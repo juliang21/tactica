@@ -1,0 +1,597 @@
+import * as S from './state.js';
+
+// ─── Textbox rewrap callback (set from app.js to avoid circular import) ──────
+let _rewrapFn = null;
+export function registerRewrap(fn) { _rewrapFn = fn; }
+
+// ─── Transforms ───────────────────────────────────────────────────────────────
+export function applyTransform(el) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const scale = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const t = el.dataset.type;
+
+  if (t === 'player' || t === 'ball' || t === 'cone') {
+    el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
+  } else if (t === 'textbox') {
+    // Textbox uses zone-style absolute positioning
+    if (_rewrapFn) _rewrapFn(el);
+  } else if (t === 'shadow-circle') {
+    const sh = el.querySelector('ellipse');
+    const hw = parseFloat(el.dataset.hw || '30') * scale;
+    const hh = parseFloat(el.dataset.hh || '20') * scale;
+    sh.setAttribute('cx', cx); sh.setAttribute('cy', cy);
+    sh.setAttribute('rx', hw); sh.setAttribute('ry', hh);
+    sh.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+  } else if (t === 'shadow-rect') {
+    const sh = el.querySelector('rect');
+    const hw = parseFloat(el.dataset.hw || '30') * scale;
+    const hh = parseFloat(el.dataset.hh || '20') * scale;
+    sh.setAttribute('x', cx-hw); sh.setAttribute('y', cy-hh);
+    sh.setAttribute('width', hw*2); sh.setAttribute('height', hh*2);
+    sh.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+  }
+}
+
+export function updateArrowVisual(el) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const dx1 = parseFloat(el.dataset.dx1), dy1 = parseFloat(el.dataset.dy1);
+  const dx2 = parseFloat(el.dataset.dx2), dy2 = parseFloat(el.dataset.dy2);
+  const sc = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+  const tfm = (dx, dy) => ({
+    x: cx + (dx*sc)*Math.cos(rot) - (dy*sc)*Math.sin(rot),
+    y: cy + (dx*sc)*Math.sin(rot) + (dy*sc)*Math.cos(rot)
+  });
+  const p1 = tfm(dx1, dy1), p2 = tfm(dx2, dy2);
+  el.querySelectorAll('line').forEach(l => {
+    l.setAttribute('x1', p1.x); l.setAttribute('y1', p1.y);
+    l.setAttribute('x2', p2.x); l.setAttribute('y2', p2.y);
+  });
+}
+
+function moveElement(el, nx, ny) {
+  el.dataset.cx = nx; el.dataset.cy = ny;
+  const t = el.dataset.type;
+  if (t === 'player' || t === 'ball' || t === 'cone') applyTransform(el);
+  else if (t === 'textbox') applyTransform(el);
+  else if (t === 'arrow') updateArrowVisual(el);
+  else if (t.startsWith('shadow')) applyTransform(el);
+}
+
+// ─── Selection ────────────────────────────────────────────────────────────────
+export function select(el) {
+  if (S.selectedEl && S.selectedEl !== el) deselectVisual(S.selectedEl);
+  S.setSelectedEl(el);
+  const type = el.dataset.type;
+
+  // Visual highlight
+  if (type === 'player' || type === 'ball' || type === 'cone') {
+    el.querySelector('circle,polygon')?.setAttribute('stroke-width', '3');
+    if (type === 'player') el.querySelector('circle')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+  }
+  if (type === 'textbox') {
+    const bg = el.querySelector('.textbox-bg');
+    if (bg) { bg.setAttribute('stroke', 'rgba(79,156,249,0.8)'); bg.setAttribute('stroke-width', '1.5'); }
+    showZoneHandles(el);
+  }
+  if (type === 'arrow') {
+    const w = parseFloat(el.dataset.arrowWidth || '2.5');
+    el.querySelector('line')?.setAttribute('stroke-width', w + 1.5);
+    showArrowHandles(el);
+  }
+  if (type.startsWith('shadow')) {
+    const shape = el.querySelector('rect,ellipse');
+    if (shape) {
+      // Save current stroke before applying selection highlight
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke');
+      shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+    showZoneHandles(el);
+  }
+
+  // Info label
+  const typeLabel = type === 'player' ? 'Player #' + el.dataset.label
+    : type === 'ball' ? 'Ball'
+    : type === 'cone' ? 'Cone'
+    : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
+    : type === 'textbox' ? 'Text'
+    : 'Zone';
+  const hint = type === 'player' ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
+  S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
+  const playerSec = document.getElementById('player-edit-section');
+  const arrowSec = document.getElementById('arrow-edit-section');
+  const zoneSec = document.getElementById('zone-edit-section');
+  const textboxSec = document.getElementById('textbox-edit-section');
+  const delSec = document.getElementById('del-section');
+
+  // Always switch to element tab
+  switchTab('element');
+  playerSec.style.display = 'none';
+  arrowSec.style.display = 'none';
+  zoneSec.style.display = 'none';
+  textboxSec.style.display = 'none';
+  delSec.style.display = '';
+
+  const isArrow = type === 'arrow';
+  const isZone = type?.startsWith('shadow');
+  const isText = type === 'textbox';
+  const showSize = !isArrow && !isZone && !isText;
+  document.getElementById('size-section').style.display = showSize ? '' : 'none';
+  document.getElementById('rotation-section').style.display = 'none';
+
+  if (type === 'player') {
+    playerSec.style.display = '';
+    document.getElementById('number-input').value = el.dataset.label || '';
+    document.getElementById('name-input').value = el.dataset.playerName || '';
+    const nameSize = el.dataset.nameSize || '11';
+    document.getElementById('name-size-slider').value = nameSize;
+    document.getElementById('name-size-val').textContent = nameSize + 'px';
+  } else if (type === 'arrow') {
+    arrowSec.style.display = '';
+    const w = el.dataset.arrowWidth || '2.5';
+    document.getElementById('arrow-width-slider').value = w;
+    document.getElementById('arrow-width-val').textContent = w;
+    const dash = el.querySelector('line')?.getAttribute('stroke-dasharray') || '';
+    let style = 'solid';
+    if (dash === '2,5') style = 'dotted';
+    else if (dash && dash !== 'none') style = 'dashed';
+    document.querySelectorAll('.style-btn').forEach(b => b.classList.toggle('active', b.dataset.style === style));
+  } else if (type === 'textbox') {
+    textboxSec.style.display = '';
+    document.getElementById('textbox-input').value = el.dataset.textContent || '';
+    const tSize = el.dataset.textSize || '14';
+    document.getElementById('textbox-size-slider').value = tSize;
+    document.getElementById('textbox-size-val').textContent = tSize + 'px';
+    const tAlign = el.dataset.textAlign || 'center';
+    document.querySelectorAll('[data-align]').forEach(b => b.classList.toggle('active', b.dataset.align === tAlign));
+  } else if (isZone) {
+    zoneSec.style.display = '';
+    // Set active border style button based on current shape
+    const shape = el.querySelector('rect,ellipse');
+    const dashArr = shape?.getAttribute('stroke-dasharray') || '';
+    const zStyle = (dashArr && dashArr !== 'none') ? 'dashed' : 'solid';
+    document.querySelectorAll('[data-zstyle]').forEach(b => b.classList.toggle('active', b.dataset.zstyle === zStyle));
+  }
+
+  const s = parseFloat(el.dataset.scale || '1') * 100;
+  document.getElementById('size-slider').value = s;
+  document.getElementById('size-val').textContent = (s/100).toFixed(1) + '×';
+  const showRot = document.getElementById('rotation-section').style.display !== 'none';
+  if (showRot) {
+    const r = parseFloat(el.dataset.rotation || '0');
+    document.getElementById('rot-slider').value = r;
+    document.getElementById('rot-val').textContent = Math.round(r) + '°';
+  }
+}
+
+export function deselectVisual(el) {
+  if (!el) return;
+  removeHandles();
+  const t = el.dataset.type;
+  if (t === 'player') {
+    const circ = el.querySelector('circle');
+    if (circ) {
+      const customBorder = el.dataset.borderColor;
+      if (customBorder === 'none') {
+        circ.setAttribute('stroke', 'transparent');
+        circ.setAttribute('stroke-width', '0');
+      } else if (customBorder) {
+        circ.setAttribute('stroke', customBorder);
+        circ.setAttribute('stroke-width', '1.5');
+      } else {
+        const fill = circ.getAttribute('fill');
+        circ.setAttribute('stroke', S.isDarkColor(fill) ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)');
+        circ.setAttribute('stroke-width', '1.5');
+      }
+    }
+  }
+  if (t === 'ball' || t === 'cone') el.querySelector('circle,polygon')?.setAttribute('stroke-width', '1.5');
+  if (t === 'textbox') {
+    const bg = el.querySelector('.textbox-bg');
+    if (bg) { bg.removeAttribute('stroke'); bg.removeAttribute('stroke-width'); }
+  }
+  if (t === 'arrow') {
+    const w = el.dataset.arrowWidth || '2.5';
+    el.querySelector('line')?.setAttribute('stroke-width', w);
+  }
+  if (t.startsWith('shadow')) {
+    const shape = el.querySelector('rect,ellipse');
+    if (shape && el.dataset.savedStroke) {
+      shape.setAttribute('stroke', el.dataset.savedStroke);
+      delete el.dataset.savedStroke;
+    }
+  }
+}
+
+export function deselect() {
+  if (!S.selectedEl) return;
+  deselectVisual(S.selectedEl);
+  S.setSelectedEl(null);
+  S.selInfo.innerHTML = 'Nothing selected.<br><span style="font-size:10px;color:var(--text-muted)">Click to select · drag to move<br>Double-click player to rename</span>';
+  document.getElementById('del-section').style.display = 'none';
+  document.getElementById('player-edit-section').style.display = 'none';
+  document.getElementById('arrow-edit-section').style.display = 'none';
+  document.getElementById('zone-edit-section').style.display = 'none';
+  document.getElementById('textbox-edit-section').style.display = 'none';
+  document.getElementById('rotation-section').style.display = 'none';
+  document.getElementById('size-section').style.display = 'none';
+}
+
+export function deleteSelected() {
+  if (!S.selectedEl) return;
+  S.pushUndo();
+  removeHandles();
+  S.selectedEl.remove();
+  S.setSelectedEl(null);
+  S.selInfo.innerHTML = 'Nothing selected.';
+  document.getElementById('del-section').style.display = 'none';
+  document.getElementById('player-edit-section').style.display = 'none';
+  document.getElementById('arrow-edit-section').style.display = 'none';
+  document.getElementById('zone-edit-section').style.display = 'none';
+  document.getElementById('textbox-edit-section').style.display = 'none';
+}
+
+// ─── Tab Switcher ─────────────────────────────────────────────────────────────
+export function switchTab(name) {
+  ['players','pitch','element'].forEach(t => {
+    document.getElementById('tab-' + t).classList.toggle('active', t === name);
+    document.getElementById('pane-' + t).style.display = t === name ? 'flex' : 'none';
+  });
+}
+
+// ─── Element Handles (arrows + zones) ─────────────────────────────────────────
+let handleGroup = null;
+
+function createHandle(ns, hx, hy, which, cursor) {
+  const c = document.createElementNS(ns, 'circle');
+  c.setAttribute('cx', hx); c.setAttribute('cy', hy);
+  c.setAttribute('r', '6'); c.setAttribute('fill', 'rgba(201,169,98,0.4)');
+  c.setAttribute('stroke', '#C9A962'); c.setAttribute('stroke-width', '1.5');
+  c.setAttribute('cursor', cursor || 'grab');
+  c.dataset.handle = which;
+  c.addEventListener('mousedown', handleDown);
+  c.addEventListener('touchstart', handleDown, { passive: false });
+  return c;
+}
+
+// ── Arrow handles ──
+export function showArrowHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'arrow';
+
+  const visLine = el.querySelectorAll('line')[0];
+  const x1 = parseFloat(visLine.getAttribute('x1'));
+  const y1 = parseFloat(visLine.getAttribute('y1'));
+  const x2 = parseFloat(visLine.getAttribute('x2'));
+  const y2 = parseFloat(visLine.getAttribute('y2'));
+
+  handleGroup.appendChild(createHandle(ns, x1, y1, 'start'));
+  handleGroup.appendChild(createHandle(ns, x2, y2, 'end'));
+  S.svg.appendChild(handleGroup);
+}
+
+// ── Zone handles ──
+function rotatedPoint(cx, cy, dx, dy, rot) {
+  const r = rot * Math.PI / 180;
+  return {
+    x: cx + dx * Math.cos(r) - dy * Math.sin(r),
+    y: cy + dx * Math.sin(r) + dy * Math.cos(r)
+  };
+}
+
+function createRotateHandle(ns, hx, hy) {
+  const g = document.createElementNS(ns, 'g');
+  g.dataset.handle = 'rotate';
+  g.setAttribute('cursor', 'crosshair');
+  // Invisible hit area
+  const hit = document.createElementNS(ns, 'circle');
+  hit.setAttribute('cx', hx); hit.setAttribute('cy', hy);
+  hit.setAttribute('r', '8'); hit.setAttribute('fill', 'transparent');
+  hit.setAttribute('stroke', 'none');
+  // Rotation arc arrow icon only
+  const arc = document.createElementNS(ns, 'path');
+  arc.setAttribute('d', `M${hx-4},${hy+1} A5,5 0 1,1 ${hx+3},${hy-4}`);
+  arc.setAttribute('fill', 'none'); arc.setAttribute('stroke', '#C9A962');
+  arc.setAttribute('stroke-width', '1.8'); arc.setAttribute('stroke-linecap', 'round');
+  // Arrowhead
+  const arrow = document.createElementNS(ns, 'path');
+  arrow.setAttribute('d', `M${hx+1},${hy-6} L${hx+3},${hy-4} L${hx+5},${hy-6}`);
+  arrow.setAttribute('fill', 'none'); arrow.setAttribute('stroke', '#C9A962');
+  arrow.setAttribute('stroke-width', '1.5'); arrow.setAttribute('stroke-linecap', 'round');
+  arrow.setAttribute('stroke-linejoin', 'round');
+  g.appendChild(hit); g.appendChild(arc); g.appendChild(arrow);
+  g.addEventListener('mousedown', handleDown);
+  g.addEventListener('touchstart', handleDown, { passive: false });
+  return g;
+}
+
+export function showZoneHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'zone';
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const hw = parseFloat(el.dataset.hw || '30');
+  const hh = parseFloat(el.dataset.hh || '20');
+  const rot = parseFloat(el.dataset.rotation || '0');
+
+  // Corners & sides in local coords, then rotate
+  const tl = rotatedPoint(cx, cy, -hw, -hh, rot);
+  const tr = rotatedPoint(cx, cy, hw, -hh, rot);
+  const br = rotatedPoint(cx, cy, hw, hh, rot);
+  const bl = rotatedPoint(cx, cy, -hw, hh, rot);
+  const sl = rotatedPoint(cx, cy, -hw, 0, rot);
+  const sr = rotatedPoint(cx, cy, hw, 0, rot);
+  const st = rotatedPoint(cx, cy, 0, -hh, rot);
+  const sb = rotatedPoint(cx, cy, 0, hh, rot);
+
+  // 0: corner-tl, 1: corner-tr (rotate), 2: corner-br, 3: corner-bl
+  handleGroup.appendChild(createHandle(ns, tl.x, tl.y, 'corner-tl', 'nwse-resize'));
+  handleGroup.appendChild(createRotateHandle(ns, tr.x, tr.y));
+  handleGroup.appendChild(createHandle(ns, br.x, br.y, 'corner-br', 'nwse-resize'));
+  handleGroup.appendChild(createHandle(ns, bl.x, bl.y, 'corner-bl', 'nesw-resize'));
+  // 4: side-l, 5: side-r, 6: side-t, 7: side-b
+  handleGroup.appendChild(createHandle(ns, sl.x, sl.y, 'side-l', 'ew-resize'));
+  handleGroup.appendChild(createHandle(ns, sr.x, sr.y, 'side-r', 'ew-resize'));
+  handleGroup.appendChild(createHandle(ns, st.x, st.y, 'side-t', 'ns-resize'));
+  handleGroup.appendChild(createHandle(ns, sb.x, sb.y, 'side-b', 'ns-resize'));
+
+  S.svg.appendChild(handleGroup);
+}
+
+export function removeHandles() {
+  if (handleGroup) { handleGroup.remove(); handleGroup = null; }
+  S.setEndpointDragging(null);
+}
+
+
+function updateHandlePositions(el) {
+  if (!handleGroup) return;
+  const type = handleGroup.dataset.handleType;
+
+  if (type === 'arrow') {
+    const visLine = el.querySelector('line');
+    const handles = handleGroup.querySelectorAll('circle');
+    handles[0]?.setAttribute('cx', visLine.getAttribute('x1'));
+    handles[0]?.setAttribute('cy', visLine.getAttribute('y1'));
+    handles[1]?.setAttribute('cx', visLine.getAttribute('x2'));
+    handles[1]?.setAttribute('cy', visLine.getAttribute('y2'));
+  } else if (type === 'zone') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const hw = parseFloat(el.dataset.hw || '30');
+    const hh = parseFloat(el.dataset.hh || '20');
+    const rot = parseFloat(el.dataset.rotation || '0');
+
+    const tl = rotatedPoint(cx, cy, -hw, -hh, rot);
+    const tr = rotatedPoint(cx, cy, hw, -hh, rot);
+    const br = rotatedPoint(cx, cy, hw, hh, rot);
+    const bl = rotatedPoint(cx, cy, -hw, hh, rot);
+    const sl = rotatedPoint(cx, cy, -hw, 0, rot);
+    const sr = rotatedPoint(cx, cy, hw, 0, rot);
+    const st = rotatedPoint(cx, cy, 0, -hh, rot);
+    const sb = rotatedPoint(cx, cy, 0, hh, rot);
+
+    // 0: tl (circle), 1: tr (rotate group), 2: br, 3: bl, 4: side-l, 5: side-r, 6: side-t, 7: side-b
+    const children = handleGroup.children;
+    // tl
+    children[0]?.setAttribute('cx', tl.x); children[0]?.setAttribute('cy', tl.y);
+    // tr rotate handle — update the circles/paths inside the group
+    const rotG = children[1];
+    if (rotG) {
+      const rc = rotG.querySelector('circle');
+      if (rc) { rc.setAttribute('cx', tr.x); rc.setAttribute('cy', tr.y); }
+      const rp = rotG.querySelector('path');
+      if (rp) rp.setAttribute('d', `M${tr.x-3},${tr.y-2} A4,4 0 1,1 ${tr.x+2},${tr.y-3}`);
+    }
+    // br, bl
+    children[2]?.setAttribute('cx', br.x); children[2]?.setAttribute('cy', br.y);
+    children[3]?.setAttribute('cx', bl.x); children[3]?.setAttribute('cy', bl.y);
+    // sides (left, right, top, bottom)
+    children[4]?.setAttribute('cx', sl.x); children[4]?.setAttribute('cy', sl.y);
+    children[5]?.setAttribute('cx', sr.x); children[5]?.setAttribute('cy', sr.y);
+    children[6]?.setAttribute('cx', st.x); children[6]?.setAttribute('cy', st.y);
+    children[7]?.setAttribute('cx', sb.x); children[7]?.setAttribute('cy', sb.y);
+  }
+}
+
+function handleDown(e) {
+  e.stopPropagation(); e.preventDefault();
+  S.setEndpointDragging(e.currentTarget.dataset.handle);
+  S.setIsDragging(true);
+  S.setDragMoved(false);
+}
+
+function onEndpointDrag(e) {
+  if (!S.endpointDragging || !S.selectedEl) return;
+  e.preventDefault();
+  S.setDragMoved(true);
+  const pt = S.getSVGPoint(e);
+  const el = S.selectedEl;
+  const t = el.dataset.type;
+
+  if (t === 'arrow') {
+    onArrowEndpointDrag(el, pt);
+  } else if (t.startsWith('shadow') || t === 'textbox') {
+    onZoneHandleDrag(el, pt);
+  }
+}
+
+function onArrowEndpointDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const dx1 = parseFloat(el.dataset.dx1), dy1 = parseFloat(el.dataset.dy1);
+  const dx2 = parseFloat(el.dataset.dx2), dy2 = parseFloat(el.dataset.dy2);
+
+  let ax1 = cx + dx1, ay1 = cy + dy1;
+  let ax2 = cx + dx2, ay2 = cy + dy2;
+
+  if (S.endpointDragging === 'start') { ax1 = pt.x; ay1 = pt.y; }
+  else { ax2 = pt.x; ay2 = pt.y; }
+
+  const ncx = (ax1 + ax2) / 2, ncy = (ay1 + ay2) / 2;
+  el.dataset.cx = ncx; el.dataset.cy = ncy;
+  el.dataset.dx1 = ax1 - ncx; el.dataset.dy1 = ay1 - ncy;
+  el.dataset.dx2 = ax2 - ncx; el.dataset.dy2 = ay2 - ncy;
+  el.dataset.scale = '1'; el.dataset.rotation = '0';
+
+  updateArrowVisual(el);
+  updateHandlePositions(el);
+}
+
+function getTextBoxMinSize(el) {
+  if (el.dataset.type !== 'textbox') return { minHW: 10, minHH: 10 };
+  const fontSize = parseFloat(el.dataset.textSize || '14');
+  const content = el.dataset.textContent || '';
+  const lines = content.split('\n');
+  const lineH = fontSize * 1.35;
+  const minHH = Math.max(10, (lines.length * lineH) / 2 + 6);
+
+  // Measure longest word to get min width
+  const ns = 'http://www.w3.org/2000/svg';
+  const measure = document.createElementNS(ns, 'text');
+  measure.setAttribute('font-family', 'Manrope, sans-serif');
+  measure.setAttribute('font-size', fontSize);
+  measure.setAttribute('font-weight', '600');
+  measure.style.visibility = 'hidden';
+  S.svg.appendChild(measure);
+  let maxWordW = 20;
+  for (const line of lines) {
+    for (const word of line.split(/\s+/)) {
+      if (!word) continue;
+      measure.textContent = word;
+      maxWordW = Math.max(maxWordW, measure.getComputedTextLength());
+    }
+  }
+  measure.remove();
+  const minHW = maxWordW / 2 + 12; // padding
+  return { minHW, minHH };
+}
+
+function onZoneHandleDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  let hw = parseFloat(el.dataset.hw || '30');
+  let hh = parseFloat(el.dataset.hh || '20');
+  let rot = parseFloat(el.dataset.rotation || '0');
+  const h = S.endpointDragging;
+  const defaultMin = 10;
+
+  // For textbox, compute minimum from text content
+  const isText = el.dataset.type === 'textbox';
+  const { minHW, minHH } = isText ? getTextBoxMinSize(el) : { minHW: defaultMin, minHH: defaultMin };
+
+  if (h === 'rotate') {
+    const angle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
+    const baseAngle = Math.atan2(-hh, hw) * 180 / Math.PI;
+    rot = angle - baseAngle;
+    rot = ((rot % 360) + 360) % 360;
+    el.dataset.rotation = rot;
+  } else if (h.startsWith('corner')) {
+    const r = -rot * Math.PI / 180;
+    const lx = (pt.x - cx) * Math.cos(r) - (pt.y - cy) * Math.sin(r);
+    const ly = (pt.x - cx) * Math.sin(r) + (pt.y - cy) * Math.cos(r);
+    hw = Math.max(minHW, Math.abs(lx));
+    hh = Math.max(minHH, Math.abs(ly));
+  } else if (h === 'side-l' || h === 'side-r') {
+    const r = -rot * Math.PI / 180;
+    const lx = (pt.x - cx) * Math.cos(r) - (pt.y - cy) * Math.sin(r);
+    // Anchor the opposite edge
+    if (h === 'side-r') {
+      const leftEdge = -hw; // fixed left edge in local coords
+      const newHW = Math.max(minHW, (lx - leftEdge) / 2);
+      const newCenterLocal = leftEdge + newHW;
+      // Convert local offset back to world coords
+      const rr = rot * Math.PI / 180;
+      el.dataset.cx = cx + newCenterLocal * Math.cos(rr);
+      el.dataset.cy = cy + newCenterLocal * Math.sin(rr);
+      hw = newHW;
+    } else {
+      const rightEdge = hw; // fixed right edge in local coords
+      const newHW = Math.max(minHW, (rightEdge - lx) / 2);
+      const newCenterLocal = rightEdge - newHW;
+      const rr = rot * Math.PI / 180;
+      el.dataset.cx = cx + newCenterLocal * Math.cos(rr);
+      el.dataset.cy = cy + newCenterLocal * Math.sin(rr);
+      hw = newHW;
+    }
+  } else if (h === 'side-t' || h === 'side-b') {
+    const r = -rot * Math.PI / 180;
+    const ly = (pt.x - cx) * Math.sin(r) + (pt.y - cy) * Math.cos(r);
+    // Anchor the opposite edge
+    if (h === 'side-b') {
+      const topEdge = -hh;
+      const newHH = Math.max(minHH, (ly - topEdge) / 2);
+      const newCenterLocal = topEdge + newHH;
+      const rr = rot * Math.PI / 180;
+      el.dataset.cx = cx + newCenterLocal * -Math.sin(rr);
+      el.dataset.cy = cy + newCenterLocal * Math.cos(rr);
+      hh = newHH;
+    } else {
+      const botEdge = hh;
+      const newHH = Math.max(minHH, (botEdge - ly) / 2);
+      const newCenterLocal = botEdge - newHH;
+      const rr = rot * Math.PI / 180;
+      el.dataset.cx = cx + newCenterLocal * -Math.sin(rr);
+      el.dataset.cy = cy + newCenterLocal * Math.cos(rr);
+      hh = newHH;
+    }
+  }
+
+  el.dataset.hw = hw; el.dataset.hh = hh;
+  el.dataset.scale = '1';
+  applyTransform(el);
+  updateHandlePositions(el);
+}
+
+// ─── Drag ─────────────────────────────────────────────────────────────────────
+export function makeDraggable(el) {
+  el.addEventListener('mousedown', startDrag);
+  el.addEventListener('touchstart', startDrag, { passive: false });
+}
+
+function startDrag(e) {
+  if (S.tool !== 'select') return;
+  // Don't start whole-element drag if clicking a handle
+  if (e.target.dataset?.handle) return;
+  e.stopPropagation(); e.preventDefault();
+  const pt = S.getSVGPoint(e);
+  S.setDragOffX(pt.x - parseFloat(e.currentTarget.dataset.cx));
+  S.setDragOffY(pt.y - parseFloat(e.currentTarget.dataset.cy));
+  S.setIsDragging(true);
+  S.setDragMoved(false);
+  S.pushUndo();
+  const target = e.currentTarget;
+  if (S.selectedEl && S.selectedEl !== target) deselectVisual(S.selectedEl);
+  S.setSelectedEl(target);
+  select(target);
+}
+
+function onDrag(e) {
+  if (!S.isDragging || !S.selectedEl) return;
+  // If endpoint dragging, use that handler instead
+  if (S.endpointDragging) { onEndpointDrag(e); return; }
+  e.preventDefault();
+  S.setDragMoved(true);
+  const pt = S.getSVGPoint(e);
+  moveElement(S.selectedEl, pt.x - S.dragOffX, pt.y - S.dragOffY);
+  // Update handles if dragging the whole element
+  const dt = S.selectedEl.dataset.type;
+  if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox') updateHandlePositions(S.selectedEl);
+}
+
+function stopDrag() {
+  S.setIsDragging(false);
+  S.setEndpointDragging(null);
+  if (S.dragMoved) setTimeout(() => { S.setDragMoved(false); }, 0);
+}
+
+// ─── Bind drag events ────────────────────────────────────────────────────────
+S.svg.addEventListener('mousemove', onDrag);
+S.svg.addEventListener('touchmove', onDrag, { passive: false });
+S.svg.addEventListener('mouseup', stopDrag);
+S.svg.addEventListener('touchend', stopDrag);
+document.addEventListener('mouseup', stopDrag);

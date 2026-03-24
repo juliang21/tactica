@@ -1,0 +1,860 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Tactica - The Premium Tactical Board for Football</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@600&display=swap" rel="stylesheet">
+  <style>
+    *, *::before, *::after {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html {
+      scroll-behavior: smooth;
+    }
+
+    body {
+      font-family: 'Manrope', sans-serif;
+      background: #0F0F0F;
+      color: #FAF8F5;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    a {
+      text-decoration: none;
+      color: inherit;
+    }
+
+    /* ── Navigation ── */
+    .nav {
+      background: #0A0A0A;
+      padding: 18px 56px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+    }
+
+    .nav-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: #C9A962;
+      letter-spacing: 1px;
+    }
+
+    .nav-links {
+      display: flex;
+      gap: 32px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      font-family: 'Manrope', sans-serif;
+      font-size: 14px;
+      color: #888888;
+      transition: color 0.2s;
+    }
+
+    .nav-links a:hover {
+      color: #FAF8F5;
+    }
+
+    .nav-cta {
+      background: #C9A962;
+      color: #0A0A0A;
+      font-family: 'Manrope', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      padding: 10px 20px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      display: inline-block;
+    }
+
+    .nav-cta:hover {
+      opacity: 0.9;
+    }
+
+    .nav-divider {
+      height: 1px;
+      background: #1F1F1F;
+    }
+
+    /* ── Hero ── */
+    .hero {
+      background: #0F0F0F;
+      padding: 64px 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 32px;
+      text-align: center;
+    }
+
+    .hero-badge {
+      font-family: 'Manrope', sans-serif;
+      font-size: 12px;
+      font-weight: 500;
+      color: #C9A962;
+      background: rgba(201, 169, 98, 0.063);
+      border: 1px solid rgba(201, 169, 98, 0.188);
+      padding: 8px 16px;
+      display: inline-block;
+    }
+
+    .hero-headline {
+      font-family: 'Playfair Display', serif;
+      font-size: 60px;
+      font-weight: 600;
+      color: #FAF8F5;
+      line-height: 1.1;
+      max-width: 800px;
+      white-space: pre-line;
+    }
+
+    .hero-sub {
+      font-family: 'Manrope', sans-serif;
+      font-size: 18px;
+      color: #888888;
+      line-height: 1.5;
+      max-width: 680px;
+      white-space: pre-line;
+    }
+
+    .hero-buttons {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .btn-primary {
+      background: #C9A962;
+      color: #0A0A0A;
+      font-family: 'Manrope', sans-serif;
+      font-size: 14px;
+      font-weight: 600;
+      padding: 14px 28px;
+      border: none;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      display: inline-block;
+    }
+
+    .btn-primary:hover {
+      opacity: 0.9;
+    }
+
+    .btn-secondary {
+      background: transparent;
+      color: #FAF8F5;
+      font-family: 'Manrope', sans-serif;
+      font-size: 14px;
+      font-weight: 500;
+      padding: 14px 28px;
+      border: 1px solid #1F1F1F;
+      cursor: pointer;
+      transition: border-color 0.2s;
+      display: inline-block;
+    }
+
+    .btn-secondary:hover {
+      border-color: #333;
+    }
+
+    .hero-screenshot {
+      border: 1px solid #1F1F1F;
+      padding: 2px;
+      max-width: 960px;
+      width: 100%;
+    }
+
+    .hero-screenshot-inner {
+      width: 100%;
+      height: 440px;
+      background: linear-gradient(135deg, #1a3a1a 0%, #0d2a0d 40%, #1a4a1a 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Manrope', sans-serif;
+      font-size: 16px;
+      color: #666666;
+      letter-spacing: 1px;
+    }
+
+    .trust-bar {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .trust-bar-text {
+      font-family: 'Manrope', sans-serif;
+      font-size: 13px;
+      color: #666666;
+    }
+
+    .trust-dot {
+      color: #666666;
+      font-size: 12px;
+    }
+
+    .trust-badge {
+      font-family: 'Manrope', sans-serif;
+      font-size: 12px;
+      color: #666666;
+    }
+
+    /* ── Section shared ── */
+    .section-badge {
+      font-family: 'Manrope', sans-serif;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 1px;
+      color: #C9A962;
+      border: 1px solid rgba(201, 169, 98, 0.188);
+      padding: 8px 16px;
+      display: inline-block;
+    }
+
+    .section-headline {
+      font-family: 'Playfair Display', serif;
+      font-weight: 600;
+      color: #FAF8F5;
+      text-align: center;
+    }
+
+    .section-sub {
+      font-family: 'Manrope', sans-serif;
+      font-size: 18px;
+      color: #888888;
+      text-align: center;
+      line-height: 1.6;
+      max-width: 700px;
+    }
+
+    /* ── Features ── */
+    .features {
+      background: #0A0A0A;
+      padding: 80px 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+
+    .features .section-headline {
+      font-size: 48px;
+    }
+
+    .features-grid {
+      display: flex;
+      gap: 24px;
+      padding: 0 24px;
+      max-width: 1200px;
+      width: 100%;
+    }
+
+    .feature-card {
+      background: #0F0F0F;
+      border: 1px solid #1F1F1F;
+      padding: 32px;
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+      flex: 1;
+    }
+
+    .feature-icon {
+      width: 48px;
+      height: 48px;
+      background: rgba(201, 169, 98, 0.082);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+
+    .feature-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: #FAF8F5;
+    }
+
+    .feature-desc {
+      font-family: 'Manrope', sans-serif;
+      font-size: 14px;
+      color: #888888;
+      line-height: 1.6;
+    }
+
+    .feature-image {
+      width: 100%;
+      height: 200px;
+      border: 1px solid #1F1F1F;
+      background: linear-gradient(135deg, #1a3a1a 0%, #0d2a0d 40%, #1a4a1a 100%);
+    }
+
+    /* ── How It Works ── */
+    .how-it-works {
+      background: #0A0A0A;
+      padding: 80px 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 40px;
+    }
+
+    .how-it-works .section-headline {
+      font-size: 42px;
+    }
+
+    .steps-grid {
+      display: flex;
+      gap: 40px;
+      padding: 0 64px;
+      max-width: 1100px;
+      width: 100%;
+    }
+
+    .step {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      text-align: center;
+      gap: 16px;
+    }
+
+    .step-circle {
+      width: 56px;
+      height: 56px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: 'Playfair Display', serif;
+      font-size: 28px;
+      font-weight: 600;
+      flex-shrink: 0;
+    }
+
+    .step-circle-filled {
+      background: #C9A962;
+      color: #0A0A0A;
+    }
+
+    .step-circle-gold {
+      background: transparent;
+      border: 2px solid #C9A962;
+      color: #C9A962;
+    }
+
+    .step-circle-dim {
+      background: transparent;
+      border: 2px solid #1F1F1F;
+      color: #666666;
+    }
+
+    .step-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      font-weight: 600;
+      color: #FAF8F5;
+    }
+
+    .step-desc {
+      font-family: 'Manrope', sans-serif;
+      font-size: 14px;
+      color: #888888;
+      line-height: 1.6;
+    }
+
+    /* ── Secondary Features ── */
+    .secondary-features {
+      background: #0F0F0F;
+      border-top: 1px solid #1F1F1F;
+      padding: 60px 80px;
+    }
+
+    .secondary-grid {
+      display: flex;
+      gap: 20px;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .secondary-card {
+      flex: 1;
+      border: 1px solid #1F1F1F;
+      padding: 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .secondary-icon {
+      font-size: 20px;
+      color: #C9A962;
+    }
+
+    .secondary-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      font-weight: 600;
+      color: #FAF8F5;
+    }
+
+    .secondary-desc {
+      font-family: 'Manrope', sans-serif;
+      font-size: 13px;
+      color: #888888;
+      line-height: 1.5;
+    }
+
+    /* ── CTA ── */
+    .cta {
+      background: #0A0A0A;
+      padding: 100px 56px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 28px;
+      text-align: center;
+    }
+
+    .cta-line {
+      width: 60px;
+      height: 2px;
+      background: #C9A962;
+    }
+
+    .cta .section-headline {
+      font-size: 44px;
+      max-width: 700px;
+    }
+
+    .cta-sub {
+      font-family: 'Manrope', sans-serif;
+      font-size: 18px;
+      color: #888888;
+      max-width: 600px;
+      text-align: center;
+      line-height: 1.5;
+    }
+
+    .cta-buttons {
+      display: flex;
+      gap: 16px;
+      align-items: center;
+    }
+
+    .cta-note {
+      font-family: 'Manrope', sans-serif;
+      font-size: 12px;
+      color: #666666;
+      letter-spacing: 0.5px;
+    }
+
+    /* ── Footer ── */
+    .footer {
+      background: #050505;
+      border-top: 1px solid #1F1F1F;
+      padding: 60px 80px;
+    }
+
+    .footer-top {
+      display: flex;
+      gap: 80px;
+      margin-bottom: 40px;
+    }
+
+    .footer-brand {
+      width: 300px;
+      flex-shrink: 0;
+    }
+
+    .footer-brand-logo {
+      font-family: 'Playfair Display', serif;
+      font-size: 22px;
+      font-weight: 600;
+      color: #C9A962;
+      letter-spacing: 2px;
+      margin-bottom: 12px;
+    }
+
+    .footer-brand-tagline {
+      font-family: 'Manrope', sans-serif;
+      font-size: 13px;
+      color: #666666;
+      line-height: 1.5;
+    }
+
+    .footer-col {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .footer-col-header {
+      font-family: 'Manrope', sans-serif;
+      font-size: 11px;
+      font-weight: 600;
+      color: #888888;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+    }
+
+    .footer-col a {
+      font-family: 'Manrope', sans-serif;
+      font-size: 13px;
+      color: #FAF8F5;
+      transition: color 0.2s;
+    }
+
+    .footer-col a:hover {
+      color: #C9A962;
+    }
+
+    .footer-bottom {
+      border-top: 1px solid #1F1F1F;
+      padding-top: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .footer-copyright {
+      font-family: 'Manrope', sans-serif;
+      font-size: 11px;
+      color: #666666;
+    }
+
+    .footer-socials {
+      display: flex;
+      gap: 12px;
+    }
+
+    .footer-social {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: 1px solid #1F1F1F;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: border-color 0.2s;
+    }
+
+    .footer-social:hover {
+      border-color: #333;
+    }
+
+    .footer-social svg {
+      width: 14px;
+      height: 14px;
+      fill: #666666;
+    }
+
+    /* ── Responsive ── */
+    @media (max-width: 1024px) {
+      .features-grid,
+      .steps-grid {
+        flex-direction: column;
+        padding: 0;
+      }
+
+      .secondary-grid {
+        flex-wrap: wrap;
+      }
+
+      .secondary-card {
+        flex: 1 1 calc(50% - 10px);
+      }
+
+      .footer-top {
+        flex-wrap: wrap;
+        gap: 40px;
+      }
+
+      .cta {
+        padding: 80px 40px;
+      }
+    }
+
+    @media (max-width: 768px) {
+      .nav {
+        padding: 14px 24px;
+      }
+
+      .nav-links {
+        display: none;
+      }
+
+      .hero {
+        padding: 48px 24px;
+      }
+
+      .hero-headline {
+        font-size: 38px;
+      }
+
+      .hero-sub {
+        font-size: 16px;
+      }
+
+      .hero-buttons {
+        flex-direction: column;
+      }
+
+      .hero-screenshot-inner {
+        height: 240px;
+      }
+
+      .features {
+        padding: 60px 24px;
+      }
+
+      .features .section-headline {
+        font-size: 34px;
+      }
+
+      .how-it-works {
+        padding: 60px 24px;
+      }
+
+      .how-it-works .section-headline {
+        font-size: 30px;
+      }
+
+      .steps-grid {
+        padding: 0;
+      }
+
+      .secondary-features {
+        padding: 40px 24px;
+      }
+
+      .secondary-grid {
+        flex-direction: column;
+      }
+
+      .secondary-card {
+        flex: 1 1 100%;
+      }
+
+      .cta {
+        padding: 60px 24px;
+      }
+
+      .cta .section-headline {
+        font-size: 32px;
+      }
+
+      .cta-buttons {
+        flex-direction: column;
+      }
+
+      .footer {
+        padding: 40px 24px;
+      }
+
+      .footer-top {
+        flex-direction: column;
+        gap: 32px;
+      }
+
+      .footer-brand {
+        width: 100%;
+      }
+
+      .trust-bar {
+        gap: 12px;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Navigation -->
+  <nav class="nav">
+    <div class="nav-logo">TACTICA</div>
+    <ul class="nav-links">
+      <li><a href="#features">Features</a></li>
+      <li><a href="#how-it-works">How It Works</a></li>
+      <li><a href="#pricing">Pricing</a></li>
+    </ul>
+    <a href="index.html" class="nav-cta">Open Board &rarr;</a>
+  </nav>
+  <div class="nav-divider"></div>
+
+  <!-- Hero -->
+  <section class="hero">
+    <div class="hero-badge">&#9917; The Tactical Edge</div>
+    <h1 class="hero-headline">Master Every Move
+on the Pitch</h1>
+    <p class="hero-sub">The premium tactical board for coaches, analysts, and football minds.
+Design formations, draw plays, and share strategies &mdash; all in one beautiful tool.</p>
+    <div class="hero-buttons">
+      <a href="index.html" class="btn-primary">Start Planning &rarr;</a>
+      <a href="#" class="btn-secondary">Watch Demo</a>
+    </div>
+    <div class="hero-screenshot">
+      <div class="hero-screenshot-inner">Tactical Board Preview</div>
+    </div>
+    <div class="trust-bar">
+      <span class="trust-bar-text">Trusted by 2,000+ coaches worldwide</span>
+      <span class="trust-dot">&middot;</span>
+      <span class="trust-badge">&#127942; #1 Coaching Tool</span>
+      <span class="trust-dot">&middot;</span>
+      <span class="trust-badge">&#11088; 4.9/5 Rating</span>
+      <span class="trust-dot">&middot;</span>
+      <span class="trust-badge">&#128737;&#65039; Pro Certified</span>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section class="features" id="features">
+    <div class="section-badge">&#10024; Why T&aacute;ctica</div>
+    <h2 class="section-headline">Everything You Need to Win</h2>
+    <p class="section-sub">From pre-match preparation to post-match analysis, T&aacute;ctica gives you every tool you need to plan, communicate, and execute winning strategies with your team.</p>
+    <div class="features-grid">
+      <div class="feature-card">
+        <div class="feature-icon">&#9917;</div>
+        <h3 class="feature-title">Formations &amp; Players</h3>
+        <p class="feature-desc">Place 11-a-side formations with one click. Choose from 4-3-3, 4-4-2, 3-5-2 and more. Customise every player with numbers, names, and team colours.</p>
+        <div class="feature-image"></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#10132;</div>
+        <h3 class="feature-title">Plays &amp; Movements</h3>
+        <p class="feature-desc">Draw runs, passes, and long balls with colour-coded arrows. Drag to reposition. Mark zones and highlight pressing areas with ellipses and rectangles.</p>
+        <div class="feature-image"></div>
+      </div>
+      <div class="feature-card">
+        <div class="feature-icon">&#128248;</div>
+        <h3 class="feature-title">Export &amp; Share</h3>
+        <p class="feature-desc">Export your tactical boards as high-quality PNG or JPG images. Share with your coaching staff, present to your team, or post to social media &mdash; pixel-perfect every time.</p>
+        <div class="feature-image"></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- How It Works -->
+  <section class="how-it-works" id="how-it-works">
+    <div class="section-badge">&#9889; How It Works</div>
+    <h2 class="section-headline">Three Steps to Tactical Clarity</h2>
+    <div class="steps-grid">
+      <div class="step">
+        <div class="step-circle step-circle-filled">1</div>
+        <h3 class="step-title">Choose Your Formation</h3>
+        <p class="step-desc">Select from a library of classic and modern formations. Place your players instantly with one click, then fine-tune positions to match your style of play.</p>
+      </div>
+      <div class="step">
+        <div class="step-circle step-circle-gold">2</div>
+        <h3 class="step-title">Draw Your Strategy</h3>
+        <p class="step-desc">Use arrows, zones, and shapes to illustrate runs, passing lanes, and pressing triggers. Colour-code movements by team and type for maximum clarity.</p>
+      </div>
+      <div class="step">
+        <div class="step-circle step-circle-dim">3</div>
+        <h3 class="step-title">Export &amp; Present</h3>
+        <p class="step-desc">Export your finished board as a high-resolution image. Share it with your coaching staff, display it in the dressing room, or post it online instantly.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Secondary Features -->
+  <section class="secondary-features">
+    <div class="secondary-grid">
+      <div class="secondary-card">
+        <div class="secondary-icon">&#128085;</div>
+        <h3 class="secondary-title">10+ Kit Presets</h3>
+        <p class="secondary-desc">Choose from a curated collection of kit colours and styles. Instantly dress your teams in recognisable colours for clearer tactical visualisation.</p>
+      </div>
+      <div class="secondary-card">
+        <div class="secondary-icon">&#127967;</div>
+        <h3 class="secondary-title">Multiple Pitch Layouts</h3>
+        <p class="secondary-desc">Switch between full pitch, half pitch, and custom layouts. Each view is optimised for different tactical scenarios and presentation needs.</p>
+      </div>
+      <div class="secondary-card">
+        <div class="secondary-icon">&#128400;</div>
+        <h3 class="secondary-title">Drag &amp; Drop Everything</h3>
+        <p class="secondary-desc">Every element on the board is fully draggable. Move players, resize shapes, and reposition arrows with intuitive drag-and-drop controls.</p>
+      </div>
+      <div class="secondary-card">
+        <div class="secondary-icon">&#9000;</div>
+        <h3 class="secondary-title">Keyboard Shortcuts</h3>
+        <p class="secondary-desc">Speed up your workflow with keyboard shortcuts for common actions. Delete, undo, switch tools, and navigate the board without lifting your hands.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta" id="pricing">
+    <div class="cta-line"></div>
+    <h2 class="section-headline">Ready to Outthink the Opposition?</h2>
+    <p class="cta-sub">Join thousands of coaches and analysts already using T&aacute;ctica to plan, visualise, and win.</p>
+    <div class="cta-buttons">
+      <a href="index.html" class="btn-primary">Open the Board &rarr;</a>
+      <a href="#features" class="btn-secondary">Learn More</a>
+    </div>
+    <p class="cta-note">Free to use &middot; No account required &middot; Works in your browser</p>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-top">
+      <div class="footer-brand">
+        <div class="footer-brand-logo">TACTICA</div>
+        <p class="footer-brand-tagline">The premium tactical board for modern football minds.</p>
+      </div>
+      <div class="footer-col">
+        <span class="footer-col-header">Product</span>
+        <a href="index.html">Open Board</a>
+        <a href="#features">Features</a>
+        <a href="#pricing">Pricing</a>
+        <a href="#">Changelog</a>
+      </div>
+      <div class="footer-col">
+        <span class="footer-col-header">Company</span>
+        <a href="#">About</a>
+        <a href="#">Blog</a>
+        <a href="#">Contact</a>
+      </div>
+      <div class="footer-col">
+        <span class="footer-col-header">Legal</span>
+        <a href="#">Privacy Policy</a>
+        <a href="#">Terms of Service</a>
+        <a href="#">Cookie Policy</a>
+      </div>
+    </div>
+    <div class="footer-bottom">
+      <span class="footer-copyright">&copy; 2026 T&aacute;ctica. All rights reserved.</span>
+      <div class="footer-socials">
+        <a href="#" class="footer-social">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M23 3a10.9 10.9 0 01-3.14 1.53 4.48 4.48 0 00-7.86 3v1A10.66 10.66 0 013 4s-4 9 5 13a11.64 11.64 0 01-7 2c9 5 20 0 20-11.5a4.5 4.5 0 00-.08-.83A7.72 7.72 0 0023 3z"/></svg>
+        </a>
+        <a href="#" class="footer-social">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><rect x="2" y="2" width="20" height="20" rx="5" ry="5" fill="none" stroke="#666666" stroke-width="2"/><circle cx="12" cy="12" r="5" fill="none" stroke="#666666" stroke-width="2"/><circle cx="17.5" cy="6.5" r="1.5" fill="#666666"/></svg>
+        </a>
+        <a href="#" class="footer-social">
+          <svg viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M16 8a6 6 0 016 6v7h-4v-7a2 2 0 00-2-2 2 2 0 00-2 2v7h-4v-7a6 6 0 016-6zM2 9h4v12H2z"/><circle cx="4" cy="4" r="2"/></svg>
+        </a>
+      </div>
+    </div>
+  </footer>
+
+</body>
+</html>

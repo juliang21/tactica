@@ -1,0 +1,575 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Táctica · Football Board</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="styles.css">
+</head>
+<body class="tool-select">
+
+<!-- ── Logo ── -->
+<div class="tool-logo">Táctica <span class="beta-badge">BETA</span></div>
+
+<!-- ── Toolbar ── -->
+<div id="toolbar">
+  <button class="tool-btn active" data-tool="select" onclick="setTool('select')">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 2l10 7-5.5 1.5L6 14z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg>
+    <span class="tool-tooltip">Select (V)</span>
+  </button>
+  <button class="tool-btn" id="undo-btn" onclick="undo()" title="Undo (⌘Z)">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M5 8l-3-3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 5h9a5 5 0 0 1 0 10H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span class="tool-tooltip">Undo (⌘Z)</span>
+  </button>
+
+  <div class="tool-sep"></div>
+
+  <!-- Players -->
+  <button class="tool-btn" data-tool="player-a" onclick="setTool('player-a')">
+    <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#38BDF8"/></svg>
+    <span class="tool-tooltip">Team A player</span>
+  </button>
+  <button class="tool-btn" data-tool="player-b" onclick="setTool('player-b')">
+    <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#FBBF24"/></svg>
+    <span class="tool-tooltip">Team B player</span>
+  </button>
+
+  <div class="tool-sep"></div>
+
+  <!-- Ball -->
+  <button class="tool-btn" data-tool="ball" onclick="setTool('ball')">
+    <svg width="20" height="20" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="white" stroke="#444" stroke-width="1.3"/><polygon points="10,4.5 11.8,8.1 15.8,8.4 12.9,11.1 13.8,15 10,12.8 6.2,15 7.1,11.1 4.2,8.4 8.2,8.1" fill="none" stroke="#333" stroke-width="0.8" stroke-linejoin="round"/></svg>
+    <span class="tool-tooltip">Ball</span>
+  </button>
+
+  <!-- Cone -->
+  <button class="tool-btn" data-tool="cone" onclick="setTool('cone')">
+    <svg width="20" height="20" viewBox="0 0 20 20"><polygon points="10,4 15,16 5,16" fill="#ff8c00" stroke="#cc6600" stroke-width="1"/><line x1="5" y1="16" x2="15" y2="16" stroke="#cc6600" stroke-width="1.2"/></svg>
+    <span class="tool-tooltip">Cone</span>
+  </button>
+
+  <div class="tool-sep"></div>
+
+  <!-- Arrows — 3 types -->
+  <button class="tool-btn" id="arrow-run-btn" data-tool="arrow" onclick="setArrowType('run');setTool('arrow')">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/><polygon points="13,9 9,6.5 9,11.5" fill="#F59E0B"/></svg>
+    <span class="tool-tooltip">Run arrow (1)</span>
+  </button>
+  <button class="tool-btn" id="arrow-pass-btn" data-tool="arrow" onclick="setArrowType('pass');setTool('arrow')">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#4ADE80"/></svg>
+    <span class="tool-tooltip">Pass arrow (2)</span>
+  </button>
+  <button class="tool-btn" id="arrow-line-btn" data-tool="arrow" onclick="setArrowType('line');setTool('arrow')">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="15" y2="9" stroke="#f94f4f" stroke-width="2" stroke-linecap="round"/></svg>
+    <span class="tool-tooltip">Line (3)</span>
+  </button>
+
+  <div class="tool-sep"></div>
+
+  <!-- Shadows -->
+  <button class="tool-btn" data-tool="shadow-circle" onclick="setTool('shadow-circle')">
+    <svg width="22" height="22" viewBox="0 0 22 22"><ellipse cx="11" cy="11" rx="8" ry="5" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2"/></svg>
+    <span class="tool-tooltip">Zone (ellipse)</span>
+  </button>
+  <button class="tool-btn" data-tool="shadow-rect" onclick="setTool('shadow-rect')">
+    <svg width="22" height="22" viewBox="0 0 22 22"><rect x="3" y="6" width="16" height="10" rx="2" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2"/></svg>
+    <span class="tool-tooltip">Zone (rect)</span>
+  </button>
+
+  <!-- Text box -->
+  <button class="tool-btn" data-tool="textbox" onclick="setTool('textbox')">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><text x="3" y="14" font-family="sans-serif" font-size="14" font-weight="700" fill="currentColor">T</text></svg>
+    <span class="tool-tooltip">Text box (T)</span>
+  </button>
+
+  <div class="tool-sep"></div>
+
+  <!-- Save / Export — prominent gold button -->
+  <button class="tool-btn save-btn" onclick="exportImage('png')">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v9M6 8l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span class="save-label">Save</span>
+    <span class="tool-tooltip">Export PNG / JPG</span>
+  </button>
+
+  <!-- Clear -->
+  <button class="tool-btn danger" onclick="clearAll()" style="margin-top:auto">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 4h12M7 4V3h4v1M14 4l-1 11H5L4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span class="tool-tooltip">Clear all</span>
+  </button>
+
+</div>
+
+<!-- ── Pitch ── -->
+<div id="canvas-wrap">
+  <div id="pitch-container">
+    <svg id="pitch-svg" width="700" height="480" xmlns="http://www.w3.org/2000/svg">
+      <defs>
+        <pattern id="stripes" patternUnits="userSpaceOnUse" width="40" height="480">
+          <rect width="20" height="480" fill="#3a7a38"/>
+          <rect x="20" width="20" height="480" fill="#367035"/>
+        </pattern>
+        <!-- Player drop shadow: black 43%, angle 90°, distance 5, blur 6 -->
+        <filter id="player-shadow" x="-30%" y="-30%" width="160%" height="180%">
+          <feDropShadow dx="0" dy="5" stdDeviation="3" flood-color="rgba(0,0,0,0.43)"/>
+        </filter>
+        <!-- Arrow markers for 3 types -->
+        <marker id="mRun"  markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#F59E0B"/></marker>
+        <marker id="mPass" markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#4ADE80"/></marker>
+        <marker id="mLong" markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#f94f4f"/></marker>
+      </defs>
+      <!-- Pitch fill -->
+      <rect width="700" height="480" fill="url(#stripes)"/>
+      <!-- Outer boundary -->
+      <rect x="30" y="20" width="640" height="440" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="2"/>
+      <!-- Centre line -->
+      <line x1="350" y1="20" x2="350" y2="460" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <!-- Centre circle + dot -->
+      <circle cx="350" cy="240" r="55" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <circle cx="350" cy="240" r="3" fill="rgba(255,255,255,0.6)"/>
+      <!-- Left box -->
+      <rect x="30" y="140" width="105" height="200" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <rect x="30" y="185" width="40" height="110" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <circle cx="97" cy="240" r="2.5" fill="rgba(255,255,255,0.6)"/>
+      <path d="M135,212 A55,55 0 0,1 135,268" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <!-- Right box -->
+      <rect x="565" y="140" width="105" height="200" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <rect x="630" y="185" width="40" height="110" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <circle cx="603" cy="240" r="2.5" fill="rgba(255,255,255,0.6)"/>
+      <path d="M565,212 A55,55 0 0,0 565,268" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <!-- Goals -->
+      <rect x="16" y="205" width="14" height="70" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <rect x="670" y="205" width="14" height="70" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.55)" stroke-width="1.5"/>
+      <!-- Corner arcs -->
+      <path d="M30,28 A8,8 0 0,1 38,20" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/>
+      <path d="M670,20 A8,8 0 0,1 670,28" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/>
+      <path d="M30,452 A8,8 0 0,0 38,460" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/>
+      <path d="M662,460 A8,8 0 0,0 670,452" fill="none" stroke="rgba(255,255,255,0.55)" stroke-width="1.2"/>
+      <g id="objects-layer"></g>
+      <g id="players-layer"></g>
+    </svg>
+  </div>
+  <!-- Rondos branding -->
+  <div class="rondos-brand">
+    <svg class="rondos-logo" width="22" height="22" viewBox="0 0 40 40" fill="none">
+      <!-- Main triangle, slightly tilted -->
+      <path d="M8 35L18 3L38 30Z" stroke="rgba(255,255,255,0.45)" stroke-width="2.8" stroke-linejoin="round" fill="none"/>
+      <!-- Small triangles -->
+      <polygon points="17,4 14,9 20,9" fill="rgba(255,255,255,0.5)"/>
+      <polygon points="30,18 27,23 33,23" fill="rgba(255,255,255,0.5)"/>
+      <polygon points="7,32 4,37 10,37" fill="rgba(255,255,255,0.5)"/>
+      <polygon points="35,30 33,34 37,34" fill="rgba(255,255,255,0.5)"/>
+      <!-- Circles -->
+      <circle cx="19" cy="18" r="3" fill="rgba(255,255,255,0.5)"/>
+      <circle cx="26" cy="27" r="3" fill="rgba(255,255,255,0.5)"/>
+    </svg>
+    <span class="rondos-powered">Powered by</span>
+    <span class="rondos-name">RONDOS</span>
+  </div>
+</div>
+
+<!-- ── Right Panel ── -->
+<div id="side-panel">
+
+  <!-- Tab switcher -->
+  <div class="panel-tabs">
+    <button class="panel-tab active" id="tab-players" onclick="switchTab('players')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+      Players
+    </button>
+    <button class="panel-tab" id="tab-pitch" onclick="switchTab('pitch')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
+      Pitch
+    </button>
+    <button class="panel-tab" id="tab-element" onclick="switchTab('element')">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l7 18 3-7 7-3z"/></svg>
+      Element
+    </button>
+  </div>
+
+  <!-- ══ TAB: PLAYERS ══ -->
+  <div id="pane-players" class="tab-pane">
+
+    <!-- TEAM -->
+    <div class="panel-section">
+      <h3>Team</h3>
+      <div class="team-row">
+        <button class="team-pill active" id="team-a-pill" onclick="selectTeamContext('a')">
+          <span class="team-dot" id="dot-a" style="background:#38BDF8"></span> Team A
+        </button>
+        <button class="team-pill" id="team-b-pill" onclick="selectTeamContext('b')">
+          <span class="team-dot" id="dot-b" style="background:#FBBF24"></span> Team B
+        </button>
+      </div>
+    </div>
+
+    <!-- ADD -->
+    <div class="panel-section">
+      <h3>Add</h3>
+      <button class="single-player-btn active" id="single-btn" onclick="setTool(teamContext==='a'?'player-a':'player-b')">＋ Single (click pitch)</button>
+      <div class="sub-label">Full team · formation</div>
+      <div class="formation-grid">
+        <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>
+        <button class="formation-btn" onclick="placeFormation('4-4-2')">4-4-2</button>
+        <button class="formation-btn" onclick="placeFormation('4-3-1-2')">4-3-1-2</button>
+        <button class="formation-btn" onclick="placeFormation('4-2-1-3')">4-2-1-3</button>
+        <button class="formation-btn" onclick="placeFormation('3-5-2')">3-5-2</button>
+        <button class="formation-btn" onclick="placeFormation('5-3-2')">5-3-2</button>
+      </div>
+      <div style="font-size:9px;color:var(--text-muted);margin-top:8px;line-height:1.6">GK shown in lighter shade · replaces existing team</div>
+    </div>
+
+    <!-- KIT COLOUR -->
+    <div class="panel-section">
+      <h3>Kit colour</h3>
+      <div class="kit-grid" id="kit-grid">
+        <div class="kit-btn" style="background:#ffffff" data-color="#ffffff" data-gk="#ffe87a" onclick="applyKit(this)" title="Real Madrid"><div class="kit-label" style="color:#000">MAD</div></div>
+        <div class="kit-btn" style="background:#a50044" data-color="#a50044" data-gk="#ffa500" onclick="applyKit(this)" title="Barcelona"><div class="kit-label">BAR</div></div>
+        <div class="kit-btn" style="background:#fde100" data-color="#fde100" data-gk="#ff6600" onclick="applyKit(this)" title="Dortmund"><div class="kit-label" style="color:#000">BVB</div></div>
+        <div class="kit-btn" style="background:#d4011d" data-color="#d4011d" data-gk="#ffd700" onclick="applyKit(this)" title="Bayern"><div class="kit-label">BAY</div></div>
+        <div class="kit-btn" style="background:#6cabdd" data-color="#6cabdd" data-gk="#ffd700" onclick="applyKit(this)" title="Man City"><div class="kit-label" style="color:#000">MCI</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffa500" onclick="applyKit(this)" title="Liverpool"><div class="kit-label">LIV</div></div>
+        <div class="kit-btn" style="background:#034694" data-color="#034694" data-gk="#ffd700" onclick="applyKit(this)" title="Chelsea"><div class="kit-label">CHE</div></div>
+        <div class="kit-btn" style="background:#e62333" data-color="#e62333" data-gk="#ffd700" onclick="applyKit(this)" title="Roma"><div class="kit-label">ROM</div></div>
+        <div class="kit-btn" style="background:#000000" data-color="#1a1a1a" data-gk="#ffd700" onclick="applyKit(this)" title="Juventus"><div class="kit-label">JUV</div></div>
+        <div class="kit-btn" style="background:#d9021b" data-color="#d9021b" data-gk="#a8f0d0" onclick="applyKit(this)" title="Sevilla"><div class="kit-label">SEV</div></div>
+      </div>
+      <div class="sub-label" style="margin-top:10px">Custom</div>
+      <div class="custom-color-strip">
+        <div class="custom-swatch" style="background:#38BDF8" data-color="#38BDF8" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#FBBF24" data-color="#FBBF24" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#f4a8a0" data-color="#f4a8a0" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#a8d4f4" data-color="#a8d4f4" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#a8f0d0" data-color="#a8f0d0" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#c8a8f4" data-color="#c8a8f4" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#f4cca8" data-color="#f4cca8" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#ffffff" data-color="#ffffff" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#f87171" data-color="#f87171" onclick="applyColor(this)"></div>
+        <div class="custom-swatch" style="background:#1a1a2e" data-color="#1a1a2e" onclick="applyColor(this)"></div>
+      </div>
+    </div>
+
+  </div><!-- /pane-players -->
+
+  <!-- ══ TAB: PITCH ══ -->
+  <div id="pane-pitch" class="tab-pane" style="display:none">
+
+    <div class="panel-section">
+      <h3>Layout</h3>
+      <div class="pitch-grid">
+        <div class="pitch-thumb selected" id="pt-full-h" onclick="setPitch('full-h')" title="Full · Horizontal">
+          <svg viewBox="0 0 80 50"><rect width="80" height="50" fill="#3a7a38"/><rect x="3" y="3" width="74" height="44" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/><line x1="40" y1="3" x2="40" y2="47" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/><circle cx="40" cy="25" r="8" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/><rect x="3" y="14" width="12" height="22" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="65" y="14" width="12" height="22" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/></svg>
+          <div class="pt-label">Full H</div>
+        </div>
+        <div class="pitch-thumb" id="pt-full-v" onclick="setPitch('full-v')" title="Full · Vertical">
+          <svg viewBox="0 0 50 80"><rect width="50" height="80" fill="#3a7a38"/><rect x="3" y="3" width="44" height="74" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/><line x1="3" y1="40" x2="47" y2="40" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/><circle cx="25" cy="40" r="8" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/><rect x="14" y="3" width="22" height="12" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="14" y="65" width="22" height="12" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/></svg>
+          <div class="pt-label">Full V</div>
+        </div>
+        <div class="pitch-thumb" id="pt-half-h" onclick="setPitch('half-h')" title="Half Pitch">
+          <svg viewBox="0 0 50 70"><rect width="50" height="70" fill="#3a7a38"/><rect x="3" y="3" width="44" height="64" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/><line x1="3" y1="3" x2="47" y2="3" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/><path d="M15,3 A10,10 0 0,0 35,3" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="12" y="47" width="26" height="20" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="18" y="57" width="14" height="10" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/></svg>
+          <div class="pt-label">Half</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section">
+      <h3>Colour</h3>
+      <div class="pitch-color-row">
+        <div class="pitch-color-dot selected" style="background:#3a7a38" data-s1="#3a7a38" data-s2="#367035" data-line="rgba(255,255,255,0.55)" onclick="setPitchColor(this)" title="Classic Green"></div>
+        <div class="pitch-color-dot" style="background:#f5f5f5;border:1.5px solid #ccc" data-s1="#f5f5f5" data-s2="#f5f5f5" data-line="rgba(0,0,0,0.25)" onclick="setPitchColor(this)" title="White"></div>
+<div class="pitch-color-dot" style="background:#0d1a0f;border:1.5px solid #1a3a1e" data-s1="rgba(0,230,118,0.05)" data-s2="rgba(0,230,118,0.05)" data-line="rgba(0,230,118,0.25)" onclick="setPitchColor(this)" title="Neon Green"></div>
+      </div>
+    </div>
+
+  </div><!-- /pane-pitch -->
+
+  <!-- ══ TAB: ELEMENT ══ -->
+  <div id="pane-element" class="tab-pane" style="display:none">
+
+    <div class="panel-section">
+      <div id="selection-info">Nothing selected.<br>
+        <span style="font-size:10px;color:var(--text-muted)">Click any element on the pitch to edit it.</span>
+      </div>
+    </div>
+
+    <!-- Player properties -->
+    <div class="panel-section" id="player-edit-section" style="display:none">
+      <h3>Player</h3>
+      <div class="field-group">
+        <div class="field-label">Number</div>
+        <div class="field-row">
+          <input type="text" id="number-input" maxlength="3" placeholder="1–99"
+                 oninput="liveUpdateNumber(this.value)"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();confirmNumber();}"/>
+          <button class="apply-btn" onclick="confirmNumber()">✓</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Name <span style="opacity:0.5">(optional)</span></div>
+        <div class="field-row">
+          <input type="text" id="name-input" maxlength="18" placeholder="e.g. Messi"
+                 oninput="liveUpdateName(this.value)"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();confirmName();}"/>
+          <button class="apply-btn" onclick="confirmName()">✓</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Name size</div>
+        <div class="field-row">
+          <input type="range" id="name-size-slider" min="6" max="16" value="11" step="0.5" oninput="applyNameSize(this.value)" style="flex:1">
+          <span id="name-size-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">11px</span>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Fill colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#38BDF8" data-color="#38BDF8" onclick="applyPlayerFill(this)"></div>
+          <div class="color-swatch mini" style="background:#FBBF24" data-color="#FBBF24" onclick="applyPlayerFill(this)"></div>
+          <div class="color-swatch mini" style="background:#f4a8a0" data-color="#f4a8a0" onclick="applyPlayerFill(this)"></div>
+          <div class="color-swatch mini" style="background:#a8d4f4" data-color="#a8d4f4" onclick="applyPlayerFill(this)"></div>
+          <div class="color-swatch mini" style="background:#a8f0d0" data-color="#a8f0d0" onclick="applyPlayerFill(this)"></div>
+          <div class="color-swatch mini" style="background:#1a1a2e;border:1px solid rgba(255,255,255,0.15)" data-color="#1a1a2e" onclick="applyPlayerFill(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('fill')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="#ffffff" onclick="applyPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="#000000" onclick="applyPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-color="#ffd700" onclick="applyPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:transparent;border:1.5px solid var(--text-muted)" data-color="none" onclick="applyPlayerBorder(this)" title="No border"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('border')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Name colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.9)" onclick="applyNameColor(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.85)" onclick="applyNameColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f9a84f" data-color="#f9a84f" onclick="applyNameColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyNameColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyNameColor(this)"></div>
+          <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyNameColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-color="#ffd700" onclick="applyNameColor(this)"></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Name background</div>
+        <div class="picker-row name-bg-row">
+          <div class="color-swatch mini checkerboard" data-color="none" onclick="applyNameBg(this)" title="No background"></div>
+          <div class="color-swatch mini" style="background:rgba(0,0,0,0.65);border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.65)" onclick="applyNameBg(this)" title="Dark"></div>
+          <div class="color-swatch mini" style="background:rgba(255,255,255,0.85)" data-color="rgba(255,255,255,0.85)" onclick="applyNameBg(this)" title="Light"></div>
+          <div class="color-swatch mini" style="background:rgba(201,169,98,0.7)" data-color="rgba(201,169,98,0.7)" onclick="applyNameBg(this)" title="Gold"></div>
+          <div class="color-swatch mini" style="background:rgba(248,113,113,0.7)" data-color="rgba(248,113,113,0.7)" onclick="applyNameBg(this)" title="Red"></div>
+          <div class="color-swatch mini" style="background:rgba(96,165,250,0.7)" data-color="rgba(96,165,250,0.7)" onclick="applyNameBg(this)" title="Blue"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Arrow / Line properties -->
+    <div class="panel-section" id="arrow-edit-section" style="display:none">
+      <h3>Arrow / Line</h3>
+      <div class="field-group">
+        <div class="field-label">Colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#f9a84f" data-color="#f9a84f" onclick="applyArrowColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4ff9a8" data-color="#4ff9a8" onclick="applyArrowColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-color="#f94f4f" onclick="applyArrowColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-color="#ffffff" onclick="applyArrowColor(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="#000000" onclick="applyArrowColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4f9cf9" data-color="#4f9cf9" onclick="applyArrowColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-color="#ffd700" onclick="applyArrowColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('arrow')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Style</div>
+        <div class="style-btn-row">
+          <button class="style-btn active" data-style="solid" onclick="applyArrowStyle('solid')">Solid</button>
+          <button class="style-btn" data-style="dashed" onclick="applyArrowStyle('dashed')">Dashed</button>
+          <button class="style-btn" data-style="dotted" onclick="applyArrowStyle('dotted')">Dotted</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Width</div>
+        <div class="field-row">
+          <input type="range" id="arrow-width-slider" min="1" max="8" value="2.5" step="0.5" oninput="applyArrowWidth(this.value)" style="flex:1">
+          <span id="arrow-width-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">2.5</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Text box properties -->
+    <div class="panel-section" id="textbox-edit-section" style="display:none">
+      <h3>Text</h3>
+      <div class="field-group">
+        <div class="field-label">Content</div>
+        <div class="field-row">
+          <textarea id="textbox-input" rows="3" maxlength="200" placeholder="Type here…"
+                    oninput="liveUpdateTextBox(this.value)"
+                    style="resize:vertical;font-family:inherit;font-size:11px;line-height:1.4"></textarea>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Alignment</div>
+        <div class="style-btn-row">
+          <button class="style-btn" data-align="left" onclick="applyTextBoxAlign('left')">Left</button>
+          <button class="style-btn active" data-align="center" onclick="applyTextBoxAlign('center')">Center</button>
+          <button class="style-btn" data-align="right" onclick="applyTextBoxAlign('right')">Right</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Font size</div>
+        <div class="field-row">
+          <input type="range" id="textbox-size-slider" min="8" max="32" value="14" step="1" oninput="applyTextBoxSize(this.value)" style="flex:1">
+          <span id="textbox-size-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">14px</span>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.9)" onclick="applyTextBoxColor(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.85)" onclick="applyTextBoxColor(this)"></div>
+          <div class="color-swatch mini" style="background:#C9A962" data-color="#C9A962" onclick="applyTextBoxColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f9a84f" data-color="#f9a84f" onclick="applyTextBoxColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyTextBoxColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyTextBoxColor(this)"></div>
+          <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyTextBoxColor(this)"></div>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Background</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#1a1a2e" data-color="rgba(0,0,0,0.5)" onclick="applyTextBoxBg(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.15)" onclick="applyTextBoxBg(this)"></div>
+          <div class="color-swatch mini" style="background:transparent;border:1.5px solid var(--text-muted)" data-color="none" onclick="applyTextBoxBg(this)" title="No background"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Zone properties -->
+    <div class="panel-section" id="zone-edit-section" style="display:none">
+      <h3>Zone</h3>
+      <div class="field-group">
+        <div class="field-label">Fill colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#4f9cf9" data-color="rgba(79,156,249,0.18)" onclick="applyZoneFill(this)"></div>
+          <div class="color-swatch mini" style="background:#f9a84f" data-color="rgba(249,168,79,0.18)" onclick="applyZoneFill(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-color="rgba(249,79,79,0.18)" onclick="applyZoneFill(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="rgba(74,222,128,0.18)" onclick="applyZoneFill(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-color="rgba(255,215,0,0.18)" onclick="applyZoneFill(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.15)" onclick="applyZoneFill(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.25)" onclick="applyZoneFill(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('zone-fill')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#4f9cf9" data-color="rgba(79,156,249,0.6)" onclick="applyZoneBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#f9a84f" data-color="rgba(249,168,79,0.6)" onclick="applyZoneBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-color="rgba(249,79,79,0.6)" onclick="applyZoneBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="rgba(74,222,128,0.6)" onclick="applyZoneBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-color="rgba(255,215,0,0.6)" onclick="applyZoneBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.5)" onclick="applyZoneBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.6)" onclick="applyZoneBorder(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('zone-border')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border style</div>
+        <div class="style-btn-row">
+          <button class="style-btn" data-zstyle="solid" onclick="applyZoneBorderStyle('solid')">Solid</button>
+          <button class="style-btn active" data-zstyle="dashed" onclick="applyZoneBorderStyle('dashed')">Dashed</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="panel-section" id="size-section">
+      <h3>Size</h3>
+      <div class="slider-wrap">
+        <div class="slider-label"><span>Scale</span><span id="size-val">1.0×</span></div>
+        <input type="range" id="size-slider" min="50" max="220" value="100" oninput="applySize(this.value)">
+      </div>
+    </div>
+
+    <div class="panel-section" id="rotation-section" style="display:none">
+      <h3>Rotation</h3>
+      <div class="slider-wrap">
+        <div class="slider-label"><span>Angle</span><span id="rot-val">0°</span></div>
+        <input type="range" id="rot-slider" min="0" max="360" value="0" oninput="applyRotation(this.value)">
+      </div>
+    </div>
+
+    <div class="panel-section" id="del-section" style="display:none">
+      <button class="action-btn danger" onclick="deleteSelected()">Remove element</button>
+    </div>
+
+  </div><!-- /pane-element -->
+
+</div>
+
+<!-- Color picker modal -->
+<div class="modal-backdrop" id="color-picker-modal">
+  <div class="modal-box" style="width:240px">
+    <div class="modal-title">Pick colour</div>
+    <input type="color" id="color-picker-input" value="#ffffff" style="width:100%;height:40px;border:none;border-radius:6px;cursor:pointer;background:transparent">
+    <div class="field-row" style="gap:6px">
+      <span style="font-size:12px;color:var(--text-muted)">#</span>
+      <input type="text" id="color-picker-hex" maxlength="6" placeholder="ffffff" style="flex:1;padding:7px 9px;border-radius:8px;border:1.5px solid var(--border);background:var(--panel2);font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:var(--text);outline:none">
+    </div>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeColorPicker()">Cancel</button>
+      <button class="modal-btn confirm" onclick="confirmColorPicker()">Apply</button>
+    </div>
+  </div>
+</div>
+
+<!-- Export modal -->
+<div class="modal-backdrop" id="export-modal">
+  <div class="modal-box">
+    <div class="modal-title">Export Pitch</div>
+    <button class="export-format-btn active" id="fmt-png" onclick="selectFmt('png')">PNG <span style="font-size:10px;opacity:0.5">lossless, transparent-friendly</span></button>
+    <button class="export-format-btn" id="fmt-jpg" onclick="selectFmt('jpg')">JPG <span style="font-size:10px;opacity:0.5">smaller file size</span></button>
+    <div class="modal-row">
+      <button class="modal-btn cancel" onclick="closeExport()">Cancel</button>
+      <button class="modal-btn confirm" onclick="doExport()">Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- Feedback Widget -->
+<button id="feedback-bubble" onclick="toggleFeedback()" title="Send feedback">
+  <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 14l-2 4 4-2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
+  Leave feedback
+</button>
+
+<div id="feedback-panel" style="display:none">
+  <div class="fb-header">
+    <span class="fb-title">Send Feedback</span>
+    <button class="fb-close" onclick="toggleFeedback()">&times;</button>
+  </div>
+  <div class="fb-body">
+    <div class="fb-type-row">
+      <button class="fb-type-btn active" data-fbtype="improvement" onclick="setFeedbackType(this)">💡 Improvement</button>
+      <button class="fb-type-btn" data-fbtype="bug" onclick="setFeedbackType(this)">🐛 Bug</button>
+    </div>
+    <textarea id="fb-message" rows="4" placeholder="Tell us what you think…"></textarea>
+    <div class="fb-upload-area">
+      <label class="fb-upload-label" id="fb-upload-label">
+        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M4 6l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 12h12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        <span id="fb-upload-text">Attach screenshot (optional)</span>
+        <input type="file" id="fb-file" accept="image/*" onchange="onFeedbackFile(this)" hidden>
+      </label>
+    </div>
+    <button id="fb-submit" onclick="submitFeedback()">Send Feedback</button>
+    <div id="fb-status" style="display:none"></div>
+  </div>
+</div>
+
+<script type="module" src="js/app.js"></script>
+</body>
+</html>
