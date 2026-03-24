@@ -115,10 +115,17 @@ S.svg.addEventListener('click', e => {
 });
 
 // ─── Arrow Drawing ────────────────────────────────────────────────────────────
-S.svg.addEventListener('mousedown', e => {
+// Helper: get SVG point from mouse or touch event
+function getEventPoint(e) {
+  if (e.touches && e.touches.length) return S.getSVGPoint(e.touches[0]);
+  if (e.changedTouches && e.changedTouches.length) return S.getSVGPoint(e.changedTouches[0]);
+  return S.getSVGPoint(e);
+}
+
+function arrowStart(e) {
   if (S.tool !== 'arrow') return;
   e.preventDefault();
-  const pt = S.getSVGPoint(e);
+  const pt = getEventPoint(e);
   S.setArrowDrawing(true);
   S.setArrowStart(pt);
   const st = S.ARROW_STYLES[S.arrowType];
@@ -132,18 +139,22 @@ S.svg.addEventListener('mousedown', e => {
   preview.setAttribute('opacity', '0.6'); preview.setAttribute('pointer-events', 'none');
   S.objectsLayer.appendChild(preview);
   S.setArrowPreview(preview);
-});
+}
+S.svg.addEventListener('mousedown', arrowStart);
+S.svg.addEventListener('touchstart', arrowStart, { passive: false });
 
-S.svg.addEventListener('mousemove', e => {
+function arrowMove(e) {
   if (!S.arrowDrawing || !S.arrowPreview) return;
-  const pt = S.getSVGPoint(e);
+  const pt = getEventPoint(e);
   S.arrowPreview.setAttribute('x2', pt.x); S.arrowPreview.setAttribute('y2', pt.y);
-});
+}
+S.svg.addEventListener('mousemove', arrowMove);
+S.svg.addEventListener('touchmove', arrowMove, { passive: false });
 
-S.svg.addEventListener('mouseup', e => {
+function arrowEnd(e) {
   if (!S.arrowDrawing || !S.arrowPreview) return;
   S.setArrowDrawing(false);
-  const pt = S.getSVGPoint(e);
+  const pt = getEventPoint(e);
   S.arrowPreview.remove();
   S.setArrowPreview(null);
   const dx = pt.x - S.arrowStart.x, dy = pt.y - S.arrowStart.y;
@@ -152,7 +163,9 @@ S.svg.addEventListener('mouseup', e => {
     const arrow = addArrow(S.arrowStart.x, S.arrowStart.y, pt.x, pt.y, S.arrowType);
     if (arrow) { setTool('select'); select(arrow); }
   }
-});
+}
+S.svg.addEventListener('mouseup', arrowEnd);
+S.svg.addEventListener('touchend', arrowEnd);
 
 // ─── Copy / Paste ────────────────────────────────────────────────────────────
 let clipboard = null;
@@ -451,3 +464,17 @@ window.toggleFeedback = toggleFeedback;
 window.setFeedbackType = setFeedbackType;
 window.submitFeedback = submitFeedback;
 window.onFeedbackFile = onFeedbackFile;
+
+// ─── Mobile panel toggle ──────────────────────────────────────────────────────
+function toggleMobilePanel() {
+  const panel = document.getElementById('side-panel');
+  const backdrop = document.getElementById('mobile-backdrop');
+  const isOpen = panel.classList.toggle('open');
+  if (backdrop) backdrop.classList.toggle('show', isOpen);
+}
+window.toggleMobilePanel = toggleMobilePanel;
+
+// ─── Mobile: auto-switch to vertical pitch for better fit ─────────────────────
+if (window.innerWidth <= 768 && S.currentPitchLayout === 'full-h') {
+  setPitch('full-v');
+}
