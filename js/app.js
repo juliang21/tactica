@@ -273,7 +273,15 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'spotlight') placed = addSpotlight(pt.x, pt.y);
   else if (S.tool === 'vision') placed = addVision(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
-  if (placed) { trackElementInserted(placed.dataset.type); setTool('select'); select(placed); }
+  if (placed) {
+    trackElementInserted(placed.dataset.type);
+    // Players stay in placement mode so you can keep adding
+    if (S.tool === 'player-a' || S.tool === 'player-b') {
+      // Don't switch tool — stay in player mode
+    } else {
+      setTool('select'); select(placed);
+    }
+  }
   else if (S.tool === 'select') {
     // Only deselect if click was on empty pitch, not on an element
     if (!e.target.closest('[data-type]')) deselect();

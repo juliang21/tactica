@@ -568,7 +568,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 }
 .ctx-label {
   font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
-  color: var(--accent); white-space: nowrap; margin-right: auto;
+  color: var(--text); white-space: nowrap; margin-right: auto;
   letter-spacing: 0.5px;
 }
 .ctx-btn {
@@ -581,8 +581,8 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 }
 .ctx-btn:hover { border-color: #444; color: var(--text); }
 .ctx-btn.ctx-props {
-  border-color: var(--accent); color: var(--accent);
-  background: rgba(201,169,98,0.08);
+  border-color: var(--text-muted); color: var(--text);
+  background: rgba(255,255,255,0.06);
 }
 .ctx-btn.ctx-delete {
   border-color: #3A1520; color: #F87171;
@@ -613,15 +613,15 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
     overflow: hidden;
   }
 
-  /* Logo — stack vertically on mobile */
+  /* Logo — inline on mobile, aligned with dropdown row */
   .tool-logo {
-    position: fixed; top: 4px; left: 12px; z-index: 200;
+    position: fixed; top: 10px; left: 12px; z-index: 200;
     font-size: 11px; letter-spacing: 2px;
-    display: flex; flex-direction: column; align-items: flex-start; gap: 1px;
-    line-height: 1.2;
+    display: flex; flex-direction: row; align-items: center; gap: 5px;
+    line-height: 1;
   }
   .beta-badge {
-    font-size: 7px;
+    font-size: 7px; padding: 1px 4px;
   }
 
   /* Toolbar → horizontal bottom bar */
