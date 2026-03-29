@@ -1,6 +1,7 @@
 import * as S from './state.js';
-import { deselect, select, switchTab, applyTransform, updateArrowVisual } from './interaction.js';
+import { deselect, select, switchTab, applyTransform, updateArrowVisual, updateSpotlightNameBg } from './interaction.js';
 import { addPlayer, rewrapTextBox } from './elements.js';
+import { trackElementEdited } from './analytics.js';
 
 // ─── Tool Selection ───────────────────────────────────────────────────────────
 export function setTool(t) {
@@ -126,6 +127,7 @@ export function confirmNumber() {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
   const val = document.getElementById('number-input').value.trim();
   if (!val) return;
+  trackElementEdited('player', 'number');
   S.selectedEl.dataset.label = val;
   S.selectedEl.querySelectorAll('text')[0].textContent = val;
 }
@@ -141,6 +143,7 @@ export function liveUpdateName(val) {
 export function confirmName() {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
   const val = document.getElementById('name-input').value.trim();
+  trackElementEdited('player', 'name');
   S.selectedEl.dataset.playerName = val;
   const nl = S.selectedEl.querySelector('.player-name');
   if (!nl) return;
@@ -152,6 +155,7 @@ export function confirmName() {
 export function applyNameSize(val) {
   document.getElementById('name-size-val').textContent = val + 'px';
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  trackElementEdited('player', 'name_size');
   const nl = S.selectedEl.querySelector('.player-name');
   if (nl) nl.setAttribute('font-size', val);
   S.selectedEl.dataset.nameSize = val;
@@ -162,6 +166,7 @@ export function applyNameColor(swatchEl) {
   swatchEl.classList.add('selected');
   const color = swatchEl.dataset.color;
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  trackElementEdited('player', 'name_color');
   const nl = S.selectedEl.querySelector('.player-name');
   if (nl) nl.setAttribute('fill', color);
   S.selectedEl.dataset.nameColor = color;
@@ -172,6 +177,7 @@ export function applyNameBg(swatchEl) {
   swatchEl.classList.add('selected');
   const color = swatchEl.dataset.color;
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  trackElementEdited('player', 'name_bg');
   S.selectedEl.dataset.nameBg = color;
   updatePlayerNameBg(S.selectedEl);
 }
@@ -208,12 +214,14 @@ export function updatePlayerNameBg(g) {
 // ─── Player Fill & Border ─────────────────────────────────────────────────────
 export function applyPlayerFill(swatchEl) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  trackElementEdited('player', 'fill_color');
   const color = swatchEl.dataset.color;
   setPlayerColor(S.selectedEl, color);
 }
 
 export function applyPlayerBorder(swatchEl) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  trackElementEdited('player', 'border_color');
   const color = swatchEl.dataset.color;
   const circ = S.selectedEl.querySelector('circle');
   if (!circ) return;
@@ -268,6 +276,12 @@ export function confirmColorPicker() {
   if (!S.selectedEl) return;
   if (colorPickerTarget === 'arrow') {
     applyArrowColorValue(hex);
+  } else if (colorPickerTarget === 'spotlight') {
+    // Convert hex to rgba for spotlight
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    setSpotlightColor(S.selectedEl, `rgba(${r},${g},${b},0.7)`);
   } else if (colorPickerTarget === 'zone-fill') {
     const shape = S.selectedEl.querySelector('rect,ellipse');
     if (shape) shape.setAttribute('fill', hex);
@@ -327,12 +341,14 @@ function applyArrowColorValue(color) {
 }
 
 export function applyArrowColor(swatchEl) {
+  trackElementEdited('arrow', 'color');
   applyArrowColorValue(swatchEl.dataset.color);
 }
 
 export function applyArrowStyle(style) {
   document.querySelectorAll('.style-btn').forEach(b => b.classList.toggle('active', b.dataset.style === style));
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
+  trackElementEdited('arrow', 'style');
   const line = S.selectedEl.querySelector('line');
   if (!line) return;
   const map = { solid: '', dashed: '6,4', dotted: '2,5' };
@@ -345,6 +361,7 @@ export function applyArrowStyle(style) {
 export function applyArrowWidth(val) {
   document.getElementById('arrow-width-val').textContent = val;
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
+  trackElementEdited('arrow', 'width');
   S.selectedEl.dataset.arrowWidth = val;
   S.selectedEl.querySelector('line')?.setAttribute('stroke-width', val);
 }
@@ -358,6 +375,7 @@ export function liveUpdateTextBox(val) {
 
 export function confirmTextBox() {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'textbox') return;
+  trackElementEdited('textbox', 'text');
   const val = document.getElementById('textbox-input').value;
   S.selectedEl.dataset.textContent = val;
   rewrapTextBox(S.selectedEl);
@@ -366,12 +384,14 @@ export function confirmTextBox() {
 export function applyTextBoxSize(val) {
   document.getElementById('textbox-size-val').textContent = val + 'px';
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'textbox') return;
+  trackElementEdited('textbox', 'size');
   S.selectedEl.dataset.textSize = val;
   rewrapTextBox(S.selectedEl);
 }
 
 export function applyTextBoxColor(swatchEl) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'textbox') return;
+  trackElementEdited('textbox', 'color');
   const color = swatchEl.dataset.color;
   S.selectedEl.dataset.textColor = color;
   const txt = S.selectedEl.querySelector('text');
@@ -380,6 +400,7 @@ export function applyTextBoxColor(swatchEl) {
 
 export function applyTextBoxBg(swatchEl) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'textbox') return;
+  trackElementEdited('textbox', 'background');
   const color = swatchEl.dataset.color;
   S.selectedEl.dataset.textBg = color;
   rewrapTextBox(S.selectedEl);
@@ -388,19 +409,133 @@ export function applyTextBoxBg(swatchEl) {
 export function applyTextBoxAlign(align) {
   document.querySelectorAll('[data-align]').forEach(b => b.classList.toggle('active', b.dataset.align === align));
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'textbox') return;
+  trackElementEdited('textbox', 'alignment');
   S.selectedEl.dataset.textAlign = align;
   rewrapTextBox(S.selectedEl);
+}
+
+// ─── Spotlight Properties ────────────────────────────────────────────────────
+export function applySpotlightColor(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'spotlight') return;
+  trackElementEdited('spotlight', 'color');
+  const color = swatchEl.dataset.spotColor;
+  setSpotlightColor(S.selectedEl, color);
+}
+
+export function setSpotlightColor(el, color) {
+  el.dataset.spotColor = color;
+  // Parse RGBA components from color
+  const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  const r = match ? match[1] : 255, g = match ? match[2] : 255, b = match ? match[3] : 255;
+
+  // Update beam (cone) gradient stops
+  const beamGradId = 'spot-beam-' + el.id;
+  const glowGradId = 'spot-glow-' + el.id;
+  const ringGradId = 'spot-ring-' + el.id;
+  const beamGrad = document.getElementById(beamGradId);
+  const glowGrad = document.getElementById(glowGradId);
+  const ringGrad = document.getElementById(ringGradId);
+
+  if (beamGrad) {
+    beamGrad.innerHTML = `
+      <stop offset="0" stop-color="rgba(${r},${g},${b},1)"/>
+      <stop offset="0.2" stop-color="rgba(${r},${g},${b},0.7)"/>
+      <stop offset="0.5" stop-color="rgba(${r},${g},${b},0.3)"/>
+      <stop offset="0.8" stop-color="rgba(${r},${g},${b},0.08)"/>
+      <stop offset="1" stop-color="rgba(${r},${g},${b},0)"/>`;
+  }
+  if (glowGrad) {
+    glowGrad.innerHTML = `
+      <stop offset="0" stop-color="rgba(${r},${g},${b},0.85)"/>
+      <stop offset="0.4" stop-color="rgba(${r},${g},${b},0.4)"/>
+      <stop offset="1" stop-color="rgba(${r},${g},${b},0)"/>`;
+  }
+  if (ringGrad) {
+    ringGrad.innerHTML = `
+      <stop offset="0" stop-color="rgba(${r},${g},${b},0.4)"/>
+      <stop offset="1" stop-color="rgba(${r},${g},${b},0.15)"/>`;
+  }
+
+  // Update ring ellipse stroke
+  const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
+  const strokeColor = `rgba(${r},${g},${b},0.85)`;
+  if (ring) {
+    ring.setAttribute('stroke', strokeColor);
+    el.dataset.savedStroke = strokeColor;
+  }
+}
+
+// ─── Spotlight Name ──────────────────────────────────────────────────────────
+export function liveUpdateSpotName(val) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'spotlight') return;
+  S.selectedEl.dataset.spotName = val.trim();
+  const nl = S.selectedEl.querySelector('.spotlight-name');
+  if (!nl) return;
+  if (val.trim()) {
+    nl.textContent = val; nl.style.display = '';
+    applyTransform(S.selectedEl);
+  } else {
+    nl.style.display = 'none';
+    const bg = S.selectedEl.querySelector('.spotlight-name-bg');
+    if (bg) bg.style.display = 'none';
+  }
+}
+
+export function confirmSpotName() {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'spotlight') return;
+  trackElementEdited('spotlight', 'name');
+  const val = document.getElementById('spot-name-input').value.trim();
+  S.selectedEl.dataset.spotName = val;
+  const nl = S.selectedEl.querySelector('.spotlight-name');
+  if (!nl) return;
+  if (val) {
+    nl.textContent = val; nl.style.display = '';
+    applyTransform(S.selectedEl);
+  } else {
+    nl.style.display = 'none'; nl.textContent = '';
+    const bg = S.selectedEl.querySelector('.spotlight-name-bg');
+    if (bg) bg.style.display = 'none';
+  }
+}
+
+export function applySpotNameSize(val) {
+  document.getElementById('spot-name-size-val').textContent = val + 'px';
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'spotlight') return;
+  trackElementEdited('spotlight', 'name_size');
+  const nl = S.selectedEl.querySelector('.spotlight-name');
+  if (nl) nl.setAttribute('font-size', val);
+  S.selectedEl.dataset.spotNameSize = val;
+  applyTransform(S.selectedEl);
+}
+
+export function applySpotNameColor(swatchEl) {
+  const color = swatchEl.dataset.color;
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'spotlight') return;
+  trackElementEdited('spotlight', 'name_color');
+  const nl = S.selectedEl.querySelector('.spotlight-name');
+  if (nl) nl.setAttribute('fill', color);
+  S.selectedEl.dataset.spotNameColor = color;
+}
+
+export function applySpotNameBg(swatchEl) {
+  const color = swatchEl.dataset.color;
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'spotlight') return;
+  trackElementEdited('spotlight', 'name_bg');
+  S.selectedEl.dataset.spotNameBg = color;
+  updateSpotlightNameBg(S.selectedEl);
 }
 
 // ─── Zone Properties ─────────────────────────────────────────────────────────
 export function applyZoneFill(swatchEl) {
   if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
+  trackElementEdited(S.selectedEl.dataset.type, 'fill_color');
   const shape = S.selectedEl.querySelector('rect,ellipse');
   if (shape) shape.setAttribute('fill', swatchEl.dataset.color);
 }
 
 export function applyZoneBorder(swatchEl) {
   if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
+  trackElementEdited(S.selectedEl.dataset.type, 'border_color');
   const shape = S.selectedEl.querySelector('rect,ellipse');
   if (shape) {
     shape.setAttribute('stroke', swatchEl.dataset.color);
@@ -412,6 +547,7 @@ export function applyZoneBorder(swatchEl) {
 export function applyZoneBorderStyle(style) {
   document.querySelectorAll('[data-zstyle]').forEach(b => b.classList.toggle('active', b.dataset.zstyle === style));
   if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
+  trackElementEdited(S.selectedEl.dataset.type, 'border_style');
   const shape = S.selectedEl.querySelector('rect,ellipse');
   if (!shape) return;
   if (style === 'solid') {
@@ -425,6 +561,7 @@ export function applyZoneBorderStyle(style) {
 export function applySize(val) {
   document.getElementById('size-val').textContent = (val/100).toFixed(1) + '×';
   if (!S.selectedEl) return;
+  trackElementEdited(S.selectedEl.dataset.type, 'scale');
   S.selectedEl.dataset.scale = val/100;
   const t = S.selectedEl.dataset.type;
   if (t === 'player' || t === 'ball' || t === 'cone' || t.startsWith('shadow')) applyTransform(S.selectedEl);
@@ -434,6 +571,7 @@ export function applySize(val) {
 export function applyRotation(val) {
   document.getElementById('rot-val').textContent = Math.round(val) + '°';
   if (!S.selectedEl) return;
+  trackElementEdited(S.selectedEl.dataset.type, 'rotation');
   S.selectedEl.dataset.rotation = val;
   const t = S.selectedEl.dataset.type;
   if (t.startsWith('shadow')) applyTransform(S.selectedEl);

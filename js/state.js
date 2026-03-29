@@ -20,6 +20,14 @@ export let currentPitchLayout = 'full-h';
 export let pitchColors = { s1: '#3a7a38', s2: '#367035', line: 'rgba(255,255,255,0.55)' };
 export let exportFmt = 'png';
 
+// ─── Image Analysis Mode ─────────────────────────────────────────────────────
+export let appMode = 'pitch';           // 'pitch' | 'image'
+export let imageData = null;            // base64 data URL of uploaded image
+export let imageDimensions = null;      // { width, height }
+export function setAppMode(v) { appMode = v; }
+export function setImageData(v) { imageData = v; }
+export function setImageDimensions(v) { imageDimensions = v; }
+
 // ─── Undo Stack ──────────────────────────────────────────────────────────────
 export const undoStack = [];
 const MAX_UNDO = 40;

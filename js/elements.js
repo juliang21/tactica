@@ -377,3 +377,118 @@ export function addShadow(x, y, type) {
   S.objectsLayer.appendChild(g);
   return g;
 }
+
+// ─── Spotlight ────────────────────────────────────────────────────────────────
+export function addSpotlight(x, y) {
+  const svgEl = S.svg;
+  const topY = 0;
+
+  const rx = 28, ry = 5;      // ellipse radii (flat = floor shadow feel)
+  const sourceW = 6;           // narrow beam source width at top
+
+  const id = 'spot-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'spotlight';
+  g.dataset.cx = x; g.dataset.cy = y;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.rx = rx; g.dataset.ry = ry;
+  g.dataset.spotColor = 'rgba(255,255,255,0.85)';
+
+  // Create unique gradient IDs
+  const beamGradId = 'spot-beam-' + id;
+  const glowGradId = 'spot-glow-' + id;
+  const ringGradId = 'spot-ring-' + id;
+
+  // SVG defs for gradients
+  let defs = svgEl.querySelector('defs');
+  if (!defs) { defs = document.createElementNS(ns, 'defs'); svgEl.prepend(defs); }
+
+  // Beam gradient — cone fade from bright at source to transparent at base
+  const beamGrad = document.createElementNS(ns, 'linearGradient');
+  beamGrad.setAttribute('id', beamGradId);
+  beamGrad.setAttribute('x1', '0'); beamGrad.setAttribute('y1', '0');
+  beamGrad.setAttribute('x2', '0'); beamGrad.setAttribute('y2', '1');
+  beamGrad.innerHTML = `
+    <stop offset="0" stop-color="rgba(255,255,255,1)"/>
+    <stop offset="0.2" stop-color="rgba(255,255,255,0.7)"/>
+    <stop offset="0.5" stop-color="rgba(255,255,255,0.3)"/>
+    <stop offset="0.8" stop-color="rgba(255,255,255,0.08)"/>
+    <stop offset="1" stop-color="rgba(255,255,255,0)"/>`;
+  defs.appendChild(beamGrad);
+
+  // Glow radial gradient for the larger base glow ellipse
+  const glowGrad = document.createElementNS(ns, 'radialGradient');
+  glowGrad.setAttribute('id', glowGradId);
+  glowGrad.innerHTML = `
+    <stop offset="0" stop-color="rgba(255,255,255,0.85)"/>
+    <stop offset="0.4" stop-color="rgba(255,255,255,0.4)"/>
+    <stop offset="1" stop-color="rgba(255,255,255,0)"/>`;
+  defs.appendChild(glowGrad);
+
+  // Ring radial gradient (subtle white fill)
+  const ringGrad = document.createElementNS(ns, 'radialGradient');
+  ringGrad.setAttribute('id', ringGradId);
+  ringGrad.innerHTML = `
+    <stop offset="0" stop-color="rgba(255,255,255,0.4)"/>
+    <stop offset="1" stop-color="rgba(255,255,255,0.15)"/>`;
+  defs.appendChild(ringGrad);
+
+  // Cone beam — trapezoid path (narrow at top, wide at base) with blur
+  const beam = document.createElementNS(ns, 'path');
+  const beamW = rx * 2;
+  beam.setAttribute('d', `M ${x - sourceW} ${topY} L ${x - beamW/2} ${y} L ${x + beamW/2} ${y} L ${x + sourceW} ${topY} Z`);
+  beam.setAttribute('fill', `url(#${beamGradId})`);
+  beam.setAttribute('filter', 'url(#spotlight-cone-blur)');
+  beam.classList.add('spotlight-beam');
+
+  // Soft glow at base (larger blurred ellipse, 1.5x ring width)
+  const glow = document.createElementNS(ns, 'ellipse');
+  glow.setAttribute('cx', x); glow.setAttribute('cy', y);
+  glow.setAttribute('rx', rx * 1.5); glow.setAttribute('ry', ry * 3);
+  glow.setAttribute('fill', `url(#${glowGradId})`);
+  glow.setAttribute('filter', 'url(#spotlight-glow-blur)');
+  glow.classList.add('spotlight-glow');
+
+  // Ring — the main ellipse ring with gradient fill and thin stroke
+  const ellipse = document.createElementNS(ns, 'ellipse');
+  ellipse.setAttribute('cx', x); ellipse.setAttribute('cy', y);
+  ellipse.setAttribute('rx', rx); ellipse.setAttribute('ry', ry);
+  ellipse.setAttribute('fill', `url(#${ringGradId})`);
+  ellipse.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+  ellipse.setAttribute('stroke-width', '1.5');
+  ellipse.classList.add('spotlight-ring');
+
+  // Name label with dark rounded-rect background, positioned below ring
+  const nameBgRect = document.createElementNS(ns, 'rect');
+  nameBgRect.setAttribute('class', 'spotlight-name-bg');
+  nameBgRect.setAttribute('rx', '4'); nameBgRect.setAttribute('ry', '4');
+  nameBgRect.setAttribute('fill', 'rgba(0,0,0,0.5)');
+  nameBgRect.setAttribute('pointer-events', 'none');
+  nameBgRect.style.display = 'none';
+
+  const nameLabel = document.createElementNS(ns, 'text');
+  nameLabel.setAttribute('class', 'spotlight-name');
+  nameLabel.setAttribute('text-anchor', 'middle');
+  nameLabel.setAttribute('dominant-baseline', 'hanging');
+  nameLabel.setAttribute('font-family', 'Poppins, sans-serif');
+  nameLabel.setAttribute('font-size', '11');
+  nameLabel.setAttribute('font-weight', '600');
+  nameLabel.setAttribute('fill', 'rgba(255,255,255,0.9)');
+  nameLabel.setAttribute('x', x);
+  nameLabel.setAttribute('y', y + ry + 10);
+  nameLabel.setAttribute('pointer-events', 'none');
+  nameLabel.style.display = 'none';
+
+  g.appendChild(glow);
+  g.appendChild(beam);
+  g.appendChild(ellipse);
+  g.appendChild(nameBgRect);
+  g.appendChild(nameLabel);
+  g.setAttribute('transform', `translate(0,0)`);
+  makeDraggable(g);
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  S.objectsLayer.appendChild(g);
+  return g;
+}

@@ -18,6 +18,8 @@ export function setPitchColor(dotEl) {
 }
 
 export function rebuildPitch() {
+  if (S.appMode === 'image') return;
+
   const svgEl = S.svg;
   const isVertical = S.currentPitchLayout.endsWith('-v');
   const isHalf = S.currentPitchLayout.startsWith('half');

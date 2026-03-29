@@ -1,8 +1,48 @@
 import * as S from './state.js';
+import { trackElementSelected } from './analytics.js';
 
 // ─── Textbox rewrap callback (set from app.js to avoid circular import) ──────
 let _rewrapFn = null;
 export function registerRewrap(fn) { _rewrapFn = fn; }
+
+// ─── Spotlight name background helper ─────────────────────────────────────────
+export function updateSpotlightNameBg(g) {
+  const nl = g.querySelector('.spotlight-name');
+  let bgRect = g.querySelector('.spotlight-name-bg');
+
+  if (!nl || nl.style.display === 'none') {
+    if (bgRect) bgRect.style.display = 'none';
+    return;
+  }
+
+  // Default to dark bg unless explicitly set to 'none'
+  const bgColor = g.dataset.spotNameBg || 'rgba(0,0,0,0.5)';
+
+  if (bgColor === 'none') {
+    if (bgRect) bgRect.style.display = 'none';
+    return;
+  }
+
+  const bbox = nl.getBBox();
+  if (!bbox.width) {
+    if (bgRect) bgRect.style.display = 'none';
+    return;
+  }
+
+  if (!bgRect) {
+    bgRect = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+    bgRect.setAttribute('class', 'spotlight-name-bg');
+    bgRect.setAttribute('rx', '4'); bgRect.setAttribute('ry', '4');
+    bgRect.setAttribute('pointer-events', 'none');
+    g.insertBefore(bgRect, nl);
+  }
+  bgRect.style.display = '';
+  bgRect.setAttribute('x', bbox.x - 5);
+  bgRect.setAttribute('y', bbox.y - 2);
+  bgRect.setAttribute('width', bbox.width + 10);
+  bgRect.setAttribute('height', bbox.height + 4);
+  bgRect.setAttribute('fill', bgColor);
+}
 
 // ─── Transforms ───────────────────────────────────────────────────────────────
 export function applyTransform(el) {
@@ -30,6 +70,40 @@ export function applyTransform(el) {
     sh.setAttribute('x', cx-hw); sh.setAttribute('y', cy-hh);
     sh.setAttribute('width', hw*2); sh.setAttribute('height', hh*2);
     sh.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+  } else if (t === 'spotlight') {
+    const rx = parseFloat(el.dataset.rx || '28') * scale;
+    const ry = parseFloat(el.dataset.ry || '5') * scale;
+    const sourceW = 6;
+    const beamW = rx * 2;
+
+    // Update cone beam path
+    const beam = el.querySelector('.spotlight-beam') || el.querySelector('path');
+    if (beam) {
+      beam.setAttribute('d', `M ${cx - sourceW} 0 L ${cx - beamW/2} ${cy} L ${cx + beamW/2} ${cy} L ${cx + sourceW} 0 Z`);
+    }
+
+    // Update glow ellipse (1.5x ring width)
+    const glow = el.querySelector('.spotlight-glow');
+    if (glow) {
+      glow.setAttribute('cx', cx); glow.setAttribute('cy', cy);
+      glow.setAttribute('rx', rx * 1.5); glow.setAttribute('ry', ry * 3);
+    }
+
+    // Update ring ellipse
+    const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
+    if (ring) {
+      ring.setAttribute('cx', cx); ring.setAttribute('cy', cy);
+      ring.setAttribute('rx', rx); ring.setAttribute('ry', ry);
+    }
+
+    // Reposition name label
+    const nameTxt = el.querySelector('.spotlight-name');
+    if (nameTxt) {
+      nameTxt.setAttribute('x', cx);
+      nameTxt.setAttribute('y', cy + ry + 10);
+    }
+    // Reposition name bg
+    updateSpotlightNameBg(el);
   }
 }
 
@@ -56,6 +130,7 @@ function moveElement(el, nx, ny) {
   if (t === 'player' || t === 'ball' || t === 'cone') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
+  else if (t === 'spotlight') applyTransform(el);
   else if (t.startsWith('shadow')) applyTransform(el);
 }
 
@@ -64,6 +139,7 @@ export function select(el) {
   if (S.selectedEl && S.selectedEl !== el) deselectVisual(S.selectedEl);
   S.setSelectedEl(el);
   const type = el.dataset.type;
+  trackElementSelected(type);
 
   // Visual highlight
   if (type === 'player' || type === 'ball' || type === 'cone') {
@@ -89,6 +165,14 @@ export function select(el) {
     }
     showZoneHandles(el);
   }
+  if (type === 'spotlight') {
+    const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
+    if (ring) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = ring.getAttribute('stroke');
+      ring.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+    showSpotlightHandles(el);
+  }
 
   // Info label
   const typeLabel = type === 'player' ? 'Player #' + el.dataset.label
@@ -96,6 +180,7 @@ export function select(el) {
     : type === 'cone' ? 'Cone'
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
     : type === 'textbox' ? 'Text'
+    : type === 'spotlight' ? 'Spotlight'
     : 'Zone';
   const hint = type === 'player' ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
@@ -103,6 +188,7 @@ export function select(el) {
   const arrowSec = document.getElementById('arrow-edit-section');
   const zoneSec = document.getElementById('zone-edit-section');
   const textboxSec = document.getElementById('textbox-edit-section');
+  const spotlightSec = document.getElementById('spotlight-edit-section');
   const delSec = document.getElementById('del-section');
 
   // Always switch to element tab
@@ -111,6 +197,7 @@ export function select(el) {
   arrowSec.style.display = 'none';
   zoneSec.style.display = 'none';
   textboxSec.style.display = 'none';
+  spotlightSec.style.display = 'none';
   delSec.style.display = '';
 
   const isArrow = type === 'arrow';
@@ -145,6 +232,12 @@ export function select(el) {
     document.getElementById('textbox-size-val').textContent = tSize + 'px';
     const tAlign = el.dataset.textAlign || 'center';
     document.querySelectorAll('[data-align]').forEach(b => b.classList.toggle('active', b.dataset.align === tAlign));
+  } else if (type === 'spotlight') {
+    spotlightSec.style.display = '';
+    document.getElementById('spot-name-input').value = el.dataset.spotName || '';
+    const sNameSize = el.dataset.spotNameSize || '11';
+    document.getElementById('spot-name-size-slider').value = sNameSize;
+    document.getElementById('spot-name-size-val').textContent = sNameSize + 'px';
   } else if (isZone) {
     zoneSec.style.display = '';
     // Set active border style button based on current shape
@@ -202,6 +295,13 @@ export function deselectVisual(el) {
       delete el.dataset.savedStroke;
     }
   }
+  if (t === 'spotlight') {
+    const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
+    if (ring && el.dataset.savedStroke) {
+      ring.setAttribute('stroke', el.dataset.savedStroke);
+      delete el.dataset.savedStroke;
+    }
+  }
 }
 
 export function deselect() {
@@ -214,6 +314,7 @@ export function deselect() {
   document.getElementById('arrow-edit-section').style.display = 'none';
   document.getElementById('zone-edit-section').style.display = 'none';
   document.getElementById('textbox-edit-section').style.display = 'none';
+  document.getElementById('spotlight-edit-section').style.display = 'none';
   document.getElementById('rotation-section').style.display = 'none';
   document.getElementById('size-section').style.display = 'none';
 }
@@ -230,6 +331,7 @@ export function deleteSelected() {
   document.getElementById('arrow-edit-section').style.display = 'none';
   document.getElementById('zone-edit-section').style.display = 'none';
   document.getElementById('textbox-edit-section').style.display = 'none';
+  document.getElementById('spotlight-edit-section').style.display = 'none';
 }
 
 // ─── Tab Switcher ─────────────────────────────────────────────────────────────
@@ -345,6 +447,22 @@ export function showZoneHandles(el) {
   S.svg.appendChild(handleGroup);
 }
 
+// ── Spotlight handles (left/right resize) ──
+export function showSpotlightHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'spotlight';
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const rx = parseFloat(el.dataset.rx || '28') * parseFloat(el.dataset.scale || '1');
+
+  handleGroup.appendChild(createHandle(ns, cx - rx, cy, 'spot-left', 'ew-resize'));
+  handleGroup.appendChild(createHandle(ns, cx + rx, cy, 'spot-right', 'ew-resize'));
+  S.svg.appendChild(handleGroup);
+}
+
 export function removeHandles() {
   if (handleGroup) { handleGroup.remove(); handleGroup = null; }
   S.setEndpointDragging(null);
@@ -397,6 +515,12 @@ function updateHandlePositions(el) {
     children[5]?.setAttribute('cx', sr.x); children[5]?.setAttribute('cy', sr.y);
     children[6]?.setAttribute('cx', st.x); children[6]?.setAttribute('cy', st.y);
     children[7]?.setAttribute('cx', sb.x); children[7]?.setAttribute('cy', sb.y);
+  } else if (type === 'spotlight') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const rx = parseFloat(el.dataset.rx || '28') * parseFloat(el.dataset.scale || '1');
+    const children = handleGroup.children;
+    children[0]?.setAttribute('cx', cx - rx); children[0]?.setAttribute('cy', cy);
+    children[1]?.setAttribute('cx', cx + rx); children[1]?.setAttribute('cy', cy);
   }
 }
 
@@ -417,6 +541,8 @@ function onEndpointDrag(e) {
 
   if (t === 'arrow') {
     onArrowEndpointDrag(el, pt);
+  } else if (t === 'spotlight') {
+    onSpotlightHandleDrag(el, pt);
   } else if (t.startsWith('shadow') || t === 'textbox') {
     onZoneHandleDrag(el, pt);
   }
@@ -440,6 +566,16 @@ function onArrowEndpointDrag(el, pt) {
   el.dataset.scale = '1'; el.dataset.rotation = '0';
 
   updateArrowVisual(el);
+  updateHandlePositions(el);
+}
+
+function onSpotlightHandleDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx);
+  const newRx = Math.max(12, Math.abs(pt.x - cx));   // min radius 12
+  el.dataset.rx = newRx;
+  // Keep ry proportional (flat ratio)
+  el.dataset.ry = Math.max(3, newRx * 5 / 28);
+  applyTransform(el);
   updateHandlePositions(el);
 }
 
@@ -580,7 +716,7 @@ function onDrag(e) {
   moveElement(S.selectedEl, pt.x - S.dragOffX, pt.y - S.dragOffY);
   // Update handles if dragging the whole element
   const dt = S.selectedEl.dataset.type;
-  if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox') updateHandlePositions(S.selectedEl);
+  if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight') updateHandlePositions(S.selectedEl);
 }
 
 function stopDrag() {

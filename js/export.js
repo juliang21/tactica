@@ -1,7 +1,9 @@
 import * as S from './state.js';
 import { deselectVisual, select } from './interaction.js';
+import { trackExportClicked, trackExportCompleted } from './analytics.js';
 
 export function exportImage() {
+  trackExportClicked();
   document.getElementById('export-modal').style.display = 'flex';
 }
 
@@ -16,6 +18,7 @@ export function closeExport() {
 }
 
 export function doExport() {
+  trackExportCompleted(S.exportFmt || 'png');
   closeExport();
   const prevSelected = S.selectedEl;
   if (S.selectedEl) deselectVisual(S.selectedEl);
@@ -37,6 +40,17 @@ export function doExport() {
   document.body.appendChild(canvas);
   const ctx = canvas.getContext('2d');
   ctx.scale(SCALE, SCALE);
+
+  // Image mode: draw uploaded image as background, then render overlays
+  if (S.appMode === 'image' && S.imageData) {
+    const bgImg = new Image();
+    bgImg.onload = () => {
+      ctx.drawImage(bgImg, 0, 0, W, H);
+      renderOverlays(ctx, W, H, SCALE, canvas, prevSelected);
+    };
+    bgImg.src = S.imageData;
+    return;
+  }
 
   // Pitch stripes
   if (isV) {
@@ -130,6 +144,10 @@ export function doExport() {
     }
   }
 
+  renderOverlays(ctx, W, H, SCALE, canvas, prevSelected);
+}
+
+function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
   // Objects (shadows, arrows)
   document.querySelectorAll('#objects-layer > g').forEach(g => {
     const type = g.dataset.type;
@@ -162,6 +180,78 @@ export function doExport() {
       if (sDash) { ctx.setLineDash(sDash.split(',').map(Number)); } else { ctx.setLineDash([]); }
       ctx.stroke(); ctx.setLineDash([]);
       ctx.restore();
+    } else if (type === 'spotlight') {
+      const rx = parseFloat(g.dataset.rx || '28') * sc;
+      const ry = parseFloat(g.dataset.ry || '5') * sc;
+      const beamW = rx * 2;
+      const sourceW = 6;
+
+      // Cone beam — trapezoid with gradient and blur
+      ctx.save();
+      ctx.filter = 'blur(6px)';
+      ctx.beginPath();
+      ctx.moveTo(cx - sourceW, 0);
+      ctx.lineTo(cx - beamW / 2, cy);
+      ctx.lineTo(cx + beamW / 2, cy);
+      ctx.lineTo(cx + sourceW, 0);
+      ctx.closePath();
+      const beamGrad = ctx.createLinearGradient(cx, 0, cx, cy);
+      beamGrad.addColorStop(0, 'rgba(255,255,255,1)');
+      beamGrad.addColorStop(0.2, 'rgba(255,255,255,0.7)');
+      beamGrad.addColorStop(0.5, 'rgba(255,255,255,0.3)');
+      beamGrad.addColorStop(0.8, 'rgba(255,255,255,0.08)');
+      beamGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = beamGrad;
+      ctx.fill();
+      ctx.restore();
+
+      // Glow ellipse (1.5x ring width, blurred)
+      ctx.save();
+      ctx.filter = 'blur(5px)';
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx * 1.5, ry * 3, 0, 0, Math.PI * 2);
+      const glowGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx * 1.5);
+      glowGrad.addColorStop(0, 'rgba(255,255,255,0.85)');
+      glowGrad.addColorStop(0.4, 'rgba(255,255,255,0.4)');
+      glowGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = glowGrad;
+      ctx.fill();
+      ctx.restore();
+
+      // Ring ellipse (gradient fill + thin stroke)
+      ctx.save();
+      ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+      const ringGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
+      ringGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
+      ringGrad.addColorStop(1, 'rgba(255,255,255,0.15)');
+      ctx.fillStyle = ringGrad;
+      ctx.fill();
+      const ring = g.querySelector('.spotlight-ring') || g.querySelector('ellipse:not(.spotlight-glow)');
+      ctx.strokeStyle = g.dataset.savedStroke || ring?.getAttribute('stroke') || 'rgba(255,255,255,0.85)';
+      ctx.lineWidth = 1.5; ctx.stroke();
+      ctx.restore();
+
+      // Spotlight name with dark rounded-rect background
+      const spotName = g.dataset.spotName;
+      if (spotName) {
+        const snSize = parseFloat(g.dataset.spotNameSize || '11');
+        const snColor = g.dataset.spotNameColor || 'rgba(255,255,255,0.9)';
+        ctx.font = `600 ${snSize}px Arial,sans-serif`;
+        ctx.textAlign = 'center'; ctx.textBaseline = 'top';
+        const snY = cy + ry + 10;
+        // Always draw dark bg for label
+        const tw = ctx.measureText(spotName).width;
+        const snBg = g.dataset.spotNameBg || 'rgba(0,0,0,0.5)';
+        if (snBg !== 'none') {
+          ctx.fillStyle = snBg;
+          const bx = cx - tw/2 - 5, by = snY - 2, bw = tw + 10, bh = snSize + 6, br = 4;
+          ctx.beginPath(); ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by); ctx.arcTo(bx+bw,by,bx+bw,by+br,br);
+          ctx.lineTo(bx+bw,by+bh-br); ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br);
+          ctx.lineTo(bx+br,by+bh); ctx.arcTo(bx,by+bh,bx,by+bh-br,br);
+          ctx.lineTo(bx,by+br); ctx.arcTo(bx,by,bx+br,by,br); ctx.closePath(); ctx.fill();
+        }
+        ctx.fillStyle = snColor;
+        ctx.fillText(spotName, cx, snY);
+      }
     } else if (type === 'arrow') {
       const dx1=parseFloat(g.dataset.dx1), dy1=parseFloat(g.dataset.dy1);
       const dx2=parseFloat(g.dataset.dx2), dy2=parseFloat(g.dataset.dy2);
@@ -360,7 +450,8 @@ export function doExport() {
       }
       document.body.removeChild(canvas);
       const a = document.createElement('a');
-      a.href = dataUrl; a.download = 'tactica-pitch.' + S.exportFmt;
+      const prefix = S.appMode === 'image' ? 'tactica-analysis' : 'tactica-pitch';
+      a.href = dataUrl; a.download = prefix + '.' + S.exportFmt;
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
     } catch(err) {
       if (document.body.contains(canvas)) document.body.removeChild(canvas);

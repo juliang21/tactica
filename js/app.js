@@ -1,17 +1,21 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, makeDraggable } from './interaction.js';
-import { addPlayer, addBall, addCone, addArrow, addShadow, addTextBox, updateTextBoxBg, rewrapTextBox } from './elements.js';
+import { addPlayer, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
          applyPlayerFill, applyPlayerBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
          applyArrowColor, applyArrowStyle, applyArrowWidth,
+         applySpotlightColor, setSpotlightColor,
+         liveUpdateSpotName, confirmSpotName, applySpotNameSize, applySpotNameColor, applySpotNameBg,
          applyZoneFill, applyZoneBorder, applyZoneBorderStyle,
          liveUpdateTextBox, confirmTextBox, applyTextBoxSize, applyTextBoxColor, applyTextBoxBg, applyTextBoxAlign,
          applySize, applyRotation, clearAll } from './ui.js';
 import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js';
+import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
+import { trackElementInserted, trackModeSwitch } from './analytics.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
@@ -81,6 +85,12 @@ window.confirmColorPicker = confirmColorPicker;
 window.applyArrowColor = applyArrowColor;
 window.applyArrowStyle = applyArrowStyle;
 window.applyArrowWidth = applyArrowWidth;
+window.applySpotlightColor = applySpotlightColor;
+window.liveUpdateSpotName = liveUpdateSpotName;
+window.confirmSpotName = confirmSpotName;
+window.applySpotNameSize = applySpotNameSize;
+window.applySpotNameColor = applySpotNameColor;
+window.applySpotNameBg = applySpotNameBg;
 window.applyZoneFill = applyZoneFill;
 window.applyZoneBorder = applyZoneBorder;
 window.applyZoneBorderStyle = applyZoneBorderStyle;
@@ -90,6 +100,71 @@ window.applyTextBoxSize = applyTextBoxSize;
 window.applyTextBoxColor = applyTextBoxColor;
 window.applyTextBoxBg = applyTextBoxBg;
 window.applyTextBoxAlign = applyTextBoxAlign;
+window.triggerImageUpload = triggerImageUpload;
+window.handleImageUpload = handleImageUpload;
+window.enterImageMode = enterImageMode;
+window.exitImageMode = exitImageMode;
+
+// ─── Mode Switching (Tactical Board vs Image Upload) ────────────────────────
+function hasCanvasWork() {
+  return S.objectsLayer.children.length > 0 || S.playersLayer.children.length > 0;
+}
+
+function switchMode(mode) {
+  const pitchBtn = document.getElementById('mode-pitch-btn');
+  const imageBtn = document.getElementById('mode-image-btn');
+
+  if (mode === 'image') {
+    if (S.appMode === 'image') return;
+    // If there's work on the tactical board, confirm before switching
+    if (hasCanvasWork()) {
+      showModeSwitchModal('Switching to Upload Image will erase all elements on your tactical board. Are you sure?', () => {
+        pitchBtn.classList.remove('active');
+        imageBtn.classList.add('active');
+        triggerImageUpload();
+      });
+      return;
+    }
+    pitchBtn.classList.remove('active');
+    imageBtn.classList.add('active');
+    triggerImageUpload();
+  } else {
+    if (S.appMode !== 'image') return;
+    // If there's work on the image, confirm before switching
+    if (hasCanvasWork()) {
+      showModeSwitchModal('Switching to Tactical Board will erase all elements on your image. Are you sure?', () => {
+        exitImageMode();
+        pitchBtn.classList.add('active');
+        imageBtn.classList.remove('active');
+      });
+      return;
+    }
+    exitImageMode();
+    pitchBtn.classList.add('active');
+    imageBtn.classList.remove('active');
+  }
+}
+window.switchMode = switchMode;
+
+function showModeSwitchModal(message, onConfirm) {
+  const modal = document.getElementById('mode-switch-modal');
+  const msg = document.getElementById('mode-switch-msg');
+  const confirmBtn = document.getElementById('mode-switch-confirm-btn');
+  msg.textContent = message;
+  modal.style.display = 'flex';
+  // Replace confirm button listener (remove old ones)
+  const newBtn = confirmBtn.cloneNode(true);
+  confirmBtn.parentNode.replaceChild(newBtn, confirmBtn);
+  newBtn.addEventListener('click', () => {
+    modal.style.display = 'none';
+    onConfirm();
+  });
+}
+
+function closeModeSwitch() {
+  document.getElementById('mode-switch-modal').style.display = 'none';
+}
+window.closeModeSwitch = closeModeSwitch;
 
 // Expose teamContext as a live getter so inline onclick handlers can read it
 Object.defineProperty(window, 'teamContext', { get: () => S.teamContext });
@@ -106,8 +181,9 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'cone') placed = addCone(pt.x, pt.y);
   else if (S.tool === 'shadow-circle') placed = addShadow(pt.x, pt.y, 'shadow-circle');
   else if (S.tool === 'shadow-rect') placed = addShadow(pt.x, pt.y, 'shadow-rect');
+  else if (S.tool === 'spotlight') placed = addSpotlight(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
-  if (placed) { setTool('select'); select(placed); }
+  if (placed) { trackElementInserted(placed.dataset.type); setTool('select'); select(placed); }
   else if (S.tool === 'select') {
     // Only deselect if click was on empty pitch, not on an element
     if (!e.target.closest('[data-type]')) deselect();
@@ -215,6 +291,15 @@ function copySelected() {
     data.textAlign = el.dataset.textAlign || 'center';
     data.hw = el.dataset.hw || '60'; data.hh = el.dataset.hh || '20';
     data.rotation = el.dataset.rotation || '0';
+  } else if (t === 'spotlight') {
+    data.rx = el.dataset.rx || '28';
+    data.ry = el.dataset.ry || '5';
+    data.spotColor = el.dataset.spotColor || 'rgba(255,255,255,0.85)';
+    data.spotName = el.dataset.spotName || '';
+    data.spotNameSize = el.dataset.spotNameSize || '11';
+    data.spotNameColor = el.dataset.spotNameColor || 'rgba(255,255,255,0.9)';
+    data.spotNameBg = el.dataset.spotNameBg || 'rgba(0,0,0,0.5)';
+    data.scale = el.dataset.scale || '1';
   } else if (t?.startsWith('shadow')) {
     const shape = el.querySelector('rect,ellipse');
     data.hw = el.dataset.hw || '30'; data.hh = el.dataset.hh || '20';
@@ -282,6 +367,35 @@ function pasteClipboard() {
       if (txt) txt.setAttribute('fill', d.textColor);
       rewrapTextBox(placed);
     }
+  } else if (d.type === 'spotlight') {
+    placed = addSpotlight(x, y);
+    if (placed) {
+      placed.dataset.rx = d.rx; placed.dataset.ry = d.ry;
+      placed.dataset.scale = d.scale;
+      // Apply color
+      if (d.spotColor !== 'rgba(255,255,255,0.85)') {
+        setSpotlightColor(placed, d.spotColor);
+      }
+      // Apply name
+      if (d.spotName) {
+        placed.dataset.spotName = d.spotName;
+        placed.dataset.spotNameSize = d.spotNameSize;
+        placed.dataset.spotNameColor = d.spotNameColor;
+        placed.dataset.spotNameBg = d.spotNameBg;
+        const nameEl = placed.querySelector('.spotlight-name');
+        if (nameEl) {
+          nameEl.textContent = d.spotName;
+          nameEl.style.display = '';
+          nameEl.setAttribute('fill', d.spotNameColor);
+          nameEl.setAttribute('font-size', d.spotNameSize);
+        }
+        const nameBg = placed.querySelector('.spotlight-name-bg');
+        if (nameBg && d.spotNameBg !== 'none') {
+          nameBg.setAttribute('fill', d.spotNameBg);
+          nameBg.style.display = '';
+        }
+      }
+    }
   } else if (d.type?.startsWith('shadow')) {
     placed = addShadow(x, y, d.type);
     if (placed) {
@@ -340,6 +454,8 @@ document.addEventListener('click', e => {
   if (e.target === modal) closeExport();
   const cpModal = document.getElementById('color-picker-modal');
   if (e.target === cpModal) closeColorPicker();
+  const msModal = document.getElementById('mode-switch-modal');
+  if (e.target === msModal) closeModeSwitch();
 });
 
 // ─── Feedback Widget ─────────────────────────────────────────────────────────
@@ -475,6 +591,6 @@ function toggleMobilePanel() {
 window.toggleMobilePanel = toggleMobilePanel;
 
 // ─── Mobile: auto-switch to vertical pitch for better fit ─────────────────────
-if (window.innerWidth <= 768 && S.currentPitchLayout === 'full-h') {
+if (window.innerWidth <= 768 && S.currentPitchLayout === 'full-h' && S.appMode !== 'image') {
   setPitch('full-v');
 }
