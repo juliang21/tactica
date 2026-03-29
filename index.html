@@ -190,18 +190,7 @@
   </div>
   <!-- Rondos branding -->
   <div class="rondos-brand">
-    <svg class="rondos-logo" width="22" height="22" viewBox="0 0 40 40" fill="none">
-      <!-- Main triangle, slightly tilted -->
-      <path d="M8 35L18 3L38 30Z" stroke="rgba(255,255,255,0.45)" stroke-width="2.8" stroke-linejoin="round" fill="none"/>
-      <!-- Small triangles -->
-      <polygon points="17,4 14,9 20,9" fill="rgba(255,255,255,0.5)"/>
-      <polygon points="30,18 27,23 33,23" fill="rgba(255,255,255,0.5)"/>
-      <polygon points="7,32 4,37 10,37" fill="rgba(255,255,255,0.5)"/>
-      <polygon points="35,30 33,34 37,34" fill="rgba(255,255,255,0.5)"/>
-      <!-- Circles -->
-      <circle cx="19" cy="18" r="3" fill="rgba(255,255,255,0.5)"/>
-      <circle cx="26" cy="27" r="3" fill="rgba(255,255,255,0.5)"/>
-    </svg>
+    <img class="rondos-logo" src="images/rondos-logo.png" width="22" height="22" alt="Rondos">
     <span class="rondos-powered">Powered by</span>
     <span class="rondos-name">RONDOS</span>
   </div>
@@ -627,6 +616,28 @@
       <div class="slider-wrap">
         <div class="slider-label"><span>Angle</span><span id="rot-val">0°</span></div>
         <input type="range" id="rot-slider" min="0" max="360" value="0" oninput="applyRotation(this.value)">
+      </div>
+    </div>
+
+    <div class="panel-section" id="layer-section" style="display:none">
+      <h3>Layer order</h3>
+      <div class="layer-btn-row">
+        <button class="layer-btn" onclick="layerSendToBack()" title="Send to Back">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><path d="M4 15V15" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          <span>To back</span>
+        </button>
+        <button class="layer-btn" onclick="layerSendBackward()" title="Send Backward">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="5" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><path d="M4 10l-2 2m0 0l2 2m-2-2h4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Backward</span>
+        </button>
+        <button class="layer-btn" onclick="layerBringForward()" title="Bring Forward">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="5" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="1" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><path d="M12 6l2-2m0 0l-2-2m2 2h-4" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          <span>Forward</span>
+        </button>
+        <button class="layer-btn" onclick="layerBringToFront()" title="Bring to Front">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+          <span>To front</span>
+        </button>
       </div>
     </div>
 

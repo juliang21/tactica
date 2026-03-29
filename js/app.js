@@ -15,7 +15,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
 import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
-import { trackElementInserted, trackModeSwitch } from './analytics.js';
+import { trackElementInserted, trackModeSwitch, trackElementEdited } from './analytics.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
@@ -49,6 +49,55 @@ function undo() {
   });
 }
 window.undo = undo;
+
+// ─── Layer Order ────────────────────────────────────────────────────────────
+function getElementLayer(el) {
+  // Elements live in either objectsLayer or playersLayer
+  if (S.objectsLayer.contains(el)) return S.objectsLayer;
+  if (S.playersLayer.contains(el)) return S.playersLayer;
+  return el.parentNode;
+}
+
+function layerBringToFront() {
+  if (!S.selectedEl) return;
+  S.pushUndo();
+  const layer = getElementLayer(S.selectedEl);
+  layer.appendChild(S.selectedEl);
+  trackElementEdited(S.selectedEl.dataset.type, 'layer_to_front');
+}
+
+function layerBringForward() {
+  if (!S.selectedEl) return;
+  const layer = getElementLayer(S.selectedEl);
+  const next = S.selectedEl.nextElementSibling;
+  if (!next) return; // already at front
+  S.pushUndo();
+  layer.insertBefore(next, S.selectedEl);
+  trackElementEdited(S.selectedEl.dataset.type, 'layer_forward');
+}
+
+function layerSendBackward() {
+  if (!S.selectedEl) return;
+  const layer = getElementLayer(S.selectedEl);
+  const prev = S.selectedEl.previousElementSibling;
+  if (!prev) return; // already at back
+  S.pushUndo();
+  layer.insertBefore(S.selectedEl, prev);
+  trackElementEdited(S.selectedEl.dataset.type, 'layer_backward');
+}
+
+function layerSendToBack() {
+  if (!S.selectedEl) return;
+  S.pushUndo();
+  const layer = getElementLayer(S.selectedEl);
+  layer.insertBefore(S.selectedEl, layer.firstChild);
+  trackElementEdited(S.selectedEl.dataset.type, 'layer_to_back');
+}
+
+window.layerBringToFront = layerBringToFront;
+window.layerBringForward = layerBringForward;
+window.layerSendBackward = layerSendBackward;
+window.layerSendToBack = layerSendToBack;
 
 // ─── Expose to inline HTML handlers ──────────────────────────────────────────
 // (These bridge the onclick="" attributes in the HTML to the module functions)

@@ -190,6 +190,7 @@ export function select(el) {
   const textboxSec = document.getElementById('textbox-edit-section');
   const spotlightSec = document.getElementById('spotlight-edit-section');
   const delSec = document.getElementById('del-section');
+  const layerSec = document.getElementById('layer-section');
 
   // Always switch to element tab
   switchTab('element');
@@ -199,6 +200,7 @@ export function select(el) {
   textboxSec.style.display = 'none';
   spotlightSec.style.display = 'none';
   delSec.style.display = '';
+  layerSec.style.display = '';
 
   const isArrow = type === 'arrow';
   const isZone = type?.startsWith('shadow');
@@ -310,6 +312,7 @@ export function deselect() {
   S.setSelectedEl(null);
   S.selInfo.innerHTML = 'Nothing selected.<br><span style="font-size:10px;color:var(--text-muted)">Click to select · drag to move<br>Double-click player to rename</span>';
   document.getElementById('del-section').style.display = 'none';
+  document.getElementById('layer-section').style.display = 'none';
   document.getElementById('player-edit-section').style.display = 'none';
   document.getElementById('arrow-edit-section').style.display = 'none';
   document.getElementById('zone-edit-section').style.display = 'none';
@@ -327,6 +330,7 @@ export function deleteSelected() {
   S.setSelectedEl(null);
   S.selInfo.innerHTML = 'Nothing selected.';
   document.getElementById('del-section').style.display = 'none';
+  document.getElementById('layer-section').style.display = 'none';
   document.getElementById('player-edit-section').style.display = 'none';
   document.getElementById('arrow-edit-section').style.display = 'none';
   document.getElementById('zone-edit-section').style.display = 'none';
