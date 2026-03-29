@@ -1,13 +1,13 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, makeDraggable } from './interaction.js';
-import { addPlayer, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox } from './elements.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerVisionUpdate, makeDraggable } from './interaction.js';
+import { addPlayer, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addVision, updateVisionPolygon } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
          applyPlayerFill, applyPlayerBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
          applyArrowColor, applyArrowStyle, applyArrowWidth,
-         applySpotlightColor, setSpotlightColor,
+         applySpotlightColor, setSpotlightColor, applyVisionColor,
          liveUpdateSpotName, confirmSpotName, applySpotNameSize, applySpotNameColor, applySpotNameBg,
          applyZoneFill, applyZoneBorder, applyZoneBorderStyle,
          liveUpdateTextBox, confirmTextBox, applyTextBoxSize, applyTextBoxColor, applyTextBoxBg, applyTextBoxAlign,
@@ -19,6 +19,7 @@ import { trackElementInserted, trackModeSwitch, trackElementEdited } from './ana
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
+registerVisionUpdate(updateVisionPolygon);
 
 // ─── Undo ────────────────────────────────────────────────────────────────────
 function undo() {
@@ -51,46 +52,58 @@ function undo() {
 window.undo = undo;
 
 // ─── Layer Order ────────────────────────────────────────────────────────────
-function getElementLayer(el) {
-  // Elements live in either objectsLayer or playersLayer
-  if (S.objectsLayer.contains(el)) return S.objectsLayer;
-  if (S.playersLayer.contains(el)) return S.playersLayer;
-  return el.parentNode;
+// SVG renders in document order. objects-layer comes first, then players-layer.
+// We treat them as one unified list: [...objects-layer children, ...players-layer children]
+// "Forward" moves toward end of players-layer (visually on top).
+// "Backward" moves toward start of objects-layer (visually behind).
+
+function getAllOrdered() {
+  return [
+    ...Array.from(S.objectsLayer.children),
+    ...Array.from(S.playersLayer.children)
+  ];
 }
 
 function layerBringToFront() {
   if (!S.selectedEl) return;
   S.pushUndo();
-  const layer = getElementLayer(S.selectedEl);
-  layer.appendChild(S.selectedEl);
+  S.playersLayer.appendChild(S.selectedEl);
   trackElementEdited(S.selectedEl.dataset.type, 'layer_to_front');
 }
 
 function layerBringForward() {
   if (!S.selectedEl) return;
-  const layer = getElementLayer(S.selectedEl);
-  const next = S.selectedEl.nextElementSibling;
-  if (!next) return; // already at front
+  const all = getAllOrdered();
+  const idx = all.indexOf(S.selectedEl);
+  if (idx === all.length - 1) return; // already at front
   S.pushUndo();
-  layer.insertBefore(next, S.selectedEl);
+  const next = all[idx + 1];
+  const nextParent = next.parentNode;
+  // Insert selected element after next (= before next's next sibling)
+  if (next.nextElementSibling) {
+    nextParent.insertBefore(S.selectedEl, next.nextElementSibling);
+  } else {
+    nextParent.appendChild(S.selectedEl);
+  }
   trackElementEdited(S.selectedEl.dataset.type, 'layer_forward');
 }
 
 function layerSendBackward() {
   if (!S.selectedEl) return;
-  const layer = getElementLayer(S.selectedEl);
-  const prev = S.selectedEl.previousElementSibling;
-  if (!prev) return; // already at back
+  const all = getAllOrdered();
+  const idx = all.indexOf(S.selectedEl);
+  if (idx === 0) return; // already at back
   S.pushUndo();
-  layer.insertBefore(S.selectedEl, prev);
+  const prev = all[idx - 1];
+  const prevParent = prev.parentNode;
+  prevParent.insertBefore(S.selectedEl, prev);
   trackElementEdited(S.selectedEl.dataset.type, 'layer_backward');
 }
 
 function layerSendToBack() {
   if (!S.selectedEl) return;
   S.pushUndo();
-  const layer = getElementLayer(S.selectedEl);
-  layer.insertBefore(S.selectedEl, layer.firstChild);
+  S.objectsLayer.insertBefore(S.selectedEl, S.objectsLayer.firstChild);
   trackElementEdited(S.selectedEl.dataset.type, 'layer_to_back');
 }
 
@@ -135,6 +148,7 @@ window.applyArrowColor = applyArrowColor;
 window.applyArrowStyle = applyArrowStyle;
 window.applyArrowWidth = applyArrowWidth;
 window.applySpotlightColor = applySpotlightColor;
+window.applyVisionColor = applyVisionColor;
 window.liveUpdateSpotName = liveUpdateSpotName;
 window.confirmSpotName = confirmSpotName;
 window.applySpotNameSize = applySpotNameSize;
@@ -231,6 +245,7 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'shadow-circle') placed = addShadow(pt.x, pt.y, 'shadow-circle');
   else if (S.tool === 'shadow-rect') placed = addShadow(pt.x, pt.y, 'shadow-rect');
   else if (S.tool === 'spotlight') placed = addSpotlight(pt.x, pt.y);
+  else if (S.tool === 'vision') placed = addVision(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
   if (placed) { trackElementInserted(placed.dataset.type); setTool('select'); select(placed); }
   else if (S.tool === 'select') {
@@ -320,7 +335,7 @@ function copySelected() {
     data.nameColor = el.querySelector('.player-name')?.getAttribute('fill') || 'rgba(255,255,255,0.9)';
     data.scale = el.dataset.scale || '1';
   } else if (t === 'ball') {
-    data.scale = el.dataset.scale || '0.8';
+    data.scale = el.dataset.scale || '0.7';
   } else if (t === 'cone') {
     data.scale = el.dataset.scale || '1';
   } else if (t === 'arrow') {
@@ -349,6 +364,12 @@ function copySelected() {
     data.spotNameColor = el.dataset.spotNameColor || 'rgba(255,255,255,0.9)';
     data.spotNameBg = el.dataset.spotNameBg || 'rgba(0,0,0,0.5)';
     data.scale = el.dataset.scale || '1';
+  } else if (t === 'vision') {
+    data.scale = el.dataset.scale || '1';
+    data.rotation = el.dataset.rotation || '0';
+    data.visionColor = el.dataset.visionColor || 'rgba(147,197,253,0.5)';
+    data.visionLength = el.dataset.visionLength || '80';
+    data.visionSpread = el.dataset.visionSpread || '35';
   } else if (t?.startsWith('shadow')) {
     const shape = el.querySelector('rect,ellipse');
     data.hw = el.dataset.hw || '30'; data.hh = el.dataset.hh || '20';
@@ -444,6 +465,17 @@ function pasteClipboard() {
           nameBg.style.display = '';
         }
       }
+    }
+  } else if (d.type === 'vision') {
+    placed = addVision(x, y);
+    if (placed) {
+      placed.dataset.scale = d.scale;
+      placed.dataset.rotation = d.rotation;
+      placed.dataset.visionColor = d.visionColor;
+      placed.dataset.visionLength = d.visionLength;
+      placed.dataset.visionSpread = d.visionSpread;
+      const shape = placed.querySelector('.vision-shape');
+      if (shape) shape.setAttribute('fill', d.visionColor);
     }
   } else if (d.type?.startsWith('shadow')) {
     placed = addShadow(x, y, d.type);

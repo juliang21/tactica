@@ -5,6 +5,10 @@ import { trackElementSelected } from './analytics.js';
 let _rewrapFn = null;
 export function registerRewrap(fn) { _rewrapFn = fn; }
 
+// ─── Vision polygon update callback ─────────────────────────────────────────
+let _updateVisionFn = null;
+export function registerVisionUpdate(fn) { _updateVisionFn = fn; }
+
 // ─── Spotlight name background helper ─────────────────────────────────────────
 export function updateSpotlightNameBg(g) {
   const nl = g.querySelector('.spotlight-name');
@@ -53,6 +57,10 @@ export function applyTransform(el) {
 
   if (t === 'player' || t === 'ball' || t === 'cone') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
+  } else if (t === 'vision') {
+    // Vision uses absolute polygon points (no transform needed)
+    el.removeAttribute('transform');
+    if (_updateVisionFn) _updateVisionFn(el);
   } else if (t === 'textbox') {
     // Textbox uses zone-style absolute positioning
     if (_rewrapFn) _rewrapFn(el);
@@ -127,7 +135,7 @@ export function updateArrowVisual(el) {
 function moveElement(el, nx, ny) {
   el.dataset.cx = nx; el.dataset.cy = ny;
   const t = el.dataset.type;
-  if (t === 'player' || t === 'ball' || t === 'cone') applyTransform(el);
+  if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
   else if (t === 'spotlight') applyTransform(el);
@@ -173,6 +181,15 @@ export function select(el) {
     }
     showSpotlightHandles(el);
   }
+  if (type === 'vision') {
+    const shape = el.querySelector('.vision-shape');
+    if (shape) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke') || 'none';
+      shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+      shape.setAttribute('stroke-width', '1.5');
+    }
+    showVisionHandles(el);
+  }
 
   // Info label
   const typeLabel = type === 'player' ? 'Player #' + el.dataset.label
@@ -181,6 +198,7 @@ export function select(el) {
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
     : type === 'textbox' ? 'Text'
     : type === 'spotlight' ? 'Spotlight'
+    : type === 'vision' ? 'Player\'s Vision'
     : 'Zone';
   const hint = type === 'player' ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
@@ -189,6 +207,7 @@ export function select(el) {
   const zoneSec = document.getElementById('zone-edit-section');
   const textboxSec = document.getElementById('textbox-edit-section');
   const spotlightSec = document.getElementById('spotlight-edit-section');
+  const visionSec = document.getElementById('vision-edit-section');
   const delSec = document.getElementById('del-section');
   const layerSec = document.getElementById('layer-section');
 
@@ -199,6 +218,7 @@ export function select(el) {
   zoneSec.style.display = 'none';
   textboxSec.style.display = 'none';
   spotlightSec.style.display = 'none';
+  visionSec.style.display = 'none';
   delSec.style.display = '';
   layerSec.style.display = '';
 
@@ -207,7 +227,7 @@ export function select(el) {
   const isText = type === 'textbox';
   const showSize = !isArrow && !isZone && !isText;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
-  document.getElementById('rotation-section').style.display = 'none';
+  document.getElementById('rotation-section').style.display = (type === 'vision') ? '' : 'none';
 
   if (type === 'player') {
     playerSec.style.display = '';
@@ -240,6 +260,8 @@ export function select(el) {
     const sNameSize = el.dataset.spotNameSize || '11';
     document.getElementById('spot-name-size-slider').value = sNameSize;
     document.getElementById('spot-name-size-val').textContent = sNameSize + 'px';
+  } else if (type === 'vision') {
+    visionSec.style.display = '';
   } else if (isZone) {
     zoneSec.style.display = '';
     // Set active border style button based on current shape
@@ -257,6 +279,11 @@ export function select(el) {
     const r = parseFloat(el.dataset.rotation || '0');
     document.getElementById('rot-slider').value = r;
     document.getElementById('rot-val').textContent = Math.round(r) + '°';
+  }
+
+  // Also show rotation section for zones that have rotation
+  if (isZone || type === 'spotlight') {
+    // rotation already handled by zone handles
   }
 }
 
@@ -304,6 +331,16 @@ export function deselectVisual(el) {
       delete el.dataset.savedStroke;
     }
   }
+  if (t === 'vision') {
+    const shape = el.querySelector('.vision-shape');
+    if (shape) {
+      const saved = el.dataset.savedStroke;
+      if (saved === 'none') { shape.removeAttribute('stroke'); shape.removeAttribute('stroke-width'); }
+      else if (saved) { shape.setAttribute('stroke', saved); }
+      else { shape.removeAttribute('stroke'); shape.removeAttribute('stroke-width'); }
+      delete el.dataset.savedStroke;
+    }
+  }
 }
 
 export function deselect() {
@@ -318,6 +355,7 @@ export function deselect() {
   document.getElementById('zone-edit-section').style.display = 'none';
   document.getElementById('textbox-edit-section').style.display = 'none';
   document.getElementById('spotlight-edit-section').style.display = 'none';
+  document.getElementById('vision-edit-section').style.display = 'none';
   document.getElementById('rotation-section').style.display = 'none';
   document.getElementById('size-section').style.display = 'none';
 }
@@ -336,6 +374,7 @@ export function deleteSelected() {
   document.getElementById('zone-edit-section').style.display = 'none';
   document.getElementById('textbox-edit-section').style.display = 'none';
   document.getElementById('spotlight-edit-section').style.display = 'none';
+  document.getElementById('vision-edit-section').style.display = 'none';
 }
 
 // ─── Tab Switcher ─────────────────────────────────────────────────────────────
@@ -467,6 +506,55 @@ export function showSpotlightHandles(el) {
   S.svg.appendChild(handleGroup);
 }
 
+// ── Vision handles ──
+function visionWorldPoints(el) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const len = parseFloat(el.dataset.visionLength || '80');
+  const spread = parseFloat(el.dataset.visionSpread || '35');
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const scale = parseFloat(el.dataset.scale || '1');
+  const r = rot * Math.PI / 180;
+  const cosR = Math.cos(r), sinR = Math.sin(r);
+  const sLen = len * scale, sSpread = spread * scale;
+
+  return {
+    apex: { x: cx, y: cy },
+    topRight: {
+      x: cx + (sLen * cosR - (-sSpread) * sinR),
+      y: cy + (sLen * sinR + (-sSpread) * cosR)
+    },
+    botRight: {
+      x: cx + (sLen * cosR - sSpread * sinR),
+      y: cy + (sLen * sinR + sSpread * cosR)
+    },
+    baseMid: {
+      x: cx + sLen * cosR,
+      y: cy + sLen * sinR
+    }
+  };
+}
+
+export function showVisionHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'vision';
+
+  const pts = visionWorldPoints(el);
+
+  // 0: top-right vertex (spread + length)
+  handleGroup.appendChild(createHandle(ns, pts.topRight.x, pts.topRight.y, 'vision-tr', 'nwse-resize'));
+  // 1: bottom-right vertex (spread + length)
+  handleGroup.appendChild(createHandle(ns, pts.botRight.x, pts.botRight.y, 'vision-br', 'nesw-resize'));
+  // 2: base midpoint (length only)
+  handleGroup.appendChild(createHandle(ns, pts.baseMid.x, pts.baseMid.y, 'vision-base', 'ew-resize'));
+  // 3: rotate handle
+  handleGroup.appendChild(createRotateHandle(ns, pts.topRight.x, pts.topRight.y - 15));
+
+  S.svg.appendChild(handleGroup);
+}
+
 export function removeHandles() {
   if (handleGroup) { handleGroup.remove(); handleGroup = null; }
   S.setEndpointDragging(null);
@@ -525,6 +613,21 @@ function updateHandlePositions(el) {
     const children = handleGroup.children;
     children[0]?.setAttribute('cx', cx - rx); children[0]?.setAttribute('cy', cy);
     children[1]?.setAttribute('cx', cx + rx); children[1]?.setAttribute('cy', cy);
+  } else if (type === 'vision') {
+    const pts = visionWorldPoints(el);
+    const children = handleGroup.children;
+    // 0: top-right
+    children[0]?.setAttribute('cx', pts.topRight.x); children[0]?.setAttribute('cy', pts.topRight.y);
+    // 1: bottom-right
+    children[1]?.setAttribute('cx', pts.botRight.x); children[1]?.setAttribute('cy', pts.botRight.y);
+    // 2: base mid
+    children[2]?.setAttribute('cx', pts.baseMid.x); children[2]?.setAttribute('cy', pts.baseMid.y);
+    // 3: rotate handle (group) — position above top-right
+    const rotG = children[3];
+    if (rotG) {
+      const rc = rotG.querySelector('circle');
+      if (rc) { rc.setAttribute('cx', pts.topRight.x); rc.setAttribute('cy', pts.topRight.y - 15); }
+    }
   }
 }
 
@@ -547,6 +650,8 @@ function onEndpointDrag(e) {
     onArrowEndpointDrag(el, pt);
   } else if (t === 'spotlight') {
     onSpotlightHandleDrag(el, pt);
+  } else if (t === 'vision') {
+    onVisionHandleDrag(el, pt);
   } else if (t.startsWith('shadow') || t === 'textbox') {
     onZoneHandleDrag(el, pt);
   }
@@ -583,6 +688,49 @@ function onSpotlightHandleDrag(el, pt) {
   updateHandlePositions(el);
 }
 
+function onVisionHandleDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const scale = parseFloat(el.dataset.scale || '1');
+  const h = S.endpointDragging;
+
+  if (h === 'rotate') {
+    // Rotate based on angle from apex to mouse
+    const angle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
+    const len = parseFloat(el.dataset.visionLength || '80');
+    const spread = parseFloat(el.dataset.visionSpread || '35');
+    // The top-right corner is at local angle atan2(-spread, len)
+    const baseAngle = Math.atan2(-spread, len) * 180 / Math.PI;
+    let newRot = angle - baseAngle;
+    newRot = ((newRot % 360) + 360) % 360;
+    el.dataset.rotation = newRot;
+    document.getElementById('rot-slider').value = Math.round(newRot);
+    document.getElementById('rot-val').textContent = Math.round(newRot) + '°';
+  } else {
+    // Convert mouse to local (un-rotated) coords relative to apex
+    const r = -rot * Math.PI / 180;
+    const dx = pt.x - cx, dy = pt.y - cy;
+    const lx = (dx * Math.cos(r) - dy * Math.sin(r)) / scale;
+    const ly = (dx * Math.sin(r) + dy * Math.cos(r)) / scale;
+
+    if (h === 'vision-base') {
+      // Drag base midpoint: change length only
+      el.dataset.visionLength = Math.max(20, lx);
+    } else if (h === 'vision-tr') {
+      // Drag top-right vertex: change both length and spread
+      el.dataset.visionLength = Math.max(20, lx);
+      el.dataset.visionSpread = Math.max(8, Math.abs(ly));
+    } else if (h === 'vision-br') {
+      // Drag bottom-right vertex: change both length and spread
+      el.dataset.visionLength = Math.max(20, lx);
+      el.dataset.visionSpread = Math.max(8, Math.abs(ly));
+    }
+  }
+
+  applyTransform(el);
+  updateHandlePositions(el);
+}
+
 function getTextBoxMinSize(el) {
   if (el.dataset.type !== 'textbox') return { minHW: 10, minHH: 10 };
   const fontSize = parseFloat(el.dataset.textSize || '14');
@@ -594,9 +742,9 @@ function getTextBoxMinSize(el) {
   // Measure longest word to get min width
   const ns = 'http://www.w3.org/2000/svg';
   const measure = document.createElementNS(ns, 'text');
-  measure.setAttribute('font-family', 'Manrope, sans-serif');
+  measure.setAttribute('font-family', 'Poppins, sans-serif');
   measure.setAttribute('font-size', fontSize);
-  measure.setAttribute('font-weight', '600');
+  measure.setAttribute('font-weight', '400');
   measure.style.visibility = 'hidden';
   S.svg.appendChild(measure);
   let maxWordW = 20;

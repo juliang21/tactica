@@ -12,7 +12,7 @@ export function setTool(t) {
   if (t === 'arrow') {
     document.getElementById('arrow-' + S.arrowType + '-btn').classList.add('active');
   }
-  document.body.className = 'tool-' + (t.startsWith('player') ? 'player' : t.startsWith('shadow') ? 'shadow' : t === 'textbox' ? 'textbox' : t);
+  document.body.className = 'tool-' + (t.startsWith('player') ? 'player' : t.startsWith('shadow') ? 'shadow' : t === 'textbox' ? 'textbox' : t === 'vision' ? 'vision' : t);
   if (!t.startsWith('player')) deselect();
 }
 
@@ -134,6 +134,7 @@ export function confirmNumber() {
 
 export function liveUpdateName(val) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  S.selectedEl.dataset.playerName = val.trim();
   const nl = S.selectedEl.querySelector('.player-name');
   if (!nl) return;
   if (val.trim()) { nl.textContent = val; nl.style.display = ''; setTimeout(() => updatePlayerNameBg(S.selectedEl), 0); }
@@ -291,6 +292,33 @@ export function confirmColorPicker() {
       shape.setAttribute('stroke', hex);
       S.selectedEl.dataset.savedStroke = hex;
     }
+  } else if (colorPickerTarget === 'name-color') {
+    trackElementEdited('player', 'name_color');
+    const nl = S.selectedEl.querySelector('.player-name');
+    if (nl) nl.setAttribute('fill', hex);
+    S.selectedEl.dataset.nameColor = hex;
+  } else if (colorPickerTarget === 'name-bg') {
+    trackElementEdited('player', 'name_bg');
+    S.selectedEl.dataset.nameBg = hex;
+    updatePlayerNameBg(S.selectedEl);
+  } else if (colorPickerTarget === 'textbox-color') {
+    trackElementEdited('textbox', 'color');
+    S.selectedEl.dataset.textColor = hex;
+    const txt = S.selectedEl.querySelector('text');
+    if (txt) txt.setAttribute('fill', hex);
+  } else if (colorPickerTarget === 'textbox-bg') {
+    trackElementEdited('textbox', 'background');
+    S.selectedEl.dataset.textBg = hex;
+    rewrapTextBox(S.selectedEl);
+  } else if (colorPickerTarget === 'vision') {
+    trackElementEdited('vision', 'color');
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    const color = `rgba(${r},${g},${b},0.6)`;
+    S.selectedEl.dataset.visionColor = color;
+    const shape = S.selectedEl.querySelector('.vision-shape');
+    if (shape) shape.setAttribute('fill', color);
   } else if (S.selectedEl.dataset.type === 'player') {
     if (colorPickerTarget === 'fill') {
       setPlayerColor(S.selectedEl, hex);
@@ -465,6 +493,16 @@ export function setSpotlightColor(el, color) {
   }
 }
 
+// ─── Vision Color ────────────────────────────────────────────────────────────
+export function applyVisionColor(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'vision') return;
+  trackElementEdited('vision', 'color');
+  const color = swatchEl.dataset.visionColor;
+  S.selectedEl.dataset.visionColor = color;
+  const shape = S.selectedEl.querySelector('.vision-shape');
+  if (shape) shape.setAttribute('fill', color);
+}
+
 // ─── Spotlight Name ──────────────────────────────────────────────────────────
 export function liveUpdateSpotName(val) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'spotlight') return;
@@ -564,7 +602,7 @@ export function applySize(val) {
   trackElementEdited(S.selectedEl.dataset.type, 'scale');
   S.selectedEl.dataset.scale = val/100;
   const t = S.selectedEl.dataset.type;
-  if (t === 'player' || t === 'ball' || t === 'cone' || t.startsWith('shadow')) applyTransform(S.selectedEl);
+  if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision' || t.startsWith('shadow')) applyTransform(S.selectedEl);
   else if (t === 'arrow') updateArrowVisual(S.selectedEl);
 }
 
@@ -574,7 +612,7 @@ export function applyRotation(val) {
   trackElementEdited(S.selectedEl.dataset.type, 'rotation');
   S.selectedEl.dataset.rotation = val;
   const t = S.selectedEl.dataset.type;
-  if (t.startsWith('shadow')) applyTransform(S.selectedEl);
+  if (t.startsWith('shadow') || t === 'vision') applyTransform(S.selectedEl);
   else if (t === 'arrow') updateArrowVisual(S.selectedEl);
 }
 

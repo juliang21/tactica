@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Táctica · Football Board</title>
+<link rel="icon" href="favicon.ico" type="image/x-icon">
+<link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css">
 </head>
@@ -84,6 +86,14 @@
       <ellipse cx="11" cy="16" rx="6" ry="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
     </svg>
     <span class="tool-tooltip">Spotlight</span>
+  </button>
+
+  <!-- Player Vision -->
+  <button class="tool-btn" data-tool="vision" onclick="setTool('vision')">
+    <svg width="22" height="22" viewBox="0 0 22 22" fill="none">
+      <polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/>
+    </svg>
+    <span class="tool-tooltip">Player's vision</span>
   </button>
 
   <!-- Text box -->
@@ -412,6 +422,7 @@
           <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyNameColor(this)"></div>
           <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyNameColor(this)"></div>
           <div class="color-swatch mini" style="background:#ffd700" data-color="#ffd700" onclick="applyNameColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('name-color')">＋</button>
         </div>
       </div>
       <div class="field-group">
@@ -423,6 +434,7 @@
           <div class="color-swatch mini" style="background:rgba(201,169,98,0.7)" data-color="rgba(201,169,98,0.7)" onclick="applyNameBg(this)" title="Gold"></div>
           <div class="color-swatch mini" style="background:rgba(248,113,113,0.7)" data-color="rgba(248,113,113,0.7)" onclick="applyNameBg(this)" title="Red"></div>
           <div class="color-swatch mini" style="background:rgba(96,165,250,0.7)" data-color="rgba(96,165,250,0.7)" onclick="applyNameBg(this)" title="Blue"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('name-bg')">＋</button>
         </div>
       </div>
     </div>
@@ -496,6 +508,7 @@
           <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyTextBoxColor(this)"></div>
           <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyTextBoxColor(this)"></div>
           <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyTextBoxColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('textbox-color')">＋</button>
         </div>
       </div>
       <div class="field-group">
@@ -505,6 +518,7 @@
           <div class="color-swatch mini" style="background:rgba(0,0,0,0.25)" data-color="rgba(0,0,0,0.25)" onclick="applyTextBoxBg(this)" title="Light dark"></div>
           <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.15)" onclick="applyTextBoxBg(this)"></div>
           <div class="color-swatch mini no-bg-swatch" data-color="none" onclick="applyTextBoxBg(this)" title="Transparent"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('textbox-bg')">＋</button>
         </div>
       </div>
     </div>
@@ -599,6 +613,23 @@
           <div class="color-swatch mini" style="background:rgba(201,169,98,0.7)" data-color="rgba(201,169,98,0.7)" onclick="applySpotNameBg(this)" title="Gold"></div>
           <div class="color-swatch mini" style="background:rgba(248,113,113,0.7)" data-color="rgba(248,113,113,0.7)" onclick="applySpotNameBg(this)" title="Red"></div>
           <div class="color-swatch mini" style="background:rgba(96,165,250,0.7)" data-color="rgba(96,165,250,0.7)" onclick="applySpotNameBg(this)" title="Blue"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Vision properties -->
+    <div class="panel-section" id="vision-edit-section" style="display:none">
+      <h3>Player's Vision</h3>
+      <div class="field-group">
+        <div class="field-label">Colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:rgba(147,197,253,0.7)" data-vision-color="rgba(147,197,253,0.6)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(200,210,230,0.7)" data-vision-color="rgba(200,210,230,0.6)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(74,222,128,0.7)" data-vision-color="rgba(74,222,128,0.6)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(248,113,113,0.7)" data-vision-color="rgba(248,113,113,0.6)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(245,158,11,0.7)" data-vision-color="rgba(245,158,11,0.6)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-vision-color="rgba(255,255,255,0.6)" onclick="applyVisionColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('vision')">＋</button>
         </div>
       </div>
     </div>

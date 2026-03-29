@@ -34,7 +34,7 @@ export function addPlayer(x, y, team, num, isGK) {
   nameLabel.setAttribute('class','player-name');
   nameLabel.setAttribute('text-anchor','middle'); nameLabel.setAttribute('dominant-baseline','hanging');
   nameLabel.setAttribute('font-family','Poppins,sans-serif');
-  nameLabel.setAttribute('font-size','11'); nameLabel.setAttribute('font-weight','600');
+  nameLabel.setAttribute('font-size','11'); nameLabel.setAttribute('font-weight','400');
   nameLabel.setAttribute('fill','rgba(255,255,255,0.9)');
   nameLabel.setAttribute('y','24'); nameLabel.setAttribute('pointer-events','none');
   nameLabel.style.display = 'none';
@@ -59,28 +59,15 @@ export function addBall(x, y) {
   const id = 'ball-' + S.nextObjectId();
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.setAttribute('id', id); g.dataset.type = 'ball';
-  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.8';
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.7';
   const ns = 'http://www.w3.org/2000/svg';
 
   const c = document.createElementNS(ns, 'circle');
   c.setAttribute('cx','0'); c.setAttribute('cy','0'); c.setAttribute('r','10');
   c.setAttribute('fill','white'); c.setAttribute('stroke','#333'); c.setAttribute('stroke-width','1.5');
 
-  const ptAt = (a, r) => [r*Math.sin(a*Math.PI/180), -r*Math.cos(a*Math.PI/180)];
-  const cp = document.createElementNS(ns, 'polygon');
-  cp.setAttribute('points', [0,72,144,216,288].map(a => ptAt(a,4).join(',')).join(' '));
-  cp.setAttribute('fill','#222'); cp.setAttribute('opacity','0.8'); cp.setAttribute('pointer-events','none');
-
-  const og = document.createElementNS(ns, 'g'); og.setAttribute('pointer-events','none');
-  [36,108,180,252,324].forEach(a => {
-    const [ox,oy] = ptAt(a, 7.2);
-    const sp = document.createElementNS(ns, 'circle');
-    sp.setAttribute('cx', ox); sp.setAttribute('cy', oy); sp.setAttribute('r','1.8');
-    sp.setAttribute('fill','#222'); sp.setAttribute('opacity','0.55'); og.appendChild(sp);
-  });
-
-  g.appendChild(c); g.appendChild(cp); g.appendChild(og);
-  g.setAttribute('transform', `translate(${x},${y}) scale(0.8)`);
+  g.appendChild(c);
+  g.setAttribute('transform', `translate(${x},${y}) scale(0.7)`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
   S.playersLayer.appendChild(g);
@@ -171,9 +158,9 @@ export function addTextBox(x, y, text) {
   bg.classList.add('textbox-bg');
 
   const txt = document.createElementNS(ns, 'text');
-  txt.setAttribute('font-family', 'Manrope, sans-serif');
+  txt.setAttribute('font-family', 'Poppins, sans-serif');
   txt.setAttribute('font-size', '14');
-  txt.setAttribute('font-weight', '600');
+  txt.setAttribute('font-weight', '400');
   txt.setAttribute('fill', 'rgba(255,255,255,0.9)');
   txt.setAttribute('pointer-events', 'none');
 
@@ -220,8 +207,8 @@ function openTextBoxEdit(g) {
     left: ${s1.x}px; top: ${s1.y}px;
     width: ${s2.x - s1.x}px; height: ${s2.y - s1.y}px;
     background: transparent; border: 2px solid #C9A962; border-radius: 4px;
-    color: ${textColor}; font-family: Manrope, sans-serif;
-    font-size: ${fontSize * (ctm.a)}px; font-weight: 600;
+    color: ${textColor}; font-family: Poppins, sans-serif;
+    font-size: ${fontSize * (ctm.a)}px; font-weight: 400;
     text-align: ${align}; padding: 6px 8px;
     outline: none; resize: none; overflow: hidden;
     z-index: 9999; box-sizing: border-box;
@@ -279,9 +266,9 @@ export function rewrapTextBox(g) {
 
   // Create a temporary text for measuring word widths
   const measure = document.createElementNS(ns, 'text');
-  measure.setAttribute('font-family', 'Manrope, sans-serif');
+  measure.setAttribute('font-family', 'Poppins, sans-serif');
   measure.setAttribute('font-size', fontSize);
-  measure.setAttribute('font-weight', '600');
+  measure.setAttribute('font-weight', '400');
   measure.style.visibility = 'hidden';
   S.svg.appendChild(measure);
 
@@ -474,7 +461,7 @@ export function addSpotlight(x, y) {
   nameLabel.setAttribute('dominant-baseline', 'hanging');
   nameLabel.setAttribute('font-family', 'Poppins, sans-serif');
   nameLabel.setAttribute('font-size', '11');
-  nameLabel.setAttribute('font-weight', '600');
+  nameLabel.setAttribute('font-weight', '400');
   nameLabel.setAttribute('fill', 'rgba(255,255,255,0.9)');
   nameLabel.setAttribute('x', x);
   nameLabel.setAttribute('y', y + ry + 10);
@@ -491,4 +478,60 @@ export function addSpotlight(x, y) {
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
   S.objectsLayer.appendChild(g);
   return g;
+}
+
+// ─── Player Vision ───────────────────────────────────────────────────────────
+export function addVision(x, y) {
+  const id = 'vision-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'vision';
+  g.dataset.cx = x; g.dataset.cy = y;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.visionLength = '80';   // depth from apex to base
+  g.dataset.visionSpread = '35';   // half-width at base
+  g.dataset.visionColor = 'rgba(147,197,253,0.6)';
+
+  const tri = document.createElementNS(ns, 'polygon');
+  tri.setAttribute('fill', 'rgba(147,197,253,0.6)');
+  tri.setAttribute('stroke', 'none');
+  tri.classList.add('vision-shape');
+
+  g.appendChild(tri);
+  updateVisionPolygon(g);
+  makeDraggable(g);
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  S.objectsLayer.appendChild(g);
+  return g;
+}
+
+// Update the vision polygon points from stored dimensions
+export function updateVisionPolygon(g) {
+  const tri = g.querySelector('.vision-shape');
+  if (!tri) return;
+  const cx = parseFloat(g.dataset.cx);
+  const cy = parseFloat(g.dataset.cy);
+  const len = parseFloat(g.dataset.visionLength || '80');
+  const spread = parseFloat(g.dataset.visionSpread || '35');
+  const rot = parseFloat(g.dataset.rotation || '0');
+  const scale = parseFloat(g.dataset.scale || '1');
+
+  // Compute the 3 world-space vertices
+  const r = rot * Math.PI / 180;
+  const cosR = Math.cos(r), sinR = Math.sin(r);
+
+  // Local coords → rotated + scaled → translated
+  // Apex at (0,0) → (cx, cy)
+  // Top-right at (len, -spread) → rotated & scaled
+  // Bottom-right at (len, spread) → rotated & scaled
+  const sLen = len * scale, sSpread = spread * scale;
+
+  const ax = cx, ay = cy;
+  const tx = cx + (sLen * cosR - (-sSpread) * sinR);
+  const ty = cy + (sLen * sinR + (-sSpread) * cosR);
+  const bx = cx + (sLen * cosR - sSpread * sinR);
+  const by = cy + (sLen * sinR + sSpread * cosR);
+
+  tri.setAttribute('points', `${ax},${ay} ${tx},${ty} ${bx},${by}`);
 }
