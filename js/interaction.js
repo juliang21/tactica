@@ -202,6 +202,17 @@ export function select(el) {
     : 'Zone';
   const hint = type === 'player' ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
+
+  // Mobile context bar
+  if (window.innerWidth <= 768) {
+    const ctxBar = document.getElementById('mobile-context-bar');
+    if (ctxBar) {
+      document.getElementById('ctx-label').textContent = typeLabel;
+      ctxBar.classList.add('show');
+    }
+    const fb = document.getElementById('feedback-bubble');
+    if (fb) fb.style.display = 'none';
+  }
   const playerSec = document.getElementById('player-edit-section');
   const arrowSec = document.getElementById('arrow-edit-section');
   const zoneSec = document.getElementById('zone-edit-section');
@@ -348,6 +359,8 @@ export function deselect() {
   deselectVisual(S.selectedEl);
   S.setSelectedEl(null);
   S.selInfo.innerHTML = 'Nothing selected.<br><span style="font-size:10px;color:var(--text-muted)">Click to select · drag to move<br>Double-click player to rename</span>';
+  // Hide mobile context bar & restore feedback
+  hideMobileContext();
   document.getElementById('del-section').style.display = 'none';
   document.getElementById('layer-section').style.display = 'none';
   document.getElementById('player-edit-section').style.display = 'none';
@@ -360,6 +373,13 @@ export function deselect() {
   document.getElementById('size-section').style.display = 'none';
 }
 
+function hideMobileContext() {
+  const ctxBar = document.getElementById('mobile-context-bar');
+  if (ctxBar) ctxBar.classList.remove('show');
+  const fb = document.getElementById('feedback-bubble');
+  if (fb) fb.style.display = '';
+}
+
 export function deleteSelected() {
   if (!S.selectedEl) return;
   S.pushUndo();
@@ -367,6 +387,7 @@ export function deleteSelected() {
   S.selectedEl.remove();
   S.setSelectedEl(null);
   S.selInfo.innerHTML = 'Nothing selected.';
+  hideMobileContext();
   document.getElementById('del-section').style.display = 'none';
   document.getElementById('layer-section').style.display = 'none';
   document.getElementById('player-edit-section').style.display = 'none';

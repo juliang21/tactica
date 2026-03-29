@@ -562,6 +562,41 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   background: rgba(201,169,98,0.15); color: var(--accent);
 }
 
+/* ── Mobile Context Bar (appears above toolbar when element selected) ── */
+#mobile-context-bar {
+  display: none; /* shown via JS on mobile when element selected */
+  position: fixed; bottom: 60px; left: 0; right: 0;
+  z-index: 199;
+  height: 44px; padding: 0 10px;
+  background: var(--panel2); border-top: 1px solid var(--border);
+  align-items: center; gap: 8px;
+  animation: ctxSlideUp 0.15s ease;
+}
+@keyframes ctxSlideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+#mobile-context-bar.show { display: flex; }
+.ctx-label {
+  font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+  color: var(--accent); white-space: nowrap; margin-right: auto;
+  letter-spacing: 0.5px;
+}
+.ctx-btn {
+  height: 30px; padding: 0 10px; border-radius: 6px;
+  border: 1px solid var(--border); background: transparent;
+  font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer; white-space: nowrap;
+  display: flex; align-items: center; gap: 4px;
+  transition: all 0.15s;
+}
+.ctx-btn:hover { border-color: #444; color: var(--text); }
+.ctx-btn.ctx-props {
+  border-color: var(--accent); color: var(--accent);
+  background: rgba(201,169,98,0.08);
+}
+.ctx-btn.ctx-delete {
+  border-color: #3A1520; color: #F87171;
+}
+.ctx-btn.ctx-delete:hover { background: #3A1520; }
+
 /* ── Mobile panel toggle button ── */
 #mobile-panel-toggle {
   display: none;
@@ -599,24 +634,26 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
   /* Toolbar → horizontal bottom bar */
   #toolbar {
-    width: 100%; height: 56px;
+    width: 100%; height: 60px;
     flex-direction: row; order: 3;
-    padding: 0 8px; gap: 2px;
+    padding: 0 6px; gap: 4px;
     border-right: none; border-top: 1px solid var(--border);
     overflow-x: auto; overflow-y: hidden;
     flex-shrink: 0;
     -webkit-overflow-scrolling: touch;
   }
   #toolbar .tool-sep {
-    width: 1px; height: 28px; margin: 0 4px; flex-shrink: 0;
+    width: 1px; height: 28px; margin: 0 6px; flex-shrink: 0;
   }
   #toolbar .tool-btn {
-    width: 36px; height: 36px; flex-shrink: 0;
+    width: 42px; height: 42px; flex-shrink: 0;
   }
+  #toolbar .tool-btn svg { width: 20px; height: 20px; }
   #toolbar .tool-btn.save-btn {
-    width: 44px; height: 44px;
-    order: -1;
+    width: 48px; height: 48px;
+    order: -1; margin-right: 6px;
   }
+  #toolbar .tool-btn.save-btn svg { width: 20px; height: 20px; }
   .tool-tooltip { display: none !important; }
   /* Push clear to the end */
   #toolbar .tool-btn.danger { margin-left: auto; margin-top: 0; }
@@ -631,7 +668,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   /* Canvas takes remaining space */
   #canvas-wrap {
     flex: 1; order: 2;
-    padding: 50px 4px 60px;
+    padding: 50px 4px 66px;
     min-height: 0;
     align-items: center;
     justify-content: center;
@@ -652,7 +689,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
   /* Side panel → slide-over from right */
   #side-panel {
-    position: fixed; top: 0; right: 0; bottom: 56px;
+    position: fixed; top: 0; right: 0; bottom: 60px;
     width: 280px; z-index: 300;
     transform: translateX(100%);
     transition: transform 0.25s ease;
@@ -670,18 +707,18 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
   /* Mobile panel backdrop */
   #mobile-backdrop {
-    display: none; position: fixed; inset: 0; bottom: 56px;
+    display: none; position: fixed; inset: 0; bottom: 60px;
     background: rgba(0,0,0,0.5); z-index: 299;
   }
   #mobile-backdrop.show { display: block; }
 
   /* Feedback button — smaller on mobile */
   #feedback-bubble {
-    bottom: 66px; right: 12px;
+    bottom: 70px; right: 12px;
     padding: 6px 12px; font-size: 11px;
   }
   #feedback-panel {
-    bottom: 110px; right: 8px; width: calc(100vw - 16px); max-width: 320px;
+    bottom: 114px; right: 8px; width: calc(100vw - 16px); max-width: 320px;
   }
 
   /* Rondos brand — hide on mobile to save space */
@@ -701,11 +738,11 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
 /* ── Responsive: Small phones (≤480px) ── */
 @media (max-width: 480px) {
-  #canvas-wrap { padding: 50px 4px 60px; }
+  #canvas-wrap { padding: 50px 4px 66px; }
 
   #side-panel { width: 100%; }
 
-  #toolbar { gap: 1px; padding: 0 4px; }
-  #toolbar .tool-btn { width: 32px; height: 32px; }
-  #toolbar .tool-btn.save-btn { width: 38px; height: 38px; }
+  #toolbar { gap: 2px; padding: 0 4px; }
+  #toolbar .tool-btn { width: 38px; height: 38px; }
+  #toolbar .tool-btn.save-btn { width: 42px; height: 42px; }
 }
