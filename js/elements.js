@@ -39,7 +39,12 @@ export function addPlayer(x, y, team, num, isGK) {
   nameLabel.setAttribute('y','24'); nameLabel.setAttribute('pointer-events','none');
   nameLabel.style.display = 'none';
 
-  g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
+  // Invisible hit area for easier touch tapping
+  const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','28');
+  hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
+
+  g.appendChild(hitArea); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
   g.setAttribute('transform', `translate(${x},${y}) scale(0.9)`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
@@ -62,11 +67,16 @@ export function addBall(x, y) {
   g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.7';
   const ns = 'http://www.w3.org/2000/svg';
 
+  // Invisible hit area for easier touch tapping
+  const hitArea = document.createElementNS(ns, 'circle');
+  hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','24');
+  hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
+
   const c = document.createElementNS(ns, 'circle');
   c.setAttribute('cx','0'); c.setAttribute('cy','0'); c.setAttribute('r','10');
   c.setAttribute('fill','white'); c.setAttribute('stroke','#333'); c.setAttribute('stroke-width','1.5');
 
-  g.appendChild(c);
+  g.appendChild(hitArea); g.appendChild(c);
   g.setAttribute('transform', `translate(${x},${y}) scale(0.7)`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
@@ -96,7 +106,12 @@ export function addCone(x, y) {
   stripe.setAttribute('stroke','#ffb84d'); stripe.setAttribute('stroke-width','1.5');
   stripe.setAttribute('pointer-events','none');
 
-  g.appendChild(sh); g.appendChild(tri); g.appendChild(stripe);
+  // Invisible hit area for easier touch tapping
+  const hitArea = document.createElementNS(ns, 'circle');
+  hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','20');
+  hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
+
+  g.appendChild(hitArea); g.appendChild(sh); g.appendChild(tri); g.appendChild(stripe);
   g.setAttribute('transform', `translate(${x},${y})`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
@@ -169,7 +184,17 @@ export function addTextBox(x, y, text) {
   rewrapTextBox(g);
 
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => {
+    if (S.tool !== 'select') return;
+    e.stopPropagation();
+    // On mobile: if already selected, open inline edit (single tap to edit)
+    const isMobile = 'ontouchstart' in window && window.innerWidth <= 768;
+    if (isMobile && S.selectedEl === g) {
+      try { openTextBoxEdit(g); } catch(err) { console.error('openTextBoxEdit error:', err); }
+    } else {
+      select(g);
+    }
+  });
   g.addEventListener('dblclick', e => {
     e.stopPropagation();
     try { openTextBoxEdit(g); } catch(err) { console.error('openTextBoxEdit error:', err); }

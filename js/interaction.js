@@ -868,7 +868,7 @@ function onDrag(e) {
   moveElement(S.selectedEl, pt.x - S.dragOffX, pt.y - S.dragOffY);
   // Update handles if dragging the whole element
   const dt = S.selectedEl.dataset.type;
-  if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight') updateHandlePositions(S.selectedEl);
+  if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight' || dt === 'vision') updateHandlePositions(S.selectedEl);
 }
 
 function stopDrag() {

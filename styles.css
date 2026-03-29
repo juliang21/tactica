@@ -532,6 +532,36 @@ body.image-mode #mode-image-btn { background: #C9A962; color: #0A0A0A; font-weig
 body.image-mode #mode-image-btn svg { opacity: 1; color: #0A0A0A; }
 body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777; font-weight: 500; }
 
+/* ── Mobile Mode Dropdown ── */
+#mode-dropdown {
+  display: none; /* hidden on desktop, shown on mobile */
+}
+#mode-dropdown-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 6px 12px; height: 30px;
+  border-radius: 6px; border: 1px solid var(--border);
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+  color: var(--accent); background: var(--panel2);
+  cursor: pointer; white-space: nowrap;
+}
+#mode-dropdown-btn svg { opacity: 0.7; }
+#mode-dropdown-menu {
+  position: absolute; top: 100%; left: 0; right: 0;
+  margin-top: 4px;
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 8px; overflow: hidden; z-index: 200;
+  box-shadow: 0 8px 24px rgba(0,0,0,0.5);
+}
+.mode-dropdown-option {
+  display: block; width: 100%; padding: 10px 14px;
+  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500;
+  color: var(--text-muted); background: transparent;
+  border: none; text-align: left; cursor: pointer;
+}
+.mode-dropdown-option:hover, .mode-dropdown-option.active {
+  background: rgba(201,169,98,0.15); color: var(--accent);
+}
+
 /* ── Mobile panel toggle button ── */
 #mobile-panel-toggle {
   display: none;
@@ -585,13 +615,21 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   /* Push clear to the end */
   #toolbar .tool-btn.danger { margin-left: auto; margin-top: 0; }
 
+  /* Toolbar → fixed at bottom */
+  #toolbar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
   /* Canvas takes remaining space */
   #canvas-wrap {
     flex: 1; order: 2;
-    padding: 50px 4px 4px;
+    padding: 50px 4px 60px;
     min-height: 0;
     align-items: center;
     justify-content: center;
+    overflow: hidden;
   }
 
   /* Make pitch SVG responsive — fill available space */
@@ -603,7 +641,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   #pitch-svg {
     width: 100% !important;
     height: 100% !important;
-    max-height: calc(100dvh - 100px);
+    max-height: calc(100dvh - 120px);
   }
 
   /* Side panel → slide-over from right */
@@ -644,11 +682,20 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   .rondos-brand {
     display: none;
   }
+
+  /* Mode bar → hide tab bar, show dropdown */
+  #mode-bar { display: none !important; }
+  #mode-dropdown {
+    display: block;
+    position: absolute; top: 8px; left: 50%;
+    transform: translateX(-50%);
+    z-index: 200;
+  }
 }
 
 /* ── Responsive: Small phones (≤480px) ── */
 @media (max-width: 480px) {
-  #canvas-wrap { padding: 50px 4px 4px; }
+  #canvas-wrap { padding: 50px 4px 60px; }
 
   #side-panel { width: 100%; }
 

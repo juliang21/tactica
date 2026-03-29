@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Táctica · Football Board</title>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="images/favicon-180.png">
@@ -123,7 +123,7 @@
 
 <!-- ── Pitch ── -->
 <div id="canvas-wrap">
-  <!-- Mode Selector Tab Bar -->
+  <!-- Mode Selector Tab Bar (desktop) -->
   <div id="mode-bar">
     <div class="mode-tab-group">
       <button class="mode-tab active" id="mode-pitch-btn" onclick="switchMode('pitch')">
@@ -142,6 +142,17 @@
         </svg>
         Upload Image
       </button>
+    </div>
+  </div>
+  <!-- Mode Selector Dropdown (mobile) -->
+  <div id="mode-dropdown">
+    <button id="mode-dropdown-btn" onclick="toggleModeDropdown()">
+      <span id="mode-dropdown-label">Tactical Board</span>
+      <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+    <div id="mode-dropdown-menu" style="display:none">
+      <button class="mode-dropdown-option active" data-mode="pitch" onclick="selectModeDropdown('pitch')">Tactical Board</button>
+      <button class="mode-dropdown-option" data-mode="image" onclick="selectModeDropdown('image')">Upload Image</button>
     </div>
   </div>
   <div id="pitch-container">

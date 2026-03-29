@@ -229,6 +229,32 @@ function closeModeSwitch() {
 }
 window.closeModeSwitch = closeModeSwitch;
 
+// ─── Mobile Mode Dropdown ────────────────────────────────────────────────────
+function toggleModeDropdown() {
+  const menu = document.getElementById('mode-dropdown-menu');
+  menu.style.display = menu.style.display === 'none' ? 'block' : 'none';
+}
+window.toggleModeDropdown = toggleModeDropdown;
+
+function selectModeDropdown(mode) {
+  document.getElementById('mode-dropdown-menu').style.display = 'none';
+  const label = document.getElementById('mode-dropdown-label');
+  const options = document.querySelectorAll('.mode-dropdown-option');
+  options.forEach(o => o.classList.toggle('active', o.dataset.mode === mode));
+  label.textContent = mode === 'pitch' ? 'Tactical Board' : 'Upload Image';
+  // Also sync with the desktop tab bar buttons
+  switchMode(mode);
+}
+window.selectModeDropdown = selectModeDropdown;
+
+// Close dropdown when tapping elsewhere
+document.addEventListener('click', e => {
+  const dd = document.getElementById('mode-dropdown');
+  if (dd && !dd.contains(e.target)) {
+    document.getElementById('mode-dropdown-menu').style.display = 'none';
+  }
+});
+
 // Expose teamContext as a live getter so inline onclick handlers can read it
 Object.defineProperty(window, 'teamContext', { get: () => S.teamContext });
 
