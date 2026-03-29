@@ -564,16 +564,8 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
 /* ── Mobile Context Bar (appears above toolbar when element selected) ── */
 #mobile-context-bar {
-  display: none; /* shown via JS on mobile when element selected */
-  position: fixed; bottom: 60px; left: 0; right: 0;
-  z-index: 199;
-  height: 44px; padding: 0 10px;
-  background: var(--panel2); border-top: 1px solid var(--border);
-  align-items: center; gap: 8px;
-  animation: ctxSlideUp 0.15s ease;
+  display: none; /* hidden everywhere by default */
 }
-@keyframes ctxSlideUp { from { transform: translateY(10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-#mobile-context-bar.show { display: flex; }
 .ctx-label {
   font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
   color: var(--accent); white-space: nowrap; margin-right: auto;
@@ -663,6 +655,17 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
     position: fixed; bottom: 0; left: 0; right: 0;
     z-index: 200;
     padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Context bar → fixed just above toolbar */
+  #mobile-context-bar.show {
+    display: flex;
+    position: fixed; bottom: 60px; left: 0; right: 0;
+    z-index: 199;
+    height: 44px; padding: 0 12px;
+    background: var(--panel2); border-top: 1px solid var(--border);
+    align-items: center; gap: 8px;
+    padding-bottom: 0;
   }
 
   /* Canvas takes remaining space */
