@@ -190,18 +190,21 @@ export function addTextBox(x, y, text) {
   g.addEventListener('click', e => {
     if (S.tool !== 'select') return;
     e.stopPropagation();
-    const isMobile = 'ontouchstart' in window && window.innerWidth <= 768;
-    if (isMobile) {
-      // On mobile: select and immediately open inline edit
-      select(g);
-      try { openTextBoxEdit(g); } catch(err) { console.error('openTextBoxEdit error:', err); }
-    } else {
-      select(g);
-    }
+    select(g);
   });
   g.addEventListener('dblclick', e => {
     e.stopPropagation();
     try { openTextBoxEdit(g); } catch(err) { console.error('openTextBoxEdit error:', err); }
+  });
+  // On mobile: touchstart preventDefault blocks click, so use touchend to open editor
+  g.addEventListener('touchend', e => {
+    if (S.tool !== 'select') return;
+    // Only open editor on tap (no drag movement)
+    if (!S.dragMoved) {
+      setTimeout(() => {
+        try { openTextBoxEdit(g); } catch(err) { console.error('openTextBoxEdit error:', err); }
+      }, 50);
+    }
   });
   return g;
 }

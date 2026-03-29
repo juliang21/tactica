@@ -615,6 +615,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   }
   #toolbar .tool-btn.save-btn {
     width: 44px; height: 44px;
+    order: -1;
   }
   .tool-tooltip { display: none !important; }
   /* Push clear to the end */
