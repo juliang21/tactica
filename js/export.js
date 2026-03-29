@@ -379,7 +379,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
       ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(8,8); ctx.lineTo(-8,8); ctx.closePath();
       ctx.fillStyle='#ff8c00'; ctx.fill(); ctx.strokeStyle='#cc6600'; ctx.lineWidth=1; ctx.stroke();
     } else if (type === 'player') {
-      const circleEl = g.querySelector('circle');
+      const circleEl = g.querySelector('circle:not(.hit-area)');
       const color = circleEl ? circleEl.getAttribute('fill') : '#e8f0ff';
       // Drop shadow: black 43%, angle 90°, distance 5, blur 6
       ctx.save();

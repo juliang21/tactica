@@ -56,7 +56,7 @@ export function applyColor(swatchEl) {
 }
 
 function setPlayerColor(g, color) {
-  const circ = g.querySelector('circle');
+  const circ = g.querySelector('circle:not(.hit-area)');
   if (circ) {
     circ.setAttribute('fill', color);
     circ.setAttribute('stroke', S.isDarkColor(color) ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)');
@@ -224,7 +224,7 @@ export function applyPlayerBorder(swatchEl) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
   trackElementEdited('player', 'border_color');
   const color = swatchEl.dataset.color;
-  const circ = S.selectedEl.querySelector('circle');
+  const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
   if (!circ) return;
   if (color === 'none') {
     circ.setAttribute('stroke', 'transparent');
@@ -248,7 +248,7 @@ export function openColorPicker(target) {
     const line = S.selectedEl?.querySelector('line');
     if (line) current = line.getAttribute('stroke') || '#ffffff';
   } else {
-    const circ = S.selectedEl?.querySelector('circle');
+    const circ = S.selectedEl?.querySelector('circle:not(.hit-area)');
     if (circ && target === 'fill') current = circ.getAttribute('fill') || '#ffffff';
     else if (circ && target === 'border') current = circ.getAttribute('stroke') || '#ffffff';
   }
@@ -323,7 +323,7 @@ export function confirmColorPicker() {
     if (colorPickerTarget === 'fill') {
       setPlayerColor(S.selectedEl, hex);
     } else {
-      const circ = S.selectedEl.querySelector('circle');
+      const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
       if (circ) {
         circ.setAttribute('stroke', hex);
         circ.setAttribute('stroke-width', '1.5');

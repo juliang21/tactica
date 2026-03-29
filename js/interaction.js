@@ -151,8 +151,8 @@ export function select(el) {
 
   // Visual highlight
   if (type === 'player' || type === 'ball' || type === 'cone') {
-    el.querySelector('circle,polygon')?.setAttribute('stroke-width', '3');
-    if (type === 'player') el.querySelector('circle')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+    el.querySelector('circle:not(.hit-area),polygon')?.setAttribute('stroke-width', '3');
+    if (type === 'player') el.querySelector('circle:not(.hit-area)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
   }
   if (type === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
@@ -292,7 +292,7 @@ export function deselectVisual(el) {
   removeHandles();
   const t = el.dataset.type;
   if (t === 'player') {
-    const circ = el.querySelector('circle');
+    const circ = el.querySelector('circle:not(.hit-area)');
     if (circ) {
       const customBorder = el.dataset.borderColor;
       if (customBorder === 'none') {
@@ -308,7 +308,7 @@ export function deselectVisual(el) {
       }
     }
   }
-  if (t === 'ball' || t === 'cone') el.querySelector('circle,polygon')?.setAttribute('stroke-width', '1.5');
+  if (t === 'ball' || t === 'cone') el.querySelector('circle:not(.hit-area),polygon')?.setAttribute('stroke-width', '1.5');
   if (t === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
     if (bg) { bg.removeAttribute('stroke'); bg.removeAttribute('stroke-width'); }
@@ -389,15 +389,28 @@ export function switchTab(name) {
 let handleGroup = null;
 
 function createHandle(ns, hx, hy, which, cursor) {
+  const isMobile = 'ontouchstart' in window && window.innerWidth <= 768;
+  const g = document.createElementNS(ns, 'g');
+  g.dataset.handle = which;
+  g.setAttribute('cursor', cursor || 'grab');
+  // Invisible larger hit area for mobile touch
+  if (isMobile) {
+    const hit = document.createElementNS(ns, 'circle');
+    hit.setAttribute('cx', hx); hit.setAttribute('cy', hy);
+    hit.setAttribute('r', '18'); hit.setAttribute('fill', 'transparent');
+    hit.setAttribute('stroke', 'none');
+    g.appendChild(hit);
+  }
+  // Visible handle
   const c = document.createElementNS(ns, 'circle');
   c.setAttribute('cx', hx); c.setAttribute('cy', hy);
-  c.setAttribute('r', '6'); c.setAttribute('fill', 'rgba(201,169,98,0.4)');
+  c.setAttribute('r', isMobile ? '10' : '6');
+  c.setAttribute('fill', 'rgba(201,169,98,0.4)');
   c.setAttribute('stroke', '#C9A962'); c.setAttribute('stroke-width', '1.5');
-  c.setAttribute('cursor', cursor || 'grab');
-  c.dataset.handle = which;
-  c.addEventListener('mousedown', handleDown);
-  c.addEventListener('touchstart', handleDown, { passive: false });
-  return c;
+  g.appendChild(c);
+  g.addEventListener('mousedown', handleDown);
+  g.addEventListener('touchstart', handleDown, { passive: false });
+  return g;
 }
 
 // ── Arrow handles ──
@@ -561,17 +574,29 @@ export function removeHandles() {
 }
 
 
+// Move a handle (group or circle) to a new position
+function moveHandleTo(h, x, y) {
+  if (!h) return;
+  if (h.tagName === 'circle') {
+    h.setAttribute('cx', x); h.setAttribute('cy', y);
+  } else {
+    h.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', x); c.setAttribute('cy', y); });
+  }
+}
+
 function updateHandlePositions(el) {
   if (!handleGroup) return;
   const type = handleGroup.dataset.handleType;
 
   if (type === 'arrow') {
     const visLine = el.querySelector('line');
-    const handles = handleGroup.querySelectorAll('circle');
-    handles[0]?.setAttribute('cx', visLine.getAttribute('x1'));
-    handles[0]?.setAttribute('cy', visLine.getAttribute('y1'));
-    handles[1]?.setAttribute('cx', visLine.getAttribute('x2'));
-    handles[1]?.setAttribute('cy', visLine.getAttribute('y2'));
+    const x1 = visLine.getAttribute('x1'), y1 = visLine.getAttribute('y1');
+    const x2 = visLine.getAttribute('x2'), y2 = visLine.getAttribute('y2');
+    // Each handle is a <g> containing circle(s) — update all circles within
+    const hStart = handleGroup.children[0];
+    const hEnd = handleGroup.children[1];
+    if (hStart) hStart.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', x1); c.setAttribute('cy', y1); });
+    if (hEnd) hEnd.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', x2); c.setAttribute('cy', y2); });
   } else if (type === 'zone') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const hw = parseFloat(el.dataset.hw || '30');
@@ -587,10 +612,9 @@ function updateHandlePositions(el) {
     const st = rotatedPoint(cx, cy, 0, -hh, rot);
     const sb = rotatedPoint(cx, cy, 0, hh, rot);
 
-    // 0: tl (circle), 1: tr (rotate group), 2: br, 3: bl, 4: side-l, 5: side-r, 6: side-t, 7: side-b
+    // 0: tl, 1: tr (rotate group), 2: br, 3: bl, 4: side-l, 5: side-r, 6: side-t, 7: side-b
     const children = handleGroup.children;
-    // tl
-    children[0]?.setAttribute('cx', tl.x); children[0]?.setAttribute('cy', tl.y);
+    moveHandleTo(children[0], tl.x, tl.y);
     // tr rotate handle — update the circles/paths inside the group
     const rotG = children[1];
     if (rotG) {
@@ -599,29 +623,27 @@ function updateHandlePositions(el) {
       const rp = rotG.querySelector('path');
       if (rp) rp.setAttribute('d', `M${tr.x-3},${tr.y-2} A4,4 0 1,1 ${tr.x+2},${tr.y-3}`);
     }
-    // br, bl
-    children[2]?.setAttribute('cx', br.x); children[2]?.setAttribute('cy', br.y);
-    children[3]?.setAttribute('cx', bl.x); children[3]?.setAttribute('cy', bl.y);
-    // sides (left, right, top, bottom)
-    children[4]?.setAttribute('cx', sl.x); children[4]?.setAttribute('cy', sl.y);
-    children[5]?.setAttribute('cx', sr.x); children[5]?.setAttribute('cy', sr.y);
-    children[6]?.setAttribute('cx', st.x); children[6]?.setAttribute('cy', st.y);
-    children[7]?.setAttribute('cx', sb.x); children[7]?.setAttribute('cy', sb.y);
+    moveHandleTo(children[2], br.x, br.y);
+    moveHandleTo(children[3], bl.x, bl.y);
+    moveHandleTo(children[4], sl.x, sl.y);
+    moveHandleTo(children[5], sr.x, sr.y);
+    moveHandleTo(children[6], st.x, st.y);
+    moveHandleTo(children[7], sb.x, sb.y);
   } else if (type === 'spotlight') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const rx = parseFloat(el.dataset.rx || '28') * parseFloat(el.dataset.scale || '1');
     const children = handleGroup.children;
-    children[0]?.setAttribute('cx', cx - rx); children[0]?.setAttribute('cy', cy);
-    children[1]?.setAttribute('cx', cx + rx); children[1]?.setAttribute('cy', cy);
+    moveHandleTo(children[0], cx - rx, cy);
+    moveHandleTo(children[1], cx + rx, cy);
   } else if (type === 'vision') {
     const pts = visionWorldPoints(el);
     const children = handleGroup.children;
     // 0: top-right
-    children[0]?.setAttribute('cx', pts.topRight.x); children[0]?.setAttribute('cy', pts.topRight.y);
+    moveHandleTo(children[0], pts.topRight.x, pts.topRight.y);
     // 1: bottom-right
-    children[1]?.setAttribute('cx', pts.botRight.x); children[1]?.setAttribute('cy', pts.botRight.y);
+    moveHandleTo(children[1], pts.botRight.x, pts.botRight.y);
     // 2: base mid
-    children[2]?.setAttribute('cx', pts.baseMid.x); children[2]?.setAttribute('cy', pts.baseMid.y);
+    moveHandleTo(children[2], pts.baseMid.x, pts.baseMid.y);
     // 3: rotate handle (group) — position above top-right
     const rotG = children[3];
     if (rotG) {

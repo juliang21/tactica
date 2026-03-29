@@ -41,6 +41,7 @@ export function addPlayer(x, y, team, num, isGK) {
 
   // Invisible hit area for easier touch tapping
   const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  hitArea.classList.add('hit-area');
   hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','28');
   hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
 
@@ -69,6 +70,7 @@ export function addBall(x, y) {
 
   // Invisible hit area for easier touch tapping
   const hitArea = document.createElementNS(ns, 'circle');
+  hitArea.classList.add('hit-area');
   hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','24');
   hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
 
@@ -108,6 +110,7 @@ export function addCone(x, y) {
 
   // Invisible hit area for easier touch tapping
   const hitArea = document.createElementNS(ns, 'circle');
+  hitArea.classList.add('hit-area');
   hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','20');
   hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
 
@@ -187,9 +190,10 @@ export function addTextBox(x, y, text) {
   g.addEventListener('click', e => {
     if (S.tool !== 'select') return;
     e.stopPropagation();
-    // On mobile: if already selected, open inline edit (single tap to edit)
     const isMobile = 'ontouchstart' in window && window.innerWidth <= 768;
-    if (isMobile && S.selectedEl === g) {
+    if (isMobile) {
+      // On mobile: select and immediately open inline edit
+      select(g);
       try { openTextBoxEdit(g); } catch(err) { console.error('openTextBoxEdit error:', err); }
     } else {
       select(g);

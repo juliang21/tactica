@@ -349,7 +349,7 @@ function copySelected() {
   const data = { type: t };
 
   if (t === 'player') {
-    const circ = el.querySelector('circle');
+    const circ = el.querySelector('circle:not(.hit-area)');
     data.team = el.dataset.team;
     data.label = el.dataset.label;
     data.isGK = el.dataset.isGK === '1';
@@ -418,7 +418,7 @@ function pasteClipboard() {
   if (d.type === 'player') {
     placed = addPlayer(x, y, d.team, d.label, d.isGK);
     if (placed) {
-      const circ = placed.querySelector('circle');
+      const circ = placed.querySelector('circle:not(.hit-area)');
       if (circ && d.fill) { circ.setAttribute('fill', d.fill); circ.setAttribute('stroke', d.stroke || ''); }
       if (d.borderColor) placed.dataset.borderColor = d.borderColor;
       if (d.playerName) {
