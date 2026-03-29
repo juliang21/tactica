@@ -20,7 +20,7 @@ export function addPlayer(x, y, team, num, isGK) {
   circle.setAttribute('cx','0'); circle.setAttribute('cy','0'); circle.setAttribute('r','16');
   circle.setAttribute('fill', fillColor);
   circle.setAttribute('stroke', isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)');
-  circle.setAttribute('stroke-width','2');
+  circle.setAttribute('stroke-width','2.5');
   circle.setAttribute('filter', 'url(#player-shadow)');
 
   const numText = document.createElementNS('http://www.w3.org/2000/svg', 'text');

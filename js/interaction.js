@@ -311,11 +311,11 @@ export function deselectVisual(el) {
         circ.setAttribute('stroke-width', '0');
       } else if (customBorder) {
         circ.setAttribute('stroke', customBorder);
-        circ.setAttribute('stroke-width', '1.5');
+        circ.setAttribute('stroke-width', '2.5');
       } else {
         const fill = circ.getAttribute('fill');
         circ.setAttribute('stroke', S.isDarkColor(fill) ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)');
-        circ.setAttribute('stroke-width', '1.5');
+        circ.setAttribute('stroke-width', '2.5');
       }
     }
   }
