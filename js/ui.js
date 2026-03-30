@@ -34,10 +34,11 @@ export function applyKit(el) {
   document.querySelectorAll('.kit-btn').forEach(b => b.classList.remove('selected'));
   el.classList.add('selected');
   const color = el.dataset.color, gkColor = el.dataset.gk || '#a8f0d0';
+  const borderColor = el.dataset.border || null;
   S.teamColors[S.teamContext] = color;
   S.gkColors[S.teamContext] = gkColor;
   document.getElementById('dot-' + S.teamContext).style.background = color;
-  updateTeamPlayerColors(S.teamContext, color, gkColor);
+  updateTeamPlayerColors(S.teamContext, color, gkColor, borderColor);
 }
 
 export function applyColor(swatchEl) {
@@ -67,11 +68,19 @@ function setPlayerColor(g, color) {
   if (txt) txt.setAttribute('fill', S.isDarkColor(color) ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
 }
 
-function updateTeamPlayerColors(team, color, gkColor) {
+function updateTeamPlayerColors(team, color, gkColor, borderColor) {
   S.playersLayer.querySelectorAll(`g[data-team="${team}"]`).forEach(g => {
     const isGK = g.dataset.isGK === '1';
     const c = isGK ? gkColor : color;
     setPlayerColor(g, c);
+    if (borderColor) {
+      const circ = g.querySelector('circle:not(.hit-area)');
+      if (circ) {
+        circ.setAttribute('stroke', borderColor);
+        circ.setAttribute('stroke-width', '2.5');
+      }
+      g.dataset.borderColor = borderColor;
+    }
   });
 }
 
