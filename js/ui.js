@@ -123,6 +123,18 @@ export function placeFormation(name) {
 
     addPlayer(x, y, team, i+1, isGK);
   });
+  // Apply kit border if the selected kit has one (e.g. River Plate)
+  const selectedKit = document.querySelector('.kit-btn.selected');
+  if (selectedKit && selectedKit.dataset.border) {
+    S.playersLayer.querySelectorAll(`g[data-team="${team}"]`).forEach(g => {
+      const circ = g.querySelector('circle:not(.hit-area)');
+      if (circ) {
+        circ.setAttribute('stroke', selectedKit.dataset.border);
+        circ.setAttribute('stroke-width', '2.5');
+      }
+      g.dataset.borderColor = selectedKit.dataset.border;
+    });
+  }
   setTool('select');
 }
 
