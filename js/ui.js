@@ -61,7 +61,7 @@ function setPlayerColor(g, color) {
   if (circ) {
     circ.setAttribute('fill', color);
     circ.setAttribute('stroke', S.isDarkColor(color) ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)');
-    circ.setAttribute('stroke-width', '2.5');
+    circ.setAttribute('stroke-width', '2');
   }
   delete g.dataset.borderColor;
   const txt = g.querySelectorAll('text')[0];
@@ -77,7 +77,7 @@ function updateTeamPlayerColors(team, color, gkColor, borderColor) {
       const circ = g.querySelector('circle:not(.hit-area)');
       if (circ) {
         circ.setAttribute('stroke', borderColor);
-        circ.setAttribute('stroke-width', '2.5');
+        circ.setAttribute('stroke-width', '2');
       }
       g.dataset.borderColor = borderColor;
     }
@@ -130,7 +130,7 @@ export function placeFormation(name) {
       const circ = g.querySelector('circle:not(.hit-area)');
       if (circ) {
         circ.setAttribute('stroke', selectedKit.dataset.border);
-        circ.setAttribute('stroke-width', '2.5');
+        circ.setAttribute('stroke-width', '2');
       }
       g.dataset.borderColor = selectedKit.dataset.border;
     });
@@ -252,7 +252,7 @@ export function applyPlayerBorder(swatchEl) {
     circ.setAttribute('stroke-width', '0');
   } else {
     circ.setAttribute('stroke', color);
-    circ.setAttribute('stroke-width', '2.5');
+    circ.setAttribute('stroke-width', '2');
   }
   S.selectedEl.dataset.borderColor = color;
 }
@@ -347,7 +347,7 @@ export function confirmColorPicker() {
       const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
       if (circ) {
         circ.setAttribute('stroke', hex);
-        circ.setAttribute('stroke-width', '2.5');
+        circ.setAttribute('stroke-width', '2');
       }
       S.selectedEl.dataset.borderColor = hex;
     }
