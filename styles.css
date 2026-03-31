@@ -485,6 +485,14 @@ body.tool-spotlight #pitch-svg { cursor: crosshair; }
 .fb-type-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(201,169,98,0.08); }
 .fb-type-btn:hover { border-color: #444; }
 
+.fb-email-input {
+  width: 100%; padding: 8px 12px; border-radius: 6px;
+  border: 1px solid var(--border); background: var(--bg);
+  color: var(--text); font-family: 'Manrope', sans-serif; font-size: 12px;
+  outline: none; box-sizing: border-box;
+}
+.fb-email-input:focus { border-color: var(--accent); }
+.fb-email-input::placeholder { color: var(--text-dim); }
 #fb-message {
   width: 100%; padding: 10px 12px; border-radius: 6px;
   border: 1px solid var(--border); background: var(--bg);

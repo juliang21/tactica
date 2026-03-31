@@ -581,6 +581,7 @@ function toggleFeedback() {
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
   // Reset on open
   if (panel.style.display === 'block') {
+    document.getElementById('fb-email').value = '';
     document.getElementById('fb-message').value = '';
     document.getElementById('fb-status').style.display = 'none';
     document.getElementById('fb-submit').disabled = false;
@@ -614,29 +615,7 @@ function onFeedbackFile(input) {
   }
 }
 
-async function uploadImage(file) {
-  // Try tmpfiles.org
-  try {
-    const fd = new FormData();
-    fd.append('file', file, file.name || 'screenshot.png');
-    const res = await fetch('https://tmpfiles.org/api/v1/upload', { method: 'POST', body: fd });
-    if (res.ok) {
-      const data = await res.json();
-      const url = data.data?.url?.replace('tmpfiles.org/', 'tmpfiles.org/dl/') || '';
-      if (url) return url;
-    }
-  } catch(e) {}
-  // Try 0x0.st as fallback
-  try {
-    const fd = new FormData();
-    fd.append('file', file);
-    const res = await fetch('https://0x0.st', { method: 'POST', body: fd });
-    if (res.ok) return (await res.text()).trim();
-  } catch(e) {}
-  return '';
-}
-
-async function submitFeedback() {
+function submitFeedback() {
   const msg = document.getElementById('fb-message').value.trim();
   if (!msg) { document.getElementById('fb-message').focus(); return; }
 
@@ -646,49 +625,70 @@ async function submitFeedback() {
   btn.textContent = 'Sending…';
   status.style.display = 'none';
 
-  try {
-    // Upload image if attached
-    let imageUrl = '';
-    if (feedbackFile) {
-      btn.textContent = 'Uploading image…';
-      imageUrl = await uploadImage(feedbackFile);
-    }
+  // Hidden iframe form POST — bypasses CORS entirely
+  const iframeName = 'fb-iframe-' + Date.now();
+  const iframe = document.createElement('iframe');
+  iframe.name = iframeName;
+  iframe.style.display = 'none';
+  document.body.appendChild(iframe);
 
-    const body = {
-      type: feedbackType,
-      message: msg,
-      _subject: `Táctica Feedback: ${feedbackType}`,
-      _template: 'table',
-    };
-    if (imageUrl) body.screenshot = imageUrl;
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.action = 'https://formsubmit.co/juliangenoud@gmail.com';
+  form.enctype = 'multipart/form-data';
+  form.target = iframeName;
+  form.style.display = 'none';
 
-    btn.textContent = 'Sending…';
-    const res = await fetch('https://formsubmit.co/ajax/juliangenoud@gmail.com', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(body),
-    });
+  const email = document.getElementById('fb-email').value.trim();
+  const fields = {
+    type: feedbackType,
+    message: msg,
+    _subject: `Táctica Feedback: ${feedbackType}`,
+    _template: 'table',
+    _captcha: 'false',
+    _next: window.location.href,
+  };
+  if (email) fields.email = email;
 
-    if (res.ok) {
-      status.textContent = 'Thanks! Feedback sent.';
-      status.className = 'success';
-      status.style.display = 'block';
-      btn.textContent = 'Sent ✓';
-      setTimeout(() => toggleFeedback(), 1800);
-    } else {
-      throw new Error('Send failed');
-    }
-  } catch(e) {
-    // Fallback to mailto
-    const subject = encodeURIComponent(`Táctica Feedback: ${feedbackType}`);
-    const mailBody = encodeURIComponent(msg);
-    window.open(`mailto:juliangenoud@gmail.com?subject=${subject}&body=${mailBody}`, '_blank');
-    status.textContent = 'Opening email client…';
+  for (const [k, v] of Object.entries(fields)) {
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.name = k;
+    input.value = v;
+    form.appendChild(input);
+  }
+
+  // Attach screenshot if present
+  if (feedbackFile) {
+    const fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.name = 'attachment';
+    fileInput.style.display = 'none';
+    form.appendChild(fileInput);
+    const dt = new DataTransfer();
+    dt.items.add(feedbackFile);
+    fileInput.files = dt.files;
+  }
+
+  document.body.appendChild(form);
+  form.submit();
+
+  // Show success after iframe loads or after timeout
+  const done = () => {
+    if (btn.textContent === 'Sent ✓') return; // already handled
+    status.textContent = 'Thanks! Feedback sent.';
     status.className = 'success';
     status.style.display = 'block';
-    btn.textContent = 'Send Feedback';
-    btn.disabled = false;
-  }
+    btn.textContent = 'Sent ✓';
+    setTimeout(() => {
+      toggleFeedback();
+      iframe.remove();
+      form.remove();
+    }, 1800);
+  };
+
+  iframe.addEventListener('load', done);
+  setTimeout(() => { done(); iframe.remove(); form.remove(); }, 6000);
 }
 
 window.toggleFeedback = toggleFeedback;
