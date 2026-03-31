@@ -651,16 +651,19 @@ async function submitFeedback() {
     formData.append('from_name', 'Táctica Feedback');
     if (email) formData.append('email', email);
 
-    // Embed screenshot as inline base64 image in the message
+    // Upload screenshot to temp host and include URL
     if (feedbackFile) {
-      btn.textContent = 'Processing image…';
+      btn.textContent = 'Uploading image…';
       const compressed = await compressImage(feedbackFile, 800, 0.6);
-      const base64 = await new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.readAsDataURL(compressed);
-      });
-      formData.set('message', msg + `\n\n[Screenshot attached]\n<img src="${base64}" style="max-width:600px">`);
+      const uploadData = new FormData();
+      uploadData.append('reqtype', 'fileupload');
+      uploadData.append('time', '72h');
+      uploadData.append('fileToUpload', compressed, 'screenshot.jpg');
+      const uploadRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: uploadData });
+      if (uploadRes.ok) {
+        const imageUrl = (await uploadRes.text()).trim();
+        formData.set('message', msg + `\n\nScreenshot: ${imageUrl}`);
+      }
     }
 
     btn.textContent = 'Sending…';
