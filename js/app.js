@@ -628,33 +628,20 @@ async function submitFeedback() {
   const email = document.getElementById('fb-email').value.trim();
 
   try {
-    const payload = {
-      access_key: '315e7f89-890f-4b05-8b81-605325f4f8e4',
-      subject: `Táctica Feedback: ${feedbackType}`,
-      type: feedbackType,
-      message: msg,
-      from_name: 'Táctica Feedback',
-    };
-    if (email) payload.email = email;
-
-    // Attach screenshot as base64 if present
-    if (feedbackFile) {
-      btn.textContent = 'Processing image…';
-      const base64 = await new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result);
-        reader.onerror = reject;
-        reader.readAsDataURL(feedbackFile);
-      });
-      payload.attachment = base64;
-      payload.attachment_name = feedbackFile.name;
-    }
+    const formData = new FormData();
+    formData.append('access_key', '315e7f89-890f-4b05-8b81-605325f4f8e4');
+    formData.append('subject', `Táctica Feedback: ${feedbackType}`);
+    formData.append('type', feedbackType);
+    formData.append('message', msg);
+    formData.append('from_name', 'Táctica Feedback');
+    if (email) formData.append('email', email);
+    if (feedbackFile) formData.append('attachment', feedbackFile, feedbackFile.name);
 
     btn.textContent = 'Sending…';
     const res = await fetch('https://api.web3forms.com/submit', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-      body: JSON.stringify(payload),
+      headers: { 'Accept': 'application/json' },
+      body: formData,
     });
 
     if (res.ok) {
