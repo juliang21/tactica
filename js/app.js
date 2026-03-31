@@ -615,6 +615,21 @@ function onFeedbackFile(input) {
   }
 }
 
+function compressImage(file, maxWidth, quality) {
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      const scale = Math.min(1, maxWidth / img.width);
+      const canvas = document.createElement('canvas');
+      canvas.width = img.width * scale;
+      canvas.height = img.height * scale;
+      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
+      canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
+    };
+    img.src = URL.createObjectURL(file);
+  });
+}
+
 async function submitFeedback() {
   const msg = document.getElementById('fb-message').value.trim();
   if (!msg) { document.getElementById('fb-message').focus(); return; }
@@ -635,7 +650,11 @@ async function submitFeedback() {
     formData.append('message', msg);
     formData.append('from_name', 'Táctica Feedback');
     if (email) formData.append('email', email);
-    if (feedbackFile) formData.append('attachment', feedbackFile, feedbackFile.name);
+    if (feedbackFile) {
+      btn.textContent = 'Compressing image…';
+      const compressed = await compressImage(feedbackFile, 1200, 0.7);
+      formData.append('attachment', compressed, 'screenshot.jpg');
+    }
 
     btn.textContent = 'Sending…';
     const res = await fetch('https://api.web3forms.com/submit', {
