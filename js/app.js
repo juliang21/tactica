@@ -615,7 +615,7 @@ function onFeedbackFile(input) {
   }
 }
 
-function submitFeedback() {
+async function submitFeedback() {
   const msg = document.getElementById('fb-message').value.trim();
   if (!msg) { document.getElementById('fb-message').focus(); return; }
 
@@ -625,70 +625,54 @@ function submitFeedback() {
   btn.textContent = 'Sending…';
   status.style.display = 'none';
 
-  // Hidden iframe form POST — bypasses CORS entirely
-  const iframeName = 'fb-iframe-' + Date.now();
-  const iframe = document.createElement('iframe');
-  iframe.name = iframeName;
-  iframe.style.display = 'none';
-  document.body.appendChild(iframe);
-
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.action = 'https://formsubmit.co/juliangenoud@gmail.com';
-  form.enctype = 'multipart/form-data';
-  form.target = iframeName;
-  form.style.display = 'none';
-
   const email = document.getElementById('fb-email').value.trim();
-  const fields = {
-    type: feedbackType,
-    message: msg,
-    _subject: `Táctica Feedback: ${feedbackType}`,
-    _template: 'table',
-    _captcha: 'false',
-    _next: window.location.href,
-  };
-  if (email) fields.email = email;
 
-  for (const [k, v] of Object.entries(fields)) {
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = k;
-    input.value = v;
-    form.appendChild(input);
-  }
+  try {
+    const payload = {
+      access_key: '315e7f89-890f-4b05-8b81-605325f4f8e4',
+      subject: `Táctica Feedback: ${feedbackType}`,
+      type: feedbackType,
+      message: msg,
+      from_name: 'Táctica Feedback',
+    };
+    if (email) payload.email = email;
 
-  // Attach screenshot if present
-  if (feedbackFile) {
-    const fileInput = document.createElement('input');
-    fileInput.type = 'file';
-    fileInput.name = 'attachment';
-    fileInput.style.display = 'none';
-    form.appendChild(fileInput);
-    const dt = new DataTransfer();
-    dt.items.add(feedbackFile);
-    fileInput.files = dt.files;
-  }
+    // Attach screenshot as base64 if present
+    if (feedbackFile) {
+      btn.textContent = 'Processing image…';
+      const base64 = await new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(feedbackFile);
+      });
+      payload.attachment = base64;
+      payload.attachment_name = feedbackFile.name;
+    }
 
-  document.body.appendChild(form);
-  form.submit();
+    btn.textContent = 'Sending…';
+    const res = await fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+      body: JSON.stringify(payload),
+    });
 
-  // Show success after iframe loads or after timeout
-  const done = () => {
-    if (btn.textContent === 'Sent ✓') return; // already handled
-    status.textContent = 'Thanks! Feedback sent.';
-    status.className = 'success';
+    if (res.ok) {
+      status.textContent = 'Thanks! Feedback sent.';
+      status.className = 'success';
+      status.style.display = 'block';
+      btn.textContent = 'Sent ✓';
+      setTimeout(() => toggleFeedback(), 1800);
+    } else {
+      throw new Error('Send failed');
+    }
+  } catch(e) {
+    status.textContent = 'Failed to send. Please try again.';
+    status.className = 'error';
     status.style.display = 'block';
-    btn.textContent = 'Sent ✓';
-    setTimeout(() => {
-      toggleFeedback();
-      iframe.remove();
-      form.remove();
-    }, 1800);
-  };
-
-  iframe.addEventListener('load', done);
-  setTimeout(() => { done(); iframe.remove(); form.remove(); }, 6000);
+    btn.textContent = 'Send Feedback';
+    btn.disabled = false;
+  }
 }
 
 window.toggleFeedback = toggleFeedback;
