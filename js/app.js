@@ -650,10 +650,17 @@ async function submitFeedback() {
     formData.append('message', msg);
     formData.append('from_name', 'Táctica Feedback');
     if (email) formData.append('email', email);
+
+    // Embed screenshot as inline base64 image in the message
     if (feedbackFile) {
-      btn.textContent = 'Compressing image…';
-      const compressed = await compressImage(feedbackFile, 1200, 0.7);
-      formData.append('attachment', compressed, 'screenshot.jpg');
+      btn.textContent = 'Processing image…';
+      const compressed = await compressImage(feedbackFile, 800, 0.6);
+      const base64 = await new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.readAsDataURL(compressed);
+      });
+      formData.set('message', msg + `\n\n[Screenshot attached]\n<img src="${base64}" style="max-width:600px">`);
     }
 
     btn.textContent = 'Sending…';
@@ -663,17 +670,19 @@ async function submitFeedback() {
       body: formData,
     });
 
-    if (res.ok) {
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
       status.textContent = 'Thanks! Feedback sent.';
       status.className = 'success';
       status.style.display = 'block';
       btn.textContent = 'Sent ✓';
       setTimeout(() => toggleFeedback(), 1800);
     } else {
-      throw new Error('Send failed');
+      throw new Error(data.message || 'Send failed');
     }
   } catch(e) {
-    status.textContent = 'Failed to send. Please try again.';
+    console.error('Feedback error:', e);
+    status.textContent = e.message || 'Failed to send. Please try again.';
     status.className = 'error';
     status.style.display = 'block';
     btn.textContent = 'Send Feedback';
