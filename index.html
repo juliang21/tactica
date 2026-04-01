@@ -14,12 +14,6 @@
 <!-- ── Logo ── -->
 <div class="tool-logo"><span class="logo-text">Táctica</span> <span class="beta-badge">ALPHA</span></div>
 
-<!-- ── My Analyses button (top bar) ── -->
-<button class="my-analyses-btn" onclick="openMyAnalyses()" title="My Analyses">
-  <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3h5l1 1.5H14v9H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-  <span class="my-analyses-label">My Analyses</span>
-</button>
-
 <!-- ── Toolbar ── -->
 <div id="toolbar">
   <button class="tool-btn active" data-tool="select" onclick="setTool('select')">
@@ -112,25 +106,12 @@
 
   <div class="tool-sep"></div>
 
-  <!-- Save / Export — prominent gold button with dropdown -->
-  <div class="save-wrapper">
-    <button class="tool-btn save-btn" onclick="toggleSaveMenu()">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v9M6 8l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      <span class="save-label">Save</span>
-      <span class="tool-tooltip">Save / Export</span>
-    </button>
-    <div class="save-menu" id="save-menu" style="display:none">
-      <button class="save-menu-item" onclick="openSaveAnalysis()">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h8l4 4v8H2V2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 2v4h5V2" stroke="currentColor" stroke-width="1.1"/><rect x="4" y="9" width="8" height="4" rx="0.5" stroke="currentColor" stroke-width="1.1"/></svg>
-        Save Analysis
-      </button>
-      <div class="save-menu-sep"></div>
-      <button class="save-menu-item" onclick="closeSaveMenu();exportImage()">
-        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v7M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-        Export Image
-      </button>
-    </div>
-  </div>
+  <!-- Save / Export — prominent gold button -->
+  <button class="tool-btn save-btn" onclick="exportImage('png')">
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v9M6 8l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    <span class="save-label">Save</span>
+    <span class="tool-tooltip">Export PNG / JPG</span>
+  </button>
 
   <!-- Clear -->
   <button class="tool-btn danger" onclick="clearAll()" style="margin-top:auto">
@@ -175,7 +156,6 @@
         Upload Image
       </button>
     </div>
-    <div class="current-analysis-bar" id="current-analysis-bar"><span></span></div>
   </div>
   <!-- Mode Selector Dropdown (mobile) -->
   <div id="mode-dropdown">
@@ -258,15 +238,6 @@
 
 <!-- ── Right Panel ── -->
 <div id="side-panel">
-
-  <!-- Mobile auth row (hidden on desktop) -->
-  <div id="mobile-auth-row" class="mobile-auth-row">
-    <button id="mobile-auth-btn" class="mobile-auth-btn" onclick="toggleMobilePanel(); openAuthModal()">Sign In</button>
-    <div id="mobile-user-info" class="mobile-user-info" style="display:none">
-      <span id="mobile-user-name" class="mobile-user-name"></span>
-      <button class="mobile-signout-btn" onclick="doSignOut()">Sign Out</button>
-    </div>
-  </div>
 
   <!-- Tab switcher -->
   <div class="panel-tabs">
@@ -803,138 +774,6 @@
     </div>
     <button id="fb-submit" onclick="submitFeedback()">Send Feedback</button>
     <div id="fb-status" style="display:none"></div>
-  </div>
-</div>
-
-<!-- Save Analysis Modal -->
-<div class="modal-backdrop" id="save-analysis-modal" style="z-index:700">
-  <div class="modal-box" style="width:340px">
-    <div class="modal-title">Save Analysis</div>
-    <div class="field-group" style="margin-bottom:0">
-      <div class="field-label">Name your analysis</div>
-      <div class="field-row">
-        <input type="text" id="save-analysis-name" maxlength="60" placeholder="e.g. 4-3-3 Build-up from the back"
-               onkeydown="if(event.key==='Enter'){event.preventDefault();confirmSaveAnalysis();}"/>
-      </div>
-    </div>
-    <div class="modal-row">
-      <button class="modal-btn cancel" onclick="closeSaveAnalysis()">Cancel</button>
-      <button class="modal-btn confirm" onclick="confirmSaveAnalysis()">Save</button>
-    </div>
-  </div>
-</div>
-
-<!-- Delete Analysis Confirmation Modal -->
-<div class="modal-backdrop" id="delete-analysis-modal" style="z-index:700">
-  <div class="modal-box" style="width:320px">
-    <div class="modal-title">Delete Analysis?</div>
-    <p id="delete-analysis-msg" style="font-size:13px;color:var(--text-muted);margin:0 0 16px;line-height:1.5">This cannot be undone.</p>
-    <div class="modal-row">
-      <button class="modal-btn cancel" onclick="closeDeleteAnalysis()">Cancel</button>
-      <button class="modal-btn confirm" style="background:#F87171" onclick="confirmDeleteAnalysis()">Delete</button>
-    </div>
-  </div>
-</div>
-
-<!-- My Analyses Dashboard (full-screen overlay) -->
-<div id="analyses-dashboard" style="display:none">
-  <div class="analyses-header">
-    <div class="analyses-header-left">
-      <button class="analyses-back-btn" onclick="closeMyAnalyses()">
-        <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M10 3L5 8l5 5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      </button>
-      <h2 class="analyses-title">My Analyses</h2>
-      <span class="analyses-count" id="analyses-count"></span>
-    </div>
-    <button class="analyses-new-btn" onclick="newAnalysisFromDashboard()">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      New Analysis
-    </button>
-  </div>
-  <div class="analyses-grid" id="analyses-grid">
-    <!-- Cards rendered dynamically -->
-  </div>
-  <div class="analyses-empty" id="analyses-empty" style="display:none">
-    <svg width="48" height="48" viewBox="0 0 48 48" fill="none"><rect x="6" y="10" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><rect x="26" y="10" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><rect x="6" y="26" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5" opacity="0.3"/><rect x="26" y="26" width="16" height="12" rx="2" stroke="currentColor" stroke-width="1.5" opacity="0.15"/></svg>
-    <p>No saved analyses yet</p>
-    <span>Create your first tactical analysis and save it here</span>
-    <button class="analyses-new-btn" onclick="newAnalysisFromDashboard()" style="margin-top:12px">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      New Analysis
-    </button>
-  </div>
-</div>
-
-<!-- Save success toast -->
-<div id="save-toast" class="save-toast"></div>
-
-<!-- Auth: User button (top bar) -->
-<button id="auth-btn" class="auth-btn" onclick="openAuthModal()">Sign In</button>
-<div id="user-menu-wrapper" class="user-menu-wrapper" style="display:none">
-  <button id="user-avatar-btn" class="user-avatar-btn" onclick="toggleUserMenu()">
-    <img id="user-avatar-img" class="user-avatar-img" src="" alt="" style="display:none">
-    <span id="user-avatar-initials" class="user-avatar-initials"></span>
-  </button>
-  <div id="user-dropdown" class="user-dropdown" style="display:none">
-    <div class="user-dropdown-info">
-      <span id="user-dropdown-name" class="user-dropdown-name"></span>
-      <span id="user-dropdown-email" class="user-dropdown-email"></span>
-    </div>
-    <div class="user-dropdown-divider"></div>
-    <button class="user-dropdown-item" onclick="openMyAnalyses(); toggleUserMenu();">
-      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3h5l1 1.5H14v9H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-      My Analyses
-    </button>
-    <button class="user-dropdown-item user-dropdown-signout" onclick="doSignOut()">Sign Out</button>
-  </div>
-</div>
-
-<!-- Auth Modal -->
-<div id="auth-modal" class="modal-backdrop" style="display:none" onclick="if(event.target===this)closeAuthModal()">
-  <div class="auth-modal-box">
-    <button class="modal-close" onclick="closeAuthModal()">&times;</button>
-    <div class="auth-logo">Táctica</div>
-
-    <!-- Tabs -->
-    <div class="auth-tabs">
-      <button class="auth-tab active" id="auth-tab-signin" onclick="switchAuthTab('signin')">Sign In</button>
-      <button class="auth-tab" id="auth-tab-signup" onclick="switchAuthTab('signup')">Sign Up</button>
-    </div>
-
-    <!-- Google button -->
-    <button class="auth-google-btn" onclick="doGoogleSignIn()">
-      <svg width="18" height="18" viewBox="0 0 48 48"><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>
-      Continue with Google
-    </button>
-
-    <div class="auth-divider"><span>or</span></div>
-
-    <!-- Sign In form -->
-    <div id="auth-form-signin" class="auth-form">
-      <input type="email" id="auth-email-in" class="auth-input" placeholder="Email" autocomplete="email">
-      <input type="password" id="auth-pass-in" class="auth-input" placeholder="Password" autocomplete="current-password">
-      <button class="auth-submit-btn" onclick="doEmailSignIn()">Sign In</button>
-      <button class="auth-link" onclick="switchAuthTab('forgot')">Forgot password?</button>
-    </div>
-
-    <!-- Sign Up form -->
-    <div id="auth-form-signup" class="auth-form" style="display:none">
-      <input type="text" id="auth-name-up" class="auth-input" placeholder="Name (optional)" autocomplete="name">
-      <input type="email" id="auth-email-up" class="auth-input" placeholder="Email" autocomplete="email">
-      <input type="password" id="auth-pass-up" class="auth-input" placeholder="Password (min 6 chars)" autocomplete="new-password">
-      <button class="auth-submit-btn" onclick="doEmailSignUp()">Create Account</button>
-    </div>
-
-    <!-- Forgot Password form -->
-    <div id="auth-form-forgot" class="auth-form" style="display:none">
-      <p class="auth-forgot-text">Enter your email and we'll send a reset link.</p>
-      <input type="email" id="auth-email-reset" class="auth-input" placeholder="Email" autocomplete="email">
-      <button class="auth-submit-btn" onclick="doPasswordReset()">Send Reset Link</button>
-      <button class="auth-link" onclick="switchAuthTab('signin')">← Back to Sign In</button>
-    </div>
-
-    <!-- Error/success message -->
-    <div id="auth-message" class="auth-message" style="display:none"></div>
   </div>
 </div>
 
