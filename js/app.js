@@ -16,6 +16,8 @@ import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited } from './analytics.js';
+import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
+import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
@@ -698,6 +700,256 @@ window.setFeedbackType = setFeedbackType;
 window.submitFeedback = submitFeedback;
 window.onFeedbackFile = onFeedbackFile;
 
+// ─── Save Menu & Analysis Management ────────────────────────────────────────
+function toggleSaveMenu() {
+  const menu = document.getElementById('save-menu');
+  const btn = document.querySelector('.save-btn');
+  if (menu.style.display === 'none') {
+    menu.style.display = 'block';
+    // Position relative to save button
+    const rect = btn.getBoundingClientRect();
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile) {
+      menu.style.left = rect.left + 'px';
+      menu.style.bottom = (window.innerHeight - rect.top + 12) + 'px';
+      menu.style.top = 'auto';
+      menu.style.right = 'auto';
+    } else {
+      menu.style.left = (rect.right + 8) + 'px';
+      menu.style.bottom = Math.max(8, window.innerHeight - rect.bottom) + 'px';
+      menu.style.top = 'auto';
+    }
+  } else {
+    menu.style.display = 'none';
+  }
+}
+window.toggleSaveMenu = toggleSaveMenu;
+
+function closeSaveMenu() {
+  document.getElementById('save-menu').style.display = 'none';
+}
+window.closeSaveMenu = closeSaveMenu;
+
+// Close save menu when clicking elsewhere
+document.addEventListener('click', e => {
+  const wrapper = document.querySelector('.save-wrapper');
+  if (wrapper && !wrapper.contains(e.target)) {
+    document.getElementById('save-menu').style.display = 'none';
+  }
+});
+
+function openSaveAnalysis() {
+  closeSaveMenu();
+  const modal = document.getElementById('save-analysis-modal');
+  const input = document.getElementById('save-analysis-name');
+  // Pre-fill with current name if editing existing
+  const currentId = getCurrentId();
+  if (currentId) {
+    const analyses = listAnalyses();
+    const current = analyses.find(a => a.id === currentId);
+    if (current) input.value = current.name;
+    else input.value = '';
+  } else {
+    input.value = '';
+  }
+  modal.style.display = 'flex';
+  setTimeout(() => input.focus(), 100);
+}
+window.openSaveAnalysis = openSaveAnalysis;
+
+function closeSaveAnalysis() {
+  document.getElementById('save-analysis-modal').style.display = 'none';
+}
+window.closeSaveAnalysis = closeSaveAnalysis;
+
+async function confirmSaveAnalysis() {
+  const input = document.getElementById('save-analysis-name');
+  const name = input.value.trim();
+  if (!name) { input.focus(); return; }
+
+  await saveAnalysis(name);
+  closeSaveAnalysis();
+  showSaveToast('Analysis saved');
+  await updateCurrentBar();
+}
+window.confirmSaveAnalysis = confirmSaveAnalysis;
+
+function showSaveToast(msg) {
+  const toast = document.getElementById('save-toast');
+  toast.textContent = msg;
+  toast.classList.add('show');
+  setTimeout(() => toast.classList.remove('show'), 2200);
+}
+
+// ─── Analyses Dashboard ──────────────────────────────────────────────────────
+function openMyAnalyses() {
+  closeSaveMenu();
+  const dashboard = document.getElementById('analyses-dashboard');
+  dashboard.style.display = 'flex';
+  renderAnalysesGrid();
+}
+window.openMyAnalyses = openMyAnalyses;
+
+function closeMyAnalyses() {
+  document.getElementById('analyses-dashboard').style.display = 'none';
+}
+window.closeMyAnalyses = closeMyAnalyses;
+
+async function renderAnalysesGrid() {
+  const grid = document.getElementById('analyses-grid');
+  const emptyState = document.getElementById('analyses-empty');
+  const countBadge = document.getElementById('analyses-count');
+  const analyses = await listAnalyses();
+
+  countBadge.textContent = analyses.length + (analyses.length === 1 ? ' analysis' : ' analyses');
+
+  if (analyses.length === 0) {
+    grid.style.display = 'none';
+    emptyState.style.display = 'flex';
+    return;
+  }
+
+  grid.style.display = 'grid';
+  emptyState.style.display = 'none';
+  const currentId = getCurrentId();
+
+  grid.innerHTML = analyses.map(a => `
+    <div class="analysis-card${a.id === currentId ? ' current' : ''}" data-id="${a.id}" onclick="loadAnalysisFromCard('${a.id}')">
+      <div class="analysis-card-thumb">
+        ${a.thumbnail ? `<img src="${a.thumbnail}" alt="${a.name}">` : '<span class="no-thumb">No preview</span>'}
+      </div>
+      <div class="analysis-card-info">
+        <div class="analysis-card-name" title="${a.name}">${a.name}</div>
+        <div class="analysis-card-meta">
+          <span class="analysis-card-date">${formatDate(a.updatedAt)}</span>
+          <div class="analysis-card-actions">
+            <button class="analysis-card-action" onclick="event.stopPropagation();duplicateFromCard('${a.id}')" title="Duplicate">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M10 4V3a1 1 0 00-1-1H3a1 1 0 00-1 1v6a1 1 0 001 1h1" stroke="currentColor" stroke-width="1.2"/></svg>
+            </button>
+            <button class="analysis-card-action delete" onclick="event.stopPropagation();askDeleteAnalysis('${a.id}','${a.name.replace(/'/g, "\\'")}')" title="Delete">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 4h9M5 4V2.5h4V4M3.5 4v7.5a1 1 0 001 1h5a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `).join('');
+}
+
+async function loadAnalysisFromCard(id) {
+  const analysis = await loadAnalysis(id, reattachListeners);
+  if (analysis) {
+    closeMyAnalyses();
+    showSaveToast('Loaded: ' + analysis.name);
+    await updateCurrentBar();
+  }
+}
+window.loadAnalysisFromCard = loadAnalysisFromCard;
+
+function reattachListeners() {
+  // Re-attach drag + click listeners to all restored elements
+  [S.objectsLayer, S.playersLayer].forEach(layer => {
+    layer.querySelectorAll('[data-type]').forEach(g => {
+      makeDraggable(g);
+      g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+      if (g.dataset.type === 'textbox') {
+        g.addEventListener('dblclick', e => {
+          e.stopPropagation();
+          try { import('./elements.js').then(m => m.openTextBoxEditFn?.(g)); } catch(err) {}
+        });
+      }
+    });
+  });
+}
+
+async function duplicateFromCard(id) {
+  const copy = await duplicateAnalysis(id);
+  if (copy) {
+    await renderAnalysesGrid();
+    showSaveToast('Duplicated');
+  }
+}
+window.duplicateFromCard = duplicateFromCard;
+
+let pendingDeleteId = null;
+function askDeleteAnalysis(id, name) {
+  pendingDeleteId = id;
+  document.getElementById('delete-analysis-msg').textContent = `Delete "${name}"? This cannot be undone.`;
+  document.getElementById('delete-analysis-modal').style.display = 'flex';
+}
+window.askDeleteAnalysis = askDeleteAnalysis;
+
+function closeDeleteAnalysis() {
+  document.getElementById('delete-analysis-modal').style.display = 'none';
+  pendingDeleteId = null;
+}
+window.closeDeleteAnalysis = closeDeleteAnalysis;
+
+async function confirmDeleteAnalysis() {
+  if (pendingDeleteId) {
+    await deleteAnalysis(pendingDeleteId);
+    pendingDeleteId = null;
+  }
+  closeDeleteAnalysis();
+  await renderAnalysesGrid();
+  await updateCurrentBar();
+}
+window.confirmDeleteAnalysis = confirmDeleteAnalysis;
+
+function newAnalysisFromDashboard() {
+  // Clear the board
+  clearCurrentId();
+  S.objectsLayer.innerHTML = '';
+  S.playersLayer.innerHTML = '';
+  S.playerCounts.a = 0;
+  S.playerCounts.b = 0;
+  S.setObjectCounter(0);
+  S.undoStack.length = 0;
+  closeMyAnalyses();
+  updateCurrentBar();
+  showSaveToast('New analysis');
+}
+window.newAnalysisFromDashboard = newAnalysisFromDashboard;
+
+// ─── Current Analysis Bar ────────────────────────────────────────────────────
+async function updateCurrentBar() {
+  const bar = document.getElementById('current-analysis-bar');
+  if (!bar) return;
+  const currentId = getCurrentId();
+  if (currentId) {
+    const analyses = await listAnalyses();
+    const current = analyses.find(a => a.id === currentId);
+    if (current) {
+      bar.querySelector('span').textContent = current.name;
+      bar.classList.add('show');
+      return;
+    }
+  }
+  bar.classList.remove('show');
+}
+
+// Initialize bar on load
+updateCurrentBar();
+
+// ─── Auto-save on Cmd+S ──────────────────────────────────────────────────────
+document.addEventListener('keydown', async e => {
+  if ((e.metaKey || e.ctrlKey) && e.key === 's') {
+    e.preventDefault();
+    const saved = await quickSave();
+    if (saved) {
+      showSaveToast('Auto-saved');
+    } else {
+      openSaveAnalysis();
+    }
+  }
+});
+
+// ─── Modal backdrop close ────────────────────────────────────────────────────
+document.addEventListener('click', e => {
+  if (e.target === document.getElementById('save-analysis-modal')) closeSaveAnalysis();
+  if (e.target === document.getElementById('delete-analysis-modal')) closeDeleteAnalysis();
+});
+
 // ─── Mobile panel toggle ──────────────────────────────────────────────────────
 function toggleMobilePanel() {
   const panel = document.getElementById('side-panel');
@@ -711,3 +963,169 @@ window.toggleMobilePanel = toggleMobilePanel;
 if (window.innerWidth <= 768 && S.currentPitchLayout === 'full-h' && S.appMode !== 'image') {
   setPitch('full-v');
 }
+
+// ─── Auth UI ────────────────────────────────────────────────────────────────
+function updateAuthUI(user) {
+  const authBtn = document.getElementById('auth-btn');
+  const userWrapper = document.getElementById('user-menu-wrapper');
+  const avatarImg = document.getElementById('user-avatar-img');
+  const avatarInitials = document.getElementById('user-avatar-initials');
+  const dropdownName = document.getElementById('user-dropdown-name');
+  const dropdownEmail = document.getElementById('user-dropdown-email');
+
+  // Mobile auth row elements
+  const mobileAuthBtn = document.getElementById('mobile-auth-btn');
+  const mobileUserInfo = document.getElementById('mobile-user-info');
+  const mobileUserName = document.getElementById('mobile-user-name');
+
+  if (user) {
+    authBtn.style.display = 'none';
+    userWrapper.style.display = 'block';
+    dropdownName.textContent = user.displayName || 'User';
+    dropdownEmail.textContent = user.email || '';
+
+    if (user.photoURL) {
+      avatarImg.src = user.photoURL;
+      avatarImg.style.display = 'block';
+      avatarInitials.style.display = 'none';
+    } else {
+      avatarImg.style.display = 'none';
+      avatarInitials.style.display = 'flex';
+      const name = user.displayName || user.email || 'U';
+      avatarInitials.textContent = name.charAt(0).toUpperCase();
+    }
+
+    // Mobile: show user info, hide sign-in button
+    if (mobileAuthBtn) mobileAuthBtn.style.display = 'none';
+    if (mobileUserInfo) {
+      mobileUserInfo.style.display = 'flex';
+      mobileUserName.textContent = user.displayName || user.email || 'User';
+    }
+  } else {
+    authBtn.style.display = 'block';
+    userWrapper.style.display = 'none';
+    document.getElementById('user-dropdown').style.display = 'none';
+
+    // Mobile: show sign-in button, hide user info
+    if (mobileAuthBtn) mobileAuthBtn.style.display = '';
+    if (mobileUserInfo) mobileUserInfo.style.display = 'none';
+  }
+}
+
+function openAuthModal() {
+  document.getElementById('auth-modal').style.display = 'flex';
+  switchAuthTab('signin');
+  clearAuthMessage();
+}
+window.openAuthModal = openAuthModal;
+
+function closeAuthModal() {
+  document.getElementById('auth-modal').style.display = 'none';
+  clearAuthMessage();
+}
+window.closeAuthModal = closeAuthModal;
+
+function switchAuthTab(tab) {
+  document.getElementById('auth-form-signin').style.display = tab === 'signin' ? 'flex' : 'none';
+  document.getElementById('auth-form-signup').style.display = tab === 'signup' ? 'flex' : 'none';
+  document.getElementById('auth-form-forgot').style.display = tab === 'forgot' ? 'flex' : 'none';
+
+  const tabSignin = document.getElementById('auth-tab-signin');
+  const tabSignup = document.getElementById('auth-tab-signup');
+  tabSignin.classList.toggle('active', tab === 'signin' || tab === 'forgot');
+  tabSignup.classList.toggle('active', tab === 'signup');
+
+  // Show/hide Google button and divider for forgot
+  const googleBtn = document.querySelector('.auth-google-btn');
+  const divider = document.querySelector('.auth-divider');
+  if (googleBtn) googleBtn.style.display = tab === 'forgot' ? 'none' : 'flex';
+  if (divider) divider.style.display = tab === 'forgot' ? 'none' : 'flex';
+
+  clearAuthMessage();
+}
+window.switchAuthTab = switchAuthTab;
+
+function showAuthMessage(msg, type) {
+  const el = document.getElementById('auth-message');
+  el.textContent = msg;
+  el.className = 'auth-message ' + type;
+  el.style.display = 'block';
+}
+
+function clearAuthMessage() {
+  const el = document.getElementById('auth-message');
+  el.style.display = 'none';
+  el.textContent = '';
+}
+
+async function doGoogleSignIn() {
+  clearAuthMessage();
+  const { user, error } = await signInWithGoogle();
+  if (error) showAuthMessage(error, 'error');
+  // onAuthChange will handle the rest
+}
+window.doGoogleSignIn = doGoogleSignIn;
+
+async function doEmailSignIn() {
+  clearAuthMessage();
+  const email = document.getElementById('auth-email-in').value.trim();
+  const pass = document.getElementById('auth-pass-in').value;
+  if (!email || !pass) { showAuthMessage('Please fill in all fields.', 'error'); return; }
+  const { user, error } = await signInWithEmail(email, pass);
+  if (error) showAuthMessage(error, 'error');
+}
+window.doEmailSignIn = doEmailSignIn;
+
+async function doEmailSignUp() {
+  clearAuthMessage();
+  const name = document.getElementById('auth-name-up').value.trim();
+  const email = document.getElementById('auth-email-up').value.trim();
+  const pass = document.getElementById('auth-pass-up').value;
+  if (!email || !pass) { showAuthMessage('Please fill in email and password.', 'error'); return; }
+  const { user, error } = await signUpWithEmail(email, pass, name);
+  if (error) showAuthMessage(error, 'error');
+}
+window.doEmailSignUp = doEmailSignUp;
+
+async function doPasswordReset() {
+  clearAuthMessage();
+  const email = document.getElementById('auth-email-reset').value.trim();
+  if (!email) { showAuthMessage('Please enter your email.', 'error'); return; }
+  const { success, error } = await sendPasswordReset(email);
+  if (error) showAuthMessage(error, 'error');
+  else showAuthMessage('Reset link sent! Check your inbox.', 'success');
+}
+window.doPasswordReset = doPasswordReset;
+
+async function doSignOut() {
+  await signOut();
+  document.getElementById('user-dropdown').style.display = 'none';
+  showSaveToast('Signed out');
+}
+window.doSignOut = doSignOut;
+
+function toggleUserMenu() {
+  const dd = document.getElementById('user-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+window.toggleUserMenu = toggleUserMenu;
+
+// Close user dropdown on outside click
+document.addEventListener('click', e => {
+  const dd = document.getElementById('user-dropdown');
+  const wrapper = document.getElementById('user-menu-wrapper');
+  if (dd && wrapper && !wrapper.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
+
+// ─── Auth State Listener ────────────────────────────────────────────────────
+onAuthChange(async (user) => {
+  updateAuthUI(user);
+  closeAuthModal();
+  if (user) {
+    // Migrate localStorage to cloud on first sign-in
+    try { await migrateLocalToCloud(user.uid); } catch (e) { console.warn('Migration error:', e); }
+  }
+  await updateCurrentBar();
+});
