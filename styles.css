@@ -1075,9 +1075,10 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
 /* ─── Auth Modal ────────────────────────────────────────────────────────── */
 .auth-modal-box {
-  background: var(--panel-bg); border: 1px solid var(--border);
-  border-radius: 12px; padding: 32px 28px; width: 380px; max-width: 95vw;
+  background: #111118; border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px; padding: 32px 28px; width: 380px; max-width: 95vw;
   position: relative; text-align: center;
+  box-shadow: 0 16px 48px rgba(0, 0, 0, 0.6);
 }
 .auth-logo {
   font-family: 'Playfair Display', serif; font-size: 24px;
