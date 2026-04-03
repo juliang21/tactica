@@ -90,3 +90,28 @@ export function trackExportCompleted(format) {
     event_category: 'export',
   });
 }
+
+// ─── 7. Sign Up (milestone!) ────────────────────────────────────────────────
+// Fired when a new user creates an account. Key conversion event.
+export function trackSignUp(method) {
+  send('sign_up', {
+    method: method,                  // 'google' or 'email'
+    event_category: 'auth',
+  });
+}
+
+// ─── 8. Sign In ─────────────────────────────────────────────────────────────
+// Fired when an existing user signs in.
+export function trackSignIn(method) {
+  send('login', {
+    method: method,                  // 'google' or 'email'
+    event_category: 'auth',
+  });
+}
+
+// ─── 9. Sign Out ────────────────────────────────────────────────────────────
+export function trackSignOut() {
+  send('sign_out', {
+    event_category: 'auth',
+  });
+}

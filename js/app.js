@@ -15,7 +15,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
 import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
-import { trackElementInserted, trackModeSwitch, trackElementEdited } from './analytics.js';
+import { trackElementInserted, trackModeSwitch, trackElementEdited, trackSignUp, trackSignIn, trackSignOut } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
 
@@ -1113,7 +1113,7 @@ async function doGoogleSignIn() {
   clearAuthMessage();
   const { user, error } = await signInWithGoogle();
   if (error) showAuthMessage(error, 'error');
-  // onAuthChange will handle the rest
+  else if (user) trackSignIn('google');
 }
 window.doGoogleSignIn = doGoogleSignIn;
 
@@ -1124,6 +1124,7 @@ async function doEmailSignIn() {
   if (!email || !pass) { showAuthMessage('Please fill in all fields.', 'error'); return; }
   const { user, error } = await signInWithEmail(email, pass);
   if (error) showAuthMessage(error, 'error');
+  else if (user) trackSignIn('email');
 }
 window.doEmailSignIn = doEmailSignIn;
 
@@ -1135,6 +1136,7 @@ async function doEmailSignUp() {
   if (!email || !pass) { showAuthMessage('Please fill in email and password.', 'error'); return; }
   const { user, error } = await signUpWithEmail(email, pass, name);
   if (error) showAuthMessage(error, 'error');
+  else if (user) trackSignUp('email');
 }
 window.doEmailSignUp = doEmailSignUp;
 
@@ -1150,6 +1152,7 @@ window.doPasswordReset = doPasswordReset;
 
 async function doSignOut() {
   await signOut();
+  trackSignOut();
   const dropdown = document.getElementById('user-dropdown');
   if (dropdown) dropdown.style.display = 'none';
   showNotification('You have been signed out', 'info', 4000);
