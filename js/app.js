@@ -781,6 +781,35 @@ function showSaveToast(msg) {
   setTimeout(() => toast.classList.remove('show'), 2200);
 }
 
+// ─── Top Notification Bar ────────────────────────────────────────────────────
+let _notifTimeout = null;
+function showNotification(message, type = 'info', duration = 5000) {
+  const bar = document.getElementById('notif-bar');
+  const msg = document.getElementById('notif-message');
+  if (!bar || !msg) return;
+  // Clear any pending hide
+  if (_notifTimeout) { clearTimeout(_notifTimeout); _notifTimeout = null; }
+  // Set message and type
+  msg.textContent = message;
+  bar.className = 'notif-bar notif-' + type;
+  // Force reflow then show
+  void bar.offsetHeight;
+  bar.classList.add('show');
+  // Auto-hide after duration (0 = stay until closed)
+  if (duration > 0) {
+    _notifTimeout = setTimeout(() => hideNotification(), duration);
+  }
+}
+window.showNotification = showNotification;
+
+function hideNotification() {
+  const bar = document.getElementById('notif-bar');
+  if (!bar) return;
+  bar.classList.remove('show');
+  if (_notifTimeout) { clearTimeout(_notifTimeout); _notifTimeout = null; }
+}
+window.hideNotification = hideNotification;
+
 // ─── Analyses Dashboard ──────────────────────────────────────────────────────
 function openMyAnalyses() {
   closeSaveMenu();
@@ -840,7 +869,7 @@ async function loadAnalysisFromCard(id) {
   const analysis = await loadAnalysis(id, reattachListeners);
   if (analysis) {
     closeMyAnalyses();
-    showSaveToast('Loaded: ' + analysis.name);
+    showNotification('Analysis loaded: ' + analysis.name, 'info', 4000);
     await updateCurrentBar();
   }
 }
@@ -966,51 +995,73 @@ if (window.innerWidth <= 768 && S.currentPitchLayout === 'full-h' && S.appMode !
 
 // ─── Auth UI ────────────────────────────────────────────────────────────────
 function updateAuthUI(user) {
-  const authBtn = document.getElementById('auth-btn');
-  const userWrapper = document.getElementById('user-menu-wrapper');
-  const avatarImg = document.getElementById('user-avatar-img');
-  const avatarInitials = document.getElementById('user-avatar-initials');
-  const dropdownName = document.getElementById('user-dropdown-name');
-  const dropdownEmail = document.getElementById('user-dropdown-email');
-
-  // Mobile auth row elements
-  const mobileAuthBtn = document.getElementById('mobile-auth-btn');
-  const mobileUserInfo = document.getElementById('mobile-user-info');
-  const mobileUserName = document.getElementById('mobile-user-name');
+  const menuIcon = document.getElementById('app-menu-icon');
+  const menuAvatarImg = document.getElementById('app-menu-avatar-img');
+  const menuAvatarInitials = document.getElementById('app-menu-avatar-initials');
+  const menuUserInfo = document.getElementById('app-menu-user-info');
+  const menuUserName = document.getElementById('app-menu-user-name');
+  const menuUserEmail = document.getElementById('app-menu-user-email');
+  const menuUserDivider = document.getElementById('app-menu-user-divider');
+  const menuSignin = document.getElementById('app-menu-signin');
+  const menuSignout = document.getElementById('app-menu-signout');
+  const menuSignoutDivider = document.getElementById('app-menu-signout-divider');
+  const menuBtn = document.getElementById('app-menu-btn');
 
   if (user) {
-    authBtn.style.display = 'none';
-    userWrapper.style.display = 'block';
-    dropdownName.textContent = user.displayName || 'User';
-    dropdownEmail.textContent = user.email || '';
+    // Show avatar, hide hamburger icon
+    menuIcon.style.display = 'none';
+    menuBtn.style.borderColor = 'var(--accent)';
 
     if (user.photoURL) {
-      avatarImg.src = user.photoURL;
-      avatarImg.style.display = 'block';
-      avatarInitials.style.display = 'none';
+      menuAvatarImg.src = user.photoURL;
+      menuAvatarImg.style.display = 'block';
+      menuAvatarInitials.style.display = 'none';
     } else {
-      avatarImg.style.display = 'none';
-      avatarInitials.style.display = 'flex';
+      menuAvatarImg.style.display = 'none';
+      menuAvatarInitials.style.display = 'flex';
       const name = user.displayName || user.email || 'U';
-      avatarInitials.textContent = name.charAt(0).toUpperCase();
+      menuAvatarInitials.textContent = name.charAt(0).toUpperCase();
     }
 
-    // Mobile: show user info, hide sign-in button
-    if (mobileAuthBtn) mobileAuthBtn.style.display = 'none';
-    if (mobileUserInfo) {
-      mobileUserInfo.style.display = 'flex';
-      mobileUserName.textContent = user.displayName || user.email || 'User';
-    }
+    // Dropdown: show user info, hide sign-in, show sign-out
+    menuUserInfo.style.display = 'block';
+    menuUserName.textContent = user.displayName || 'User';
+    menuUserEmail.textContent = user.email || '';
+    menuUserDivider.style.display = 'block';
+    menuSignin.style.display = 'none';
+    menuSignout.style.display = 'flex';
+    menuSignoutDivider.style.display = 'block';
   } else {
-    authBtn.style.display = 'block';
-    userWrapper.style.display = 'none';
-    document.getElementById('user-dropdown').style.display = 'none';
+    // Show hamburger icon, hide avatar
+    menuIcon.style.display = 'flex';
+    menuAvatarImg.style.display = 'none';
+    menuAvatarInitials.style.display = 'none';
+    menuBtn.style.borderColor = '';
 
-    // Mobile: show sign-in button, hide user info
-    if (mobileAuthBtn) mobileAuthBtn.style.display = '';
-    if (mobileUserInfo) mobileUserInfo.style.display = 'none';
+    // Dropdown: hide user info, show sign-in, hide sign-out
+    menuUserInfo.style.display = 'none';
+    menuUserDivider.style.display = 'none';
+    menuSignin.style.display = 'flex';
+    menuSignout.style.display = 'none';
+    menuSignoutDivider.style.display = 'none';
   }
 }
+
+function toggleAppMenu() {
+  const dd = document.getElementById('app-menu-dropdown');
+  const isOpen = dd.style.display !== 'none';
+  dd.style.display = isOpen ? 'none' : 'block';
+}
+window.toggleAppMenu = toggleAppMenu;
+
+// Close app menu when clicking outside
+document.addEventListener('click', (e) => {
+  const wrapper = document.getElementById('app-menu-wrapper');
+  const dd = document.getElementById('app-menu-dropdown');
+  if (wrapper && dd && !wrapper.contains(e.target)) {
+    dd.style.display = 'none';
+  }
+});
 
 function openAuthModal() {
   document.getElementById('auth-modal').style.display = 'flex';
@@ -1104,20 +1155,7 @@ async function doSignOut() {
 }
 window.doSignOut = doSignOut;
 
-function toggleUserMenu() {
-  const dd = document.getElementById('user-dropdown');
-  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
-}
-window.toggleUserMenu = toggleUserMenu;
-
-// Close user dropdown on outside click
-document.addEventListener('click', e => {
-  const dd = document.getElementById('user-dropdown');
-  const wrapper = document.getElementById('user-menu-wrapper');
-  if (dd && wrapper && !wrapper.contains(e.target)) {
-    dd.style.display = 'none';
-  }
-});
+// (toggleUserMenu removed — replaced by toggleAppMenu)
 
 // ─── Auth State Listener ────────────────────────────────────────────────────
 onAuthChange(async (user) => {
