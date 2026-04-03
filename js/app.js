@@ -1150,7 +1150,8 @@ window.doPasswordReset = doPasswordReset;
 
 async function doSignOut() {
   await signOut();
-  document.getElementById('user-dropdown').style.display = 'none';
+  const dropdown = document.getElementById('user-dropdown');
+  if (dropdown) dropdown.style.display = 'none';
   showNotification('You have been signed out', 'info', 4000);
 }
 window.doSignOut = doSignOut;
