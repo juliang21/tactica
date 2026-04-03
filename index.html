@@ -13,76 +13,70 @@
 
 <!-- ── Landing Gate (shown when not authenticated) ── -->
 <div id="landing-gate" class="landing-gate">
-  <!-- Animated pitch background -->
-  <div class="landing-pitch-bg">
-    <svg viewBox="0 0 700 480" preserveAspectRatio="xMidYMid slice" class="landing-pitch-svg">
-      <!-- Pitch -->
-      <rect x="0" y="0" width="700" height="480" fill="#2d5a27" rx="8"/>
-      <!-- Stripes -->
-      <rect x="0" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
-      <rect x="107.6" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
-      <rect x="215.2" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
-      <rect x="322.8" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
-      <rect x="430.4" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
-      <rect x="538" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
-      <rect x="645.6" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
-      <!-- Lines -->
-      <rect x="30" y="30" width="640" height="420" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-      <line x1="350" y1="30" x2="350" y2="450" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-      <circle cx="350" cy="240" r="60" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-      <circle cx="350" cy="240" r="2.5" fill="rgba(255,255,255,0.3)"/>
-      <!-- Left box -->
-      <rect x="30" y="140" width="110" height="200" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-      <rect x="30" y="190" width="50" height="100" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-      <!-- Right box -->
-      <rect x="560" y="140" width="110" height="200" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-      <rect x="620" y="190" width="50" height="100" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
-
-      <!-- Team A players (purple) - 4-3-3 -->
-      <circle class="lp lp-a1" cx="65" cy="240" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a2" cx="160" cy="120" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a3" cx="160" cy="200" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a4" cx="160" cy="280" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a5" cx="160" cy="360" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a6" cx="270" cy="150" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a7" cx="270" cy="240" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a8" cx="270" cy="330" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a9" cx="370" cy="130" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a10" cx="370" cy="240" r="14" fill="#8B5CF6" opacity="0.85"/>
-      <circle class="lp lp-a11" cx="370" cy="350" r="14" fill="#8B5CF6" opacity="0.85"/>
-
-      <!-- Team B players (coral) - 4-4-2 -->
-      <circle class="lp lp-b1" cx="635" cy="240" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b2" cx="540" cy="120" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b3" cx="540" cy="200" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b4" cx="540" cy="280" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b5" cx="540" cy="360" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b6" cx="450" cy="120" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b7" cx="450" cy="200" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b8" cx="450" cy="280" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b9" cx="450" cy="360" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b10" cx="400" cy="180" r="14" fill="#F97066" opacity="0.85"/>
-      <circle class="lp lp-b11" cx="400" cy="300" r="14" fill="#F97066" opacity="0.85"/>
-
-      <!-- Animated arrows -->
-      <path class="landing-arrow la-1" d="M270 240 Q310 200 350 210" fill="none" stroke="#a78bfa" stroke-width="2" stroke-dasharray="6 4" opacity="0.6"/>
-      <path class="landing-arrow la-2" d="M370 130 Q390 100 420 120" fill="none" stroke="#fca5a1" stroke-width="2" stroke-dasharray="6 4" opacity="0.6"/>
-      <path class="landing-arrow la-3" d="M160 280 Q200 260 240 270" fill="none" stroke="#a78bfa" stroke-width="2" stroke-dasharray="6 4" opacity="0.6"/>
-    </svg>
-  </div>
-  <div class="landing-content">
-    <div class="landing-logo">Táctica</div>
-    <p class="landing-tagline">The tactical board for modern coaches</p>
-    <p class="landing-sub">Create formations, draw plays, and share analysis — all in your browser.</p>
-    <div class="landing-actions">
-      <button class="landing-btn landing-btn-primary" onclick="openAuthModal(); switchAuthTab('signup');">
-        Get started
-      </button>
-      <button class="landing-btn landing-btn-secondary" onclick="openAuthModal(); switchAuthTab('signin');">
-        Sign in
-      </button>
+  <div class="landing-split">
+    <!-- Left: text -->
+    <div class="landing-left">
+      <p class="landing-alpha-badge">Alpha</p>
+      <h1 class="landing-headline">Master<br>Every Play</h1>
+      <p class="landing-sub">Elevate your coaching with Táctica's intuitive professional tactical board. Plan formations, draw dynamic plays, and analyze in real-time.</p>
+      <div class="landing-actions">
+        <button class="landing-btn landing-btn-primary" onclick="openAuthModal(); switchAuthTab('signup');">
+          Get started
+        </button>
+        <button class="landing-btn landing-btn-secondary" onclick="openAuthModal(); switchAuthTab('signin');">
+          Sign in
+        </button>
+      </div>
     </div>
-    <p class="landing-footer">Currently in Alpha</p>
+    <!-- Right: product preview -->
+    <div class="landing-right">
+      <div class="landing-glow"></div>
+      <div class="landing-mockup">
+        <svg viewBox="0 0 700 480" class="landing-pitch-svg">
+          <rect x="0" y="0" width="700" height="480" fill="#2d5a27" rx="6"/>
+          <rect x="0" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
+          <rect x="107.6" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
+          <rect x="215.2" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
+          <rect x="322.8" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
+          <rect x="430.4" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
+          <rect x="538" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
+          <rect x="645.6" y="0" width="53.8" height="480" fill="rgba(255,255,255,0.03)"/>
+          <rect x="30" y="30" width="640" height="420" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <line x1="350" y1="30" x2="350" y2="450" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <circle cx="350" cy="240" r="60" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <circle cx="350" cy="240" r="2.5" fill="rgba(255,255,255,0.3)"/>
+          <rect x="30" y="140" width="110" height="200" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <rect x="30" y="190" width="50" height="100" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <rect x="560" y="140" width="110" height="200" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <rect x="620" y="190" width="50" height="100" fill="none" stroke="rgba(255,255,255,0.25)" stroke-width="1.5"/>
+          <circle class="lp lp-a1" cx="65" cy="240" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a2" cx="160" cy="120" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a3" cx="160" cy="200" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a4" cx="160" cy="280" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a5" cx="160" cy="360" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a6" cx="270" cy="150" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a7" cx="270" cy="240" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a8" cx="270" cy="330" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a9" cx="370" cy="130" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a10" cx="370" cy="240" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-a11" cx="370" cy="350" r="12" fill="#8B5CF6" opacity="0.9"/>
+          <circle class="lp lp-b1" cx="635" cy="240" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b2" cx="540" cy="120" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b3" cx="540" cy="200" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b4" cx="540" cy="280" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b5" cx="540" cy="360" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b6" cx="450" cy="120" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b7" cx="450" cy="200" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b8" cx="450" cy="280" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b9" cx="450" cy="360" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b10" cx="400" cy="180" r="12" fill="#F97066" opacity="0.9"/>
+          <circle class="lp lp-b11" cx="400" cy="300" r="12" fill="#F97066" opacity="0.9"/>
+          <path class="landing-arrow la-1" d="M270 240 Q310 200 350 210" fill="none" stroke="#a78bfa" stroke-width="2" stroke-dasharray="6 4" opacity="0.7"/>
+          <path class="landing-arrow la-2" d="M370 130 Q390 100 420 120" fill="none" stroke="#fca5a1" stroke-width="2" stroke-dasharray="6 4" opacity="0.7"/>
+          <path class="landing-arrow la-3" d="M160 280 Q200 260 240 270" fill="none" stroke="#a78bfa" stroke-width="2" stroke-dasharray="6 4" opacity="0.7"/>
+        </svg>
+      </div>
+    </div>
   </div>
 </div>
 

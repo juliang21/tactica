@@ -1081,15 +1081,95 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   overflow: hidden;
 }
 
-/* Animated pitch background */
-.landing-pitch-bg {
-  position: absolute; inset: 0;
+/* ── Split layout ── */
+.landing-split {
+  display: flex; align-items: center;
+  width: 100%; max-width: 1200px;
+  padding: 0 64px; gap: 64px;
+  position: relative; z-index: 1;
+}
+.landing-left {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  align-items: flex-start;
+}
+.landing-right {
+  flex: 1; min-width: 0;
+  position: relative;
   display: flex; align-items: center; justify-content: center;
-  opacity: 0.18;
+}
+
+/* Alpha badge */
+.landing-alpha-badge {
+  display: inline-block;
+  font-family: 'Manrope', sans-serif;
+  font-size: 11px; font-weight: 700;
+  letter-spacing: 1.5px; text-transform: uppercase;
+  color: var(--accent); border: 1px solid rgba(201,169,98,0.4);
+  padding: 4px 12px; border-radius: 20px;
+  margin-bottom: 24px;
+  background: rgba(201,169,98,0.06);
+}
+
+/* Headline */
+.landing-headline {
+  font-family: 'Space Grotesk', sans-serif;
+  font-size: 72px; font-weight: 700;
+  color: var(--text); line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: 20px;
+}
+
+.landing-sub {
+  font-family: 'Manrope', sans-serif;
+  font-size: 16px; font-weight: 400;
+  color: var(--text-muted); margin-bottom: 36px;
+  line-height: 1.65; max-width: 420px;
+}
+
+/* CTAs */
+.landing-actions {
+  display: flex; gap: 12px; margin-bottom: 0;
+}
+.landing-btn {
+  padding: 14px 32px; border-radius: 10px;
+  font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+  letter-spacing: 0.3px;
+}
+.landing-btn-primary {
+  border: none; background: var(--accent); color: #0a0a0f;
+  box-shadow: 0 4px 16px rgba(201,169,98,0.3);
+}
+.landing-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,169,98,0.4); }
+.landing-btn-secondary {
+  border: 1px solid rgba(255,255,255,0.15); background: transparent;
+  color: var(--text);
+}
+.landing-btn-secondary:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.04); }
+
+/* Golden glow behind mockup */
+.landing-glow {
+  position: absolute;
+  width: 140%; height: 140%;
+  top: -20%; left: -20%;
+  background: radial-gradient(ellipse at center, rgba(201,169,98,0.22) 0%, rgba(201,169,98,0.10) 35%, transparent 65%);
+  border-radius: 50%;
   pointer-events: none;
+  filter: blur(50px);
+}
+
+/* Product mockup */
+.landing-mockup {
+  position: relative;
+  width: 100%; max-width: 520px;
+  border-radius: 14px;
+  overflow: hidden;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.06);
+  background: #1a2e16;
 }
 .landing-pitch-svg {
-  width: 100%; height: 100%;
+  display: block; width: 100%; height: auto;
 }
 
 /* Player drift animations */
@@ -1158,51 +1238,18 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   to { stroke-dashoffset: -30; }
 }
 
-.landing-content {
-  position: relative; z-index: 1;
-  text-align: center; max-width: 480px; padding: 40px 24px;
-}
-.landing-logo {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 56px; font-weight: 700;
-  color: var(--accent); margin-bottom: 16px;
-  letter-spacing: -1px;
-}
-.landing-tagline {
-  font-family: 'Manrope', sans-serif;
-  font-size: 18px; font-weight: 600;
-  color: var(--text); margin-bottom: 12px;
-  line-height: 1.4;
-}
-.landing-sub {
-  font-family: 'Manrope', sans-serif;
-  font-size: 14px; font-weight: 400;
-  color: var(--text-muted); margin-bottom: 36px;
-  line-height: 1.6;
-}
-.landing-actions {
-  display: flex; gap: 12px; justify-content: center; margin-bottom: 24px;
-}
-.landing-btn {
-  padding: 12px 32px; border-radius: 10px;
-  font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
-  cursor: pointer; transition: all 0.15s;
-  letter-spacing: 0.3px;
-}
-.landing-btn-primary {
-  border: none; background: var(--accent); color: #0a0a0f;
-  box-shadow: 0 4px 16px rgba(201,169,98,0.3);
-}
-.landing-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(201,169,98,0.4); }
-.landing-btn-secondary {
-  border: 1px solid rgba(255,255,255,0.15); background: transparent;
-  color: var(--text);
-}
-.landing-btn-secondary:hover { border-color: rgba(255,255,255,0.3); background: rgba(255,255,255,0.04); }
-.landing-footer {
-  font-family: 'Manrope', sans-serif;
-  font-size: 11px; font-weight: 500;
-  color: var(--text-dim); letter-spacing: 0.5px;
+
+/* ── Landing responsive (mobile) ── */
+@media (max-width: 860px) {
+  .landing-split {
+    flex-direction: column; padding: 48px 24px; gap: 40px;
+    text-align: center;
+  }
+  .landing-left { align-items: center; }
+  .landing-headline { font-size: 48px; letter-spacing: -1px; }
+  .landing-sub { max-width: 100%; }
+  .landing-actions { justify-content: center; }
+  .landing-mockup { max-width: 400px; }
 }
 
 /* ─── Auth Modal ────────────────────────────────────────────────────────── */
