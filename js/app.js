@@ -1166,7 +1166,10 @@ let _authInitialized = false;
 onAuthChange(async (user) => {
   updateAuthUI(user);
   closeAuthModal();
+  const gate = document.getElementById('landing-gate');
   if (user) {
+    // Hide landing gate
+    if (gate) gate.style.display = 'none';
     // Migrate localStorage to cloud on first sign-in
     try { await migrateLocalToCloud(user.uid); } catch (e) { console.warn('Migration error:', e); }
     // Show welcome notification (skip on initial page load auto-restore)
@@ -1174,6 +1177,9 @@ onAuthChange(async (user) => {
       const name = user.displayName || user.email || 'User';
       showNotification('Welcome back, ' + name + '!', 'success', 4000);
     }
+  } else {
+    // Show landing gate when not authenticated
+    if (gate) gate.style.display = 'flex';
   }
   _authInitialized = true;
   await updateCurrentBar();
