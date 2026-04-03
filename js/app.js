@@ -1159,12 +1159,19 @@ window.doSignOut = doSignOut;
 // (toggleUserMenu removed — replaced by toggleAppMenu)
 
 // ─── Auth State Listener ────────────────────────────────────────────────────
+let _authInitialized = false;
 onAuthChange(async (user) => {
   updateAuthUI(user);
   closeAuthModal();
   if (user) {
     // Migrate localStorage to cloud on first sign-in
     try { await migrateLocalToCloud(user.uid); } catch (e) { console.warn('Migration error:', e); }
+    // Show welcome notification (skip on initial page load auto-restore)
+    if (_authInitialized) {
+      const name = user.displayName || user.email || 'User';
+      showNotification('Welcome back, ' + name + '!', 'success', 4000);
+    }
   }
+  _authInitialized = true;
   await updateCurrentBar();
 });
