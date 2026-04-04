@@ -1903,6 +1903,11 @@ onAuthChange(async (user) => {
     if (gate) gate.style.display = 'none';
     // Migrate localStorage to cloud on first sign-in
     try { await migrateLocalToCloud(user.uid); } catch (e) { console.warn('Migration error:', e); }
+    // Track auto-restored sessions (returning users who didn't actively sign in)
+    if (!_authInitialized) {
+      const method = user.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email';
+      trackSignIn(method);
+    }
     // Show welcome notification (skip on initial page load auto-restore)
     if (_authInitialized) {
       const name = user.displayName || user.email || 'User';
