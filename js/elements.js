@@ -538,6 +538,189 @@ export function addVision(x, y) {
   return g;
 }
 
+// ─── Add Freeform Zone ──────────────────────────────────────────────────────
+// points = [{x,y}, {x,y}, ...]  (at least 3 world-space points)
+export function addFreeformZone(points) {
+  if (points.length < 3) return null;
+  const id = 'freeform-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'freeform';
+
+  // Store center as centroid of all points
+  let sumX = 0, sumY = 0;
+  points.forEach(p => { sumX += p.x; sumY += p.y; });
+  const cx = sumX / points.length;
+  const cy = sumY / points.length;
+  g.dataset.cx = cx; g.dataset.cy = cy;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+
+  // Store points as deltas from center (JSON string)
+  const deltas = points.map(p => ({ dx: p.x - cx, dy: p.y - cy }));
+  g.dataset.freeformPts = JSON.stringify(deltas);
+
+  const path = document.createElementNS(ns, 'path');
+  path.classList.add('freeform-shape');
+  path.setAttribute('fill', 'rgba(79,156,249,0.18)');
+  path.setAttribute('stroke', 'rgba(255,255,255,0.5)');
+  path.setAttribute('stroke-width', '1.5');
+  path.setAttribute('stroke-dasharray', '4,3');
+  path.setAttribute('stroke-linejoin', 'round');
+
+  g.appendChild(path);
+  updateFreeformPath(g); // compute the smooth SVG d= from points
+
+  makeDraggable(g);
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  S.objectsLayer.appendChild(g);
+  return g;
+}
+
+// Build a smooth closed SVG path (Catmull-Rom → Cubic Bezier) from the stored freeform points
+export function updateFreeformPath(g) {
+  const path = g.querySelector('.freeform-shape');
+  if (!path) return;
+  const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+  const scale = parseFloat(g.dataset.scale || '1');
+  const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+  const deltas = JSON.parse(g.dataset.freeformPts || '[]');
+  if (deltas.length < 3) return;
+
+  // Transform deltas to world points
+  const cosR = Math.cos(rot), sinR = Math.sin(rot);
+  const pts = deltas.map(d => ({
+    x: cx + (d.dx * scale * cosR - d.dy * scale * sinR),
+    y: cy + (d.dx * scale * sinR + d.dy * scale * cosR)
+  }));
+
+  // Catmull-Rom to Bezier — smooth closed curve
+  const n = pts.length;
+  const tension = 0.35;
+  let d = `M ${pts[0].x} ${pts[0].y}`;
+  for (let i = 0; i < n; i++) {
+    const p0 = pts[(i - 1 + n) % n];
+    const p1 = pts[i];
+    const p2 = pts[(i + 1) % n];
+    const p3 = pts[(i + 2) % n];
+    const cp1x = p1.x + (p2.x - p0.x) * tension;
+    const cp1y = p1.y + (p2.y - p0.y) * tension;
+    const cp2x = p2.x - (p3.x - p1.x) * tension;
+    const cp2y = p2.y - (p3.y - p1.y) * tension;
+    d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
+  }
+  d += ' Z';
+  path.setAttribute('d', d);
+}
+
+// ─── Add Motion (player movement trail + ghost) ─────────────────────────────
+export function addMotion(x1, y1, x2, y2, color) {
+  color = color || 'rgba(255,255,255,0.5)';
+  const id = 'motion-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'motion';
+
+  const cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+  g.dataset.cx = cx; g.dataset.cy = cy;
+  g.dataset.dx1 = x1 - cx; g.dataset.dy1 = y1 - cy;
+  g.dataset.dx2 = x2 - cx; g.dataset.dy2 = y2 - cy;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.motionColor = color;
+
+  // Trail line (dashed, curved feel via stroke style)
+  const trail = document.createElementNS(ns, 'line');
+  trail.classList.add('motion-trail');
+  trail.setAttribute('stroke', color);
+  trail.setAttribute('stroke-width', '2');
+  trail.setAttribute('stroke-dasharray', '6,4');
+  trail.setAttribute('stroke-linecap', 'round');
+  trail.setAttribute('opacity', '0.7');
+
+  // Direction chevrons (small arrow in the middle)
+  const chevron = document.createElementNS(ns, 'polygon');
+  chevron.classList.add('motion-chevron');
+  chevron.setAttribute('fill', color);
+  chevron.setAttribute('opacity', '0.6');
+
+  // Ghost circle at destination
+  const ghost = document.createElementNS(ns, 'circle');
+  ghost.classList.add('motion-ghost');
+  ghost.setAttribute('r', '10');
+  ghost.setAttribute('fill', color);
+  ghost.setAttribute('opacity', '0.25');
+  ghost.setAttribute('stroke', color);
+  ghost.setAttribute('stroke-width', '1.5');
+  ghost.setAttribute('stroke-dasharray', '3,2');
+
+  // Invisible hit area
+  const hit = document.createElementNS(ns, 'line');
+  hit.setAttribute('stroke', 'transparent');
+  hit.setAttribute('stroke-width', '14');
+
+  g.appendChild(trail);
+  g.appendChild(chevron);
+  g.appendChild(ghost);
+  g.appendChild(hit);
+  updateMotionVisual(g);
+
+  makeDraggable(g);
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  S.objectsLayer.appendChild(g);
+  return g;
+}
+
+// Recompute visual positions for a motion element
+export function updateMotionVisual(el) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const dx1 = parseFloat(el.dataset.dx1), dy1 = parseFloat(el.dataset.dy1);
+  const dx2 = parseFloat(el.dataset.dx2), dy2 = parseFloat(el.dataset.dy2);
+  const sc = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+  const cosR = Math.cos(rot), sinR = Math.sin(rot);
+
+  const p1x = cx + (dx1*sc)*cosR - (dy1*sc)*sinR;
+  const p1y = cy + (dx1*sc)*sinR + (dy1*sc)*cosR;
+  const p2x = cx + (dx2*sc)*cosR - (dy2*sc)*sinR;
+  const p2y = cy + (dx2*sc)*sinR + (dy2*sc)*cosR;
+
+  // Trail line
+  const trail = el.querySelector('.motion-trail');
+  if (trail) {
+    trail.setAttribute('x1', p1x); trail.setAttribute('y1', p1y);
+    trail.setAttribute('x2', p2x); trail.setAttribute('y2', p2y);
+  }
+
+  // Hit area
+  const hit = el.querySelector('line:not(.motion-trail)');
+  if (hit) {
+    hit.setAttribute('x1', p1x); hit.setAttribute('y1', p1y);
+    hit.setAttribute('x2', p2x); hit.setAttribute('y2', p2y);
+  }
+
+  // Ghost at endpoint
+  const ghost = el.querySelector('.motion-ghost');
+  if (ghost) {
+    ghost.setAttribute('cx', p2x); ghost.setAttribute('cy', p2y);
+  }
+
+  // Chevron (small arrow at midpoint, pointing toward destination)
+  const chevron = el.querySelector('.motion-chevron');
+  if (chevron) {
+    const mx = (p1x + p2x) / 2, my = (p1y + p2y) / 2;
+    const angle = Math.atan2(p2y - p1y, p2x - p1x);
+    const sz = 5;
+    const tipX = mx + sz * Math.cos(angle);
+    const tipY = my + sz * Math.sin(angle);
+    const lx = mx - sz * Math.cos(angle - 0.5);
+    const ly = my - sz * Math.sin(angle - 0.5);
+    const rx = mx - sz * Math.cos(angle + 0.5);
+    const ry = my - sz * Math.sin(angle + 0.5);
+    chevron.setAttribute('points', `${tipX},${tipY} ${lx},${ly} ${rx},${ry}`);
+  }
+}
+
 // Update the vision polygon points from stored dimensions
 export function updateVisionPolygon(g) {
   const tri = g.querySelector('.vision-shape');

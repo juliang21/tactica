@@ -10,7 +10,8 @@ export function setTool(t) {
   const btn = document.querySelector(`[data-tool="${t}"]`);
   if (btn) btn.classList.add('active');
   if (t === 'arrow') {
-    document.getElementById('arrow-' + S.arrowType + '-btn').classList.add('active');
+    const arrowBtn = document.getElementById('arrow-' + S.arrowType + '-btn');
+    if (arrowBtn) arrowBtn.classList.add('active');
   }
   document.body.className = 'tool-' + (t.startsWith('player') ? 'player' : t.startsWith('shadow') ? 'shadow' : t === 'textbox' ? 'textbox' : t === 'vision' ? 'vision' : t);
   if (!t.startsWith('player')) deselect();
@@ -18,8 +19,12 @@ export function setTool(t) {
 
 export function setArrowType(type) {
   S.setArrowType(type);
-  ['run','pass','line'].forEach(t => document.getElementById('arrow-' + t + '-btn').classList.remove('active'));
-  document.getElementById('arrow-' + type + '-btn').classList.add('active');
+  ['run','pass','line'].forEach(t => {
+    const el = document.getElementById('arrow-' + t + '-btn');
+    if (el) el.classList.remove('active');
+  });
+  const activeEl = document.getElementById('arrow-' + type + '-btn');
+  if (activeEl) activeEl.classList.add('active');
 }
 
 // ─── Team Context ─────────────────────────────────────────────────────────────

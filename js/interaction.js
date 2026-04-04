@@ -9,6 +9,14 @@ export function registerRewrap(fn) { _rewrapFn = fn; }
 let _updateVisionFn = null;
 export function registerVisionUpdate(fn) { _updateVisionFn = fn; }
 
+// ─── Freeform path update callback ─────────────────────────────────────────
+let _updateFreeformFn = null;
+export function registerFreeformUpdate(fn) { _updateFreeformFn = fn; }
+
+// ─── Motion visual update callback ─────────────────────────────────────────
+let _updateMotionFn = null;
+export function registerMotionUpdate(fn) { _updateMotionFn = fn; }
+
 // ─── Spotlight name background helper ─────────────────────────────────────────
 export function updateSpotlightNameBg(g) {
   const nl = g.querySelector('.spotlight-name');
@@ -71,6 +79,10 @@ export function applyTransform(el) {
     sh.setAttribute('cx', cx); sh.setAttribute('cy', cy);
     sh.setAttribute('rx', hw); sh.setAttribute('ry', hh);
     sh.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+  } else if (t === 'freeform') {
+    if (_updateFreeformFn) _updateFreeformFn(el);
+  } else if (t === 'motion') {
+    if (_updateMotionFn) _updateMotionFn(el);
   } else if (t === 'shadow-rect') {
     const sh = el.querySelector('rect');
     const hw = parseFloat(el.dataset.hw || '30') * scale;
@@ -138,7 +150,9 @@ function moveElement(el, nx, ny) {
   if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
+  else if (t === 'motion') applyTransform(el);
   else if (t === 'spotlight') applyTransform(el);
+  else if (t === 'freeform') applyTransform(el);
   else if (t.startsWith('shadow')) applyTransform(el);
 }
 
@@ -190,6 +204,23 @@ export function select(el) {
     }
     showVisionHandles(el);
   }
+  if (type === 'freeform') {
+    const shape = el.querySelector('.freeform-shape');
+    if (shape) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke');
+      shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+    showFreeformHandles(el);
+  }
+  if (type === 'motion') {
+    const trail = el.querySelector('.motion-trail');
+    if (trail) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = trail.getAttribute('stroke');
+      trail.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+      trail.setAttribute('opacity', '1');
+    }
+    showMotionHandles(el);
+  }
 
   // Info label
   const typeLabel = type === 'player' ? 'Player #' + el.dataset.label
@@ -199,6 +230,8 @@ export function select(el) {
     : type === 'textbox' ? 'Text'
     : type === 'spotlight' ? 'Spotlight'
     : type === 'vision' ? 'Player\'s Vision'
+    : type === 'freeform' ? 'Freeform Zone'
+    : type === 'motion' ? 'Motion Path'
     : 'Zone';
   const hint = type === 'player' ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
@@ -349,6 +382,21 @@ export function deselectVisual(el) {
       if (saved === 'none') { shape.removeAttribute('stroke'); shape.removeAttribute('stroke-width'); }
       else if (saved) { shape.setAttribute('stroke', saved); }
       else { shape.removeAttribute('stroke'); shape.removeAttribute('stroke-width'); }
+      delete el.dataset.savedStroke;
+    }
+  }
+  if (t === 'freeform') {
+    const shape = el.querySelector('.freeform-shape');
+    if (shape && el.dataset.savedStroke) {
+      shape.setAttribute('stroke', el.dataset.savedStroke);
+      delete el.dataset.savedStroke;
+    }
+  }
+  if (t === 'motion') {
+    const trail = el.querySelector('.motion-trail');
+    if (trail && el.dataset.savedStroke) {
+      trail.setAttribute('stroke', el.dataset.savedStroke);
+      trail.setAttribute('opacity', '0.7');
       delete el.dataset.savedStroke;
     }
   }
@@ -589,6 +637,48 @@ export function showVisionHandles(el) {
   S.svg.appendChild(handleGroup);
 }
 
+// ── Freeform zone handles (vertex handles) ──
+export function showFreeformHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'freeform';
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const scale = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+  const cosR = Math.cos(rot), sinR = Math.sin(rot);
+  const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+
+  deltas.forEach((d, i) => {
+    const wx = cx + (d.dx * scale * cosR - d.dy * scale * sinR);
+    const wy = cy + (d.dx * scale * sinR + d.dy * scale * cosR);
+    handleGroup.appendChild(createHandle(ns, wx, wy, 'freeform-' + i, 'move'));
+  });
+  S.svg.appendChild(handleGroup);
+}
+
+// ── Motion handles (start/end like arrows) ──
+export function showMotionHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'motion';
+
+  const trail = el.querySelector('.motion-trail');
+  if (!trail) return;
+  const x1 = parseFloat(trail.getAttribute('x1'));
+  const y1 = parseFloat(trail.getAttribute('y1'));
+  const x2 = parseFloat(trail.getAttribute('x2'));
+  const y2 = parseFloat(trail.getAttribute('y2'));
+
+  handleGroup.appendChild(createHandle(ns, x1, y1, 'start'));
+  handleGroup.appendChild(createHandle(ns, x2, y2, 'end'));
+  S.svg.appendChild(handleGroup);
+}
+
 export function removeHandles() {
   if (handleGroup) { handleGroup.remove(); handleGroup = null; }
   S.setEndpointDragging(null);
@@ -659,17 +749,34 @@ function updateHandlePositions(el) {
   } else if (type === 'vision') {
     const pts = visionWorldPoints(el);
     const children = handleGroup.children;
-    // 0: top-right
     moveHandleTo(children[0], pts.topRight.x, pts.topRight.y);
-    // 1: bottom-right
     moveHandleTo(children[1], pts.botRight.x, pts.botRight.y);
-    // 2: base mid
     moveHandleTo(children[2], pts.baseMid.x, pts.baseMid.y);
-    // 3: rotate handle (group) — position above top-right
     const rotG = children[3];
     if (rotG) {
       const rc = rotG.querySelector('circle');
       if (rc) { rc.setAttribute('cx', pts.topRight.x); rc.setAttribute('cy', pts.topRight.y - 15); }
+    }
+  } else if (type === 'freeform') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const scale = parseFloat(el.dataset.scale || '1');
+    const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+    const cosR = Math.cos(rot), sinR = Math.sin(rot);
+    const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+    const children = handleGroup.children;
+    deltas.forEach((d, i) => {
+      if (children[i]) {
+        const wx = cx + (d.dx * scale * cosR - d.dy * scale * sinR);
+        const wy = cy + (d.dx * scale * sinR + d.dy * scale * cosR);
+        moveHandleTo(children[i], wx, wy);
+      }
+    });
+  } else if (type === 'motion') {
+    const trail = el.querySelector('.motion-trail');
+    if (trail) {
+      const children = handleGroup.children;
+      moveHandleTo(children[0], parseFloat(trail.getAttribute('x1')), parseFloat(trail.getAttribute('y1')));
+      moveHandleTo(children[1], parseFloat(trail.getAttribute('x2')), parseFloat(trail.getAttribute('y2')));
     }
   }
 }
@@ -695,6 +802,10 @@ function onEndpointDrag(e) {
     onSpotlightHandleDrag(el, pt);
   } else if (t === 'vision') {
     onVisionHandleDrag(el, pt);
+  } else if (t === 'freeform') {
+    onFreeformHandleDrag(el, pt);
+  } else if (t === 'motion') {
+    onMotionEndpointDrag(el, pt);
   } else if (t.startsWith('shadow') || t === 'textbox') {
     onZoneHandleDrag(el, pt);
   }
@@ -771,6 +882,50 @@ function onVisionHandleDrag(el, pt) {
   }
 
   applyTransform(el);
+  updateHandlePositions(el);
+}
+
+function onFreeformHandleDrag(el, pt) {
+  const h = S.endpointDragging;
+  if (!h || !h.startsWith('freeform-')) return;
+  const idx = parseInt(h.split('-')[1]);
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const scale = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+  const cosR = Math.cos(-rot), sinR = Math.sin(-rot);
+
+  // Convert world point back to local delta
+  const wx = pt.x - cx, wy = pt.y - cy;
+  const ldx = (wx * cosR - wy * sinR) / scale;
+  const ldy = (wx * sinR + wy * cosR) / scale;
+
+  const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+  if (idx >= 0 && idx < deltas.length) {
+    deltas[idx] = { dx: ldx, dy: ldy };
+    el.dataset.freeformPts = JSON.stringify(deltas);
+    applyTransform(el);
+    updateHandlePositions(el);
+  }
+}
+
+function onMotionEndpointDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const dx1 = parseFloat(el.dataset.dx1), dy1 = parseFloat(el.dataset.dy1);
+  const dx2 = parseFloat(el.dataset.dx2), dy2 = parseFloat(el.dataset.dy2);
+
+  let ax1 = cx + dx1, ay1 = cy + dy1;
+  let ax2 = cx + dx2, ay2 = cy + dy2;
+
+  if (S.endpointDragging === 'start') { ax1 = pt.x; ay1 = pt.y; }
+  else { ax2 = pt.x; ay2 = pt.y; }
+
+  const ncx = (ax1 + ax2) / 2, ncy = (ay1 + ay2) / 2;
+  el.dataset.cx = ncx; el.dataset.cy = ncy;
+  el.dataset.dx1 = ax1 - ncx; el.dataset.dy1 = ay1 - ncy;
+  el.dataset.dx2 = ax2 - ncx; el.dataset.dy2 = ay2 - ncy;
+  el.dataset.scale = '1'; el.dataset.rotation = '0';
+
+  if (_updateMotionFn) _updateMotionFn(el);
   updateHandlePositions(el);
 }
 
@@ -914,7 +1069,13 @@ function onDrag(e) {
   if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight' || dt === 'vision') updateHandlePositions(S.selectedEl);
 }
 
+let _onDragEndFn = null;
+export function registerDragEnd(fn) { _onDragEndFn = fn; }
+
 function stopDrag() {
+  if (S.isDragging && S.dragMoved && S.selectedEl && _onDragEndFn) {
+    _onDragEndFn(S.selectedEl);
+  }
   S.setIsDragging(false);
   S.setEndpointDragging(null);
   if (S.dragMoved) setTimeout(() => { S.setDragMoved(false); }, 0);
