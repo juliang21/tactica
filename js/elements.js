@@ -90,7 +90,7 @@ export function addBall(x, y) {
 
 // ─── Add Referee ─────────────────────────────────────────────────────────────
 export function addReferee(x, y, label, fillColor, borderColor) {
-  if (label === undefined) { _refCount++; label = 'R' + _refCount; }
+  if (label === undefined) { _refCount++; label = _refCount === 1 ? 'R' : 'R' + _refCount; }
   fillColor = fillColor || '#1a1a1a';
   borderColor = borderColor || '#FBBF24';
   const isDark = S.isDarkColor(fillColor);

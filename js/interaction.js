@@ -63,7 +63,7 @@ export function applyTransform(el) {
   const rot = parseFloat(el.dataset.rotation || '0');
   const t = el.dataset.type;
 
-  if (t === 'player' || t === 'ball' || t === 'cone') {
+  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
   } else if (t === 'vision') {
     // Vision uses absolute polygon points (no transform needed)
@@ -147,7 +147,7 @@ export function updateArrowVisual(el) {
 function moveElement(el, nx, ny) {
   el.dataset.cx = nx; el.dataset.cy = ny;
   const t = el.dataset.type;
-  if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision') applyTransform(el);
+  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'vision') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
   else if (t === 'motion') applyTransform(el);
