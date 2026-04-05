@@ -309,7 +309,9 @@ export function openColorPicker(target) {
   const modal = document.getElementById('color-picker-modal');
   modal.style.display = 'flex';
   let current = '#ffffff';
-  if (target === 'arrow') {
+  if (target === 'kit-custom') {
+    current = S.teamColors[S.teamContext] || '#ffffff';
+  } else if (target === 'arrow') {
     const line = S.selectedEl?.querySelector('line');
     if (line) current = line.getAttribute('stroke') || '#ffffff';
   } else {
@@ -339,6 +341,15 @@ export function confirmColorPicker() {
   const hex = '#' + document.getElementById('color-picker-hex').value;
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
   closeColorPicker();
+  if (colorPickerTarget === 'kit-custom') {
+    // Apply custom color to team (same as applyColor)
+    S.teamColors[S.teamContext] = hex;
+    document.getElementById('dot-' + S.teamContext).style.background = hex;
+    S.playersLayer.querySelectorAll(`g[data-team="${S.teamContext}"]`).forEach(g => {
+      if (g.dataset.isGK !== '1') setPlayerColor(g, hex);
+    });
+    return;
+  }
   if (!S.selectedEl) return;
   if (colorPickerTarget === 'arrow') {
     applyArrowColorValue(hex);
