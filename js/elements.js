@@ -1,6 +1,8 @@
 import * as S from './state.js';
 import { makeDraggable, select, updateArrowVisual } from './interaction.js';
 
+let _refCount = 0;
+
 // ─── Add Player ───────────────────────────────────────────────────────────────
 export function addPlayer(x, y, team, num, isGK) {
   if (num === undefined) { S.playerCounts[team]++; num = S.playerCounts[team]; }
@@ -82,6 +84,60 @@ export function addBall(x, y) {
   g.setAttribute('transform', `translate(${x},${y}) scale(0.7)`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  S.playersLayer.appendChild(g);
+  return g;
+}
+
+// ─── Add Referee ─────────────────────────────────────────────────────────────
+export function addReferee(x, y, label, fillColor, borderColor) {
+  if (label === undefined) { _refCount++; label = 'R' + _refCount; }
+  fillColor = fillColor || '#1a1a1a';
+  borderColor = borderColor || '#FBBF24';
+  const isDark = S.isDarkColor(fillColor);
+  const textColor = isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)';
+
+  const id = 'ref-' + S.nextObjectId();
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'referee';
+  g.dataset.label = String(label);
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.9';
+  g.dataset.fillColor = fillColor;
+  g.dataset.borderColor = borderColor;
+
+  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  circle.setAttribute('cx','0'); circle.setAttribute('cy','0'); circle.setAttribute('r','16');
+  circle.setAttribute('fill', fillColor);
+  circle.setAttribute('stroke', borderColor);
+  circle.setAttribute('stroke-width','2.5');
+  circle.setAttribute('filter', 'url(#player-shadow)');
+
+  const numText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  numText.setAttribute('text-anchor','middle'); numText.setAttribute('dominant-baseline','central');
+  numText.setAttribute('font-family','Poppins,sans-serif');
+  numText.setAttribute('font-size','10'); numText.setAttribute('font-weight','700');
+  numText.setAttribute('fill', textColor); numText.setAttribute('pointer-events','none');
+  numText.textContent = label;
+
+  const nameLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+  nameLabel.setAttribute('class','player-name');
+  nameLabel.setAttribute('text-anchor','middle'); nameLabel.setAttribute('dominant-baseline','hanging');
+  nameLabel.setAttribute('font-family','Poppins,sans-serif');
+  nameLabel.setAttribute('font-size','11'); nameLabel.setAttribute('font-weight','400');
+  nameLabel.setAttribute('fill','rgba(255,255,255,0.9)');
+  nameLabel.setAttribute('y','24'); nameLabel.setAttribute('pointer-events','none');
+  nameLabel.style.display = 'none';
+
+  const hitArea = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  hitArea.classList.add('hit-area');
+  hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','28');
+  hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
+
+  g.appendChild(hitArea); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
+  g.setAttribute('transform', `translate(${x},${y}) scale(0.9)`);
+  makeDraggable(g);
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('dblclick', e => { e.stopPropagation(); select(g); });
   S.playersLayer.appendChild(g);
   return g;
 }

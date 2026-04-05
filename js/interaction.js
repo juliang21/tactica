@@ -164,9 +164,9 @@ export function select(el) {
   trackElementSelected(type);
 
   // Visual highlight
-  if (type === 'player' || type === 'ball' || type === 'cone') {
+  if (type === 'player' || type === 'referee' || type === 'ball' || type === 'cone') {
     el.querySelector('circle:not(.hit-area),polygon')?.setAttribute('stroke-width', '3');
-    if (type === 'player') el.querySelector('circle:not(.hit-area)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+    if (type === 'player' || type === 'referee') el.querySelector('circle:not(.hit-area)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
   }
   if (type === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
@@ -224,6 +224,7 @@ export function select(el) {
 
   // Info label
   const typeLabel = type === 'player' ? 'Player #' + el.dataset.label
+    : type === 'referee' ? 'Referee ' + el.dataset.label
     : type === 'ball' ? 'Ball'
     : type === 'cone' ? 'Cone'
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
@@ -233,7 +234,7 @@ export function select(el) {
     : type === 'freeform' ? 'Freeform Zone'
     : type === 'motion' ? 'Motion Path'
     : 'Zone';
-  const hint = type === 'player' ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
+  const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
 
   // Mobile context bar
@@ -247,6 +248,7 @@ export function select(el) {
     if (fb) fb.style.display = 'none';
   }
   const playerSec = document.getElementById('player-edit-section');
+  const refereeSec = document.getElementById('referee-edit-section');
   const arrowSec = document.getElementById('arrow-edit-section');
   const zoneSec = document.getElementById('zone-edit-section');
   const textboxSec = document.getElementById('textbox-edit-section');
@@ -258,6 +260,7 @@ export function select(el) {
   // Always switch to element tab
   switchTab('element');
   playerSec.style.display = 'none';
+  if (refereeSec) refereeSec.style.display = 'none';
   arrowSec.style.display = 'none';
   zoneSec.style.display = 'none';
   textboxSec.style.display = 'none';
@@ -280,6 +283,11 @@ export function select(el) {
     const nameSize = el.dataset.nameSize || '11';
     document.getElementById('name-size-slider').value = nameSize;
     document.getElementById('name-size-val').textContent = nameSize + 'px';
+  } else if (type === 'referee') {
+    if (refereeSec) {
+      refereeSec.style.display = '';
+      document.getElementById('ref-name-input').value = el.dataset.label || '';
+    }
   } else if (type === 'arrow') {
     arrowSec.style.display = '';
     const w = el.dataset.arrowWidth || '2.5';
@@ -348,6 +356,19 @@ export function deselectVisual(el) {
       } else {
         const fill = circ.getAttribute('fill');
         circ.setAttribute('stroke', S.isDarkColor(fill) ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)');
+        circ.setAttribute('stroke-width', '2.5');
+      }
+    }
+  }
+  if (t === 'referee') {
+    const circ = el.querySelector('circle:not(.hit-area)');
+    if (circ) {
+      const border = el.dataset.borderColor || '#FBBF24';
+      if (border === 'none') {
+        circ.setAttribute('stroke', 'transparent');
+        circ.setAttribute('stroke-width', '0');
+      } else {
+        circ.setAttribute('stroke', border);
         circ.setAttribute('stroke-width', '2.5');
       }
     }

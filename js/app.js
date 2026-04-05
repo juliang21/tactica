@@ -1,10 +1,11 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerDragEnd, makeDraggable } from './interaction.js';
-import { addPlayer, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
          applyPlayerFill, applyPlayerBorder,
+         liveUpdateRefName, confirmRefName, applyRefFill, applyRefBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
          applyArrowColor, applyArrowStyle, applyArrowWidth,
          applySpotlightColor, setSpotlightColor, applyVisionColor,
@@ -163,6 +164,10 @@ window.applyNameBg = applyNameBg;
 window.updatePlayerNameBg = updatePlayerNameBg;
 window.applyPlayerFill = applyPlayerFill;
 window.applyPlayerBorder = applyPlayerBorder;
+window.liveUpdateRefName = liveUpdateRefName;
+window.confirmRefName = confirmRefName;
+window.applyRefFill = applyRefFill;
+window.applyRefBorder = applyRefBorder;
 window.openColorPicker = openColorPicker;
 window.closeColorPicker = closeColorPicker;
 window.confirmColorPicker = confirmColorPicker;
@@ -291,6 +296,7 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'player-b') placed = addPlayer(pt.x, pt.y, 'b');
   else if (S.tool === 'ball') placed = addBall(pt.x, pt.y);
   else if (S.tool === 'cone') placed = addCone(pt.x, pt.y);
+  else if (S.tool === 'referee') placed = addReferee(pt.x, pt.y);
   else if (S.tool === 'shadow-circle') placed = addShadow(pt.x, pt.y, 'shadow-circle');
   else if (S.tool === 'shadow-rect') placed = addShadow(pt.x, pt.y, 'shadow-rect');
   else if (S.tool === 'spotlight') placed = addSpotlight(pt.x, pt.y);
@@ -1101,6 +1107,12 @@ function copySelected() {
     data.nameSize = el.dataset.nameSize || '11';
     data.nameColor = el.querySelector('.player-name')?.getAttribute('fill') || 'rgba(255,255,255,0.9)';
     data.scale = el.dataset.scale || '1';
+  } else if (t === 'referee') {
+    const circ = el.querySelector('circle:not(.hit-area)');
+    data.label = el.dataset.label;
+    data.fillColor = el.dataset.fillColor || '#1a1a1a';
+    data.borderColor = el.dataset.borderColor || '#FBBF24';
+    data.scale = el.dataset.scale || '0.9';
   } else if (t === 'ball') {
     data.scale = el.dataset.scale || '0.7';
   } else if (t === 'cone') {
@@ -1170,6 +1182,9 @@ function pasteClipboard() {
       placed.dataset.nameSize = d.nameSize;
       placed.dataset.scale = d.scale;
     }
+  } else if (d.type === 'referee') {
+    placed = addReferee(x, y, d.label, d.fillColor, d.borderColor);
+    if (placed) placed.dataset.scale = d.scale;
   } else if (d.type === 'ball') {
     placed = addBall(x, y);
     if (placed) placed.dataset.scale = d.scale;

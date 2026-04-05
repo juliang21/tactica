@@ -262,6 +262,45 @@ export function applyPlayerBorder(swatchEl) {
   S.selectedEl.dataset.borderColor = color;
 }
 
+// ─── Referee Editing ─────────────────────────────────────────────────────────
+export function liveUpdateRefName(val) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'referee') return;
+  const numText = S.selectedEl.querySelector('text:not(.hit-area):not(.player-name)');
+  if (numText) numText.textContent = val || '';
+  S.selectedEl.dataset.label = val;
+}
+export function confirmRefName() {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'referee') return;
+  trackElementEdited('referee', 'name');
+}
+export function applyRefFill(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'referee') return;
+  trackElementEdited('referee', 'fill_color');
+  const color = swatchEl.dataset.color;
+  const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
+  if (!circ) return;
+  circ.setAttribute('fill', color);
+  S.selectedEl.dataset.fillColor = color;
+  const isDark = S.isDarkColor(color);
+  const numText = S.selectedEl.querySelector('text:not(.hit-area):not(.player-name)');
+  if (numText) numText.setAttribute('fill', isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
+}
+export function applyRefBorder(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'referee') return;
+  trackElementEdited('referee', 'border_color');
+  const color = swatchEl.dataset.color;
+  const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
+  if (!circ) return;
+  if (color === 'none') {
+    circ.setAttribute('stroke', 'transparent');
+    circ.setAttribute('stroke-width', '0');
+  } else {
+    circ.setAttribute('stroke', color);
+    circ.setAttribute('stroke-width', '2.5');
+  }
+  S.selectedEl.dataset.borderColor = color;
+}
+
 // ─── Color Picker ─────────────────────────────────────────────────────────────
 let colorPickerTarget = 'fill'; // 'fill', 'border', or 'arrow'
 
@@ -345,6 +384,17 @@ export function confirmColorPicker() {
     S.selectedEl.dataset.visionColor = color;
     const shape = S.selectedEl.querySelector('.vision-shape');
     if (shape) shape.setAttribute('fill', color);
+  } else if (colorPickerTarget === 'ref-fill') {
+    const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
+    if (circ) circ.setAttribute('fill', hex);
+    S.selectedEl.dataset.fillColor = hex;
+    const isDark = S.isDarkColor(hex);
+    const numText = S.selectedEl.querySelector('text:not(.hit-area):not(.player-name)');
+    if (numText) numText.setAttribute('fill', isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
+  } else if (colorPickerTarget === 'ref-border') {
+    const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
+    if (circ) { circ.setAttribute('stroke', hex); circ.setAttribute('stroke-width', '2.5'); }
+    S.selectedEl.dataset.borderColor = hex;
   } else if (S.selectedEl.dataset.type === 'player') {
     if (colorPickerTarget === 'fill') {
       setPlayerColor(S.selectedEl, hex);
