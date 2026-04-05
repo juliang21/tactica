@@ -84,7 +84,7 @@ export function generateThumbnail() {
       const circ = g.querySelector('circle:not(.hit-area)');
       ctx.beginPath();
       ctx.arc(cx, cy, 12, 0, Math.PI * 2);
-      ctx.fillStyle = circ ? circ.getAttribute('fill') : '#38BDF8';
+      ctx.fillStyle = circ ? circ.getAttribute('fill') : '#8B5CF6';
       ctx.fill();
     });
 

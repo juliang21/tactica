@@ -761,7 +761,7 @@ function resetToBase() {
 
 // ─── GIF Export ──────────────────────────────────────────────────────────────
 function exportAnimation() {
-  if (frames.length < 2) { alert('Add at least 2 steps before exporting.'); return; }
+  if (frames.length < 2) { showNotification('Add at least 2 steps before exporting.', 'error', 4000); return; }
   saveCurrentToFrame();
 
   const svgEl = S.svg;
@@ -1484,14 +1484,14 @@ document.addEventListener('click', e => {
   }
 });
 
-function openSaveAnalysis() {
+async function openSaveAnalysis() {
   closeSaveMenu();
   const modal = document.getElementById('save-analysis-modal');
   const input = document.getElementById('save-analysis-name');
   // Pre-fill with current name if editing existing
   const currentId = getCurrentId();
   if (currentId) {
-    const analyses = listAnalyses();
+    const analyses = await listAnalyses();
     const current = analyses.find(a => a.id === currentId);
     if (current) input.value = current.name;
     else input.value = '';
@@ -1515,17 +1515,12 @@ async function confirmSaveAnalysis() {
 
   await saveAnalysis(name);
   closeSaveAnalysis();
-  showSaveToast('Analysis saved');
+  showNotification('Analysis saved', 'success', 3000);
   await updateCurrentBar();
 }
 window.confirmSaveAnalysis = confirmSaveAnalysis;
 
-function showSaveToast(msg) {
-  const toast = document.getElementById('save-toast');
-  toast.textContent = msg;
-  toast.classList.add('show');
-  setTimeout(() => toast.classList.remove('show'), 2200);
-}
+// showSaveToast removed — all notifications now use showNotification()
 
 // ─── Top Notification Bar ────────────────────────────────────────────────────
 let _notifTimeout = null;
@@ -1641,7 +1636,7 @@ async function duplicateFromCard(id) {
   const copy = await duplicateAnalysis(id);
   if (copy) {
     await renderAnalysesGrid();
-    showSaveToast('Duplicated');
+    showNotification('Duplicated', 'success', 3000);
   }
 }
 window.duplicateFromCard = duplicateFromCard;
@@ -1682,7 +1677,7 @@ function newAnalysisFromDashboard() {
   S.undoStack.length = 0;
   closeMyAnalyses();
   updateCurrentBar();
-  showSaveToast('New analysis');
+  showNotification('New analysis', 'info', 3000);
 }
 window.newAnalysisFromDashboard = newAnalysisFromDashboard;
 
@@ -1712,7 +1707,7 @@ document.addEventListener('keydown', async e => {
     e.preventDefault();
     const saved = await quickSave();
     if (saved) {
-      showSaveToast('Auto-saved');
+      showNotification('Auto-saved', 'success', 2000);
     } else {
       openSaveAnalysis();
     }

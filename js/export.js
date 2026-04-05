@@ -455,7 +455,8 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
     } catch(err) {
       if (document.body.contains(canvas)) document.body.removeChild(canvas);
-      alert('Export error: ' + err.message);
+      if (typeof showNotification === 'function') showNotification('Export error: ' + err.message, 'error', 5000);
+      else console.error('Export error:', err.message);
     }
     if (prevSelected) select(prevSelected);
   }, 50);
