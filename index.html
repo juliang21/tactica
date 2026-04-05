@@ -342,6 +342,11 @@
           <rect width="20" height="480" fill="#3a7a38"/>
           <rect x="20" width="20" height="480" fill="#367035"/>
         </pattern>
+        <!-- Kit stripe patterns -->
+        <pattern id="kit-arg" patternUnits="userSpaceOnUse" width="6" height="30" patternTransform="rotate(0)">
+          <rect width="3" height="30" fill="#75aadb"/>
+          <rect x="3" width="3" height="30" fill="#ffffff"/>
+        </pattern>
         <!-- Player drop shadow: black 43%, angle 90°, distance 5, blur 6 -->
         <filter id="player-shadow" x="-30%" y="-30%" width="160%" height="180%">
           <feDropShadow dx="0" dy="5" stdDeviation="3" flood-color="rgba(0,0,0,0.43)"/>
@@ -479,7 +484,11 @@
     <!-- KIT COLOUR -->
     <div class="panel-section">
       <h3>Kit colour</h3>
-      <div class="kit-grid" id="kit-grid">
+      <div class="kit-tabs">
+        <button class="kit-tab active" onclick="switchKitTab('clubs',this)">Clubs</button>
+        <button class="kit-tab" onclick="switchKitTab('national',this)">National</button>
+      </div>
+      <div class="kit-grid" id="kit-grid-clubs">
         <div class="kit-btn" style="background:#ffffff" data-color="#ffffff" data-gk="#ffe87a" onclick="applyKit(this)" title="Real Madrid"><div class="kit-label" style="color:#000">MAD</div></div>
         <div class="kit-btn" style="background:#a50044" data-color="#a50044" data-gk="#ffa500" onclick="applyKit(this)" title="Barcelona"><div class="kit-label">BAR</div></div>
         <div class="kit-btn" style="background:#fde100" data-color="#fde100" data-gk="#ff6600" onclick="applyKit(this)" title="Dortmund"><div class="kit-label" style="color:#000">BVB</div></div>
@@ -492,6 +501,68 @@
         <div class="kit-btn" style="background:#d9021b" data-color="#d9021b" data-gk="#a8f0d0" onclick="applyKit(this)" title="Sevilla"><div class="kit-label">SEV</div></div>
         <div class="kit-btn" style="background:#003da5" data-color="#003da5" data-gk="#fde100" onclick="applyKit(this)" title="Boca Juniors"><div class="kit-label">BOC</div></div>
         <div class="kit-btn" style="background:#ffffff;border:2px solid #cd1e2b" data-color="#ffffff" data-border="#cd1e2b" data-gk="#00a651" onclick="applyKit(this)" title="River Plate"><div class="kit-label" style="color:#000">RIV</div></div>
+      </div>
+      <div class="kit-grid" id="kit-grid-national" style="display:none">
+        <div class="kit-group-label">Group A</div>
+        <div class="kit-btn" style="background:#006847" data-color="#006847" data-gk="#ff6600" onclick="applyKit(this)" title="Mexico"><div class="kit-label">MEX</div></div>
+        <div class="kit-btn" style="background:#009639" data-color="#009639" data-gk="#ffd700" onclick="applyKit(this)" title="South Africa"><div class="kit-label">RSA</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="South Korea"><div class="kit-label">KOR</div></div>
+        <div class="kit-btn" style="background:#003da5" data-color="#003da5" data-gk="#ffd700" onclick="applyKit(this)" title="Czech Republic"><div class="kit-label">CZE</div></div>
+        <div class="kit-group-label">Group B</div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Canada"><div class="kit-label">CAN</div></div>
+        <div class="kit-btn" style="background:#003da5" data-color="#003da5" data-gk="#ffd700" onclick="applyKit(this)" title="Bosnia and Herzegovina"><div class="kit-label">BIH</div></div>
+        <div class="kit-btn" style="background:#8b0000" data-color="#8b0000" data-gk="#ffd700" onclick="applyKit(this)" title="Qatar"><div class="kit-label">QAT</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Switzerland"><div class="kit-label">SUI</div></div>
+        <div class="kit-group-label">Group C</div>
+        <div class="kit-btn" style="background:#caab00" data-color="#caab00" data-gk="#009b3a" onclick="applyKit(this)" title="Brazil"><div class="kit-label" style="color:#000">BRA</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Morocco"><div class="kit-label">MAR</div></div>
+        <div class="kit-btn" style="background:#003da5" data-color="#003da5" data-gk="#ffd700" onclick="applyKit(this)" title="Haiti"><div class="kit-label">HAI</div></div>
+        <div class="kit-btn" style="background:#003893" data-color="#003893" data-gk="#ffd700" onclick="applyKit(this)" title="Scotland"><div class="kit-label">SCO</div></div>
+        <div class="kit-group-label">Group D</div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #0033a0" data-color="#ffffff" data-border="#0033a0" data-gk="#ffd700" onclick="applyKit(this)" title="United States"><div class="kit-label" style="color:#000">USA</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Paraguay"><div class="kit-label">PAR</div></div>
+        <div class="kit-btn" style="background:#009639" data-color="#009639" data-gk="#ffd700" onclick="applyKit(this)" title="Australia"><div class="kit-label">AUS</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Turkey"><div class="kit-label">TUR</div></div>
+        <div class="kit-group-label">Group E</div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #000" data-color="#ffffff" data-border="#000" data-gk="#ffd700" onclick="applyKit(this)" title="Germany"><div class="kit-label" style="color:#000">GER</div></div>
+        <div class="kit-btn" style="background:#003da5" data-color="#003da5" data-gk="#ffd700" onclick="applyKit(this)" title="Curaçao"><div class="kit-label">CUW</div></div>
+        <div class="kit-btn" style="background:#ff6600" data-color="#ff6600" data-gk="#ffd700" onclick="applyKit(this)" title="Ivory Coast"><div class="kit-label" style="color:#000">CIV</div></div>
+        <div class="kit-btn" style="background:#004b87" data-color="#004b87" data-gk="#ffd700" onclick="applyKit(this)" title="Ecuador"><div class="kit-label">ECU</div></div>
+        <div class="kit-group-label">Group F</div>
+        <div class="kit-btn" style="background:#ff6600" data-color="#ff6600" data-gk="#ffd700" onclick="applyKit(this)" title="Netherlands"><div class="kit-label" style="color:#000">NED</div></div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #c8102e" data-color="#ffffff" data-border="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Japan"><div class="kit-label" style="color:#000">JPN</div></div>
+        <div class="kit-btn" style="background:#006ab3" data-color="#006ab3" data-gk="#ffd700" onclick="applyKit(this)" title="Sweden"><div class="kit-label">SWE</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Tunisia"><div class="kit-label">TUN</div></div>
+        <div class="kit-group-label">Group G</div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Belgium"><div class="kit-label">BEL</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Egypt"><div class="kit-label">EGY</div></div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #c8102e" data-color="#ffffff" data-border="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Iran"><div class="kit-label" style="color:#000">IRN</div></div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #000" data-color="#ffffff" data-border="#000" data-gk="#ffd700" onclick="applyKit(this)" title="New Zealand"><div class="kit-label" style="color:#000">NZL</div></div>
+        <div class="kit-group-label">Group H</div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Spain"><div class="kit-label">ESP</div></div>
+        <div class="kit-btn" style="background:#003da5" data-color="#003da5" data-gk="#ffd700" onclick="applyKit(this)" title="Cape Verde"><div class="kit-label">CPV</div></div>
+        <div class="kit-btn" style="background:#006847" data-color="#006847" data-gk="#ffd700" onclick="applyKit(this)" title="Saudi Arabia"><div class="kit-label">KSA</div></div>
+        <div class="kit-btn" style="background:#75aadb" data-color="#75aadb" data-gk="#ffd700" onclick="applyKit(this)" title="Uruguay"><div class="kit-label" style="color:#000">URU</div></div>
+        <div class="kit-group-label">Group I</div>
+        <div class="kit-btn" style="background:#002654" data-color="#002654" data-gk="#ffd700" onclick="applyKit(this)" title="France"><div class="kit-label">FRA</div></div>
+        <div class="kit-btn" style="background:#009b3a" data-color="#009b3a" data-gk="#ffd700" onclick="applyKit(this)" title="Senegal"><div class="kit-label">SEN</div></div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #009b3a" data-color="#ffffff" data-border="#009b3a" data-gk="#ffd700" onclick="applyKit(this)" title="Iraq"><div class="kit-label" style="color:#000">IRQ</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Norway"><div class="kit-label">NOR</div></div>
+        <div class="kit-group-label">Group J</div>
+        <div class="kit-btn" style="background:repeating-linear-gradient(90deg,#75aadb 0 3px,#fff 3px 6px)" data-color="#75aadb" data-pattern="kit-arg" data-gk="#ffd700" onclick="applyKit(this)" title="Argentina"><div class="kit-label" style="color:#000">ARG</div></div>
+        <div class="kit-btn" style="background:#009b3a" data-color="#009b3a" data-gk="#ffd700" onclick="applyKit(this)" title="Algeria"><div class="kit-label">ALG</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Austria"><div class="kit-label">AUT</div></div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #c8102e" data-color="#ffffff" data-border="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Jordan"><div class="kit-label" style="color:#000">JOR</div></div>
+        <div class="kit-group-label">Group K</div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Portugal"><div class="kit-label">POR</div></div>
+        <div class="kit-btn" style="background:#003da5" data-color="#003da5" data-gk="#ffd700" onclick="applyKit(this)" title="DR Congo"><div class="kit-label">COD</div></div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #003da5" data-color="#ffffff" data-border="#003da5" data-gk="#ffd700" onclick="applyKit(this)" title="Uzbekistan"><div class="kit-label" style="color:#000">UZB</div></div>
+        <div class="kit-btn" style="background:#002868" data-color="#002868" data-gk="#ffd700" onclick="applyKit(this)" title="Colombia"><div class="kit-label">COL</div></div>
+        <div class="kit-group-label">Group L</div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #c8102e" data-color="#ffffff" data-border="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="England"><div class="kit-label" style="color:#000">ENG</div></div>
+        <div class="kit-btn" style="background:#c8102e;border:2px solid #fff" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Croatia"><div class="kit-label">CRO</div></div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #ffd700" data-color="#ffffff" data-border="#ffd700" data-gk="#ffd700" onclick="applyKit(this)" title="Ghana"><div class="kit-label" style="color:#000">GHA</div></div>
+        <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" title="Panama"><div class="kit-label">PAN</div></div>
       </div>
       <div class="sub-label" style="margin-top:10px">Custom</div>
       <div class="custom-color-strip">

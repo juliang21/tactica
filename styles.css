@@ -256,7 +256,13 @@ body {
 .team-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
 
 /* Preset team colors */
+.kit-tabs { display: flex; gap: 0; margin-bottom: 8px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+.kit-tab { flex: 1; padding: 5px 0; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; border: none; cursor: pointer; background: var(--panel2); color: var(--text-muted); transition: all 0.15s; font-family: 'Manrope', sans-serif; }
+.kit-tab.active { background: var(--accent); color: #000; }
+.kit-tab:hover:not(.active) { color: var(--text); }
 .kit-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+.kit-group-label { grid-column: 1 / -1; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-top: 6px; font-family: 'Manrope', sans-serif; }
+.kit-group-label:first-child { margin-top: 0; }
 .kit-btn {
   height: 32px; cursor: pointer;
   border: none; transition: transform 0.1s;

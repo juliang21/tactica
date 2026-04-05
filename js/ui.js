@@ -40,10 +40,14 @@ export function applyKit(el) {
   el.classList.add('selected');
   const color = el.dataset.color, gkColor = el.dataset.gk || '#a8f0d0';
   const borderColor = el.dataset.border || null;
-  S.teamColors[S.teamContext] = color;
+  const pattern = el.dataset.pattern || null;
+  const fillValue = pattern ? 'url(#' + pattern + ')' : color;
+  S.teamColors[S.teamContext] = fillValue;
   S.gkColors[S.teamContext] = gkColor;
-  document.getElementById('dot-' + S.teamContext).style.background = color;
-  updateTeamPlayerColors(S.teamContext, color, gkColor, borderColor);
+  document.getElementById('dot-' + S.teamContext).style.background = pattern
+    ? el.style.background
+    : color;
+  updateTeamPlayerColors(S.teamContext, fillValue, gkColor, borderColor);
 }
 
 export function applyColor(swatchEl) {
@@ -63,14 +67,15 @@ export function applyColor(swatchEl) {
 
 function setPlayerColor(g, color) {
   const circ = g.querySelector('circle:not(.hit-area)');
+  const isPattern = color.startsWith('url(');
   if (circ) {
     circ.setAttribute('fill', color);
-    circ.setAttribute('stroke', S.isDarkColor(color) ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)');
+    circ.setAttribute('stroke', (!isPattern && S.isDarkColor(color)) ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)');
     circ.setAttribute('stroke-width', '2');
   }
   delete g.dataset.borderColor;
   const txt = g.querySelectorAll('text')[0];
-  if (txt) txt.setAttribute('fill', S.isDarkColor(color) ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
+  if (txt) txt.setAttribute('fill', (!isPattern && S.isDarkColor(color)) ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
 }
 
 function updateTeamPlayerColors(team, color, gkColor, borderColor) {

@@ -142,6 +142,12 @@ window.setArrowType = setArrowType;
 window.selectTeamContext = selectTeamContext;
 window.applyKit = applyKit;
 window.applyColor = applyColor;
+window.switchKitTab = function(tab, btn) {
+  document.getElementById('kit-grid-clubs').style.display = tab === 'clubs' ? '' : 'none';
+  document.getElementById('kit-grid-national').style.display = tab === 'national' ? '' : 'none';
+  document.querySelectorAll('.kit-tab').forEach(t => t.classList.remove('active'));
+  btn.classList.add('active');
+};
 window.placeFormation = placeFormation;
 window.liveUpdateNumber = liveUpdateNumber;
 window.confirmNumber = confirmNumber;
