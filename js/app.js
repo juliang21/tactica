@@ -1090,10 +1090,41 @@ function openBundle(id) {
   if (!el) return;
   const isOpen = el.classList.contains('open');
   document.querySelectorAll('.tool-bundle.open').forEach(b => b.classList.remove('open'));
-  if (!isOpen) el.classList.add('open');
+  if (!isOpen) {
+    el.classList.add('open');
+    // On mobile, move bundle menu to body and position it above the button
+    if (window.innerWidth <= 768) {
+      const menuEl = el.querySelector('.bundle-menu');
+      const btn = el.querySelector('.tool-btn');
+      if (menuEl && btn) {
+        document.body.appendChild(menuEl);
+        const rect = btn.getBoundingClientRect();
+        menuEl.style.position = 'fixed';
+        menuEl.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 200)) + 'px';
+        menuEl.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
+        menuEl.style.top = 'auto';
+        menuEl.style.display = 'block';
+        menuEl._parentBundle = el;
+      }
+    }
+  }
 }
 function closeBundle(id) {
-  document.getElementById(id)?.classList.remove('open');
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.remove('open');
+  // On mobile, move menu back into the bundle
+  if (window.innerWidth <= 768) {
+    const detached = document.querySelector('.bundle-menu[style*="position: fixed"]');
+    if (detached && detached._parentBundle === el) {
+      detached.style.display = '';
+      detached.style.position = '';
+      detached.style.left = '';
+      detached.style.bottom = '';
+      detached.style.top = '';
+      el.appendChild(detached);
+    }
+  }
 }
 
 // When selecting a bundle option, swap the main button's icon to reflect the choice
@@ -1546,10 +1577,14 @@ function toggleSaveMenu() {
   const menu = document.getElementById('save-menu');
   const btn = document.querySelector('.save-btn');
   if (menu.style.display === 'none') {
+    // On mobile, move menu to body so it escapes toolbar overflow
+    const isMobile = window.innerWidth <= 768;
+    if (isMobile && menu.parentElement !== document.body) {
+      document.body.appendChild(menu);
+    }
     menu.style.display = 'block';
     // Position relative to save button
     const rect = btn.getBoundingClientRect();
-    const isMobile = window.innerWidth <= 768;
     if (isMobile) {
       menu.style.left = rect.left + 'px';
       menu.style.bottom = (window.innerHeight - rect.top + 12) + 'px';

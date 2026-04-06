@@ -496,6 +496,9 @@ input[type=range]::-webkit-slider-thumb {
 .modal-btn.confirm { border: none; background: var(--accent); color: var(--panel); font-weight: 600; }
 .modal-btn:hover { opacity: 0.85; }
 
+/* Panel close button — hidden on desktop, shown on mobile */
+.panel-close-btn { display: none; }
+
 /* Tabs */
 .panel-tabs {
   display: flex; gap: 0; padding: 4px 16px 0;
@@ -863,13 +866,23 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
   /* Toolbar → horizontal bottom bar */
   #toolbar {
-    width: 100%; height: 60px;
+    width: 100%; height: 64px;
     flex-direction: row; order: 3;
-    padding: 0 6px; gap: 4px;
+    padding: 0 10px; gap: 6px;
     border-right: none; border-top: 1px solid var(--border);
-    overflow-x: auto; overflow-y: hidden;
+    overflow-x: auto; overflow-y: visible;
     flex-shrink: 0;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  #toolbar::-webkit-scrollbar { display: none; }
+  /* Scroll fade hint on right edge */
+  #toolbar::after {
+    content: '';
+    position: sticky; right: 0; top: 0;
+    min-width: 28px; height: 100%; flex-shrink: 0;
+    background: linear-gradient(to right, transparent, var(--panel) 80%);
+    pointer-events: none;
   }
   .tool-group { display: contents; }
   .tool-group-save { display: contents; }
@@ -877,22 +890,23 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   .tool-group-title { display: none; }
   .tool-bundle > .tool-btn::after { display: none; }
   .bundle-menu {
-    position: fixed; bottom: 68px; left: auto;
+    position: fixed; bottom: 72px; left: auto;
     top: auto;
   }
   #toolbar .tool-sep {
-    width: 1px; height: 28px; margin: 0 6px; flex-shrink: 0;
+    width: 1px; height: 28px; margin: 0 4px; flex-shrink: 0;
   }
   #toolbar .tool-btn {
-    width: 42px; height: 42px; flex-shrink: 0;
-    flex-direction: column;
+    width: 46px; height: 46px; flex-shrink: 0;
+    flex-direction: column; border-radius: 10px;
   }
-  #toolbar .tool-btn svg { width: 20px; height: 20px; }
+  #toolbar .tool-btn svg { width: 22px; height: 22px; }
   #toolbar .tool-btn.save-btn {
-    width: 48px; height: 48px;
-    order: -1; margin-right: 6px; flex-direction: column;
+    width: 52px; height: 52px;
+    order: -1; margin-right: 4px; flex-direction: column;
+    border-radius: 12px;
   }
-  #toolbar .tool-btn.save-btn svg { width: 20px; height: 20px; }
+  #toolbar .tool-btn.save-btn svg { width: 22px; height: 22px; }
   #toolbar .tool-btn.danger { margin-left: auto; margin-top: 0; }
 
   /* Toolbar → fixed at bottom */
@@ -905,7 +919,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   /* Context bar → fixed just above toolbar */
   #mobile-context-bar.show {
     display: flex;
-    position: fixed; bottom: 60px; left: 0; right: 0;
+    position: fixed; bottom: 64px; left: 0; right: 0;
     z-index: 199;
     height: 44px; padding: 0 12px;
     background: var(--panel2); border-top: 1px solid var(--border);
@@ -916,7 +930,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   /* Canvas takes remaining space */
   #canvas-wrap {
     flex: 1; order: 2;
-    padding: 50px 4px 66px;
+    padding: 50px 4px 70px;
     min-height: 0;
     align-items: center;
     justify-content: center;
@@ -938,7 +952,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
   /* Side panel → slide-over from right */
   #side-panel {
-    position: fixed; top: 0; right: 0; bottom: 60px;
+    position: fixed; top: 0; right: 0; bottom: 64px;
     width: 280px; z-index: 300;
     transform: translateX(100%);
     transition: transform 0.25s ease;
@@ -952,7 +966,22 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   #side-panel.open {
     transform: translateX(0);
   }
-  .panel-tabs { border-radius: 0; }
+  .panel-tabs {
+    border-radius: 0;
+    padding-top: 6px;
+    padding-right: 44px; /* leave room for close button */
+  }
+
+  /* Close button inside panel */
+  .panel-close-btn {
+    display: flex !important;
+    position: absolute; top: 6px; right: 8px; z-index: 10;
+    width: 32px; height: 32px; border-radius: 8px;
+    border: none; background: rgba(255,255,255,0.06);
+    color: var(--text-muted); cursor: pointer;
+    align-items: center; justify-content: center;
+  }
+  .panel-close-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 
   /* Panel toggle button visible */
   #mobile-panel-toggle {
@@ -961,14 +990,14 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
   /* Mobile panel backdrop */
   #mobile-backdrop {
-    display: none; position: fixed; inset: 0; bottom: 60px;
+    display: none; position: fixed; inset: 0; bottom: 64px;
     background: rgba(0,0,0,0.5); z-index: 299;
   }
   #mobile-backdrop.show { display: block; }
 
   /* Feedback button — smaller on mobile */
   #feedback-bubble {
-    bottom: 70px; right: 12px;
+    bottom: 74px; right: 12px;
     padding: 6px 12px; font-size: 11px;
   }
   #feedback-panel {
@@ -1314,13 +1343,13 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
 /* ── Responsive: Small phones (≤480px) ── */
 @media (max-width: 480px) {
-  #canvas-wrap { padding: 50px 4px 66px; }
+  #canvas-wrap { padding: 50px 4px 70px; }
 
   #side-panel { width: 100%; }
 
-  #toolbar { gap: 2px; padding: 0 4px; }
-  #toolbar .tool-btn { width: 38px; height: 38px; }
-  #toolbar .tool-btn.save-btn { width: 42px; height: 42px; }
+  #toolbar { gap: 4px; padding: 0 8px; }
+  #toolbar .tool-btn { width: 42px; height: 42px; }
+  #toolbar .tool-btn.save-btn { width: 48px; height: 48px; }
 
   .auth-modal-box { width: 92vw !important; padding: 24px 20px !important; }
 }

@@ -309,9 +309,14 @@ export function select(el) {
   const isHeadline = type === 'headline';
   const showSize = !isArrow && !isZone && !isText && !isHeadline;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
-  // Vision uses the standalone rotation-section; players use inline arm-rotation-group
-  const showVisionRot = type === 'vision';
-  document.getElementById('rotation-section').style.display = showVisionRot ? '' : 'none';
+  // Vision and zones use the standalone rotation-section; players use inline arm-rotation-group
+  const showStandaloneRot = type === 'vision' || isZone;
+  document.getElementById('rotation-section').style.display = showStandaloneRot ? '' : 'none';
+  if (isZone) {
+    const rv = el.dataset.rotation || '0';
+    document.getElementById('rot-slider').value = rv;
+    document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
+  }
 
   if (type === 'player') {
     playerSec.style.display = '';

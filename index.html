@@ -437,6 +437,11 @@
 <!-- ── Right Panel ── -->
 <div id="side-panel">
 
+  <!-- Close button (mobile only) -->
+  <button class="panel-close-btn" onclick="toggleMobilePanel()" aria-label="Close panel">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="4" y1="4" x2="12" y2="12"/><line x1="12" y1="4" x2="4" y2="12"/></svg>
+  </button>
+
   <!-- Tab switcher -->
   <div class="panel-tabs">
     <button class="panel-tab active" id="tab-players" onclick="switchTab('players')">
