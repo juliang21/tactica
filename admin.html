@@ -210,9 +210,11 @@ window.loadDashboard = async function() {
     const sessionsSnap = await getDocs(sessionsQ);
     _allSessions = sessionsSnap.docs.map(d => d.data());
 
-    const actionsQ = query(collection(db, 'tactica_actions'), orderBy('timestamp', 'desc'));
-    const actionsSnap = await getDocs(actionsQ);
-    _allActions = actionsSnap.docs.map(d => d.data());
+    try {
+      const actionsQ = query(collection(db, 'tactica_actions'), orderBy('timestamp', 'desc'));
+      const actionsSnap = await getDocs(actionsQ);
+      _allActions = actionsSnap.docs.map(d => d.data());
+    } catch (e) { console.warn('Actions fetch failed (may need Firestore index/rules):', e); _allActions = []; }
 
     applyDateFilter();
   } catch (e) {
