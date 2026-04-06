@@ -1040,6 +1040,9 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   /* Save wrapper reorder on mobile */
   .save-wrapper { order: -1; margin-right: 6px; }
 
+  /* Terms link — separate from last toolbar button */
+  .sidebar-terms-link { padding-left: 12px; }
+
   /* Analyses dashboard — full mobile */
   .analyses-header { padding: 16px 16px; }
   .analyses-title { font-size: 15px; }
