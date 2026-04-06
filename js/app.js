@@ -19,6 +19,7 @@ import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } 
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackSignUp, trackSignIn, trackSignOut } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
+import { logSession } from './firestore.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
@@ -1924,6 +1925,8 @@ onAuthChange(async (user) => {
       const method = user.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email';
       trackSignIn(method);
     }
+    // Log session to Firestore for admin dashboard
+    try { await logSession(user.uid, user.email, user.displayName); } catch (e) { console.warn('Session log error:', e); }
     // Show welcome notification (skip on initial page load auto-restore)
     if (_authInitialized) {
       const name = user.displayName || user.email || 'User';

@@ -84,6 +84,51 @@ export async function migrateLocalToCloud(uid) {
   localStorage.setItem(migrationKey, '1');
 }
 
+// ─── Session Tracking ───────────────────────────────────────────────────────
+export async function logSession(uid, email, displayName) {
+  const now = Date.now();
+  const today = new Date(now).toISOString().slice(0, 10); // YYYY-MM-DD
+
+  // Update user profile with last seen + session count
+  const userRef = doc(db, 'tactica_users', uid);
+  const userSnap = await getDoc(userRef);
+  const existing = userSnap.exists() ? userSnap.data() : {};
+  const sessionCount = (existing.sessionCount || 0) + 1;
+  const firstSeen = existing.firstSeen || now;
+
+  await setDoc(userRef, {
+    email: email || '',
+    displayName: displayName || '',
+    firstSeen,
+    lastSeen: now,
+    sessionCount,
+    lastSessionDate: today,
+  }, { merge: true });
+
+  // Log individual session
+  const sessionRef = doc(collection(db, 'tactica_sessions'));
+  await setDoc(sessionRef, {
+    uid,
+    email: email || '',
+    timestamp: now,
+    date: today,
+  });
+}
+
+// ─── Admin: Get all users ───────────────────────────────────────────────────
+export async function getAllUsers() {
+  const q = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ uid: d.id, ...d.data() }));
+}
+
+// ─── Admin: Get sessions for date range ─────────────────────────────────────
+export async function getRecentSessions(limitCount = 500) {
+  const q = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.slice(0, limitCount).map(d => d.data());
+}
+
 // ─── Sanitize data for Firestore ────────────────────────────────────────────
 function sanitizeData(data) {
   if (!data) return {};

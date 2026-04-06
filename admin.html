@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tactica Admin Dashboard</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'Manrope', sans-serif;
+    background: #0f0f13; color: #e0e0e0;
+    min-height: 100vh; padding: 32px;
+  }
+  .header {
+    display: flex; align-items: center; gap: 16px;
+    margin-bottom: 32px; padding-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+  }
+  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: #D4A843; }
+  .header .badge { font-size: 10px; background: rgba(212,168,67,0.2); color: #D4A843; padding: 3px 8px; border-radius: 4px; font-weight: 600; letter-spacing: 1px; }
+  .loading { text-align: center; padding: 60px; color: #888; font-size: 14px; }
+  .auth-gate { text-align: center; padding: 80px 20px; }
+  .auth-gate h2 { font-size: 18px; margin-bottom: 16px; color: #D4A843; }
+  .auth-gate p { color: #888; font-size: 13px; margin-bottom: 24px; }
+  .auth-gate button {
+    background: #D4A843; color: #000; border: none; padding: 10px 24px;
+    border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;
+    font-family: 'Manrope', sans-serif;
+  }
+
+  /* Stats cards */
+  .stats-grid {
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 16px; margin-bottom: 32px;
+  }
+  .stat-card {
+    background: #1a1a22; border-radius: 12px; padding: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+  }
+  .stat-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 8px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; color: #D4A843; }
+  .stat-card .sub { font-size: 11px; color: #666; margin-top: 4px; }
+
+  /* Section */
+  .section { margin-bottom: 32px; }
+  .section h2 { font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #888; margin-bottom: 12px; }
+
+  /* Table */
+  .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  th { text-align: left; padding: 10px 14px; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #666; background: #1a1a22; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
+  tr:hover td { background: rgba(212,168,67,0.03); }
+  .email { color: #D4A843; }
+  .returning { color: #4ade80; font-weight: 600; }
+  .new { color: #888; }
+
+  /* Activity chart */
+  .chart-container { background: #1a1a22; border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
+  .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 120px; margin-top: 12px; }
+  .chart-bar { flex: 1; background: #D4A843; border-radius: 3px 3px 0 0; min-width: 8px; position: relative; transition: all 0.2s; cursor: default; }
+  .chart-bar:hover { opacity: 0.8; }
+  .chart-bar .tooltip {
+    display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
+    background: #333; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 10px;
+    white-space: nowrap; margin-bottom: 4px;
+  }
+  .chart-bar:hover .tooltip { display: block; }
+  .chart-labels { display: flex; gap: 4px; margin-top: 6px; }
+  .chart-labels span { flex: 1; text-align: center; font-size: 8px; color: #555; }
+
+  .refresh-btn {
+    background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #888;
+    padding: 6px 14px; border-radius: 6px; font-size: 11px; cursor: pointer;
+    font-family: 'Manrope', sans-serif; font-weight: 500; transition: all 0.15s;
+  }
+  .refresh-btn:hover { border-color: #D4A843; color: #D4A843; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>TACTICA</h1>
+  <span class="badge">ADMIN</span>
+  <div style="flex:1"></div>
+  <button class="refresh-btn" onclick="loadDashboard()">Refresh</button>
+</div>
+
+<div id="auth-gate" class="auth-gate" style="display:none">
+  <h2>Admin Access Required</h2>
+  <p>Sign in with your admin Google account to view the dashboard.</p>
+  <button onclick="doSignIn()">Sign in with Google</button>
+</div>
+
+<div id="dashboard" style="display:none">
+  <div class="stats-grid" id="stats-grid"></div>
+
+  <div class="section">
+    <h2>Sessions · Last 14 Days</h2>
+    <div class="chart-container">
+      <div class="chart-bars" id="chart-bars"></div>
+      <div class="chart-labels" id="chart-labels"></div>
+    </div>
+  </div>
+
+  <div class="section">
+    <h2>All Users</h2>
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>Email</th>
+            <th>Name</th>
+            <th>First Seen</th>
+            <th>Last Seen</th>
+            <th>Sessions</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="users-table"></tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div id="loading" class="loading">Loading...</div>
+
+<script type="module">
+import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
+import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+import { getFirestore, collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBda3avj-hYXV72mgbc5ueLw7QAQnqTI34",
+  authDomain: "tactica-94ff8.firebaseapp.com",
+  projectId: "tactica-94ff8",
+  storageBucket: "tactica-94ff8.firebasestorage.app",
+  messagingSenderId: "288026105473",
+  appId: "1:288026105473:web:50e369ab4be48afe685f80",
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// Admin email whitelist — add your email(s) here
+const ADMIN_EMAILS = ['juliangenoud@gmail.com'];
+
+window.doSignIn = async function() {
+  try {
+    await signInWithPopup(auth, new GoogleAuthProvider());
+  } catch (e) {
+    alert('Sign in failed: ' + e.message);
+  }
+};
+
+onAuthStateChanged(auth, (user) => {
+  document.getElementById('loading').style.display = 'none';
+  if (user && ADMIN_EMAILS.includes(user.email)) {
+    document.getElementById('auth-gate').style.display = 'none';
+    document.getElementById('dashboard').style.display = 'block';
+    loadDashboard();
+  } else if (user) {
+    document.getElementById('auth-gate').style.display = 'block';
+    document.getElementById('auth-gate').querySelector('p').textContent = 'Access denied. ' + user.email + ' is not an admin.';
+  } else {
+    document.getElementById('auth-gate').style.display = 'block';
+  }
+});
+
+window.loadDashboard = async function() {
+  try {
+    // Fetch users
+    const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
+    const usersSnap = await getDocs(usersQ);
+    const users = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+
+    // Fetch sessions
+    const sessionsQ = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
+    const sessionsSnap = await getDocs(sessionsQ);
+    const sessions = sessionsSnap.docs.map(d => d.data());
+
+    renderStats(users, sessions);
+    renderChart(sessions);
+    renderUsersTable(users);
+  } catch (e) {
+    console.error('Dashboard error:', e);
+  }
+};
+
+function renderStats(users, sessions) {
+  const now = Date.now();
+  const day = 86400000;
+  const totalUsers = users.length;
+  const returningUsers = users.filter(u => u.sessionCount > 1).length;
+  const todaySessions = sessions.filter(s => now - s.timestamp < day).length;
+  const weekSessions = sessions.filter(s => now - s.timestamp < 7 * day).length;
+  const weekActiveUsers = new Set(sessions.filter(s => now - s.timestamp < 7 * day).map(s => s.uid)).size;
+  const avgSessions = totalUsers > 0 ? (users.reduce((sum, u) => sum + (u.sessionCount || 0), 0) / totalUsers).toFixed(1) : '0';
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card"><div class="label">Total Users</div><div class="value">${totalUsers}</div></div>
+    <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${totalUsers > 0 ? Math.round(returningUsers / totalUsers * 100) : 0}% return rate</div></div>
+    <div class="stat-card"><div class="label">Active This Week</div><div class="value">${weekActiveUsers}</div><div class="sub">${weekSessions} sessions</div></div>
+    <div class="stat-card"><div class="label">Today</div><div class="value">${todaySessions}</div><div class="sub">sessions today</div></div>
+    <div class="stat-card"><div class="label">Avg Sessions / User</div><div class="value">${avgSessions}</div></div>
+  `;
+}
+
+function renderChart(sessions) {
+  const days = 14;
+  const now = new Date();
+  const buckets = {};
+  for (let i = days - 1; i >= 0; i--) {
+    const d = new Date(now);
+    d.setDate(d.getDate() - i);
+    const key = d.toISOString().slice(0, 10);
+    buckets[key] = { count: 0, uniqueUsers: new Set() };
+  }
+
+  sessions.forEach(s => {
+    const key = s.date || new Date(s.timestamp).toISOString().slice(0, 10);
+    if (buckets[key]) {
+      buckets[key].count++;
+      buckets[key].uniqueUsers.add(s.uid);
+    }
+  });
+
+  const keys = Object.keys(buckets);
+  const maxCount = Math.max(1, ...keys.map(k => buckets[k].count));
+
+  const barsEl = document.getElementById('chart-bars');
+  const labelsEl = document.getElementById('chart-labels');
+  barsEl.innerHTML = '';
+  labelsEl.innerHTML = '';
+
+  keys.forEach(key => {
+    const b = buckets[key];
+    const pct = (b.count / maxCount) * 100;
+    const dayLabel = key.slice(5); // MM-DD
+    const weekday = new Date(key + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
+
+    barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%"><div class="tooltip">${weekday} ${dayLabel}: ${b.count} sessions, ${b.uniqueUsers.size} users</div></div>`;
+    labelsEl.innerHTML += `<span>${dayLabel.slice(3)}</span>`;
+  });
+}
+
+function renderUsersTable(users) {
+  const tbody = document.getElementById('users-table');
+  tbody.innerHTML = users.map(u => {
+    const firstSeen = u.firstSeen ? new Date(u.firstSeen).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
+    const lastSeen = u.lastSeen ? timeAgo(u.lastSeen) : '—';
+    const isReturning = u.sessionCount > 1;
+    return `<tr>
+      <td class="email">${u.email || '—'}</td>
+      <td>${u.displayName || '—'}</td>
+      <td>${firstSeen}</td>
+      <td>${lastSeen}</td>
+      <td>${u.sessionCount || 0}</td>
+      <td><span class="${isReturning ? 'returning' : 'new'}">${isReturning ? 'Returning' : 'New'}</span></td>
+    </tr>`;
+  }).join('');
+}
+
+function timeAgo(ts) {
+  const diff = Date.now() - ts;
+  const mins = Math.floor(diff / 60000);
+  if (mins < 1) return 'just now';
+  if (mins < 60) return mins + 'm ago';
+  const hours = Math.floor(mins / 60);
+  if (hours < 24) return hours + 'h ago';
+  const days = Math.floor(hours / 24);
+  if (days < 7) return days + 'd ago';
+  return new Date(ts).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+}
+</script>
+</body>
+</html>
