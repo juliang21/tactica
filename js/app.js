@@ -15,7 +15,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          applySize, applyRotation, clearAll } from './ui.js';
 import { setPitch, setPitchColor } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport } from './export.js';
+import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
