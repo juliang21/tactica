@@ -318,27 +318,33 @@ function renderSessionStats(sessions, actions) {
 }
 
 // ─── Key Features Usage ────────────────────────────────────────────────────
+function featureData(actions, actionName) {
+  const items = (actions || []).filter(a => a.action === actionName);
+  const totalEvents = items.length;
+  const uniqueSessions = new Set(items.map(a => a.sessionId).filter(Boolean)).size;
+  const uniqueUsers = new Set(items.map(a => a.uid)).size;
+  return { totalEvents, uniqueSessions, uniqueUsers };
+}
+
 function renderFeatureStats(actions, activeUsers) {
-  const saves = (actions || []).filter(a => a.action === 'save').length;
-  const saveUsers = new Set((actions || []).filter(a => a.action === 'save').map(a => a.uid)).size;
-
-  const animations = (actions || []).filter(a => a.action === 'feature_animation').length;
-  const animationUsers = new Set((actions || []).filter(a => a.action === 'feature_animation').map(a => a.uid)).size;
-
-  const pitchChanges = (actions || []).filter(a => a.action === 'feature_pitch_change').length;
-  const pitchUsers = new Set((actions || []).filter(a => a.action === 'feature_pitch_change').map(a => a.uid)).size;
-
-  const imageUploads = (actions || []).filter(a => a.action === 'feature_image_upload').length;
-  const imageUsers = new Set((actions || []).filter(a => a.action === 'feature_image_upload').map(a => a.uid)).size;
+  const save = featureData(actions, 'save');
+  const animation = featureData(actions, 'feature_animation');
+  const pitch = featureData(actions, 'feature_pitch_change');
+  const image = featureData(actions, 'feature_image_upload');
 
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
 
-  document.getElementById('feature-stats').innerHTML = `
-    <div class="stat-card"><div class="label">Save</div><div class="value">${saves}</div><div class="sub">${saveUsers} users (${pct(saveUsers)}% of active)</div></div>
-    <div class="stat-card"><div class="label">Animation</div><div class="value">${animations}</div><div class="sub">${animationUsers} users (${pct(animationUsers)}% of active)</div></div>
-    <div class="stat-card"><div class="label">Pitch Change</div><div class="value">${pitchChanges}</div><div class="sub">${pitchUsers} users (${pct(pitchUsers)}% of active)</div></div>
-    <div class="stat-card"><div class="label">Image Upload</div><div class="value">${imageUploads}</div><div class="sub">${imageUsers} users (${pct(imageUsers)}% of active)</div></div>
-  `;
+  function card(label, d) {
+    return `<div class="stat-card">
+      <div class="label">${label}</div>
+      <div class="value">${d.uniqueSessions}</div>
+      <div class="sub">sessions used &middot; ${d.uniqueUsers} users (${pct(d.uniqueUsers)}% of active)</div>
+      <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>
+    </div>`;
+  }
+
+  document.getElementById('feature-stats').innerHTML =
+    card('Save', save) + card('Animation', animation) + card('Pitch Change', pitch) + card('Image Upload', image);
 }
 
 // ─── Chart ──────────────────────────────────────────────────────────────────

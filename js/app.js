@@ -20,7 +20,7 @@ import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } 
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
-import { logSession, logAction } from './firestore.js';
+import { logSession, logAction, setSessionId } from './firestore.js';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
@@ -2145,7 +2145,8 @@ onAuthChange(async (user) => {
       const method = user.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email';
       trackSignIn(method);
     }
-    // Log session to Firestore for admin dashboard
+    // Generate session ID and log session to Firestore
+    setSessionId(user.uid + '_' + Date.now());
     try { await logSession(user.uid, user.email, user.displayName); } catch (e) { console.warn('Session log error:', e); }
     // Always start a fresh board on new session
     clearCurrentId();

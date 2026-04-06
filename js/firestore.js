@@ -115,7 +115,12 @@ export async function logSession(uid, email, displayName) {
   });
 }
 
-// ─── Action Tracking (saves, exports) ──────────────────────────────────────
+// ─── Session ID (one per page load) ────────────────────────────────────────
+let _sessionId = null;
+export function setSessionId(id) { _sessionId = id; }
+export function getSessionId() { return _sessionId; }
+
+// ─── Action Tracking (saves, exports, features) ───────────────────────────
 export async function logAction(uid, email, action, meta) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
@@ -123,8 +128,9 @@ export async function logAction(uid, email, action, meta) {
   await setDoc(ref, {
     uid,
     email: email || '',
-    action,       // 'save' | 'export'
-    meta: meta || {},  // e.g. { format: 'png' }
+    action,       // 'save' | 'export' | 'feature_*'
+    meta: meta || {},
+    sessionId: _sessionId || null,
     timestamp: now,
     date: today,
   });
