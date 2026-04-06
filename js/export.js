@@ -853,21 +853,6 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
   }
 
   setTimeout(() => {
-    // Free-tier watermark
-    if (!canAccess('export:no-watermark')) {
-      const logo = new Image();
-      logo.onload = () => {
-        drawWatermark(ctx, W, H, logo);
-        finalizeExport();
-      };
-      logo.onerror = () => {
-        // If logo fails to load, draw text-only watermark
-        drawWatermark(ctx, W, H, null);
-        finalizeExport();
-      };
-      logo.src = 'images/rondos-logo.png';
-    } else {
-      finalizeExport();
-    }
+    finalizeExport();
   }, 50);
 }
