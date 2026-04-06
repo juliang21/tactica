@@ -226,13 +226,14 @@ window.applyDateFilter = function() {
   const filteredSessions = _allSessions.filter(s => s.timestamp >= startMs && s.timestamp <= endMs);
   const activeUids = new Set(filteredSessions.map(s => s.uid));
   const filteredUsers = _allUsers.filter(u => activeUids.has(u.uid));
+  const signUps = _allUsers.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
 
-  renderStats(filteredUsers, filteredSessions, _allUsers);
+  renderStats(filteredUsers, filteredSessions, _allUsers, signUps);
   renderChart(filteredSessions, startStr, endStr);
   renderUsersTable(filteredUsers);
 };
 
-function renderStats(users, sessions, allUsers) {
+function renderStats(users, sessions, allUsers, signUps) {
   const totalUsers = allUsers ? allUsers.length : users.length;
   const returningUsers = users.filter(u => u.sessionCount > 1).length;
   const activeUsers = new Set(sessions.map(s => s.uid)).size;
@@ -241,9 +242,9 @@ function renderStats(users, sessions, allUsers) {
 
   document.getElementById('stats-grid').innerHTML = `
     <div class="stat-card"><div class="label">Total Users (all time)</div><div class="value">${totalUsers}</div></div>
+    <div class="stat-card"><div class="label">Sign Ups in Period</div><div class="value">${signUps || 0}</div></div>
     <div class="stat-card"><div class="label">Active in Period</div><div class="value">${activeUsers}</div><div class="sub">${totalSessions} sessions</div></div>
     <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${activeUsers > 0 ? Math.round(returningUsers / activeUsers * 100) : 0}% of active</div></div>
-    <div class="stat-card"><div class="label">Sessions in Period</div><div class="value">${totalSessions}</div></div>
     <div class="stat-card"><div class="label">Avg Sessions / User</div><div class="value">${avgSessions}</div></div>
   `;
 }
