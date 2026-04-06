@@ -309,8 +309,9 @@ export function select(el) {
   const isHeadline = type === 'headline';
   const showSize = !isArrow && !isZone && !isText && !isHeadline;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
-  const showRot = (type === 'vision') || (type === 'player' && el.dataset.arms === '1');
-  document.getElementById('rotation-section').style.display = showRot ? '' : 'none';
+  // Vision uses the standalone rotation-section; players use inline arm-rotation-group
+  const showVisionRot = type === 'vision';
+  document.getElementById('rotation-section').style.display = showVisionRot ? '' : 'none';
 
   if (type === 'player') {
     playerSec.style.display = '';
@@ -319,13 +320,17 @@ export function select(el) {
     const nameSize = el.dataset.nameSize || '11';
     document.getElementById('name-size-slider').value = nameSize;
     document.getElementById('name-size-val').textContent = nameSize + 'px';
-    // Arms toggle & rotation sync
+    // Arms toggle & inline rotation sync
     const armsToggle = document.getElementById('arms-toggle');
+    const armRotGroup = document.getElementById('arm-rotation-group');
     if (armsToggle) armsToggle.checked = el.dataset.arms === '1';
     if (el.dataset.arms === '1') {
       const rv = el.dataset.rotation || '0';
-      document.getElementById('rot-slider').value = rv;
-      document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
+      if (armRotGroup) armRotGroup.style.display = '';
+      document.getElementById('arm-rot-slider').value = rv;
+      document.getElementById('arm-rot-val').textContent = Math.round(parseFloat(rv)) + '°';
+    } else {
+      if (armRotGroup) armRotGroup.style.display = 'none';
     }
   } else if (type === 'referee') {
     if (refereeSec) {

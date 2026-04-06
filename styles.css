@@ -388,6 +388,19 @@ body {
 .toggle-row input:checked + .toggle-switch::after {
   transform: translateX(14px); background: #fff;
 }
+/* Large toggle variant */
+.toggle-switch-lg {
+  width: 42px; height: 24px; border-radius: 12px;
+}
+.toggle-switch-lg::after {
+  width: 18px; height: 18px; top: 3px; left: 3px;
+}
+.toggle-row input:checked + .toggle-switch-lg::after {
+  transform: translateX(18px);
+}
+.arms-toggle-row {
+  padding: 6px 0;
+}
 .field-row { display: flex; gap: 8px; }
 .field-row input[type=text] {
   flex: 1; min-width: 0; padding: 8px 12px; height: 36px;
@@ -1119,6 +1132,14 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 .save-menu-item:hover { background: rgba(201,169,98,0.1); color: var(--text); }
 .save-menu-item svg { flex-shrink: 0; opacity: 0.6; }
 .save-menu-item:hover svg { opacity: 1; }
+.pro-badge {
+  margin-left: auto;
+  font-size: 8px; font-weight: 700; letter-spacing: 0.5px;
+  padding: 1px 5px; border-radius: 3px;
+  background: linear-gradient(135deg, #f6c343, #d4a017);
+  color: #1a1a1a;
+  line-height: 1.4;
+}
 .save-menu-sep {
   height: 1px; background: var(--border); margin: 0;
 }

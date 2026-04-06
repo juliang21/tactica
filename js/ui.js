@@ -276,13 +276,19 @@ export function togglePlayerArms(checked) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
   trackElementEdited('player', 'arms');
   S.selectedEl.dataset.arms = checked ? '1' : '0';
+  // Set default arm direction: Team A faces right (90°), Team B faces left (270°)
+  if (checked && (!S.selectedEl.dataset.rotation || S.selectedEl.dataset.rotation === '0')) {
+    const team = S.selectedEl.dataset.team;
+    S.selectedEl.dataset.rotation = team === 'b' ? '270' : '90';
+  }
   updatePlayerArms(S.selectedEl);
-  // Show/hide rotation when arms toggled
-  document.getElementById('rotation-section').style.display = checked ? '' : 'none';
+  // Show/hide inline arm rotation group
+  const armRotGroup = document.getElementById('arm-rotation-group');
+  if (armRotGroup) armRotGroup.style.display = checked ? '' : 'none';
   if (checked) {
     const rv = S.selectedEl.dataset.rotation || '0';
-    document.getElementById('rot-slider').value = rv;
-    document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
+    document.getElementById('arm-rot-slider').value = rv;
+    document.getElementById('arm-rot-val').textContent = Math.round(parseFloat(rv)) + '°';
   } else {
     S.selectedEl.dataset.rotation = '0';
   }
@@ -810,7 +816,10 @@ export function applySize(val) {
 }
 
 export function applyRotation(val) {
-  document.getElementById('rot-val').textContent = Math.round(val) + '°';
+  const rv = Math.round(val) + '°';
+  document.getElementById('rot-val').textContent = rv;
+  const armRotVal = document.getElementById('arm-rot-val');
+  if (armRotVal) armRotVal.textContent = rv;
   if (!S.selectedEl) return;
   trackElementEdited(S.selectedEl.dataset.type, 'rotation');
   S.selectedEl.dataset.rotation = val;
