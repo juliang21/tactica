@@ -449,7 +449,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
     const bodyLineH = bodySize * 1.4;
 
     const totalTitleH = titleLines.length * titleLineH;
-    const gapBetween = 6;
+    const gapBetween = 3;
     const totalBodyH = bodyLines.length * bodyLineH;
     const totalContentH = totalTitleH + gapBetween + totalBodyH;
     const startY = -totalContentH / 2;

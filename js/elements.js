@@ -576,7 +576,7 @@ export function rewrapHeadline(g) {
 
   // Layout: start from top with padding
   const totalTitleH = titleLines.length * titleLineH;
-  const gapBetween = 6;
+  const gapBetween = 3;
   const totalBodyH = bodyLines.length * bodyLineH;
   const totalContentH = totalTitleH + gapBetween + totalBodyH;
   const startY = cy - totalContentH / 2;
