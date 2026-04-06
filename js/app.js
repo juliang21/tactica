@@ -1782,12 +1782,12 @@ window.newAnalysisFromDashboard = newAnalysisFromDashboard;
 async function updateCurrentBar() {
   const bar = document.getElementById('current-analysis-bar');
   if (!bar) return;
+  const input = document.getElementById('analysis-name-input');
   const currentId = getCurrentId();
   if (currentId) {
     const analyses = await listAnalyses();
     const current = analyses.find(a => a.id === currentId);
     if (current) {
-      const input = document.getElementById('analysis-name-input');
       if (input) {
         input.value = current.name;
         input.style.width = Math.min(Math.max(input.value.length * 7 + 24, 80), 200) + 'px';
@@ -1796,7 +1796,16 @@ async function updateCurrentBar() {
       return;
     }
   }
-  bar.classList.remove('show');
+  // Show "New analysis" for fresh sessions when user is logged in
+  if (getCurrentUser()) {
+    if (input) {
+      input.value = 'New analysis';
+      input.style.width = Math.min(Math.max(input.value.length * 7 + 24, 80), 200) + 'px';
+    }
+    bar.classList.add('show');
+  } else {
+    bar.classList.remove('show');
+  }
 }
 
 // Initialize bar on load
@@ -1866,6 +1875,20 @@ window.toggleMobilePanel = toggleMobilePanel;
 // ─── Mobile: auto-switch to vertical pitch for better fit ─────────────────────
 if (window.innerWidth <= 768 && S.currentPitchLayout === 'full-h' && S.appMode !== 'image') {
   setPitch('full-v');
+}
+
+// ─── Mobile Hint Modal ──────────────────────────────────────────────────────
+function showMobileHint() {
+  const overlay = document.createElement('div');
+  overlay.className = 'mobile-hint-overlay';
+  overlay.innerHTML = `
+    <div class="mobile-hint-modal">
+      <div class="mobile-hint-icon">🖥️</div>
+      <h2>Best on Desktop</h2>
+      <p>Táctica is optimised for desktop screens. For the best experience, open it on a computer.</p>
+      <button class="mobile-hint-btn" onclick="this.closest('.mobile-hint-overlay').remove()">Understood!</button>
+    </div>`;
+  document.body.appendChild(overlay);
 }
 
 // ─── Auth UI ────────────────────────────────────────────────────────────────
@@ -2054,10 +2077,22 @@ onAuthChange(async (user) => {
     }
     // Log session to Firestore for admin dashboard
     try { await logSession(user.uid, user.email, user.displayName); } catch (e) { console.warn('Session log error:', e); }
+    // Always start a fresh board on new session
+    clearCurrentId();
+    const nameInput = document.getElementById('analysis-name-input');
+    if (nameInput) nameInput.value = 'New analysis';
+
     // Show welcome notification (skip on initial page load auto-restore)
     if (_authInitialized) {
       const name = user.displayName || user.email || 'User';
-      showNotification('Welcome back, ' + name + '!', 'success', 4000);
+      showNotification('Welcome to Táctica, ' + name + '!', 'success', 4000);
+    }
+
+    // Mobile experience modal (show for first 2 sessions)
+    if (window.innerWidth <= 768) {
+      const mobileCount = parseInt(localStorage.getItem('tactica_mobile_sessions') || '0', 10) + 1;
+      localStorage.setItem('tactica_mobile_sessions', mobileCount);
+      if (mobileCount <= 2) showMobileHint();
     }
   } else {
     // Show landing gate when not authenticated

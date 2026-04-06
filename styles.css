@@ -1591,3 +1591,32 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 }
 .auth-message.error { background: rgba(248,113,113,0.15); color: #f87171; }
 .auth-message.success { background: rgba(74,222,128,0.15); color: #4ade80; }
+
+/* ── Mobile Hint Modal ──────────────────────────────────────────────────── */
+.mobile-hint-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: 24px;
+}
+.mobile-hint-modal {
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 16px; padding: 32px 28px; max-width: 340px;
+  text-align: center; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+}
+.mobile-hint-icon { font-size: 40px; margin-bottom: 12px; }
+.mobile-hint-modal h2 {
+  font-family: 'Manrope', sans-serif; font-size: 20px; font-weight: 700;
+  color: var(--text); margin: 0 0 10px;
+}
+.mobile-hint-modal p {
+  font-family: 'Manrope', sans-serif; font-size: 14px; line-height: 1.5;
+  color: var(--text-muted); margin: 0 0 24px;
+}
+.mobile-hint-btn {
+  width: 100%; padding: 12px 0; border: none; border-radius: 8px;
+  background: var(--gold); color: #000; font-family: 'Manrope', sans-serif;
+  font-size: 15px; font-weight: 700; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.mobile-hint-btn:hover { opacity: 0.9; }
