@@ -1637,15 +1637,17 @@ async function openSaveAnalysis() {
   closeSaveMenu();
   const modal = document.getElementById('save-analysis-modal');
   const input = document.getElementById('save-analysis-name');
-  // Pre-fill with current name if editing existing
+  const headerInput = document.getElementById('analysis-name-input');
+  // Pre-fill with current name if editing existing, or header name for new
   const currentId = getCurrentId();
   if (currentId) {
     const analyses = await listAnalyses();
     const current = analyses.find(a => a.id === currentId);
     if (current) input.value = current.name;
-    else input.value = '';
+    else input.value = headerInput ? headerInput.value.trim() : '';
   } else {
-    input.value = '';
+    const headerName = headerInput ? headerInput.value.trim() : '';
+    input.value = (headerName && headerName !== 'New analysis') ? headerName : '';
   }
   modal.style.display = 'flex';
   setTimeout(() => input.focus(), 100);
@@ -1883,6 +1885,9 @@ updateCurrentBar();
     const currentId = getCurrentId();
     if (currentId) {
       await renameAnalysis(currentId, newName);
+    } else if (newName !== 'New analysis') {
+      // Show reminder hint for unsaved analyses
+      showSaveReminder();
     }
   });
 
@@ -1892,9 +1897,24 @@ updateCurrentBar();
   });
 
   input.addEventListener('input', () => {
-    input.style.width = Math.min(Math.max(input.value.length * 7 + 24, 80), 200) + 'px';
+    input.style.width = Math.min(Math.max(input.value.length * 8.5 + 24, 120), 400) + 'px';
   });
 })();
+
+function showSaveReminder() {
+  // Remove any existing reminder
+  const old = document.getElementById('save-reminder-hint');
+  if (old) old.remove();
+  const hint = document.createElement('span');
+  hint.id = 'save-reminder-hint';
+  hint.textContent = 'Remember to save!';
+  hint.style.cssText = 'font-size:11px;color:#888;margin-left:10px;opacity:1;transition:opacity 0.5s;white-space:nowrap;';
+  const bar = document.getElementById('current-analysis-bar');
+  if (bar) bar.appendChild(hint);
+  // Fade out after 3s then remove
+  setTimeout(() => { hint.style.opacity = '0'; }, 3000);
+  setTimeout(() => { hint.remove(); }, 3500);
+}
 
 // ─── Auto-save on Cmd+S ──────────────────────────────────────────────────────
 document.addEventListener('keydown', async e => {
