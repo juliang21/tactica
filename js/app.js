@@ -216,6 +216,23 @@ function hasCanvasWork() {
   return S.objectsLayer.children.length > 0 || S.playersLayer.children.length > 0;
 }
 
+function showImageUploadPane() {
+  // Switch to pitch tab first, then replace pitch pane with upload pane
+  switchTab('pitch');
+  const pitchPane = document.getElementById('pane-pitch');
+  const uploadPane = document.getElementById('image-upload-pane');
+  const imageInfo = document.getElementById('image-mode-info');
+  if (pitchPane) pitchPane.style.display = 'none';
+  if (uploadPane) uploadPane.style.display = 'flex';
+  if (imageInfo) imageInfo.style.display = 'none';
+}
+window.showImageUploadPane = showImageUploadPane;
+
+function hideImageUploadPane() {
+  const uploadPane = document.getElementById('image-upload-pane');
+  if (uploadPane) uploadPane.style.display = 'none';
+}
+
 function switchMode(mode) {
   const pitchBtn = document.getElementById('mode-pitch-btn');
   const imageBtn = document.getElementById('mode-image-btn');
@@ -227,15 +244,23 @@ function switchMode(mode) {
       showModeSwitchModal('Switching to Upload Image will erase all elements on your tactical board. Are you sure?', () => {
         pitchBtn.classList.remove('active');
         imageBtn.classList.add('active');
-        triggerImageUpload();
+        showImageUploadPane();
       });
       return;
     }
     pitchBtn.classList.remove('active');
     imageBtn.classList.add('active');
-    triggerImageUpload();
+    showImageUploadPane();
   } else {
-    if (S.appMode !== 'image') return;
+    // Hide upload pane if it's showing (user clicked back to pitch before uploading)
+    hideImageUploadPane();
+    const pitchPane = document.getElementById('pane-pitch');
+    if (pitchPane) pitchPane.style.display = '';
+    if (S.appMode !== 'image') {
+      pitchBtn.classList.add('active');
+      imageBtn.classList.remove('active');
+      return;
+    }
     // If there's work on the image, confirm before switching
     if (hasCanvasWork()) {
       showModeSwitchModal('Switching to Tactical Board will erase all elements on your image. Are you sure?', () => {

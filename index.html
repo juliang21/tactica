@@ -622,7 +622,32 @@
 
   </div><!-- /pane-pitch -->
 
-  <!-- ══ IMAGE MODE INFO (replaces pitch pane when in image mode) ══ -->
+  <!-- ══ IMAGE MODE: UPLOAD PROMPT (before image loaded) ══ -->
+  <div id="image-upload-pane" class="tab-pane" style="display:none">
+    <div class="panel-section" style="text-align:center;padding:24px 16px">
+      <div style="margin-bottom:16px">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <rect x="6" y="10" width="36" height="28" rx="4" stroke="var(--text-muted)" stroke-width="2" fill="none"/>
+          <circle cx="18" cy="22" r="4" fill="var(--text-muted)" opacity="0.5"/>
+          <path d="M6 34l10-10 6 6L32 20l10 14" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" opacity="0.5"/>
+          <path d="M24 8v8M20 12h8" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3 style="margin-bottom:6px;font-size:15px">Upload Image</h3>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:20px">
+        Upload a match screenshot or tactical image to start your analysis.
+      </div>
+      <button class="action-btn" onclick="triggerImageUpload()" style="width:100%;justify-content:center;padding:10px 16px;font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+          <path d="M9 2v10M5 6l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12v3a1 1 0 001 1h12a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Choose Image
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ IMAGE MODE INFO (after image loaded) ══ -->
   <div id="image-mode-info" class="tab-pane" style="display:none">
     <div class="panel-section">
       <h3>Image Analysis</h3>
@@ -1268,6 +1293,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=5"></script>
+<script type="module" src="js/app.js?v=6"></script>
 </body>
 </html>

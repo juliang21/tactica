@@ -129,8 +129,10 @@ function updateImageModeUI(isImageMode) {
   // Show/hide pitch-specific controls
   const pitchPane = document.getElementById('pane-pitch');
   const imagePlaceholder = document.getElementById('image-mode-info');
+  const uploadPane = document.getElementById('image-upload-pane');
   if (pitchPane) pitchPane.style.display = isImageMode ? 'none' : '';
   if (imagePlaceholder) imagePlaceholder.style.display = isImageMode ? '' : 'none';
+  if (uploadPane) uploadPane.style.display = 'none'; // always hide upload pane when entering/exiting
 
   // Sync mode bar tab buttons
   const pitchBtn = document.getElementById('mode-pitch-btn');
