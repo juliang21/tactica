@@ -32,7 +32,7 @@
   /* Stats cards */
   .stats-grid {
     display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px; margin-bottom: 32px;
+    gap: 16px; margin-bottom: 16px;
   }
   .stat-card {
     background: #1a1a22; border-radius: 12px; padding: 20px;
@@ -44,6 +44,13 @@
 
   /* Section */
   .section { margin-bottom: 32px; }
+  .section-header {
+    font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
+    color: #D4A843; margin-bottom: 14px; padding-bottom: 8px;
+    border-bottom: 1px solid rgba(212,168,67,0.15);
+    display: flex; align-items: center; gap: 8px;
+  }
+  .section-header .icon { font-size: 14px; opacity: 0.7; }
   .section h2 { font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #888; margin-bottom: 12px; }
 
   /* Table */
@@ -107,12 +114,27 @@
   <div class="date-filters">
     <label>From</label>
     <input type="date" id="date-start" onchange="applyDateFilter()">
-    <span class="sep">→</span>
+    <span class="sep">&rarr;</span>
     <label>To</label>
     <input type="date" id="date-end" onchange="applyDateFilter()">
+    <span class="sep" style="margin-left:12px"></span>
+    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
+      <input type="checkbox" id="exclude-me" onchange="applyDateFilter()" style="accent-color:#D4A843;cursor:pointer">
+      <span>Exclude me</span>
+    </label>
   </div>
 
-  <div class="stats-grid" id="stats-grid"></div>
+  <!-- User-level data -->
+  <div class="section">
+    <div class="section-header"><span class="icon">&#128100;</span> User-Level Data</div>
+    <div class="stats-grid" id="user-stats"></div>
+  </div>
+
+  <!-- Session-level data -->
+  <div class="section">
+    <div class="section-header"><span class="icon">&#9889;</span> Session-Level Data</div>
+    <div class="stats-grid" id="session-stats"></div>
+  </div>
 
   <div class="section">
     <h2 id="chart-title">Sessions</h2>
@@ -163,7 +185,7 @@ const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence);
 const db = getFirestore(app);
 
-// Admin email whitelist — add your email(s) here
+// Admin email whitelist
 const ADMIN_EMAILS = ['juliangenoud@gmail.com'];
 
 window.doSignIn = async function() {
@@ -230,43 +252,63 @@ window.applyDateFilter = function() {
   const startMs = new Date(startStr + 'T00:00:00').getTime();
   const endMs = new Date(endStr + 'T23:59:59.999').getTime();
 
-  const filteredSessions = _allSessions.filter(s => s.timestamp >= startMs && s.timestamp <= endMs);
-  const filteredActions = _allActions.filter(a => a.timestamp >= startMs && a.timestamp <= endMs);
-  const activeUids = new Set(filteredSessions.map(s => s.uid));
-  const filteredUsers = _allUsers.filter(u => activeUids.has(u.uid));
-  const signUps = _allUsers.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
+  const excludeMe = document.getElementById('exclude-me').checked;
+  const ADMIN_UID_EMAILS = ['juliangenoud@gmail.com'];
+  const excludeUids = excludeMe ? new Set(_allUsers.filter(u => ADMIN_UID_EMAILS.includes(u.email)).map(u => u.uid)) : new Set();
 
-  renderStats(filteredUsers, filteredSessions, _allUsers, signUps, filteredActions);
+  const filteredSessions = _allSessions.filter(s => s.timestamp >= startMs && s.timestamp <= endMs && !excludeUids.has(s.uid));
+  const filteredActions = _allActions.filter(a => a.timestamp >= startMs && a.timestamp <= endMs && !excludeUids.has(a.uid));
+  const activeUids = new Set(filteredSessions.map(s => s.uid));
+  const filteredUsers = _allUsers.filter(u => activeUids.has(u.uid) && !excludeUids.has(u.uid));
+
+  const allUsersFiltered = excludeMe ? _allUsers.filter(u => !excludeUids.has(u.uid)) : _allUsers;
+  renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids);
+  renderSessionStats(filteredSessions, filteredActions);
   renderChart(filteredSessions, startStr, endStr);
   renderUsersTable(filteredUsers);
 };
 
-function renderStats(users, sessions, allUsers, signUps, actions) {
-  const totalUsers = allUsers ? allUsers.length : users.length;
+// ─── User-Level Stats ───────────────────────────────────────────────────────
+function renderUserStats(users, sessions, allUsers, actions, activeUids) {
+  const totalUsers = allUsers.length;
+  const activeUsers = activeUids.size;
   const returningUsers = users.filter(u => u.sessionCount > 1).length;
-  const activeUsers = new Set(sessions.map(s => s.uid)).size;
-  const totalSessions = sessions.length;
-  const avgSessions = activeUsers > 0 ? (totalSessions / activeUsers).toFixed(1) : '0';
 
-  const saves = (actions || []).filter(a => a.action === 'save');
-  const exports = (actions || []).filter(a => a.action === 'export');
-  const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started');
-  const saveUsers = new Set(saves.map(a => a.uid)).size;
-  const exportUsers = new Set(exports.map(a => a.uid)).size;
-  const analysisUsers = new Set(analysisStarted.map(a => a.uid)).size;
-  const analysisPct = activeUsers > 0 ? Math.round(analysisUsers / activeUsers * 100) : 0;
+  const analysisUsers = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
+  const saveUsers = new Set((actions || []).filter(a => a.action === 'save').map(a => a.uid)).size;
+  const exportUsers = new Set((actions || []).filter(a => a.action === 'export').map(a => a.uid)).size;
 
-  document.getElementById('stats-grid').innerHTML = `
+  const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
+
+  document.getElementById('user-stats').innerHTML = `
     <div class="stat-card"><div class="label">Total Users (all time)</div><div class="value">${totalUsers}</div></div>
-    <div class="stat-card"><div class="label">Sign Ups in Period</div><div class="value">${signUps || 0}</div></div>
-    <div class="stat-card"><div class="label">Active in Period</div><div class="value">${activeUsers}</div><div class="sub">${totalSessions} sessions</div></div>
-    <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${activeUsers > 0 ? Math.round(returningUsers / activeUsers * 100) : 0}% of active</div></div>
-    <div class="stat-card"><div class="label">Sessions w/an Analysis</div><div class="value">${analysisStarted.length}</div><div class="sub">${analysisUsers} user${analysisUsers !== 1 ? 's' : ''} · ${analysisPct}% of active</div></div>
-    <div class="stat-card"><div class="label">Saves</div><div class="value">${saves.length}</div><div class="sub">${saveUsers} user${saveUsers !== 1 ? 's' : ''}</div></div>
-    <div class="stat-card"><div class="label">Exports</div><div class="value">${exports.length}</div><div class="sub">${exportUsers} user${exportUsers !== 1 ? 's' : ''}</div></div>
+    <div class="stat-card"><div class="label">Active Users in Period</div><div class="value">${activeUsers}</div></div>
+    <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${pct(returningUsers)}% of active</div></div>
+    <div class="stat-card"><div class="label">Users w/ an Analysis</div><div class="value">${pct(analysisUsers)}%</div><div class="sub">${analysisUsers} of ${activeUsers} active</div></div>
+    <div class="stat-card"><div class="label">Users w/ a Save</div><div class="value">${pct(saveUsers)}%</div><div class="sub">${saveUsers} of ${activeUsers} active</div></div>
+    <div class="stat-card"><div class="label">Users w/ an Export</div><div class="value">${pct(exportUsers)}%</div><div class="sub">${exportUsers} of ${activeUsers} active</div></div>
   `;
 }
 
+// ─── Session-Level Stats ────────────────────────────────────────────────────
+function renderSessionStats(sessions, actions) {
+  const totalSessions = sessions.length;
+
+  const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started').length;
+  const saves = (actions || []).filter(a => a.action === 'save').length;
+  const exports = (actions || []).filter(a => a.action === 'export').length;
+
+  const pct = (n) => totalSessions > 0 ? Math.round(n / totalSessions * 100) : 0;
+
+  document.getElementById('session-stats').innerHTML = `
+    <div class="stat-card"><div class="label">Total Sessions</div><div class="value">${totalSessions}</div></div>
+    <div class="stat-card"><div class="label">Sessions w/ an Analysis</div><div class="value">${analysisStarted}</div><div class="sub">${pct(analysisStarted)}% of sessions</div></div>
+    <div class="stat-card"><div class="label">Total Saves</div><div class="value">${saves}</div><div class="sub">${pct(saves)}% of sessions</div></div>
+    <div class="stat-card"><div class="label">Total Exports</div><div class="value">${exports}</div><div class="sub">${pct(exports)}% of sessions</div></div>
+  `;
+}
+
+// ─── Chart ──────────────────────────────────────────────────────────────────
 function localDateStr(d) {
   return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
 }
@@ -276,12 +318,11 @@ function renderChart(sessions, startStr, endStr) {
   const end = new Date(endStr + 'T00:00:00');
   const diffDays = Math.round((end - start) / 86400000) + 1;
 
-  // Update chart title
   const title = document.getElementById('chart-title');
   if (startStr === endStr) {
-    title.textContent = 'Sessions · ' + new Date(startStr + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
+    title.textContent = 'Sessions \u00b7 ' + new Date(startStr + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
   } else {
-    title.textContent = 'Sessions · ' + diffDays + ' days';
+    title.textContent = 'Sessions \u00b7 ' + diffDays + ' days';
   }
 
   const buckets = {};
@@ -293,7 +334,6 @@ function renderChart(sessions, startStr, endStr) {
   }
 
   sessions.forEach(s => {
-    // Convert timestamp to local date to match bucket keys
     const key = localDateStr(new Date(s.timestamp));
     if (buckets[key]) {
       buckets[key].count++;
@@ -309,7 +349,6 @@ function renderChart(sessions, startStr, endStr) {
   barsEl.innerHTML = '';
   labelsEl.innerHTML = '';
 
-  // Show labels smartly — skip some if too many days
   const showEvery = diffDays > 30 ? Math.ceil(diffDays / 15) : 1;
 
   keys.forEach((key, i) => {
@@ -323,15 +362,16 @@ function renderChart(sessions, startStr, endStr) {
   });
 }
 
+// ─── Users Table ────────────────────────────────────────────────────────────
 function renderUsersTable(users) {
   const tbody = document.getElementById('users-table');
   tbody.innerHTML = users.map(u => {
-    const firstSeen = u.firstSeen ? new Date(u.firstSeen).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : '—';
-    const lastSeen = u.lastSeen ? timeAgo(u.lastSeen) : '—';
+    const firstSeen = u.firstSeen ? new Date(u.firstSeen).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
+    const lastSeen = u.lastSeen ? timeAgo(u.lastSeen) : '\u2014';
     const isReturning = u.sessionCount > 1;
     return `<tr>
-      <td class="email">${u.email || '—'}</td>
-      <td>${u.displayName || '—'}</td>
+      <td class="email">${u.email || '\u2014'}</td>
+      <td>${u.displayName || '\u2014'}</td>
       <td>${firstSeen}</td>
       <td>${lastSeen}</td>
       <td>${u.sessionCount || 0}</td>
