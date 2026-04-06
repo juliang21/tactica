@@ -20,7 +20,7 @@ import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } 
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
-import { logSession, logAction, setSessionId } from './firestore.js?v=2';
+import { logSession, logAction, setSessionId } from './firestore.js?v=3';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────

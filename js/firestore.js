@@ -106,12 +106,14 @@ export async function logSession(uid, email, displayName) {
   }, { merge: true });
 
   // Log individual session
+  const device = window.innerWidth <= 768 ? 'mobile' : 'desktop';
   const sessionRef = doc(collection(db, 'tactica_sessions'));
   await setDoc(sessionRef, {
     uid,
     email: email || '',
     timestamp: now,
     date: today,
+    device,
   });
 }
 

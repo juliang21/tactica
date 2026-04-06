@@ -307,10 +307,16 @@ function renderSessionStats(sessions, actions) {
   const saves = (actions || []).filter(a => a.action === 'save').length;
   const exports = (actions || []).filter(a => a.action === 'export').length;
 
+  const desktopSessions = sessions.filter(s => s.device === 'desktop').length;
+  const mobileSessions = sessions.filter(s => s.device === 'mobile').length;
+  const unknownSessions = sessions.filter(s => !s.device).length;
+
   const pct = (n) => totalSessions > 0 ? Math.round(n / totalSessions * 100) : 0;
 
   document.getElementById('session-stats').innerHTML = `
     <div class="stat-card"><div class="label">Total Sessions</div><div class="value">${totalSessions}</div></div>
+    <div class="stat-card"><div class="label">Desktop Sessions</div><div class="value">${desktopSessions}</div><div class="sub">${pct(desktopSessions)}% of sessions${unknownSessions ? ' &middot; ' + unknownSessions + ' unknown' : ''}</div></div>
+    <div class="stat-card"><div class="label">Mobile Sessions</div><div class="value">${mobileSessions}</div><div class="sub">${pct(mobileSessions)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Sessions w/ an Analysis</div><div class="value">${analysisStarted}</div><div class="sub">${pct(analysisStarted)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Total Saves</div><div class="value">${saves}</div><div class="sub">${pct(saves)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Total Exports</div><div class="value">${exports}</div><div class="sub">${pct(exports)}% of sessions</div></div>
