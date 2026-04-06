@@ -76,6 +76,16 @@
     font-family: 'Manrope', sans-serif; font-weight: 500; transition: all 0.15s;
   }
   .refresh-btn:hover { border-color: #D4A843; color: #D4A843; }
+
+  .date-filters { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
+  .date-filters label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #666; }
+  .date-filters input[type="date"] {
+    background: #1a1a22; border: 1px solid rgba(255,255,255,0.1); color: #e0e0e0;
+    padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: 'Manrope', sans-serif;
+    outline: none; cursor: pointer;
+  }
+  .date-filters input[type="date"]:focus { border-color: #D4A843; }
+  .date-filters .sep { color: #444; font-size: 12px; }
 </style>
 </head>
 <body>
@@ -94,10 +104,18 @@
 </div>
 
 <div id="dashboard" style="display:none">
+  <div class="date-filters">
+    <label>From</label>
+    <input type="date" id="date-start" onchange="applyDateFilter()">
+    <span class="sep">→</span>
+    <label>To</label>
+    <input type="date" id="date-end" onchange="applyDateFilter()">
+  </div>
+
   <div class="stats-grid" id="stats-grid"></div>
 
   <div class="section">
-    <h2>Sessions · Last 14 Days</h2>
+    <h2 id="chart-title">Sessions</h2>
     <div class="chart-container">
       <div class="chart-bars" id="chart-bars"></div>
       <div class="chart-labels" id="chart-labels"></div>
@@ -172,52 +190,81 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// Cache fetched data so date filter changes don't re-fetch
+let _allUsers = [];
+let _allSessions = [];
+
+// Set default dates (today)
+const today = new Date().toISOString().slice(0, 10);
+document.getElementById('date-start').value = today;
+document.getElementById('date-end').value = today;
+
 window.loadDashboard = async function() {
   try {
-    // Fetch users
     const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
     const usersSnap = await getDocs(usersQ);
-    const users = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    _allUsers = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
 
-    // Fetch sessions
     const sessionsQ = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
     const sessionsSnap = await getDocs(sessionsQ);
-    const sessions = sessionsSnap.docs.map(d => d.data());
+    _allSessions = sessionsSnap.docs.map(d => d.data());
 
-    renderStats(users, sessions);
-    renderChart(sessions);
-    renderUsersTable(users);
+    applyDateFilter();
   } catch (e) {
     console.error('Dashboard error:', e);
   }
 };
 
-function renderStats(users, sessions) {
-  const now = Date.now();
-  const day = 86400000;
-  const totalUsers = users.length;
+window.applyDateFilter = function() {
+  const startStr = document.getElementById('date-start').value;
+  const endStr = document.getElementById('date-end').value;
+  if (!startStr || !endStr) return;
+
+  const startMs = new Date(startStr + 'T00:00:00').getTime();
+  const endMs = new Date(endStr + 'T23:59:59.999').getTime();
+
+  const filteredSessions = _allSessions.filter(s => s.timestamp >= startMs && s.timestamp <= endMs);
+  const activeUids = new Set(filteredSessions.map(s => s.uid));
+  const filteredUsers = _allUsers.filter(u => activeUids.has(u.uid));
+
+  renderStats(filteredUsers, filteredSessions, _allUsers);
+  renderChart(filteredSessions, startStr, endStr);
+  renderUsersTable(filteredUsers);
+};
+
+function renderStats(users, sessions, allUsers) {
+  const totalUsers = allUsers ? allUsers.length : users.length;
   const returningUsers = users.filter(u => u.sessionCount > 1).length;
-  const todaySessions = sessions.filter(s => now - s.timestamp < day).length;
-  const weekSessions = sessions.filter(s => now - s.timestamp < 7 * day).length;
-  const weekActiveUsers = new Set(sessions.filter(s => now - s.timestamp < 7 * day).map(s => s.uid)).size;
-  const avgSessions = totalUsers > 0 ? (users.reduce((sum, u) => sum + (u.sessionCount || 0), 0) / totalUsers).toFixed(1) : '0';
+  const activeUsers = new Set(sessions.map(s => s.uid)).size;
+  const totalSessions = sessions.length;
+  const avgSessions = activeUsers > 0 ? (totalSessions / activeUsers).toFixed(1) : '0';
 
   document.getElementById('stats-grid').innerHTML = `
-    <div class="stat-card"><div class="label">Total Users</div><div class="value">${totalUsers}</div></div>
-    <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${totalUsers > 0 ? Math.round(returningUsers / totalUsers * 100) : 0}% return rate</div></div>
-    <div class="stat-card"><div class="label">Active This Week</div><div class="value">${weekActiveUsers}</div><div class="sub">${weekSessions} sessions</div></div>
-    <div class="stat-card"><div class="label">Today</div><div class="value">${todaySessions}</div><div class="sub">sessions today</div></div>
+    <div class="stat-card"><div class="label">Total Users (all time)</div><div class="value">${totalUsers}</div></div>
+    <div class="stat-card"><div class="label">Active in Period</div><div class="value">${activeUsers}</div><div class="sub">${totalSessions} sessions</div></div>
+    <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${activeUsers > 0 ? Math.round(returningUsers / activeUsers * 100) : 0}% of active</div></div>
+    <div class="stat-card"><div class="label">Sessions in Period</div><div class="value">${totalSessions}</div></div>
     <div class="stat-card"><div class="label">Avg Sessions / User</div><div class="value">${avgSessions}</div></div>
   `;
 }
 
-function renderChart(sessions) {
-  const days = 14;
-  const now = new Date();
+function renderChart(sessions, startStr, endStr) {
+  const start = new Date(startStr + 'T00:00:00');
+  const end = new Date(endStr + 'T00:00:00');
+  const diffDays = Math.round((end - start) / 86400000) + 1;
+
+  // Update chart title
+  const title = document.getElementById('chart-title');
+  if (startStr === endStr) {
+    title.textContent = 'Sessions · ' + new Date(startStr + 'T12:00:00').toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' });
+  } else {
+    title.textContent = 'Sessions · ' + diffDays + ' days';
+  }
+
   const buckets = {};
-  for (let i = days - 1; i >= 0; i--) {
-    const d = new Date(now);
-    d.setDate(d.getDate() - i);
+  for (let i = 0; i < diffDays; i++) {
+    const d = new Date(start);
+    d.setDate(d.getDate() + i);
     const key = d.toISOString().slice(0, 10);
     buckets[key] = { count: 0, uniqueUsers: new Set() };
   }
@@ -238,14 +285,17 @@ function renderChart(sessions) {
   barsEl.innerHTML = '';
   labelsEl.innerHTML = '';
 
-  keys.forEach(key => {
+  // Show labels smartly — skip some if too many days
+  const showEvery = diffDays > 30 ? Math.ceil(diffDays / 15) : 1;
+
+  keys.forEach((key, i) => {
     const b = buckets[key];
     const pct = (b.count / maxCount) * 100;
-    const dayLabel = key.slice(5); // MM-DD
+    const dayLabel = key.slice(5);
     const weekday = new Date(key + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
 
     barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%"><div class="tooltip">${weekday} ${dayLabel}: ${b.count} sessions, ${b.uniqueUsers.size} users</div></div>`;
-    labelsEl.innerHTML += `<span>${dayLabel.slice(3)}</span>`;
+    labelsEl.innerHTML += `<span>${i % showEvery === 0 ? dayLabel.slice(3) : ''}</span>`;
   });
 }
 
