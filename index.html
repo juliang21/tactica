@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=9">
+<link rel="stylesheet" href="styles.css?v=10">
 </head>
 <body class="tool-select">
 
@@ -305,8 +305,12 @@
 
 <!-- ── Pitch ── -->
 <div id="canvas-wrap">
-  <!-- Mode Selector Tab Bar (desktop) -->
+  <!-- Top bar: analysis name (desktop) -->
   <div id="mode-bar">
+    <div class="current-analysis-bar" id="current-analysis-bar"><input type="text" class="analysis-name-input" id="analysis-name-input" readonly value="" maxlength="60" /></div>
+  </div>
+  <!-- Mode Selector Tab Bar (desktop) — below top bar, above pitch -->
+  <div id="mode-tabs-bar">
     <div class="mode-tab-group">
       <button class="mode-tab active" id="mode-pitch-btn" onclick="switchMode('pitch')">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -325,7 +329,6 @@
         Upload Image
       </button>
     </div>
-    <div class="current-analysis-bar" id="current-analysis-bar"><input type="text" class="analysis-name-input" id="analysis-name-input" readonly value="" maxlength="60" /></div>
   </div>
   <!-- Mode Selector Dropdown (mobile) -->
   <div id="mode-dropdown">
@@ -1328,6 +1331,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=10"></script>
+<script type="module" src="js/app.js?v=11"></script>
 </body>
 </html>

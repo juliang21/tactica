@@ -1928,6 +1928,20 @@ function showMobileHint() {
   document.body.appendChild(overlay);
 }
 
+function showDesktopWelcome() {
+  const overlay = document.createElement('div');
+  overlay.className = 'mobile-hint-overlay';
+  overlay.innerHTML = `
+    <div class="mobile-hint-modal">
+      <div class="mobile-hint-icon">⚽</div>
+      <h2>Welcome to Táctica!</h2>
+      <p>Thanks for trying the beta! The product is still in early development, so you may encounter some bugs along the way.</p>
+      <p style="margin-top:8px;opacity:0.7;font-size:12px;">I'd love to hear what you think — use the <strong>Feedback</strong> button to tell me what I should build next :)</p>
+      <button class="mobile-hint-btn" onclick="this.closest('.mobile-hint-overlay').remove()">Let's go!</button>
+    </div>`;
+  document.body.appendChild(overlay);
+}
+
 // ─── Auth UI ────────────────────────────────────────────────────────────────
 function updateAuthUI(user) {
   const menuIcon = document.getElementById('app-menu-icon');
@@ -2125,11 +2139,15 @@ onAuthChange(async (user) => {
       showNotification('Welcome to Táctica, ' + name + '!', 'success', 4000);
     }
 
-    // Mobile experience modal (show for first 2 sessions)
+    // Welcome modals (show for first 2 sessions)
     if (window.innerWidth <= 768) {
       const mobileCount = parseInt(localStorage.getItem('tactica_mobile_sessions') || '0', 10) + 1;
       localStorage.setItem('tactica_mobile_sessions', mobileCount);
       if (mobileCount <= 2) showMobileHint();
+    } else {
+      const desktopCount = parseInt(localStorage.getItem('tactica_desktop_sessions') || '0', 10) + 1;
+      localStorage.setItem('tactica_desktop_sessions', desktopCount);
+      if (desktopCount <= 2) showDesktopWelcome();
     }
   } else {
     // Show landing gate when not authenticated

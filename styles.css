@@ -180,6 +180,13 @@ body {
   border-bottom: 1px solid #1F1F1F;
   display: flex; align-items: center; justify-content: center;
 }
+#mode-tabs-bar {
+  position: absolute; top: 44px; left: 0; right: 0;
+  height: 38px; z-index: 99;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10,10,10,0.85);
+  backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+}
 .mode-tab-group {
   display: flex; gap: 2px;
   background: #141414; border-radius: 8px;
@@ -206,7 +213,7 @@ body {
 /* ── Canvas ── */
 #canvas-wrap {
   flex: 1; display: flex; align-items: center; justify-content: center;
-  padding: 54px 20px 20px; position: relative; overflow: hidden;
+  padding: 86px 20px 20px; position: relative; overflow: hidden;
   background: var(--bg);
 }
 #pitch-wrap {
@@ -1030,6 +1037,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
   /* Mode bar → hide tab bar, show dropdown */
   #mode-bar { display: none !important; }
+  #mode-tabs-bar { display: none !important; }
   #mode-dropdown {
     display: block;
     position: absolute; top: 8px; left: 50%;
