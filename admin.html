@@ -328,6 +328,7 @@ function featureData(actions, actionName) {
 
 function renderFeatureStats(actions, activeUsers) {
   const save = featureData(actions, 'save');
+  const xport = featureData(actions, 'export');
   const animation = featureData(actions, 'feature_animation');
   const pitch = featureData(actions, 'feature_pitch_change');
   const image = featureData(actions, 'feature_image_upload');
@@ -344,7 +345,7 @@ function renderFeatureStats(actions, activeUsers) {
   }
 
   document.getElementById('feature-stats').innerHTML =
-    card('Save', save) + card('Animation', animation) + card('Pitch Change', pitch) + card('Image Upload', image);
+    card('Save', save) + card('Export', xport) + card('Animation', animation) + card('Pitch Change', pitch) + card('Image Upload', image);
 }
 
 // ─── Chart ──────────────────────────────────────────────────────────────────
