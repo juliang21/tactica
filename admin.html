@@ -262,14 +262,15 @@ window.applyDateFilter = function() {
   const filteredUsers = _allUsers.filter(u => activeUids.has(u.uid) && !excludeUids.has(u.uid));
 
   const allUsersFiltered = excludeMe ? _allUsers.filter(u => !excludeUids.has(u.uid)) : _allUsers;
-  renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids);
+  const signUps = allUsersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
+  renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids, signUps);
   renderSessionStats(filteredSessions, filteredActions);
   renderChart(filteredSessions, startStr, endStr);
   renderUsersTable(filteredUsers);
 };
 
 // ─── User-Level Stats ───────────────────────────────────────────────────────
-function renderUserStats(users, sessions, allUsers, actions, activeUids) {
+function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps) {
   const totalUsers = allUsers.length;
   const activeUsers = activeUids.size;
   const returningUsers = users.filter(u => u.sessionCount > 1).length;
@@ -282,6 +283,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids) {
 
   document.getElementById('user-stats').innerHTML = `
     <div class="stat-card"><div class="label">Total Users (all time)</div><div class="value">${totalUsers}</div></div>
+    <div class="stat-card"><div class="label">Sign Ups in Period</div><div class="value">${signUps}</div></div>
     <div class="stat-card"><div class="label">Active Users in Period</div><div class="value">${activeUsers}</div></div>
     <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${pct(returningUsers)}% of active</div></div>
     <div class="stat-card"><div class="label">Users w/ an Analysis</div><div class="value">${pct(analysisUsers)}%</div><div class="sub">${analysisUsers} of ${activeUsers} active</div></div>
