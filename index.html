@@ -7,7 +7,7 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=5">
+<link rel="stylesheet" href="styles.css?v=7">
 </head>
 <body class="tool-select">
 
@@ -216,16 +216,16 @@
     </button>
     <div class="tool-bundle" id="arrow-bundle">
       <button class="tool-btn" id="arrow-main-btn" data-tool="arrow" onclick="openBundle('arrow-bundle')">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/><polygon points="13,9 9,6.5 9,11.5" fill="#F59E0B"/></svg>
+        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>
         <span class="tool-label">Arrow</span>
       </button>
       <div class="bundle-menu">
         <button class="bundle-option" onclick="setArrowType('run');setTool('arrow');closeBundle('arrow-bundle');updateArrowBundleIcon('run')">
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/><polygon points="13,9 9,6.5 9,11.5" fill="#F59E0B"/></svg>
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>
           Run
         </button>
         <button class="bundle-option" onclick="setArrowType('pass');setTool('arrow');closeBundle('arrow-bundle');updateArrowBundleIcon('pass')">
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#4ADE80" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#4ADE80"/></svg>
+          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/><polygon points="13,9 9,6.5 9,11.5" fill="#F59E0B"/></svg>
           Pass
         </button>
         <button class="bundle-option" onclick="setArrowType('line');setTool('arrow');closeBundle('arrow-bundle');updateArrowBundleIcon('line')">
@@ -363,8 +363,8 @@
           <feGaussianBlur stdDeviation="5"/>
         </filter>
         <!-- Arrow markers for 3 types -->
-        <marker id="mRun"  markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#F59E0B"/></marker>
-        <marker id="mPass" markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#4ADE80"/></marker>
+        <marker id="mRun"  markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#FFFFFF"/></marker>
+        <marker id="mPass" markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#F59E0B"/></marker>
         <marker id="mLong" markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#f94f4f"/></marker>
       </defs>
       <!-- Pitch fill -->
@@ -1175,7 +1175,7 @@
 <!-- Feedback Widget -->
 <button id="feedback-bubble" onclick="toggleFeedback()" title="Send feedback">
   <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 14l-2 4 4-2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>
-  Leave feedback
+  <span class="feedback-full">Leave feedback</span><span class="feedback-short">Feedback</span>
 </button>
 
 <div id="feedback-panel" style="display:none">
@@ -1328,6 +1328,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=7"></script>
+<script type="module" src="js/app.js?v=8"></script>
 </body>
 </html>

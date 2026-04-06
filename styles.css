@@ -684,6 +684,7 @@ body.tool-motion #pitch-svg { cursor: crosshair; }
   letter-spacing: 0.3px;
   transition: all 0.2s; box-shadow: 0 3px 16px rgba(201,169,98,0.35);
 }
+#feedback-bubble .feedback-short { display: none; }
 #feedback-bubble:hover { transform: scale(1.04); box-shadow: 0 4px 20px rgba(201,169,98,0.5); }
 
 #feedback-panel {
@@ -853,15 +854,15 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
     overflow: hidden;
   }
 
-  /* Logo — inline on mobile, aligned with dropdown row */
+  /* Logo — stacked on mobile: TÁCTICA over BETA */
   .tool-logo {
-    position: fixed; top: 10px; left: 12px; z-index: 200;
+    position: fixed; top: 6px; left: 12px; z-index: 200;
     font-size: 11px; letter-spacing: 2px;
-    display: flex; flex-direction: row; align-items: center; gap: 5px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
     line-height: 1;
   }
   .beta-badge {
-    font-size: 7px; padding: 1px 4px;
+    font-size: 6px; padding: 1px 4px;
   }
 
   /* Toolbar → horizontal bottom bar */
@@ -1009,13 +1010,15 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   }
   #mobile-backdrop.show { display: block; }
 
-  /* Feedback button — smaller on mobile */
+  /* Feedback button — compact on mobile, higher above toolbar */
   #feedback-bubble {
-    bottom: 74px; right: 12px;
-    padding: 6px 12px; font-size: 11px;
+    bottom: 84px; right: 12px;
+    padding: 10px 14px; font-size: 11px;
   }
+  #feedback-bubble .feedback-full { display: none; }
+  #feedback-bubble .feedback-short { display: inline; }
   #feedback-panel {
-    bottom: 114px; right: 8px; width: calc(100vw - 16px); max-width: 320px;
+    bottom: 130px; right: 8px; width: calc(100vw - 16px); max-width: 320px;
   }
 
   /* Rondos brand — hide on mobile to save space */

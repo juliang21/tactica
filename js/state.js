@@ -72,8 +72,8 @@ export const FORMATIONS = {
 };
 
 export const ARROW_STYLES = {
-  run:  { color: '#F59E0B', dash: '',     marker: 'url(#mRun)'  },
-  pass: { color: '#4ADE80', dash: '6,4',  marker: 'url(#mPass)' },
+  run:  { color: '#FFFFFF', dash: '6,4',  marker: 'url(#mRun)'  },
+  pass: { color: '#F59E0B', dash: '',     marker: 'url(#mPass)' },
   line: { color: '#f94f4f', dash: '',     marker: 'none'         },
 };
 
