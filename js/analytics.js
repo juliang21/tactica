@@ -36,6 +36,33 @@ function send(eventName, params = {}) {
   }
 }
 
+// ─── Session "analysis started" detection ───────────────────────────────────
+// Fires once per session when the user performs ≥3 meaningful interactions
+// (inserts + edits + drags). Logged to Firestore as action='analysis_started'.
+const ANALYSIS_THRESHOLD = 3;
+let _sessionInteractions = 0;
+let _analysisStartedFired = false;
+let _logActionFn = null;  // set from app.js to avoid circular imports
+
+export function registerAnalysisTracker(logActionFn) {
+  _logActionFn = logActionFn;
+}
+
+export function bumpInteraction() {
+  if (_analysisStartedFired) return;
+  _sessionInteractions++;
+  if (_sessionInteractions >= ANALYSIS_THRESHOLD && _logActionFn) {
+    _analysisStartedFired = true;
+    _logActionFn();
+  }
+}
+
+// ─── 0. Element Dragged ─────────────────────────────────────────────────────
+// Called from app.js registerDragEnd callback — counts as an interaction.
+export function trackElementDragged() {
+  bumpInteraction();
+}
+
 // ─── 1. Element Selected ─────────────────────────────────────────────────────
 // Fired when the user selects an existing element on the canvas.
 export function trackElementSelected(elementType) {
@@ -52,6 +79,7 @@ export function trackElementInserted(elementType) {
     element_type: elementType,
     event_category: 'creation',
   });
+  bumpInteraction();
 }
 
 // ─── 3. Element Edited ──────────────────────────────────────────────────────
@@ -63,6 +91,7 @@ export function trackElementEdited(elementType, property) {
     edit_property: property,         // e.g. 'color', 'name', 'scale', …
     event_category: 'editing',
   });
+  bumpInteraction();
 }
 
 // ─── 4. Mode Switched ───────────────────────────────────────────────────────

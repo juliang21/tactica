@@ -17,7 +17,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
 import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
-import { trackElementInserted, trackModeSwitch, trackElementEdited, trackSignUp, trackSignIn, trackSignOut } from './analytics.js';
+import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
 import { logSession, logAction } from './firestore.js';
@@ -32,7 +32,14 @@ registerMotionUpdate(updateMotionVisual);
 // ─── Initialize subscription UI ────────────────────────────────────────────
 updateLockedUI();
 
+// ─── "Analysis started" session tracker ────────────────────────────────────
+registerAnalysisTracker(() => {
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'analysis_started').catch(() => {});
+});
+
 registerDragEnd((el) => {
+  trackElementDragged();
   // When a player is dragged in a step > 0, save and redraw trails
   if (el.dataset.type === 'player' && frames.length > 0) {
     saveCurrentToFrame();
