@@ -261,7 +261,7 @@ function renderStats(users, sessions, allUsers, signUps, actions) {
     <div class="stat-card"><div class="label">Sign Ups in Period</div><div class="value">${signUps || 0}</div></div>
     <div class="stat-card"><div class="label">Active in Period</div><div class="value">${activeUsers}</div><div class="sub">${totalSessions} sessions</div></div>
     <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${activeUsers > 0 ? Math.round(returningUsers / activeUsers * 100) : 0}% of active</div></div>
-    <div class="stat-card"><div class="label">Analysis Started</div><div class="value">${analysisStarted.length}</div><div class="sub">${analysisUsers} user${analysisUsers !== 1 ? 's' : ''} · ${analysisPct}% of active</div></div>
+    <div class="stat-card"><div class="label">Sessions w/an Analysis</div><div class="value">${analysisStarted.length}</div><div class="sub">${analysisUsers} user${analysisUsers !== 1 ? 's' : ''} · ${analysisPct}% of active</div></div>
     <div class="stat-card"><div class="label">Saves</div><div class="value">${saves.length}</div><div class="sub">${saveUsers} user${saveUsers !== 1 ? 's' : ''}</div></div>
     <div class="stat-card"><div class="label">Exports</div><div class="value">${exports.length}</div><div class="sub">${exportUsers} user${exportUsers !== 1 ? 's' : ''}</div></div>
   `;
