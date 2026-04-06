@@ -2,12 +2,6 @@ import * as S from './state.js';
 import { canAccess, showUpgradePrompt } from './subscription.js';
 
 export function setPitch(layout) {
-  // Check freemium gating
-  const featureId = 'pitch:' + layout;
-  if (!canAccess(featureId)) {
-    showUpgradePrompt(layoutLabel(layout) + ' pitch');
-    return;
-  }
   S.setCurrentPitchLayout(layout);
   document.querySelectorAll('.pitch-thumb').forEach(t => t.classList.remove('selected'));
   const el = document.getElementById('pt-' + layout);
