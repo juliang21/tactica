@@ -201,11 +201,11 @@ export function doExport() {
       pl(() => { ctx.strokeRect(cx-55,px,110,40); });
       ctx.beginPath(); ctx.arc(cx,px+67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
       const vArcA = Math.acos(38/55);
-      pl(() => { ctx.beginPath(); ctx.arc(cx,px+67,55,Math.PI/2+vArcA,Math.PI*2.5-vArcA); ctx.stroke(); });
+      if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+67,55,Math.PI/2-vArcA,Math.PI/2+vArcA); ctx.stroke(); });
       pl(() => { ctx.strokeRect(cx-100,px+ph-105,200,105); });
       pl(() => { ctx.strokeRect(cx-55,px+ph-40,110,40); });
       ctx.beginPath(); ctx.arc(cx,px+ph-67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      pl(() => { ctx.beginPath(); ctx.arc(cx,px+ph-67,55,Math.PI/2-vArcA,-(Math.PI/2-vArcA)); ctx.stroke(); });
+      if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+ph-67,55,Math.PI*1.5-vArcA,Math.PI*1.5+vArcA); ctx.stroke(); });
       ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
       ctx.fillRect(cx-35,px-14,70,14); ctx.strokeRect(cx-35,px-14,70,14);
       ctx.fillRect(cx-35,px+ph,70,14); ctx.strokeRect(cx-35,px+ph,70,14);
