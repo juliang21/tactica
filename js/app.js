@@ -1902,8 +1902,10 @@ document.addEventListener('click', e => {
 function toggleMobilePanel() {
   const panel = document.getElementById('side-panel');
   const backdrop = document.getElementById('mobile-backdrop');
+  const toggle = document.getElementById('mobile-panel-toggle');
   const isOpen = panel.classList.toggle('open');
   if (backdrop) backdrop.classList.toggle('show', isOpen);
+  if (toggle) toggle.classList.toggle('hidden', isOpen);
 }
 window.toggleMobilePanel = toggleMobilePanel;
 
