@@ -1885,7 +1885,7 @@ function showMobileHint() {
     <div class="mobile-hint-modal">
       <div class="mobile-hint-icon">🖥️</div>
       <h2>Best on Desktop</h2>
-      <p>Táctica is optimised for desktop screens. For the best experience, open it on a computer.</p>
+      <p>Táctica is optimised for desktop screens. For the best experience, open it on a computer :)</p>
       <button class="mobile-hint-btn" onclick="this.closest('.mobile-hint-overlay').remove()">Understood!</button>
     </div>`;
   document.body.appendChild(overlay);
