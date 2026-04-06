@@ -20,7 +20,7 @@ import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } 
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackSignUp, trackSignIn, trackSignOut } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
-import { logSession } from './firestore.js';
+import { logSession, logAction } from './firestore.js';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
@@ -172,7 +172,11 @@ window.setUserTier = setUserTier;
 window.exportImage = exportImage;
 window.selectFmt = selectFmt;
 window.closeExport = closeExport;
-window.doExport = doExport;
+window.doExport = function() {
+  doExport();
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'export', { format: document.querySelector('.fmt-btn.active')?.dataset?.fmt || 'png' }).catch(() => {});
+};
 window.applyNameSize = applyNameSize;
 window.applyNameColor = applyNameColor;
 window.applyNameBg = applyNameBg;
@@ -1601,6 +1605,8 @@ async function confirmSaveAnalysis() {
   closeSaveAnalysis();
   showNotification('Analysis saved', 'success', 3000);
   await updateCurrentBar();
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'save').catch(() => {});
 }
 window.confirmSaveAnalysis = confirmSaveAnalysis;
 
@@ -1827,6 +1833,8 @@ document.addEventListener('keydown', async e => {
     const saved = await quickSave();
     if (saved) {
       showNotification('Auto-saved', 'success', 2000);
+      const u = getCurrentUser();
+      if (u) logAction(u.uid, u.email, 'save').catch(() => {});
     } else {
       openSaveAnalysis();
     }

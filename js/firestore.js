@@ -115,6 +115,21 @@ export async function logSession(uid, email, displayName) {
   });
 }
 
+// ─── Action Tracking (saves, exports) ──────────────────────────────────────
+export async function logAction(uid, email, action, meta) {
+  const now = Date.now();
+  const today = new Date(now).toISOString().slice(0, 10);
+  const ref = doc(collection(db, 'tactica_actions'));
+  await setDoc(ref, {
+    uid,
+    email: email || '',
+    action,       // 'save' | 'export'
+    meta: meta || {},  // e.g. { format: 'png' }
+    timestamp: now,
+    date: today,
+  });
+}
+
 // ─── Admin: Get all users ───────────────────────────────────────────────────
 export async function getAllUsers() {
   const q = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
