@@ -263,6 +263,10 @@ function renderStats(users, sessions, allUsers, signUps, actions) {
   `;
 }
 
+function localDateStr(d) {
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
 function renderChart(sessions, startStr, endStr) {
   const start = new Date(startStr + 'T00:00:00');
   const end = new Date(endStr + 'T00:00:00');
@@ -280,12 +284,13 @@ function renderChart(sessions, startStr, endStr) {
   for (let i = 0; i < diffDays; i++) {
     const d = new Date(start);
     d.setDate(d.getDate() + i);
-    const key = d.toISOString().slice(0, 10);
+    const key = localDateStr(d);
     buckets[key] = { count: 0, uniqueUsers: new Set() };
   }
 
   sessions.forEach(s => {
-    const key = s.date || new Date(s.timestamp).toISOString().slice(0, 10);
+    // Convert timestamp to local date to match bucket keys
+    const key = localDateStr(new Date(s.timestamp));
     if (buckets[key]) {
       buckets[key].count++;
       buckets[key].uniqueUsers.add(s.uid);
