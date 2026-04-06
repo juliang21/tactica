@@ -172,7 +172,13 @@ window.applyRotation = applyRotation;
 window.clearAll = clearAll;
 window.deleteSelected = deleteSelected;
 window.switchTab = switchTab;
-window.setPitch = setPitch;
+window.setPitch = function(layout) {
+  setPitch(layout);
+  if (layout !== 'full-h') {
+    const u = getCurrentUser();
+    if (u) logAction(u.uid, u.email, 'feature_pitch_change', { layout }).catch(() => {});
+  }
+};
 window.setPitchColor = setPitchColor;
 window.hideUpgradePrompt = hideUpgradePrompt;
 window.setUserTier = setUserTier;
@@ -225,7 +231,11 @@ window.applyHeadlineBodySize = applyHeadlineBodySize;
 window.applyHeadlineTextColor = applyHeadlineTextColor;
 window.applyHeadlineBg = applyHeadlineBg;
 window.triggerImageUpload = triggerImageUpload;
-window.handleImageUpload = handleImageUpload;
+window.handleImageUpload = function(input) {
+  handleImageUpload(input);
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_image_upload').catch(() => {});
+};
 window.enterImageMode = enterImageMode;
 window.exitImageMode = exitImageMode;
 
@@ -581,6 +591,9 @@ function addStep() {
   currentFrame = frames.length - 1;
   renderStepBar();
   drawTrails();
+  // Track animation feature usage
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'add_step', step: currentFrame }).catch(() => {});
 }
 
 function goToStep(idx) {
@@ -727,6 +740,9 @@ function playAllSteps() {
   animationRunning = true;
   renderStepBar();
   if (trailsGroup) trailsGroup.style.display = 'none';
+  // Track animation play
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'play', steps: frames.length }).catch(() => {});
 
   const stepDuration = 1200;
   const pauseDuration = 300;
@@ -823,6 +839,9 @@ function resetToBase() {
 function exportAnimation() {
   if (frames.length < 2) { showNotification('Add at least 2 steps before exporting.', 'error', 4000); return; }
   saveCurrentToFrame();
+  // Track animation export
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'export', steps: frames.length }).catch(() => {});
 
   const svgEl = S.svg;
   const w = parseInt(svgEl.getAttribute('width'));

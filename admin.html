@@ -136,6 +136,12 @@
     <div class="stats-grid" id="session-stats"></div>
   </div>
 
+  <!-- Key Features Usage -->
+  <div class="section">
+    <div class="section-header"><span class="icon">&#128273;</span> Key Features Usage</div>
+    <div class="stats-grid" id="feature-stats"></div>
+  </div>
+
   <div class="section">
     <h2 id="chart-title">Sessions</h2>
     <div class="chart-container">
@@ -265,6 +271,7 @@ window.applyDateFilter = function() {
   const signUps = allUsersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
   renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids, signUps);
   renderSessionStats(filteredSessions, filteredActions);
+  renderFeatureStats(filteredActions, activeUids.size);
   renderChart(filteredSessions, startStr, endStr);
   renderUsersTable(filteredUsers);
 };
@@ -307,6 +314,30 @@ function renderSessionStats(sessions, actions) {
     <div class="stat-card"><div class="label">Sessions w/ an Analysis</div><div class="value">${analysisStarted}</div><div class="sub">${pct(analysisStarted)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Total Saves</div><div class="value">${saves}</div><div class="sub">${pct(saves)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Total Exports</div><div class="value">${exports}</div><div class="sub">${pct(exports)}% of sessions</div></div>
+  `;
+}
+
+// ─── Key Features Usage ────────────────────────────────────────────────────
+function renderFeatureStats(actions, activeUsers) {
+  const saves = (actions || []).filter(a => a.action === 'save').length;
+  const saveUsers = new Set((actions || []).filter(a => a.action === 'save').map(a => a.uid)).size;
+
+  const animations = (actions || []).filter(a => a.action === 'feature_animation').length;
+  const animationUsers = new Set((actions || []).filter(a => a.action === 'feature_animation').map(a => a.uid)).size;
+
+  const pitchChanges = (actions || []).filter(a => a.action === 'feature_pitch_change').length;
+  const pitchUsers = new Set((actions || []).filter(a => a.action === 'feature_pitch_change').map(a => a.uid)).size;
+
+  const imageUploads = (actions || []).filter(a => a.action === 'feature_image_upload').length;
+  const imageUsers = new Set((actions || []).filter(a => a.action === 'feature_image_upload').map(a => a.uid)).size;
+
+  const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
+
+  document.getElementById('feature-stats').innerHTML = `
+    <div class="stat-card"><div class="label">Save</div><div class="value">${saves}</div><div class="sub">${saveUsers} users (${pct(saveUsers)}% of active)</div></div>
+    <div class="stat-card"><div class="label">Animation</div><div class="value">${animations}</div><div class="sub">${animationUsers} users (${pct(animationUsers)}% of active)</div></div>
+    <div class="stat-card"><div class="label">Pitch Change</div><div class="value">${pitchChanges}</div><div class="sub">${pitchUsers} users (${pct(pitchUsers)}% of active)</div></div>
+    <div class="stat-card"><div class="label">Image Upload</div><div class="value">${imageUploads}</div><div class="sub">${imageUsers} users (${pct(imageUsers)}% of active)</div></div>
   `;
 }
 
