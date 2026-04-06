@@ -89,11 +89,28 @@ export function generateThumbnail() {
     });
 
     S.objectsLayer.querySelectorAll('[data-type="arrow"]').forEach(g => {
-      const line = g.querySelector('line');
+      const line = g.querySelector('.arrow-line');
       if (!line) return;
+      const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+      const dx1 = parseFloat(g.dataset.dx1), dy1 = parseFloat(g.dataset.dy1);
+      const dx2 = parseFloat(g.dataset.dx2), dy2 = parseFloat(g.dataset.dy2);
+      const sc = parseFloat(g.dataset.scale || '1');
+      const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+      const k = parseFloat(g.dataset.curve || '0');
+      const tfm = (dx, dy) => ({
+        x: cx + (dx*sc)*Math.cos(rot) - (dy*sc)*Math.sin(rot),
+        y: cy + (dx*sc)*Math.sin(rot) + (dy*sc)*Math.cos(rot)
+      });
+      const p1 = tfm(dx1, dy1), p2 = tfm(dx2, dy2);
+      const midX = (p1.x+p2.x)/2, midY = (p1.y+p2.y)/2;
+      let perpX = -(p2.y-p1.y), perpY = p2.x-p1.x;
+      const pLen = Math.sqrt(perpX*perpX+perpY*perpY);
+      if (pLen > 1) { perpX /= pLen; perpY /= pLen; }
+      const cpX = midX + k*perpX, cpY = midY + k*perpY;
       ctx.beginPath();
-      ctx.moveTo(parseFloat(line.getAttribute('x1')), parseFloat(line.getAttribute('y1')));
-      ctx.lineTo(parseFloat(line.getAttribute('x2')), parseFloat(line.getAttribute('y2')));
+      ctx.moveTo(p1.x, p1.y);
+      if (Math.abs(k) < 1) { ctx.lineTo(p2.x, p2.y); }
+      else { ctx.quadraticCurveTo(cpX, cpY, p2.x, p2.y); }
       ctx.strokeStyle = line.getAttribute('stroke') || '#F59E0B';
       ctx.lineWidth = 2;
       ctx.stroke();

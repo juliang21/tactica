@@ -133,15 +133,32 @@ export function updateArrowVisual(el) {
   const dx2 = parseFloat(el.dataset.dx2), dy2 = parseFloat(el.dataset.dy2);
   const sc = parseFloat(el.dataset.scale || '1');
   const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+  const k = parseFloat(el.dataset.curve || '0');
   const tfm = (dx, dy) => ({
     x: cx + (dx*sc)*Math.cos(rot) - (dy*sc)*Math.sin(rot),
     y: cy + (dx*sc)*Math.sin(rot) + (dy*sc)*Math.cos(rot)
   });
   const p1 = tfm(dx1, dy1), p2 = tfm(dx2, dy2);
-  el.querySelectorAll('line').forEach(l => {
-    l.setAttribute('x1', p1.x); l.setAttribute('y1', p1.y);
-    l.setAttribute('x2', p2.x); l.setAttribute('y2', p2.y);
+
+  // Compute control point for quadratic bezier
+  const cp = arrowControlPoint(p1, p2, k);
+  const d = `M${p1.x},${p1.y} Q${cp.x},${cp.y} ${p2.x},${p2.y}`;
+
+  el.querySelectorAll('.arrow-line, .arrow-hit').forEach(p => {
+    p.setAttribute('d', d);
   });
+}
+
+// Compute the quadratic bezier control point from endpoints and curvature k
+export function arrowControlPoint(p1, p2, k) {
+  const midX = (p1.x + p2.x) / 2;
+  const midY = (p1.y + p2.y) / 2;
+  let perpX = -(p2.y - p1.y);
+  let perpY = p2.x - p1.x;
+  const len = Math.sqrt(perpX * perpX + perpY * perpY);
+  if (len < 1) return { x: midX, y: midY };
+  perpX /= len; perpY /= len;
+  return { x: midX + k * perpX, y: midY + k * perpY };
 }
 
 function moveElement(el, nx, ny) {
@@ -175,7 +192,7 @@ export function select(el) {
   }
   if (type === 'arrow') {
     const w = parseFloat(el.dataset.arrowWidth || '2.5');
-    el.querySelector('line')?.setAttribute('stroke-width', w + 1.5);
+    el.querySelector('.arrow-line')?.setAttribute('stroke-width', w + 1.5);
     showArrowHandles(el);
   }
   if (type.startsWith('shadow')) {
@@ -293,7 +310,10 @@ export function select(el) {
     const w = el.dataset.arrowWidth || '2.5';
     document.getElementById('arrow-width-slider').value = w;
     document.getElementById('arrow-width-val').textContent = w;
-    const dash = el.querySelector('line')?.getAttribute('stroke-dasharray') || '';
+    const curveVal = el.dataset.curve || '0';
+    document.getElementById('arrow-curve-slider').value = curveVal;
+    document.getElementById('arrow-curve-val').textContent = Math.round(parseFloat(curveVal));
+    const dash = el.querySelector('.arrow-line')?.getAttribute('stroke-dasharray') || '';
     let style = 'solid';
     if (dash === '2,5') style = 'dotted';
     else if (dash && dash !== 'none') style = 'dashed';
@@ -380,7 +400,7 @@ export function deselectVisual(el) {
   }
   if (t === 'arrow') {
     const w = el.dataset.arrowWidth || '2.5';
-    el.querySelector('line')?.setAttribute('stroke-width', w);
+    el.querySelector('.arrow-line')?.setAttribute('stroke-width', w);
   }
   if (t.startsWith('shadow')) {
     const shape = el.querySelector('rect,ellipse');
@@ -511,14 +531,28 @@ export function showArrowHandles(el) {
   handleGroup.setAttribute('id', 'element-handles');
   handleGroup.dataset.handleType = 'arrow';
 
-  const visLine = el.querySelectorAll('line')[0];
-  const x1 = parseFloat(visLine.getAttribute('x1'));
-  const y1 = parseFloat(visLine.getAttribute('y1'));
-  const x2 = parseFloat(visLine.getAttribute('x2'));
-  const y2 = parseFloat(visLine.getAttribute('y2'));
+  // Read endpoints from dataset
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const dx1 = parseFloat(el.dataset.dx1), dy1 = parseFloat(el.dataset.dy1);
+  const dx2 = parseFloat(el.dataset.dx2), dy2 = parseFloat(el.dataset.dy2);
+  const sc = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+  const k = parseFloat(el.dataset.curve || '0');
+  const tfm = (dx, dy) => ({
+    x: cx + (dx*sc)*Math.cos(rot) - (dy*sc)*Math.sin(rot),
+    y: cy + (dx*sc)*Math.sin(rot) + (dy*sc)*Math.cos(rot)
+  });
+  const p1 = tfm(dx1, dy1), p2 = tfm(dx2, dy2);
+  const cp = arrowControlPoint(p1, p2, k);
 
-  handleGroup.appendChild(createHandle(ns, x1, y1, 'start'));
-  handleGroup.appendChild(createHandle(ns, x2, y2, 'end'));
+  handleGroup.appendChild(createHandle(ns, p1.x, p1.y, 'start'));
+  handleGroup.appendChild(createHandle(ns, p2.x, p2.y, 'end'));
+
+  // Curve handle (different color to distinguish)
+  const curveH = createHandle(ns, cp.x, cp.y, 'curve');
+  curveH.querySelector('circle:not([fill="transparent"])').setAttribute('fill', '#C9A962');
+  handleGroup.appendChild(curveH);
+
   S.svg.appendChild(handleGroup);
 }
 
@@ -721,14 +755,24 @@ function updateHandlePositions(el) {
   const type = handleGroup.dataset.handleType;
 
   if (type === 'arrow') {
-    const visLine = el.querySelector('line');
-    const x1 = visLine.getAttribute('x1'), y1 = visLine.getAttribute('y1');
-    const x2 = visLine.getAttribute('x2'), y2 = visLine.getAttribute('y2');
-    // Each handle is a <g> containing circle(s) — update all circles within
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const dx1 = parseFloat(el.dataset.dx1), dy1 = parseFloat(el.dataset.dy1);
+    const dx2 = parseFloat(el.dataset.dx2), dy2 = parseFloat(el.dataset.dy2);
+    const sc = parseFloat(el.dataset.scale || '1');
+    const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+    const k = parseFloat(el.dataset.curve || '0');
+    const tfm = (dx, dy) => ({
+      x: cx + (dx*sc)*Math.cos(rot) - (dy*sc)*Math.sin(rot),
+      y: cy + (dx*sc)*Math.sin(rot) + (dy*sc)*Math.cos(rot)
+    });
+    const p1 = tfm(dx1, dy1), p2 = tfm(dx2, dy2);
+    const cp = arrowControlPoint(p1, p2, k);
     const hStart = handleGroup.children[0];
     const hEnd = handleGroup.children[1];
-    if (hStart) hStart.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', x1); c.setAttribute('cy', y1); });
-    if (hEnd) hEnd.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', x2); c.setAttribute('cy', y2); });
+    const hCurve = handleGroup.children[2];
+    if (hStart) hStart.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', p1.x); c.setAttribute('cy', p1.y); });
+    if (hEnd) hEnd.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', p2.x); c.setAttribute('cy', p2.y); });
+    if (hCurve) hCurve.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', cp.x); c.setAttribute('cy', cp.y); });
   } else if (type === 'zone') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const hw = parseFloat(el.dataset.hw || '30');
@@ -836,6 +880,28 @@ function onArrowEndpointDrag(el, pt) {
   const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
   const dx1 = parseFloat(el.dataset.dx1), dy1 = parseFloat(el.dataset.dy1);
   const dx2 = parseFloat(el.dataset.dx2), dy2 = parseFloat(el.dataset.dy2);
+
+  if (S.endpointDragging === 'curve') {
+    // Drag curve handle — project mouse onto perpendicular to compute curvature
+    let ax1 = cx + dx1, ay1 = cy + dy1;
+    let ax2 = cx + dx2, ay2 = cy + dy2;
+    const midX = (ax1 + ax2) / 2, midY = (ay1 + ay2) / 2;
+    let perpX = -(ay2 - ay1), perpY = ax2 - ax1;
+    const len = Math.sqrt(perpX * perpX + perpY * perpY);
+    if (len > 1) {
+      perpX /= len; perpY /= len;
+      const k = (pt.x - midX) * perpX + (pt.y - midY) * perpY;
+      el.dataset.curve = String(k);
+      // Sync curvature slider if visible
+      const slider = document.getElementById('arrow-curve-slider');
+      if (slider) slider.value = Math.max(-150, Math.min(150, k));
+      const valSpan = document.getElementById('arrow-curve-val');
+      if (valSpan) valSpan.textContent = Math.round(k);
+    }
+    updateArrowVisual(el);
+    updateHandlePositions(el);
+    return;
+  }
 
   let ax1 = cx + dx1, ay1 = cy + dy1;
   let ax2 = cx + dx2, ay2 = cy + dy2;

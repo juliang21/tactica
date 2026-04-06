@@ -260,26 +260,52 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
         y: cy+(dx*sc)*Math.sin(rot)+(dy*sc)*Math.cos(rot)
       });
       const p1=tfm(dx1,dy1), p2=tfm(dx2,dy2);
+      const k = parseFloat(g.dataset.curve || '0');
       const ddx=p2.x-p1.x, ddy=p2.y-p1.y, len=Math.sqrt(ddx*ddx+ddy*ddy);
       if (len < 2) return;
       const aType = g.dataset.arrowType || 'run';
-      const line = g.querySelector('line');
+      const line = g.querySelector('.arrow-line');
       const col = line?.getAttribute('stroke') || S.ARROW_STYLES[aType]?.color || '#f9a84f';
       const lineDash = line?.getAttribute('stroke-dasharray') || '';
       const lineW = parseFloat(g.dataset.arrowWidth || '2.5');
       const hasMarker = aType !== 'line' && line?.getAttribute('marker-end') !== '';
-      const ux=ddx/len, uy=ddy/len, aSize=11;
+
+      // Compute control point for curve
+      const midX = (p1.x+p2.x)/2, midY = (p1.y+p2.y)/2;
+      let perpX = -(p2.y-p1.y), perpY = p2.x-p1.x;
+      const pLen = Math.sqrt(perpX*perpX+perpY*perpY);
+      if (pLen > 1) { perpX /= pLen; perpY /= pLen; }
+      const cpX = midX + k*perpX, cpY = midY + k*perpY;
+
+      // Tangent at endpoint for arrowhead angle
+      // For quadratic bezier Q(t) = (1-t)²P1 + 2(1-t)t CP + t²P2
+      // Tangent at t=1: 2*(P2 - CP)
+      const tanX = p2.x - cpX, tanY = p2.y - cpY;
+      const tanLen = Math.sqrt(tanX*tanX+tanY*tanY);
+      const ux = tanLen > 0 ? tanX/tanLen : ddx/len;
+      const uy = tanLen > 0 ? tanY/tanLen : ddy/len;
+      const aSize=11;
+
       ctx.save();
       ctx.strokeStyle=col; ctx.lineWidth=lineW; ctx.lineCap='round';
       if (lineDash) { ctx.setLineDash(lineDash.split(',').map(Number)); }
-      if (hasMarker) {
-        ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x-ux*aSize*0.8,p2.y-uy*aSize*0.8); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(p1.x,p1.y);
+      if (Math.abs(k) < 1) {
+        // Straight line
+        if (hasMarker) { ctx.lineTo(p2.x-ux*aSize*0.8,p2.y-uy*aSize*0.8); }
+        else { ctx.lineTo(p2.x,p2.y); }
       } else {
-        ctx.beginPath(); ctx.moveTo(p1.x,p1.y); ctx.lineTo(p2.x,p2.y); ctx.stroke();
+        // Curved
+        if (hasMarker) {
+          ctx.quadraticCurveTo(cpX,cpY, p2.x-ux*aSize*0.8,p2.y-uy*aSize*0.8);
+        } else {
+          ctx.quadraticCurveTo(cpX,cpY, p2.x,p2.y);
+        }
       }
+      ctx.stroke();
       ctx.setLineDash([]);
       if (hasMarker) {
-        ctx.translate(p2.x,p2.y); ctx.rotate(Math.atan2(ddy,ddx));
+        ctx.translate(p2.x,p2.y); ctx.rotate(Math.atan2(tanY,tanX));
         ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(-aSize,-aSize*0.45); ctx.lineTo(-aSize,aSize*0.45);
         ctx.closePath(); ctx.fillStyle=col; ctx.fill();
       }

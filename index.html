@@ -794,6 +794,13 @@
           <span id="arrow-width-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">2.5</span>
         </div>
       </div>
+      <div class="field-group">
+        <div class="field-label">Curvature</div>
+        <div class="field-row">
+          <input type="range" id="arrow-curve-slider" min="-150" max="150" value="0" step="1" oninput="applyArrowCurve(this.value)" style="flex:1">
+          <span id="arrow-curve-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">0</span>
+        </div>
+      </div>
     </div>
 
     <!-- Text box properties -->
@@ -1188,6 +1195,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=3"></script>
+<script type="module" src="js/app.js?v=4"></script>
 </body>
 </html>

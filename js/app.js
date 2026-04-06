@@ -7,7 +7,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyPlayerFill, applyPlayerBorder,
          liveUpdateRefName, confirmRefName, applyRefFill, applyRefBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
-         applyArrowColor, applyArrowStyle, applyArrowWidth,
+         applyArrowColor, applyArrowStyle, applyArrowWidth, applyArrowCurve,
          applySpotlightColor, setSpotlightColor, applyVisionColor,
          liveUpdateSpotName, confirmSpotName, applySpotNameSize, applySpotNameColor, applySpotNameBg,
          applyZoneFill, applyZoneBorder, applyZoneBorderStyle,
@@ -181,6 +181,7 @@ window.confirmColorPicker = confirmColorPicker;
 window.applyArrowColor = applyArrowColor;
 window.applyArrowStyle = applyArrowStyle;
 window.applyArrowWidth = applyArrowWidth;
+window.applyArrowCurve = applyArrowCurve;
 window.applySpotlightColor = applySpotlightColor;
 window.applyVisionColor = applyVisionColor;
 window.liveUpdateSpotName = liveUpdateSpotName;
@@ -1125,7 +1126,7 @@ function copySelected() {
   } else if (t === 'cone') {
     data.scale = el.dataset.scale || '1';
   } else if (t === 'arrow') {
-    const line = el.querySelector('line');
+    const line = el.querySelector('.arrow-line');
     data.arrowType = el.dataset.arrowType;
     data.color = line?.getAttribute('stroke');
     data.dash = line?.getAttribute('stroke-dasharray') || '';
@@ -1133,6 +1134,7 @@ function copySelected() {
     data.marker = line?.getAttribute('marker-end') || '';
     data.dx1 = el.dataset.dx1; data.dy1 = el.dataset.dy1;
     data.dx2 = el.dataset.dx2; data.dy2 = el.dataset.dy2;
+    data.curve = el.dataset.curve || '0';
   } else if (t === 'textbox') {
     data.textContent = el.dataset.textContent || 'Text';
     data.textSize = el.dataset.textSize || '14';
@@ -1203,7 +1205,7 @@ function pasteClipboard() {
     const dy = parseFloat(d.dy2) - parseFloat(d.dy1);
     placed = addArrow(x - dx/2, y - dy/2, x + dx/2, y + dy/2, d.arrowType);
     if (placed) {
-      const line = placed.querySelector('line');
+      const line = placed.querySelector('.arrow-line');
       if (line && d.color) {
         line.setAttribute('stroke', d.color);
         if (d.dash) line.setAttribute('stroke-dasharray', d.dash);
@@ -1212,6 +1214,10 @@ function pasteClipboard() {
         line.setAttribute('stroke-width', d.width);
       }
       placed.dataset.arrowWidth = d.width;
+      if (d.curve && d.curve !== '0') {
+        placed.dataset.curve = d.curve;
+        updateArrowVisual(placed);
+      }
     }
   } else if (d.type === 'textbox') {
     placed = addTextBox(x, y, d.textContent);

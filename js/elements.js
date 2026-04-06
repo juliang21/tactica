@@ -190,16 +190,21 @@ export function addArrow(x1, y1, x2, y2, type) {
   g.dataset.dx2 = x2-cx; g.dataset.dy2 = y2-cy;
   g.dataset.scale = '1'; g.dataset.rotation = '0';
 
+  g.dataset.curve = '0';
+
   const st = S.ARROW_STYLES[type];
-  const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  line.classList.add('arrow-line');
   line.setAttribute('stroke', st.color); line.setAttribute('stroke-width','2.5');
-  line.setAttribute('stroke-linecap','round');
+  line.setAttribute('stroke-linecap','round'); line.setAttribute('fill', 'none');
   if (st.dash) line.setAttribute('stroke-dasharray', st.dash);
   if (st.marker !== 'none') line.setAttribute('marker-end', st.marker);
   line.setAttribute('opacity','0.95');
 
-  const hit = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+  const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  hit.classList.add('arrow-hit');
   hit.setAttribute('stroke','transparent'); hit.setAttribute('stroke-width','14');
+  hit.setAttribute('fill', 'none');
 
   g.appendChild(line); g.appendChild(hit);
   updateArrowVisual(g);

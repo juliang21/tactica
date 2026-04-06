@@ -1,5 +1,5 @@
 import * as S from './state.js';
-import { deselect, select, switchTab, applyTransform, updateArrowVisual, updateSpotlightNameBg } from './interaction.js';
+import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg } from './interaction.js';
 import { addPlayer, rewrapTextBox } from './elements.js';
 import { trackElementEdited } from './analytics.js';
 
@@ -317,7 +317,7 @@ export function openColorPicker(target) {
   if (target === 'kit-custom') {
     current = S.teamColors[S.teamContext] || '#ffffff';
   } else if (target === 'arrow') {
-    const line = S.selectedEl?.querySelector('line');
+    const line = S.selectedEl?.querySelector('.arrow-line');
     if (line) current = line.getAttribute('stroke') || '#ffffff';
   } else {
     const circ = S.selectedEl?.querySelector('circle:not(.hit-area)');
@@ -448,7 +448,7 @@ function getOrCreateMarker(color) {
 
 function applyArrowColorValue(color) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
-  const line = S.selectedEl.querySelector('line');
+  const line = S.selectedEl.querySelector('.arrow-line');
   if (line) {
     line.setAttribute('stroke', color);
     // Update marker if arrow has a head
@@ -469,7 +469,7 @@ export function applyArrowStyle(style) {
   document.querySelectorAll('.style-btn').forEach(b => b.classList.toggle('active', b.dataset.style === style));
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
   trackElementEdited('arrow', 'style');
-  const line = S.selectedEl.querySelector('line');
+  const line = S.selectedEl.querySelector('.arrow-line');
   if (!line) return;
   const map = { solid: '', dashed: '6,4', dotted: '2,5' };
   const dash = map[style] || '';
@@ -483,7 +483,16 @@ export function applyArrowWidth(val) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
   trackElementEdited('arrow', 'width');
   S.selectedEl.dataset.arrowWidth = val;
-  S.selectedEl.querySelector('line')?.setAttribute('stroke-width', val);
+  S.selectedEl.querySelector('.arrow-line')?.setAttribute('stroke-width', val);
+}
+
+export function applyArrowCurve(val) {
+  document.getElementById('arrow-curve-val').textContent = Math.round(val);
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
+  trackElementEdited('arrow', 'curve');
+  S.selectedEl.dataset.curve = val;
+  updateArrowVisual(S.selectedEl);
+  showArrowHandles(S.selectedEl);
 }
 
 // ─── Text Box Editing ────────────────────────────────────────────────────────
