@@ -1,6 +1,6 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerDragEnd, makeDraggable } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual } from './elements.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerDragEnd, makeDraggable } from './interaction.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -12,6 +12,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateSpotName, confirmSpotName, applySpotNameSize, applySpotNameColor, applySpotNameBg,
          applyZoneFill, applyZoneBorder, applyZoneBorderStyle,
          liveUpdateTextBox, confirmTextBox, applyTextBoxSize, applyTextBoxColor, applyTextBoxBg, applyTextBoxAlign,
+         liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          applySize, applyRotation, clearAll } from './ui.js';
 import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js';
@@ -23,6 +24,7 @@ import { logSession } from './firestore.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
+registerHeadlineRewrap(rewrapHeadline);
 registerVisionUpdate(updateVisionPolygon);
 registerFreeformUpdate(updateFreeformPath);
 registerMotionUpdate(updateMotionVisual);
@@ -198,6 +200,12 @@ window.applyTextBoxSize = applyTextBoxSize;
 window.applyTextBoxColor = applyTextBoxColor;
 window.applyTextBoxBg = applyTextBoxBg;
 window.applyTextBoxAlign = applyTextBoxAlign;
+window.liveUpdateHeadline = liveUpdateHeadline;
+window.applyHeadlineBarColor = applyHeadlineBarColor;
+window.applyHeadlineTitleSize = applyHeadlineTitleSize;
+window.applyHeadlineBodySize = applyHeadlineBodySize;
+window.applyHeadlineTextColor = applyHeadlineTextColor;
+window.applyHeadlineBg = applyHeadlineBg;
 window.triggerImageUpload = triggerImageUpload;
 window.handleImageUpload = handleImageUpload;
 window.enterImageMode = enterImageMode;
@@ -310,6 +318,7 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'spotlight') placed = addSpotlight(pt.x, pt.y);
   else if (S.tool === 'vision') placed = addVision(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
+  else if (S.tool === 'headline') placed = addHeadline(pt.x, pt.y);
   if (placed) {
     trackElementInserted(placed.dataset.type);
     // Players stay in placement mode so you can keep adding
@@ -1143,6 +1152,16 @@ function copySelected() {
     data.textAlign = el.dataset.textAlign || 'center';
     data.hw = el.dataset.hw || '60'; data.hh = el.dataset.hh || '20';
     data.rotation = el.dataset.rotation || '0';
+  } else if (t === 'headline') {
+    data.hlTitle = el.dataset.hlTitle || '';
+    data.hlBody = el.dataset.hlBody || '';
+    data.hlBarColor = el.dataset.hlBarColor || '#4FC3F7';
+    data.hlTitleSize = el.dataset.hlTitleSize || '16';
+    data.hlBodySize = el.dataset.hlBodySize || '12';
+    data.hlTextColor = el.dataset.hlTextColor || 'rgba(255,255,255,0.9)';
+    data.hlBg = el.dataset.hlBg || 'none';
+    data.hw = el.dataset.hw || '130'; data.hh = el.dataset.hh || '40';
+    data.rotation = el.dataset.rotation || '0';
   } else if (t === 'spotlight') {
     data.rx = el.dataset.rx || '28';
     data.ry = el.dataset.ry || '5';
@@ -1231,6 +1250,18 @@ function pasteClipboard() {
       const txt = placed.querySelector('text');
       if (txt) txt.setAttribute('fill', d.textColor);
       rewrapTextBox(placed);
+    }
+  } else if (d.type === 'headline') {
+    placed = addHeadline(x, y, d.hlTitle, d.hlBody);
+    if (placed) {
+      placed.dataset.hlBarColor = d.hlBarColor;
+      placed.dataset.hlTitleSize = d.hlTitleSize;
+      placed.dataset.hlBodySize = d.hlBodySize;
+      placed.dataset.hlTextColor = d.hlTextColor;
+      placed.dataset.hlBg = d.hlBg;
+      placed.dataset.hw = d.hw; placed.dataset.hh = d.hh;
+      placed.dataset.rotation = d.rotation;
+      rewrapHeadline(placed);
     }
   } else if (d.type === 'spotlight') {
     placed = addSpotlight(x, y);

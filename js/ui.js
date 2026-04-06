@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg } from './interaction.js';
-import { addPlayer, rewrapTextBox } from './elements.js';
+import { addPlayer, rewrapTextBox, rewrapHeadline } from './elements.js';
 import { trackElementEdited } from './analytics.js';
 
 // ─── Tool Selection ───────────────────────────────────────────────────────────
@@ -319,6 +319,12 @@ export function openColorPicker(target) {
   } else if (target === 'arrow') {
     const line = S.selectedEl?.querySelector('.arrow-line');
     if (line) current = line.getAttribute('stroke') || '#ffffff';
+  } else if (target === 'headline-bar') {
+    current = S.selectedEl?.dataset.hlBarColor || '#4FC3F7';
+  } else if (target === 'headline-text') {
+    current = S.selectedEl?.dataset.hlTextColor || '#ffffff';
+  } else if (target === 'headline-bg') {
+    current = S.selectedEl?.dataset.hlBg || '#ffffff';
   } else {
     const circ = S.selectedEl?.querySelector('circle:not(.hit-area)');
     if (circ && target === 'fill') current = circ.getAttribute('fill') || '#ffffff';
@@ -411,6 +417,12 @@ export function confirmColorPicker() {
     const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
     if (circ) { circ.setAttribute('stroke', hex); circ.setAttribute('stroke-width', '2.5'); }
     S.selectedEl.dataset.borderColor = hex;
+  } else if (colorPickerTarget === 'headline-bar') {
+    applyHeadlineBarColorValue(hex);
+  } else if (colorPickerTarget === 'headline-text') {
+    applyHeadlineTextColorValue(hex);
+  } else if (colorPickerTarget === 'headline-bg') {
+    applyHeadlineBgValue(hex);
   } else if (S.selectedEl.dataset.type === 'player') {
     if (colorPickerTarget === 'fill') {
       setPlayerColor(S.selectedEl, hex);
@@ -541,6 +553,69 @@ export function applyTextBoxAlign(align) {
   trackElementEdited('textbox', 'alignment');
   S.selectedEl.dataset.textAlign = align;
   rewrapTextBox(S.selectedEl);
+}
+
+// ─── Headline Properties ────────────────────────────────────────────────────
+export function liveUpdateHeadline() {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  S.selectedEl.dataset.hlTitle = document.getElementById('headline-title-input').value;
+  S.selectedEl.dataset.hlBody = document.getElementById('headline-body-input').value;
+  rewrapHeadline(S.selectedEl);
+}
+
+export function applyHeadlineBarColor(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  trackElementEdited('headline', 'barColor');
+  S.selectedEl.dataset.hlBarColor = swatchEl.dataset.color;
+  rewrapHeadline(S.selectedEl);
+}
+
+export function applyHeadlineBarColorValue(color) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  S.selectedEl.dataset.hlBarColor = color;
+  rewrapHeadline(S.selectedEl);
+}
+
+export function applyHeadlineTitleSize(val) {
+  document.getElementById('headline-title-size-val').textContent = val + 'px';
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  trackElementEdited('headline', 'titleSize');
+  S.selectedEl.dataset.hlTitleSize = val;
+  rewrapHeadline(S.selectedEl);
+}
+
+export function applyHeadlineBodySize(val) {
+  document.getElementById('headline-body-size-val').textContent = val + 'px';
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  trackElementEdited('headline', 'bodySize');
+  S.selectedEl.dataset.hlBodySize = val;
+  rewrapHeadline(S.selectedEl);
+}
+
+export function applyHeadlineTextColor(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  trackElementEdited('headline', 'textColor');
+  S.selectedEl.dataset.hlTextColor = swatchEl.dataset.color;
+  rewrapHeadline(S.selectedEl);
+}
+
+export function applyHeadlineTextColorValue(color) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  S.selectedEl.dataset.hlTextColor = color;
+  rewrapHeadline(S.selectedEl);
+}
+
+export function applyHeadlineBg(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  trackElementEdited('headline', 'background');
+  S.selectedEl.dataset.hlBg = swatchEl.dataset.color;
+  rewrapHeadline(S.selectedEl);
+}
+
+export function applyHeadlineBgValue(color) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'headline') return;
+  S.selectedEl.dataset.hlBg = color;
+  rewrapHeadline(S.selectedEl);
 }
 
 // ─── Spotlight Properties ────────────────────────────────────────────────────

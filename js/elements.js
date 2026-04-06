@@ -428,6 +428,192 @@ export function rewrapTextBox(g) {
 // Legacy alias
 export function updateTextBoxBg(g) { rewrapTextBox(g); }
 
+// ─── Add Headline ────────────────────────────────────────────────────────────
+export function addHeadline(x, y, title, body) {
+  title = title || 'Your headline here';
+  body = body || 'Add a short description or key idea.';
+  const id = 'hl-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'headline';
+  g.dataset.cx = x; g.dataset.cy = y;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.hw = '130'; g.dataset.hh = '40';
+  g.dataset.hlTitle = title;
+  g.dataset.hlBody = body;
+  g.dataset.hlBarColor = '#4FC3F7';
+  g.dataset.hlTitleSize = '16';
+  g.dataset.hlBodySize = '12';
+  g.dataset.hlTextColor = 'rgba(255,255,255,0.9)';
+  g.dataset.hlBg = 'none';
+
+  // Background rect
+  const bg = document.createElementNS(ns, 'rect');
+  bg.setAttribute('rx', '4'); bg.setAttribute('ry', '4');
+  bg.setAttribute('fill', 'transparent');
+  bg.classList.add('headline-bg');
+
+  // Vertical accent bar
+  const bar = document.createElementNS(ns, 'rect');
+  bar.setAttribute('rx', '2'); bar.setAttribute('ry', '2');
+  bar.setAttribute('fill', '#4FC3F7');
+  bar.classList.add('headline-bar');
+
+  // Title text
+  const titleEl = document.createElementNS(ns, 'text');
+  titleEl.classList.add('headline-title');
+  titleEl.setAttribute('font-family', 'Poppins, sans-serif');
+  titleEl.setAttribute('font-size', '16');
+  titleEl.setAttribute('font-weight', '700');
+  titleEl.setAttribute('fill', 'rgba(255,255,255,0.9)');
+  titleEl.setAttribute('pointer-events', 'none');
+
+  // Body text
+  const bodyEl = document.createElementNS(ns, 'text');
+  bodyEl.classList.add('headline-body');
+  bodyEl.setAttribute('font-family', 'Poppins, sans-serif');
+  bodyEl.setAttribute('font-size', '12');
+  bodyEl.setAttribute('font-weight', '400');
+  bodyEl.setAttribute('fill', 'rgba(255,255,255,0.7)');
+  bodyEl.setAttribute('pointer-events', 'none');
+
+  g.appendChild(bg); g.appendChild(bar); g.appendChild(titleEl); g.appendChild(bodyEl);
+  S.playersLayer.appendChild(g);
+  rewrapHeadline(g);
+
+  makeDraggable(g);
+  g.addEventListener('click', e => {
+    if (S.tool !== 'select') return;
+    e.stopPropagation();
+    select(g);
+  });
+  return g;
+}
+
+export function rewrapHeadline(g) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const bg = g.querySelector('.headline-bg');
+  const bar = g.querySelector('.headline-bar');
+  const titleEl = g.querySelector('.headline-title');
+  const bodyEl = g.querySelector('.headline-body');
+  if (!titleEl || !bodyEl) return;
+
+  const cx = parseFloat(g.dataset.cx);
+  const cy = parseFloat(g.dataset.cy);
+  const hw = parseFloat(g.dataset.hw || '130');
+  const hh = parseFloat(g.dataset.hh || '40');
+  const rot = parseFloat(g.dataset.rotation || '0');
+  const titleSize = parseFloat(g.dataset.hlTitleSize || '16');
+  const bodySize = parseFloat(g.dataset.hlBodySize || '12');
+  const barColor = g.dataset.hlBarColor || '#4FC3F7';
+  const textColor = g.dataset.hlTextColor || 'rgba(255,255,255,0.9)';
+  const bgColor = g.dataset.hlBg || 'none';
+  const title = g.dataset.hlTitle || '';
+  const body = g.dataset.hlBody || '';
+
+  const barW = 4;
+  const padL = 14; // left padding after bar
+  const padR = 10;
+  const padY = 10;
+  const textAreaW = hw * 2 - barW - padL - padR;
+
+  // Update bar
+  if (bar) {
+    bar.setAttribute('x', cx - hw + 4);
+    bar.setAttribute('y', cy - hh + padY);
+    bar.setAttribute('width', barW);
+    bar.setAttribute('height', hh * 2 - padY * 2);
+    bar.setAttribute('fill', barColor);
+    if (rot) bar.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+    else bar.removeAttribute('transform');
+  }
+
+  // Update bg
+  if (bg) {
+    bg.setAttribute('x', cx - hw); bg.setAttribute('y', cy - hh);
+    bg.setAttribute('width', hw * 2); bg.setAttribute('height', hh * 2);
+    bg.setAttribute('fill', bgColor === 'none' ? 'transparent' : bgColor);
+    if (rot) bg.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+    else bg.removeAttribute('transform');
+  }
+
+  const textStartX = cx - hw + barW + padL;
+
+  // Measure helper
+  function wrapText(content, fontSize, maxW) {
+    const measure = document.createElementNS(ns, 'text');
+    measure.setAttribute('font-family', 'Poppins, sans-serif');
+    measure.setAttribute('font-size', fontSize);
+    measure.setAttribute('font-weight', fontSize === titleSize ? '700' : '400');
+    measure.style.visibility = 'hidden';
+    S.svg.appendChild(measure);
+    const paragraphs = content.split('\n');
+    const lines = [];
+    for (const para of paragraphs) {
+      if (para.trim() === '') { lines.push(''); continue; }
+      const words = para.split(/\s+/);
+      let cur = '';
+      for (const w of words) {
+        const test = cur ? cur + ' ' + w : w;
+        measure.textContent = test;
+        if (measure.getComputedTextLength() > maxW && cur) { lines.push(cur); cur = w; }
+        else cur = test;
+      }
+      if (cur) lines.push(cur);
+    }
+    measure.remove();
+    return lines.length ? lines : [''];
+  }
+
+  // Wrap title
+  const titleLines = wrapText(title, titleSize, textAreaW);
+  const titleLineH = titleSize * 1.3;
+
+  // Wrap body
+  const bodyLines = wrapText(body, bodySize, textAreaW);
+  const bodyLineH = bodySize * 1.4;
+
+  // Layout: start from top with padding
+  const totalTitleH = titleLines.length * titleLineH;
+  const gapBetween = 6;
+  const totalBodyH = bodyLines.length * bodyLineH;
+  const totalContentH = totalTitleH + gapBetween + totalBodyH;
+  const startY = cy - totalContentH / 2;
+
+  // Render title tspans
+  titleEl.innerHTML = '';
+  titleEl.setAttribute('font-size', titleSize);
+  titleEl.setAttribute('fill', textColor);
+  titleEl.setAttribute('text-anchor', 'start');
+  titleLines.forEach((line, i) => {
+    const tspan = document.createElementNS(ns, 'tspan');
+    tspan.setAttribute('x', textStartX);
+    tspan.setAttribute('y', startY + i * titleLineH + titleSize * 0.85);
+    tspan.textContent = line || '\u00A0';
+    titleEl.appendChild(tspan);
+  });
+  if (rot) titleEl.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+  else titleEl.removeAttribute('transform');
+
+  // Render body tspans
+  bodyEl.innerHTML = '';
+  bodyEl.setAttribute('font-size', bodySize);
+  bodyEl.setAttribute('fill', textColor);
+  bodyEl.setAttribute('text-anchor', 'start');
+  bodyEl.setAttribute('opacity', '0.7');
+  const bodyStartY = startY + totalTitleH + gapBetween;
+  bodyLines.forEach((line, i) => {
+    const tspan = document.createElementNS(ns, 'tspan');
+    tspan.setAttribute('x', textStartX);
+    tspan.setAttribute('y', bodyStartY + i * bodyLineH + bodySize * 0.85);
+    tspan.textContent = line || '\u00A0';
+    bodyEl.appendChild(tspan);
+  });
+  if (rot) bodyEl.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+  else bodyEl.removeAttribute('transform');
+}
+
 // ─── Add Shadow/Zone ──────────────────────────────────────────────────────────
 export function addShadow(x, y, type) {
   const id = 'shadow-' + S.nextObjectId();

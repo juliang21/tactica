@@ -9,6 +9,10 @@ export function registerRewrap(fn) { _rewrapFn = fn; }
 let _updateVisionFn = null;
 export function registerVisionUpdate(fn) { _updateVisionFn = fn; }
 
+// ─── Headline rewrap callback ──────────────────────────────────────────────
+let _rewrapHeadlineFn = null;
+export function registerHeadlineRewrap(fn) { _rewrapHeadlineFn = fn; }
+
 // ─── Freeform path update callback ─────────────────────────────────────────
 let _updateFreeformFn = null;
 export function registerFreeformUpdate(fn) { _updateFreeformFn = fn; }
@@ -72,6 +76,8 @@ export function applyTransform(el) {
   } else if (t === 'textbox') {
     // Textbox uses zone-style absolute positioning
     if (_rewrapFn) _rewrapFn(el);
+  } else if (t === 'headline') {
+    if (_rewrapHeadlineFn) _rewrapHeadlineFn(el);
   } else if (t === 'shadow-circle') {
     const sh = el.querySelector('ellipse');
     const hw = parseFloat(el.dataset.hw || '30') * scale;
@@ -166,6 +172,7 @@ function moveElement(el, nx, ny) {
   const t = el.dataset.type;
   if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'vision') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
+  else if (t === 'headline') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
   else if (t === 'motion') applyTransform(el);
   else if (t === 'spotlight') applyTransform(el);
@@ -187,6 +194,11 @@ export function select(el) {
   }
   if (type === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
+    if (bg) { bg.setAttribute('stroke', 'rgba(79,156,249,0.8)'); bg.setAttribute('stroke-width', '1.5'); }
+    showZoneHandles(el);
+  }
+  if (type === 'headline') {
+    const bg = el.querySelector('.headline-bg');
     if (bg) { bg.setAttribute('stroke', 'rgba(79,156,249,0.8)'); bg.setAttribute('stroke-width', '1.5'); }
     showZoneHandles(el);
   }
@@ -250,6 +262,7 @@ export function select(el) {
     : type === 'vision' ? 'Player\'s Vision'
     : type === 'freeform' ? 'Freeform Zone'
     : type === 'motion' ? 'Motion Path'
+    : type === 'headline' ? 'Headline'
     : 'Zone';
   const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
@@ -269,6 +282,7 @@ export function select(el) {
   const arrowSec = document.getElementById('arrow-edit-section');
   const zoneSec = document.getElementById('zone-edit-section');
   const textboxSec = document.getElementById('textbox-edit-section');
+  const headlineSec = document.getElementById('headline-edit-section');
   const spotlightSec = document.getElementById('spotlight-edit-section');
   const visionSec = document.getElementById('vision-edit-section');
   const delSec = document.getElementById('del-section');
@@ -281,6 +295,7 @@ export function select(el) {
   arrowSec.style.display = 'none';
   zoneSec.style.display = 'none';
   textboxSec.style.display = 'none';
+  if (headlineSec) headlineSec.style.display = 'none';
   spotlightSec.style.display = 'none';
   visionSec.style.display = 'none';
   delSec.style.display = '';
@@ -289,7 +304,8 @@ export function select(el) {
   const isArrow = type === 'arrow';
   const isZone = type?.startsWith('shadow');
   const isText = type === 'textbox';
-  const showSize = !isArrow && !isZone && !isText;
+  const isHeadline = type === 'headline';
+  const showSize = !isArrow && !isZone && !isText && !isHeadline;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
   document.getElementById('rotation-section').style.display = (type === 'vision') ? '' : 'none';
 
@@ -326,6 +342,18 @@ export function select(el) {
     document.getElementById('textbox-size-val').textContent = tSize + 'px';
     const tAlign = el.dataset.textAlign || 'center';
     document.querySelectorAll('[data-align]').forEach(b => b.classList.toggle('active', b.dataset.align === tAlign));
+  } else if (type === 'headline') {
+    if (headlineSec) {
+      headlineSec.style.display = '';
+      document.getElementById('headline-title-input').value = el.dataset.hlTitle || '';
+      document.getElementById('headline-body-input').value = el.dataset.hlBody || '';
+      const tSize = el.dataset.hlTitleSize || '16';
+      document.getElementById('headline-title-size-slider').value = tSize;
+      document.getElementById('headline-title-size-val').textContent = tSize + 'px';
+      const bSize = el.dataset.hlBodySize || '12';
+      document.getElementById('headline-body-size-slider').value = bSize;
+      document.getElementById('headline-body-size-val').textContent = bSize + 'px';
+    }
   } else if (type === 'spotlight') {
     spotlightSec.style.display = '';
     document.getElementById('spot-name-input').value = el.dataset.spotName || '';
@@ -396,6 +424,10 @@ export function deselectVisual(el) {
   if (t === 'ball' || t === 'cone') el.querySelector('circle:not(.hit-area),polygon')?.setAttribute('stroke-width', '1.5');
   if (t === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
+    if (bg) { bg.removeAttribute('stroke'); bg.removeAttribute('stroke-width'); }
+  }
+  if (t === 'headline') {
+    const bg = el.querySelector('.headline-bg');
     if (bg) { bg.removeAttribute('stroke'); bg.removeAttribute('stroke-width'); }
   }
   if (t === 'arrow') {
@@ -871,7 +903,7 @@ function onEndpointDrag(e) {
     onFreeformHandleDrag(el, pt);
   } else if (t === 'motion') {
     onMotionEndpointDrag(el, pt);
-  } else if (t.startsWith('shadow') || t === 'textbox') {
+  } else if (t.startsWith('shadow') || t === 'textbox' || t === 'headline') {
     onZoneHandleDrag(el, pt);
   }
 }

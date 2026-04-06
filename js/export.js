@@ -2,6 +2,24 @@ import * as S from './state.js';
 import { deselectVisual, select } from './interaction.js';
 import { trackExportClicked, trackExportCompleted } from './analytics.js';
 
+// Helper: word-wrap text for canvas rendering
+function wrapCanvasText(ctx, content, maxW) {
+  const paragraphs = content.split('\n');
+  const lines = [];
+  for (const para of paragraphs) {
+    if (para.trim() === '') { lines.push(''); continue; }
+    const words = para.split(/\s+/);
+    let cur = '';
+    for (const w of words) {
+      const test = cur ? cur + ' ' + w : w;
+      if (ctx.measureText(test).width > maxW && cur) { lines.push(cur); cur = w; }
+      else cur = test;
+    }
+    if (cur) lines.push(cur);
+  }
+  return lines.length ? lines : [''];
+}
+
 export function exportImage() {
   trackExportClicked();
   document.getElementById('export-modal').style.display = 'flex';
@@ -378,10 +396,88 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
     ctx.restore();
   });
 
+  // Headlines
+  document.querySelectorAll('#players-layer > g[data-type="headline"]').forEach(g => {
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    const hw = parseFloat(g.dataset.hw || '130');
+    const hh = parseFloat(g.dataset.hh || '40');
+    const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+    const titleSize = parseFloat(g.dataset.hlTitleSize || '16');
+    const bodySize = parseFloat(g.dataset.hlBodySize || '12');
+    const textColor = g.dataset.hlTextColor || 'rgba(255,255,255,0.9)';
+    const bgColor = g.dataset.hlBg || 'none';
+    const barColor = g.dataset.hlBarColor || '#4FC3F7';
+    const title = g.dataset.hlTitle || '';
+    const body = g.dataset.hlBody || '';
+
+    ctx.save();
+    ctx.translate(cx, cy);
+    if (rot) ctx.rotate(rot);
+
+    // Draw background
+    if (bgColor && bgColor !== 'none') {
+      ctx.fillStyle = bgColor;
+      const br = 4, bx = -hw, by = -hh, bw = hw*2, bh = hh*2;
+      ctx.beginPath();
+      ctx.moveTo(bx+br,by); ctx.lineTo(bx+bw-br,by); ctx.arcTo(bx+bw,by,bx+bw,by+br,br);
+      ctx.lineTo(bx+bw,by+bh-br); ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br);
+      ctx.lineTo(bx+br,by+bh); ctx.arcTo(bx,by+bh,bx,by+bh-br,br);
+      ctx.lineTo(bx,by+br); ctx.arcTo(bx,by,bx+br,by,br); ctx.closePath();
+      ctx.fill();
+    }
+
+    // Draw vertical bar
+    const barW = 4, padY = 10;
+    ctx.fillStyle = barColor;
+    ctx.beginPath();
+    ctx.roundRect(-hw + 4, -hh + padY, barW, hh*2 - padY*2, 2);
+    ctx.fill();
+
+    // Text layout
+    const padL = 14, padR = 10;
+    const textAreaW = hw*2 - barW - padL - padR;
+    const textStartX = -hw + barW + padL;
+
+    // Wrap title
+    ctx.font = `700 ${titleSize}px Poppins, sans-serif`;
+    const titleLines = wrapCanvasText(ctx, title, textAreaW);
+    const titleLineH = titleSize * 1.3;
+
+    // Wrap body
+    ctx.font = `400 ${bodySize}px Poppins, sans-serif`;
+    const bodyLines = wrapCanvasText(ctx, body, textAreaW);
+    const bodyLineH = bodySize * 1.4;
+
+    const totalTitleH = titleLines.length * titleLineH;
+    const gapBetween = 6;
+    const totalBodyH = bodyLines.length * bodyLineH;
+    const totalContentH = totalTitleH + gapBetween + totalBodyH;
+    const startY = -totalContentH / 2;
+
+    // Draw title
+    ctx.font = `700 ${titleSize}px Poppins, sans-serif`;
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'alphabetic';
+    titleLines.forEach((line, i) => {
+      ctx.fillText(line, textStartX, startY + i * titleLineH + titleSize * 0.85);
+    });
+
+    // Draw body
+    ctx.font = `400 ${bodySize}px Poppins, sans-serif`;
+    ctx.globalAlpha = 0.7;
+    bodyLines.forEach((line, i) => {
+      ctx.fillText(line, textStartX, startY + totalTitleH + gapBetween + i * bodyLineH + bodySize * 0.85);
+    });
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+  });
+
   // Players, ball, cones
   document.querySelectorAll('#players-layer > g').forEach(g => {
     const type = g.dataset.type;
-    if (type === 'textbox') return; // already rendered above
+    if (type === 'textbox' || type === 'headline') return; // already rendered above
     const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
     const sc = parseFloat(g.dataset.scale || '1');
     if (isNaN(cx) || isNaN(cy)) return;
