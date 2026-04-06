@@ -128,7 +128,7 @@
 
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
-import { getAuth, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
+import { getAuth, setPersistence, browserLocalPersistence, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
 import { getFirestore, collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 const firebaseConfig = {
@@ -142,6 +142,7 @@ const firebaseConfig = {
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
+setPersistence(auth, browserLocalPersistence);
 const db = getFirestore(app);
 
 // Admin email whitelist — add your email(s) here
@@ -163,9 +164,11 @@ onAuthStateChanged(auth, (user) => {
     loadDashboard();
   } else if (user) {
     document.getElementById('auth-gate').style.display = 'block';
+    document.getElementById('dashboard').style.display = 'none';
     document.getElementById('auth-gate').querySelector('p').textContent = 'Access denied. ' + user.email + ' is not an admin.';
   } else {
     document.getElementById('auth-gate').style.display = 'block';
+    document.getElementById('dashboard').style.display = 'none';
   }
 });
 
