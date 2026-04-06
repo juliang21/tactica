@@ -1,6 +1,7 @@
 // ─── Analysis Storage (Router: Firestore when signed in, localStorage fallback)
 import * as S from './state.js';
 import { getCurrentUser } from './auth.js';
+import { deselectVisual } from './interaction.js';
 import {
   saveAnalysisToCloud, loadAnalysisFromCloud, listAnalysesFromCloud,
   deleteAnalysisFromCloud, duplicateAnalysisInCloud, migrateLocalToCloud,
@@ -34,14 +35,18 @@ function getUid() {
 
 // ─── Capture current state ──────────────────────────────────────────────────
 export function captureState() {
+  // Deselect before serializing to avoid saving selection artifacts (e.g. inflated stroke-width)
+  if (S.selectedEl) deselectVisual(S.selectedEl);
+  // Normalize url() references to relative form before saving
+  const cleanHTML = html => html.replace(/url\(["']?[^)]*?(#[\w-]+)["']?\)/g, 'url($1)');
   return {
     appMode: S.appMode,
     pitchLayout: S.currentPitchLayout,
     pitchColors: { ...S.pitchColors },
     teamColors: { ...S.teamColors },
     gkColors: { ...S.gkColors },
-    objectsHTML: S.objectsLayer.innerHTML,
-    playersHTML: S.playersLayer.innerHTML,
+    objectsHTML: cleanHTML(S.objectsLayer.innerHTML),
+    playersHTML: cleanHTML(S.playersLayer.innerHTML),
     playerCounts: { ...S.playerCounts },
     objectCounter: S.objectCounter,
     imageData: S.imageData || null,
@@ -81,11 +86,31 @@ export function generateThumbnail() {
 
     S.playersLayer.querySelectorAll('[data-type="player"]').forEach(g => {
       const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
-      const circ = g.querySelector('circle:not(.hit-area)');
-      ctx.beginPath();
-      ctx.arc(cx, cy, 12, 0, Math.PI * 2);
-      ctx.fillStyle = circ ? circ.getAttribute('fill') : '#8B5CF6';
-      ctx.fill();
+      const circ = g.querySelector('circle:not(.hit-area):not(.player-arm)');
+      const color = circ ? circ.getAttribute('fill') : '#8B5CF6';
+      if (g.dataset.arms === '1') {
+        const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+        const r = 12;
+        const cosR = Math.cos(rot), sinR = Math.sin(rot);
+        function rp(x, y) { return [x*cosR - y*sinR, x*sinR + y*cosR]; }
+        ctx.save(); ctx.translate(cx, cy);
+        // Arms behind
+        ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
+        for (const side of [-1, 1]) {
+          const [sx,sy] = rp(side * r * 0.55, r * 0.45);
+          const [ex,ey] = rp(side * (r * 0.55 + r * 0.85), r * 0.45 + r * 0.7);
+          const [cpx,cpy] = rp(side * (r * 0.55 + r * 0.425), r * 0.45 + r * 0.105);
+          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(cpx, cpy, ex, ey); ctx.stroke();
+        }
+        // Body on top
+        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
+        ctx.restore();
+      } else {
+        ctx.beginPath();
+        ctx.arc(cx, cy, 12, 0, Math.PI * 2);
+        ctx.fillStyle = color;
+        ctx.fill();
+      }
     });
 
     S.objectsLayer.querySelectorAll('[data-type="arrow"]').forEach(g => {
@@ -188,8 +213,49 @@ export async function loadAnalysis(id, onReady) {
   if (d.teamColors) { S.teamColors.a = d.teamColors.a; S.teamColors.b = d.teamColors.b; }
   if (d.gkColors) { S.gkColors.a = d.gkColors.a; S.gkColors.b = d.gkColors.b; }
 
-  S.objectsLayer.innerHTML = d.objectsHTML || '';
-  S.playersLayer.innerHTML = d.playersHTML || '';
+  // Normalize url() references that browsers may serialize as absolute URLs
+  const fixUrls = html => html.replace(/url\(["']?[^)]*?(#[\w-]+)["']?\)/g, 'url($1)');
+  S.objectsLayer.innerHTML = fixUrls(d.objectsHTML || '');
+  S.playersLayer.innerHTML = fixUrls(d.playersHTML || '');
+
+  // Restore arrow markers from data attributes (bypasses URL serialization issues)
+  S.objectsLayer.querySelectorAll('[data-type="arrow"]').forEach(g => {
+    const aType = g.dataset.arrowType || 'run';
+    const line = g.querySelector('.arrow-line');
+    if (!line || aType === 'line') return;
+    // Also restore original stroke-width in case arrow was saved while selected
+    const w = g.dataset.arrowWidth || '2.5';
+    line.setAttribute('stroke-width', w);
+    const customColor = g.dataset.arrowColor;
+    const st = S.ARROW_STYLES[aType];
+    if (customColor && customColor !== st?.color) {
+      // Custom color — ensure marker def exists
+      const safeId = 'marker-' + customColor.replace('#', '');
+      if (!document.getElementById(safeId)) {
+        const defs = S.svg.querySelector('defs');
+        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
+        marker.setAttribute('id', safeId);
+        marker.setAttribute('markerWidth', '7'); marker.setAttribute('markerHeight', '6');
+        marker.setAttribute('refX', '5.5'); marker.setAttribute('refY', '3');
+        marker.setAttribute('orient', 'auto');
+        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+        poly.setAttribute('points', '0 0, 7 3, 0 6'); poly.setAttribute('fill', customColor);
+        marker.appendChild(poly); defs.appendChild(marker);
+      }
+      line.setAttribute('marker-end', `url(#${safeId})`);
+    } else if (st?.marker && st.marker !== 'none') {
+      line.setAttribute('marker-end', st.marker);
+    }
+  });
+  // Restore filter references on players and objects
+  [S.objectsLayer, S.playersLayer].forEach(layer => {
+    layer.querySelectorAll('[filter]').forEach(el => {
+      const val = el.getAttribute('filter');
+      const match = val.match(/#([\w-]+)/);
+      if (match) el.setAttribute('filter', `url(#${match[1]})`);
+    });
+  });
+
   S.playerCounts.a = d.playerCounts?.a || 0;
   S.playerCounts.b = d.playerCounts?.b || 0;
   S.setObjectCounter(d.objectCounter || 0);
@@ -210,6 +276,21 @@ export async function deleteAnalysis(id) {
   if (isSignedIn()) {
     try { await deleteAnalysisFromCloud(getUid(), id); }
     catch (e) { console.warn('Cloud delete failed:', e); }
+  }
+}
+
+// ─── Rename Analysis ───────────────────────────────────────────────────────
+export async function renameAnalysis(id, newName) {
+  const analyses = getLocalAnalyses();
+  const analysis = analyses.find(a => a.id === id);
+  if (!analysis) return;
+  analysis.name = newName;
+  analysis.updatedAt = Date.now();
+  saveLocalAnalyses(analyses);
+
+  if (isSignedIn()) {
+    try { await saveAnalysisToCloud(getUid(), analysis); }
+    catch (e) { console.warn('Cloud rename failed:', e); }
   }
 }
 

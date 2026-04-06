@@ -228,8 +228,10 @@ export function select(el) {
     const shape = el.querySelector('.vision-shape');
     if (shape) {
       if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke') || 'none';
-      shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+      if (!el.dataset.savedStrokeWidth) el.dataset.savedStrokeWidth = shape.getAttribute('stroke-width') || '1';
+      shape.setAttribute('stroke', 'rgba(255,255,255,0.6)');
       shape.setAttribute('stroke-width', '1.5');
+      shape.setAttribute('stroke-dasharray', '4,3');
     }
     showVisionHandles(el);
   }
@@ -307,7 +309,8 @@ export function select(el) {
   const isHeadline = type === 'headline';
   const showSize = !isArrow && !isZone && !isText && !isHeadline;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
-  document.getElementById('rotation-section').style.display = (type === 'vision') ? '' : 'none';
+  const showRot = (type === 'vision') || (type === 'player' && el.dataset.arms === '1');
+  document.getElementById('rotation-section').style.display = showRot ? '' : 'none';
 
   if (type === 'player') {
     playerSec.style.display = '';
@@ -316,6 +319,14 @@ export function select(el) {
     const nameSize = el.dataset.nameSize || '11';
     document.getElementById('name-size-slider').value = nameSize;
     document.getElementById('name-size-val').textContent = nameSize + 'px';
+    // Arms toggle & rotation sync
+    const armsToggle = document.getElementById('arms-toggle');
+    if (armsToggle) armsToggle.checked = el.dataset.arms === '1';
+    if (el.dataset.arms === '1') {
+      const rv = el.dataset.rotation || '0';
+      document.getElementById('rot-slider').value = rv;
+      document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
+    }
   } else if (type === 'referee') {
     if (refereeSec) {
       refereeSec.style.display = '';
@@ -374,8 +385,8 @@ export function select(el) {
   const s = parseFloat(el.dataset.scale || '1') * 100;
   document.getElementById('size-slider').value = s;
   document.getElementById('size-val').textContent = (s/100).toFixed(1) + '×';
-  const showRot = document.getElementById('rotation-section').style.display !== 'none';
-  if (showRot) {
+  const rotVisible = document.getElementById('rotation-section').style.display !== 'none';
+  if (rotVisible) {
     const r = parseFloat(el.dataset.rotation || '0');
     document.getElementById('rot-slider').value = r;
     document.getElementById('rot-val').textContent = Math.round(r) + '°';
@@ -452,10 +463,13 @@ export function deselectVisual(el) {
     const shape = el.querySelector('.vision-shape');
     if (shape) {
       const saved = el.dataset.savedStroke;
-      if (saved === 'none') { shape.removeAttribute('stroke'); shape.removeAttribute('stroke-width'); }
-      else if (saved) { shape.setAttribute('stroke', saved); }
+      const savedW = el.dataset.savedStrokeWidth || '1';
+      if (saved === 'none') { shape.setAttribute('stroke', 'none'); shape.removeAttribute('stroke-width'); }
+      else if (saved) { shape.setAttribute('stroke', saved); shape.setAttribute('stroke-width', savedW); }
       else { shape.removeAttribute('stroke'); shape.removeAttribute('stroke-width'); }
+      shape.removeAttribute('stroke-dasharray');
       delete el.dataset.savedStroke;
+      delete el.dataset.savedStrokeWidth;
     }
   }
   if (t === 'freeform') {

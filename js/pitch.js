@@ -1,11 +1,32 @@
 import * as S from './state.js';
+import { canAccess, showUpgradePrompt } from './subscription.js';
 
 export function setPitch(layout) {
+  // Check freemium gating
+  const featureId = 'pitch:' + layout;
+  if (!canAccess(featureId)) {
+    showUpgradePrompt(layoutLabel(layout) + ' pitch');
+    return;
+  }
   S.setCurrentPitchLayout(layout);
   document.querySelectorAll('.pitch-thumb').forEach(t => t.classList.remove('selected'));
   const el = document.getElementById('pt-' + layout);
   if (el) el.classList.add('selected');
   rebuildPitch();
+}
+
+function layoutLabel(id) {
+  const labels = {
+    'full-h': 'Full Horizontal',
+    'full-v': 'Full Vertical',
+    'full-h-nd': 'Full H (No D)',
+    'full-v-nd': 'Full V (No D)',
+    'half-h': 'Half Pitch',
+    'half-h-nd': 'Half (No D)',
+    'half-h-ng': 'Half (No Goal)',
+    'half-h-ng-nd': 'Half (Clean)',
+  };
+  return labels[id] || id;
 }
 
 export function setPitchColor(dotEl) {
@@ -21,9 +42,11 @@ export function rebuildPitch() {
   if (S.appMode === 'image') return;
 
   const svgEl = S.svg;
-  const isVertical = S.currentPitchLayout.endsWith('-v');
-  const isHalf = S.currentPitchLayout.startsWith('half');
-  const hasGoals = !S.currentPitchLayout.includes('-ng-');
+  const lay = S.currentPitchLayout;
+  const isVertical = lay.includes('full-v');
+  const isHalf = lay.startsWith('half');
+  const hasGoals = !lay.includes('-ng');
+  const hasD = !lay.includes('-nd');
 
   let W, H;
   if (isHalf) {
@@ -96,8 +119,10 @@ export function rebuildPitch() {
     // Penalty spot
     mk('circle',{cx:cx,cy:bot-67,r:'2.5',fill:LC});
     // Penalty arc (part outside penalty area)
-    const arcA = Math.acos(38/55);
-    mk('path',{d:`M${cx-55*Math.sin(arcA)},${bot-105} A55,55 0 0,1 ${cx+55*Math.sin(arcA)},${bot-105}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasD) {
+      const arcA = Math.acos(38/55);
+      mk('path',{d:`M${cx-55*Math.sin(arcA)},${bot-105} A55,55 0 0,1 ${cx+55*Math.sin(arcA)},${bot-105}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    }
     // Halfway line at top
     mk('line',{x1:pad,y1:py,x2:pad+pw,y2:py,stroke:LC,'stroke-width':'1.5'});
     // Center circle arc (bottom half of circle, peeking into the half)
@@ -120,13 +145,13 @@ export function rebuildPitch() {
     mk('rect',{x:pad,y:cy-100,width:105,height:200,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('rect',{x:pad,y:cy-55,width:40,height:110,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('circle',{cx:pad+67,cy:cy,r:'2.5',fill:LC});
-    mk('path',{d:`M${pad+105},${cy-28} A55,55 0 0,1 ${pad+105},${cy+28}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasD) mk('path',{d:`M${pad+105},${cy-28} A55,55 0 0,1 ${pad+105},${cy+28}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('rect',{x:pad+pw-105,y:cy-100,width:105,height:200,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('rect',{x:pad+pw-40,y:cy-55,width:40,height:110,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('circle',{cx:pad+pw-67,cy:cy,r:'2.5',fill:LC});
-    mk('path',{d:`M${pad+pw-105},${cy-28} A55,55 0 0,0 ${pad+pw-105},${cy+28}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
-    mk('rect',{x:pad-14,y:cy-35,width:14,height:70,fill:'none',stroke:LC,'stroke-width':'1.5'});
-    mk('rect',{x:pad+pw,y:cy-35,width:14,height:70,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasD) mk('path',{d:`M${pad+pw-105},${cy-28} A55,55 0 0,0 ${pad+pw-105},${cy+28}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasGoals) mk('rect',{x:pad-14,y:cy-35,width:14,height:70,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasGoals) mk('rect',{x:pad+pw,y:cy-35,width:14,height:70,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('path',{d:`M${pad},${py+8} A8,8 0 0,1 ${pad+8},${py}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
     mk('path',{d:`M${pad+pw-8},${py} A8,8 0 0,1 ${pad+pw},${py+8}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
     mk('path',{d:`M${pad},${py+ph-8} A8,8 0 0,0 ${pad+8},${py+ph}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
@@ -142,13 +167,13 @@ export function rebuildPitch() {
     mk('rect',{x:cx-100,y:px,width:200,height:105,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('rect',{x:cx-55,y:px,width:110,height:40,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('circle',{cx:cx,cy:px+67,r:'2.5',fill:LC});
-    mk('path',{d:`M${cx-28},${px+105} A55,55 0 0,0 ${cx+28},${px+105}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasD) mk('path',{d:`M${cx-28},${px+105} A55,55 0 0,0 ${cx+28},${px+105}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('rect',{x:cx-100,y:px+ph-105,width:200,height:105,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('rect',{x:cx-55,y:px+ph-40,width:110,height:40,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('circle',{cx:cx,cy:px+ph-67,r:'2.5',fill:LC});
-    mk('path',{d:`M${cx-28},${px+ph-105} A55,55 0 0,1 ${cx+28},${px+ph-105}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
-    mk('rect',{x:cx-35,y:px-14,width:70,height:14,fill:'none',stroke:LC,'stroke-width':'1.5'});
-    mk('rect',{x:cx-35,y:px+ph,width:70,height:14,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasD) mk('path',{d:`M${cx-28},${px+ph-105} A55,55 0 0,1 ${cx+28},${px+ph-105}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasGoals) mk('rect',{x:cx-35,y:px-14,width:70,height:14,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    if (hasGoals) mk('rect',{x:cx-35,y:px+ph,width:70,height:14,fill:'none',stroke:LC,'stroke-width':'1.5'});
     mk('path',{d:`M${pad+8},${px} A8,8 0 0,0 ${pad},${px+8}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
     mk('path',{d:`M${pad+pw-8},${px} A8,8 0 0,1 ${pad+pw},${px+8}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
     mk('path',{d:`M${pad},${px+ph-8} A8,8 0 0,0 ${pad+8},${px+ph}`,fill:'none',stroke:LC,'stroke-width':'1.2'});

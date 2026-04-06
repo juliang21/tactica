@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg } from './interaction.js';
-import { addPlayer, rewrapTextBox, rewrapHeadline } from './elements.js';
+import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms } from './elements.js';
 import { trackElementEdited } from './analytics.js';
 
 // ─── Tool Selection ───────────────────────────────────────────────────────────
@@ -66,7 +66,7 @@ export function applyColor(swatchEl) {
 }
 
 function setPlayerColor(g, color) {
-  const circ = g.querySelector('circle:not(.hit-area)');
+  const circ = g.querySelector('circle:not(.hit-area):not(.player-arm)');
   const isPattern = color.startsWith('url(');
   if (circ) {
     circ.setAttribute('fill', color);
@@ -76,6 +76,8 @@ function setPlayerColor(g, color) {
   delete g.dataset.borderColor;
   const txt = g.querySelectorAll('text')[0];
   if (txt) txt.setAttribute('fill', (!isPattern && S.isDarkColor(color)) ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
+  // Sync arms to match new color
+  if (g.dataset.arms === '1') updatePlayerArms(g);
 }
 
 function updateTeamPlayerColors(team, color, gkColor, borderColor) {
@@ -255,7 +257,7 @@ export function applyPlayerBorder(swatchEl) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
   trackElementEdited('player', 'border_color');
   const color = swatchEl.dataset.color;
-  const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
+  const circ = S.selectedEl.querySelector('circle:not(.hit-area):not(.player-arm)');
   if (!circ) return;
   if (color === 'none') {
     circ.setAttribute('stroke', 'transparent');
@@ -265,6 +267,26 @@ export function applyPlayerBorder(swatchEl) {
     circ.setAttribute('stroke-width', '2');
   }
   S.selectedEl.dataset.borderColor = color;
+  // Sync arms to match
+  if (S.selectedEl.dataset.arms === '1') updatePlayerArms(S.selectedEl);
+}
+
+// ─── Player Arms Toggle ──────────────────────────────────────────────────────
+export function togglePlayerArms(checked) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  trackElementEdited('player', 'arms');
+  S.selectedEl.dataset.arms = checked ? '1' : '0';
+  updatePlayerArms(S.selectedEl);
+  // Show/hide rotation when arms toggled
+  document.getElementById('rotation-section').style.display = checked ? '' : 'none';
+  if (checked) {
+    const rv = S.selectedEl.dataset.rotation || '0';
+    document.getElementById('rot-slider').value = rv;
+    document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
+  } else {
+    S.selectedEl.dataset.rotation = '0';
+  }
+  applyTransform(S.selectedEl);
 }
 
 // ─── Referee Editing ─────────────────────────────────────────────────────────
@@ -676,7 +698,12 @@ export function applyVisionColor(swatchEl) {
   const color = swatchEl.dataset.visionColor;
   S.selectedEl.dataset.visionColor = color;
   const shape = S.selectedEl.querySelector('.vision-shape');
-  if (shape) shape.setAttribute('fill', color);
+  if (shape) {
+    shape.setAttribute('fill', color);
+    // Derive a matching border: same RGB at lower opacity
+    const borderColor = color.replace(/[\d.]+\)$/, '0.4)');
+    S.selectedEl.dataset.savedStroke = borderColor;
+  }
 }
 
 // ─── Spotlight Name ──────────────────────────────────────────────────────────
@@ -790,6 +817,7 @@ export function applyRotation(val) {
   const t = S.selectedEl.dataset.type;
   if (t.startsWith('shadow') || t === 'vision') applyTransform(S.selectedEl);
   else if (t === 'arrow') updateArrowVisual(S.selectedEl);
+  else if (t === 'player' && S.selectedEl.dataset.arms === '1') updatePlayerArms(S.selectedEl);
 }
 
 // ─── Clear All ────────────────────────────────────────────────────────────────

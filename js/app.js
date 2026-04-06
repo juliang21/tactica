@@ -1,10 +1,10 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerDragEnd, makeDraggable } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
-         applyPlayerFill, applyPlayerBorder,
+         applyPlayerFill, applyPlayerBorder, togglePlayerArms,
          liveUpdateRefName, confirmRefName, applyRefFill, applyRefBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
          applyArrowColor, applyArrowStyle, applyArrowWidth, applyArrowCurve,
@@ -18,9 +18,10 @@ import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackSignUp, trackSignIn, trackSignOut } from './analytics.js';
-import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
+import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
 import { logSession } from './firestore.js';
+import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
@@ -28,6 +29,9 @@ registerHeadlineRewrap(rewrapHeadline);
 registerVisionUpdate(updateVisionPolygon);
 registerFreeformUpdate(updateFreeformPath);
 registerMotionUpdate(updateMotionVisual);
+// ─── Initialize subscription UI ────────────────────────────────────────────
+updateLockedUI();
+
 registerDragEnd((el) => {
   // When a player is dragged in a step > 0, save and redraw trails
   if (el.dataset.type === 'player' && frames.length > 0) {
@@ -163,6 +167,8 @@ window.deleteSelected = deleteSelected;
 window.switchTab = switchTab;
 window.setPitch = setPitch;
 window.setPitchColor = setPitchColor;
+window.hideUpgradePrompt = hideUpgradePrompt;
+window.setUserTier = setUserTier;
 window.exportImage = exportImage;
 window.selectFmt = selectFmt;
 window.closeExport = closeExport;
@@ -173,6 +179,7 @@ window.applyNameBg = applyNameBg;
 window.updatePlayerNameBg = updatePlayerNameBg;
 window.applyPlayerFill = applyPlayerFill;
 window.applyPlayerBorder = applyPlayerBorder;
+window.togglePlayerArms = togglePlayerArms;
 window.liveUpdateRefName = liveUpdateRefName;
 window.confirmRefName = confirmRefName;
 window.applyRefFill = applyRefFill;
@@ -1138,7 +1145,7 @@ function copySelected() {
   const data = { type: t };
 
   if (t === 'player') {
-    const circ = el.querySelector('circle:not(.hit-area)');
+    const circ = el.querySelector('circle:not(.hit-area):not(.player-arm)');
     data.team = el.dataset.team;
     data.label = el.dataset.label;
     data.isGK = el.dataset.isGK === '1';
@@ -1149,6 +1156,8 @@ function copySelected() {
     data.nameSize = el.dataset.nameSize || '11';
     data.nameColor = el.querySelector('.player-name')?.getAttribute('fill') || 'rgba(255,255,255,0.9)';
     data.scale = el.dataset.scale || '1';
+    data.arms = el.dataset.arms || '0';
+    data.rotation = el.dataset.rotation || '0';
   } else if (t === 'referee') {
     const circ = el.querySelector('circle:not(.hit-area)');
     data.label = el.dataset.label;
@@ -1224,7 +1233,7 @@ function pasteClipboard() {
   if (d.type === 'player') {
     placed = addPlayer(x, y, d.team, d.label, d.isGK);
     if (placed) {
-      const circ = placed.querySelector('circle:not(.hit-area)');
+      const circ = placed.querySelector('circle:not(.hit-area):not(.player-arm)');
       if (circ && d.fill) { circ.setAttribute('fill', d.fill); circ.setAttribute('stroke', d.stroke || ''); }
       if (d.borderColor) placed.dataset.borderColor = d.borderColor;
       if (d.playerName) {
@@ -1234,6 +1243,12 @@ function pasteClipboard() {
       }
       placed.dataset.nameSize = d.nameSize;
       placed.dataset.scale = d.scale;
+      if (d.arms === '1') {
+        placed.dataset.arms = '1';
+        placed.dataset.rotation = d.rotation || '0';
+        updatePlayerArms(placed);
+        applyTransform(placed);
+      }
     }
   } else if (d.type === 'referee') {
     placed = addReferee(x, y, d.label, d.fillColor, d.borderColor);
@@ -1759,7 +1774,11 @@ async function updateCurrentBar() {
     const analyses = await listAnalyses();
     const current = analyses.find(a => a.id === currentId);
     if (current) {
-      bar.querySelector('span').textContent = current.name;
+      const input = document.getElementById('analysis-name-input');
+      if (input) {
+        input.value = current.name;
+        input.style.width = Math.min(Math.max(input.value.length * 7 + 24, 80), 200) + 'px';
+      }
       bar.classList.add('show');
       return;
     }
@@ -1769,6 +1788,37 @@ async function updateCurrentBar() {
 
 // Initialize bar on load
 updateCurrentBar();
+
+// ─── Editable analysis name in header ───────────────────────────────────────
+(() => {
+  const input = document.getElementById('analysis-name-input');
+  if (!input) return;
+
+  input.addEventListener('click', () => {
+    input.removeAttribute('readonly');
+    input.focus();
+    input.select();
+  });
+
+  input.addEventListener('blur', async () => {
+    input.setAttribute('readonly', '');
+    const newName = input.value.trim();
+    if (!newName) { await updateCurrentBar(); return; }
+    const currentId = getCurrentId();
+    if (currentId) {
+      await renameAnalysis(currentId, newName);
+    }
+  });
+
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.blur(); }
+  });
+
+  input.addEventListener('input', () => {
+    input.style.width = Math.min(Math.max(input.value.length * 7 + 24, 80), 200) + 'px';
+  });
+})();
 
 // ─── Auto-save on Cmd+S ──────────────────────────────────────────────────────
 document.addEventListener('keydown', async e => {

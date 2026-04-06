@@ -27,6 +27,7 @@
           Sign in
         </button>
       </div>
+      <a href="/terms.html" class="landing-terms-link">Terms &amp; Conditions</a>
     </div>
     <!-- Right: product preview -->
     <div class="landing-right">
@@ -202,25 +203,17 @@
         </button>
       </div>
     </div>
-    <div class="tool-bundle" id="overlay-bundle">
-      <button class="tool-btn" id="overlay-main-btn" data-tool="spotlight" onclick="openBundle('overlay-bundle')">
+    <button class="tool-btn" data-tool="spotlight" onclick="setTool('spotlight')">
         <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
           <path d="M10 2 L5 16 L17 16 L12 2 Z" fill="rgba(200,210,230,0.2)"/>
           <ellipse cx="11" cy="16" rx="6" ry="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
         </svg>
         <span class="tool-label">Highlight</span>
-      </button>
-      <div class="bundle-menu">
-        <button class="bundle-option" onclick="setTool('spotlight');closeBundle('overlay-bundle');updateBundleIcon('overlay-bundle','spotlight')">
-          <svg width="16" height="16" viewBox="0 0 22 22" fill="none"><path d="M10 2 L5 16 L17 16 L12 2 Z" fill="rgba(200,210,230,0.2)"/><ellipse cx="11" cy="16" rx="6" ry="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>
-          Spotlight
-        </button>
-        <button class="bundle-option" onclick="setTool('vision');closeBundle('overlay-bundle');updateBundleIcon('overlay-bundle','vision')">
-          <svg width="16" height="16" viewBox="0 0 22 22" fill="none"><polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/></svg>
-          Player vision
-        </button>
-      </div>
-    </div>
+    </button>
+    <button class="tool-btn" data-tool="vision" onclick="setTool('vision')">
+        <svg width="18" height="18" viewBox="0 0 22 22" fill="none"><polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/></svg>
+        <span class="tool-label">Vision</span>
+    </button>
     <div class="tool-bundle" id="arrow-bundle">
       <button class="tool-btn" id="arrow-main-btn" data-tool="arrow" onclick="openBundle('arrow-bundle')">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/><polygon points="13,9 9,6.5 9,11.5" fill="#F59E0B"/></svg>
@@ -293,6 +286,8 @@
     </div>
   </div>
 
+  <a href="/terms.html" target="_blank" class="sidebar-terms-link">Terms &amp; Conditions</a>
+
 </div>
 
 <!-- ── Mobile Context Bar (appears above toolbar when element selected) ── -->
@@ -330,7 +325,7 @@
         Upload Image
       </button>
     </div>
-    <div class="current-analysis-bar" id="current-analysis-bar"><span></span></div>
+    <div class="current-analysis-bar" id="current-analysis-bar"><input type="text" class="analysis-name-input" id="analysis-name-input" readonly value="" maxlength="60" /></div>
   </div>
   <!-- Mode Selector Dropdown (mobile) -->
   <div id="mode-dropdown">
@@ -608,6 +603,17 @@
           <svg viewBox="0 0 50 70"><rect width="50" height="70" fill="#3a7a38"/><rect x="3" y="3" width="44" height="64" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/><line x1="3" y1="3" x2="47" y2="3" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/><path d="M15,3 A10,10 0 0,0 35,3" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="12" y="47" width="26" height="20" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="18" y="57" width="14" height="10" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/></svg>
           <div class="pt-label">Half</div>
         </div>
+        <!-- ── Premium pitch layouts ── -->
+        <div class="pitch-thumb locked" id="pt-half-h-ng" data-feature="pitch:half-h-ng" onclick="setPitch('half-h-ng')" title="Half · No Goal">
+          <svg viewBox="0 0 50 70"><rect width="50" height="70" fill="#3a7a38"/><rect x="3" y="3" width="44" height="64" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/><line x1="3" y1="3" x2="47" y2="3" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/><path d="M15,3 A10,10 0 0,0 35,3" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="12" y="47" width="26" height="20" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="18" y="57" width="14" height="10" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/></svg>
+          <div class="pt-label">No Goal</div>
+          <div class="lock-badge"><svg viewBox="0 0 16 16" width="10" height="10"><path d="M8 1a3 3 0 0 0-3 3v2H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1V4a3 3 0 0 0-3-3zm-1.5 3a1.5 1.5 0 1 1 3 0v2h-3V4z" fill="currentColor"/></svg></div>
+        </div>
+        <div class="pitch-thumb locked" id="pt-half-h-ng-nd" data-feature="pitch:half-h-ng-nd" onclick="setPitch('half-h-ng-nd')" title="Half · Clean (No Goal, No D)">
+          <svg viewBox="0 0 50 70"><rect width="50" height="70" fill="#3a7a38"/><rect x="3" y="3" width="44" height="64" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="1"/><line x1="3" y1="3" x2="47" y2="3" stroke="rgba(255,255,255,0.6)" stroke-width="0.8"/><rect x="12" y="47" width="26" height="20" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/><rect x="18" y="57" width="14" height="10" fill="none" stroke="rgba(255,255,255,0.6)" stroke-width="0.7"/></svg>
+          <div class="pt-label">Clean</div>
+          <div class="lock-badge"><svg viewBox="0 0 16 16" width="10" height="10"><path d="M8 1a3 3 0 0 0-3 3v2H4a1 1 0 0 0-1 1v6a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1V7a1 1 0 0 0-1-1h-1V4a3 3 0 0 0-3-3zm-1.5 3a1.5 1.5 0 1 1 3 0v2h-3V4z" fill="currentColor"/></svg></div>
+        </div>
       </div>
     </div>
 
@@ -707,6 +713,14 @@
           <input type="range" id="name-size-slider" min="6" max="16" value="11" step="0.5" oninput="applyNameSize(this.value)" style="flex:1">
           <span id="name-size-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">11px</span>
         </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Body style</div>
+        <label class="toggle-row">
+          <span class="toggle-label">Show arms</span>
+          <input type="checkbox" id="arms-toggle" onchange="togglePlayerArms(this.checked)">
+          <span class="toggle-switch"></span>
+        </label>
       </div>
       <div class="field-group">
         <div class="field-label">Fill colour</div>
@@ -1052,12 +1066,12 @@
       <div class="field-group">
         <div class="field-label">Colour</div>
         <div class="picker-row">
-          <div class="color-swatch mini" style="background:rgba(147,197,253,0.7)" data-vision-color="rgba(147,197,253,0.6)" onclick="applyVisionColor(this)"></div>
-          <div class="color-swatch mini" style="background:rgba(200,210,230,0.7)" data-vision-color="rgba(200,210,230,0.6)" onclick="applyVisionColor(this)"></div>
-          <div class="color-swatch mini" style="background:rgba(74,222,128,0.7)" data-vision-color="rgba(74,222,128,0.6)" onclick="applyVisionColor(this)"></div>
-          <div class="color-swatch mini" style="background:rgba(248,113,113,0.7)" data-vision-color="rgba(248,113,113,0.6)" onclick="applyVisionColor(this)"></div>
-          <div class="color-swatch mini" style="background:rgba(245,158,11,0.7)" data-vision-color="rgba(245,158,11,0.6)" onclick="applyVisionColor(this)"></div>
-          <div class="color-swatch mini" style="background:#ffffff" data-vision-color="rgba(255,255,255,0.6)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(147,197,253,0.7)" data-vision-color="rgba(147,197,253,0.55)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(200,210,230,0.7)" data-vision-color="rgba(200,210,230,0.55)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(74,222,128,0.7)" data-vision-color="rgba(74,222,128,0.55)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(248,113,113,0.7)" data-vision-color="rgba(248,113,113,0.55)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(245,158,11,0.7)" data-vision-color="rgba(245,158,11,0.55)" onclick="applyVisionColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-vision-color="rgba(255,255,255,0.55)" onclick="applyVisionColor(this)"></div>
           <button class="color-picker-btn" onclick="openColorPicker('vision')">＋</button>
         </div>
       </div>
@@ -1293,6 +1307,19 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=6"></script>
+<!-- ══ UPGRADE OVERLAY ══ -->
+<div id="upgrade-overlay" class="upgrade-overlay">
+  <div class="upgrade-card">
+    <div class="upgrade-icon">
+      <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#F59E0B" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+    </div>
+    <h3 class="upgrade-title">Pro Feature</h3>
+    <p class="upgrade-desc"><span class="upgrade-feature-name">This feature</span> is available with a Pro subscription.</p>
+    <button class="upgrade-btn" onclick="hideUpgradePrompt()">Got it</button>
+    <button class="upgrade-close" onclick="hideUpgradePrompt()">&times;</button>
+  </div>
+</div>
+
+<script type="module" src="js/app.js?v=7"></script>
 </body>
 </html>

@@ -56,6 +56,61 @@ export function addPlayer(x, y, team, num, isGK) {
   return g;
 }
 
+// ─── Toggle / Update Arms on Player ──────────────────────────────────────────
+// Arms style: two short curved strokes extending from body sides,
+// mimicking a simple person silhouette (like the Football UI Kit style).
+// Rotation only affects the arms, not the number/name.
+export function updatePlayerArms(g) {
+  const hasArms = g.dataset.arms === '1';
+  // Remove existing arm elements
+  g.querySelectorAll('.player-arm').forEach(a => a.remove());
+
+  if (!hasArms) return;
+
+  const bodyCircle = g.querySelector('circle:not(.hit-area):not(.player-arm)');
+  if (!bodyCircle) return;
+  const r = parseFloat(bodyCircle.getAttribute('r'));   // body radius (16)
+  const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+
+  // Base arm geometry (at 0° rotation)
+  const startY = r * 0.45;
+  const armLen = r * 0.85;
+  const armDrop = r * 0.7;
+
+  // Rotate a point around origin
+  function rotPt(x, y) {
+    return [x * Math.cos(rot) - y * Math.sin(rot),
+            x * Math.sin(rot) + y * Math.cos(rot)];
+  }
+
+  function mkArm(side) {
+    const sx0 = side * r * 0.55,  sy0 = startY;
+    const ex0 = side * (r * 0.55 + armLen), ey0 = startY + armDrop;
+    const cpx0 = side * (r * 0.55 + armLen * 0.5), cpy0 = startY + armDrop * 0.15;
+
+    const [sx, sy] = rotPt(sx0, sy0);
+    const [ex, ey] = rotPt(ex0, ey0);
+    const [cpx, cpy] = rotPt(cpx0, cpy0);
+
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.classList.add('player-arm');
+    path.setAttribute('d', `M${sx.toFixed(2)},${sy.toFixed(2)} Q${cpx.toFixed(2)},${cpy.toFixed(2)} ${ex.toFixed(2)},${ey.toFixed(2)}`);
+    path.setAttribute('fill', 'none');
+    path.setAttribute('stroke', '#1a1a1a');
+    path.setAttribute('stroke-width', '2.5');
+    path.setAttribute('stroke-linecap', 'round');
+    path.setAttribute('pointer-events', 'none');
+    return path;
+  }
+
+  const leftArm = mkArm(-1);
+  const rightArm = mkArm(1);
+
+  // Insert before body circle so arms draw behind it
+  g.insertBefore(leftArm, bodyCircle);
+  g.insertBefore(rightArm, bodyCircle);
+}
+
 function openPlayerEdit(g) {
   select(g);
   const inp = document.getElementById('number-input');
@@ -770,11 +825,13 @@ export function addVision(x, y) {
   g.dataset.scale = '1'; g.dataset.rotation = '0';
   g.dataset.visionLength = '80';   // depth from apex to base
   g.dataset.visionSpread = '35';   // half-width at base
-  g.dataset.visionColor = 'rgba(147,197,253,0.6)';
+  g.dataset.visionColor = 'rgba(147,197,253,0.55)';
 
   const tri = document.createElementNS(ns, 'polygon');
-  tri.setAttribute('fill', 'rgba(147,197,253,0.6)');
-  tri.setAttribute('stroke', 'none');
+  tri.setAttribute('fill', 'rgba(147,197,253,0.55)');
+  tri.setAttribute('stroke', 'rgba(147,197,253,0.4)');
+  tri.setAttribute('stroke-width', '1');
+  tri.setAttribute('stroke-linejoin', 'round');
   tri.classList.add('vision-shape');
 
   g.appendChild(tri);
