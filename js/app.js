@@ -1474,7 +1474,6 @@ function toggleFeedback() {
   panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
   // Reset on open
   if (panel.style.display === 'block') {
-    document.getElementById('fb-email').value = '';
     document.getElementById('fb-message').value = '';
     document.getElementById('fb-status').style.display = 'none';
     document.getElementById('fb-submit').disabled = false;
@@ -1533,16 +1532,18 @@ async function submitFeedback() {
   btn.textContent = 'Sending…';
   status.style.display = 'none';
 
-  const email = document.getElementById('fb-email').value.trim();
+  const user = getCurrentUser();
+  const userEmail = user ? user.email : 'unknown';
+  const userName = user ? (user.displayName || user.email) : 'unknown';
 
   try {
     const formData = new FormData();
     formData.append('access_key', '315e7f89-890f-4b05-8b81-605325f4f8e4');
     formData.append('subject', `Táctica Feedback: ${feedbackType}`);
     formData.append('type', feedbackType);
-    formData.append('message', msg);
+    formData.append('message', `From: ${userName} (${userEmail})\n\n${msg}`);
     formData.append('from_name', 'Táctica Feedback');
-    if (email) formData.append('email', email);
+    formData.append('email', userEmail);
 
     // Upload screenshot to temp host and include URL
     if (feedbackFile) {
