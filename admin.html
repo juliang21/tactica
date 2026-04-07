@@ -14,7 +14,7 @@
   }
   .header {
     display: flex; align-items: center; gap: 16px;
-    margin-bottom: 32px; padding-bottom: 16px;
+    margin-bottom: 0; padding-bottom: 16px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
   }
   .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: #D4A843; }
@@ -28,6 +28,23 @@
     border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;
     font-family: 'Manrope', sans-serif;
   }
+
+  /* Tabs */
+  .admin-tabs {
+    display: flex; gap: 2px; padding: 16px 0 24px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 24px;
+  }
+  .admin-tab {
+    padding: 8px 20px; border-radius: 8px; border: none;
+    font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600;
+    color: #666; background: transparent; cursor: pointer;
+    transition: all 0.15s; letter-spacing: 0.3px;
+  }
+  .admin-tab:hover { color: #999; }
+  .admin-tab.active { background: #D4A843; color: #000; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
 
   /* Stats cards */
   .stats-grid {
@@ -93,6 +110,30 @@
   }
   .date-filters input[type="date"]:focus { border-color: #D4A843; }
   .date-filters .sep { color: #444; font-size: 12px; }
+
+  /* Feature breakdown cards */
+  .feature-card {
+    background: #1a1a22; border-radius: 12px; padding: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    margin-bottom: 20px;
+  }
+  .feature-card-header {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px; padding-bottom: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .feature-card-title { font-size: 14px; font-weight: 700; color: #D4A843; letter-spacing: 0.5px; }
+  .feature-card-summary { font-size: 11px; color: #666; }
+  .breakdown-bar {
+    display: flex; align-items: center; gap: 10px;
+    padding: 6px 0; border-bottom: 1px solid rgba(255,255,255,0.03);
+  }
+  .breakdown-bar:last-child { border-bottom: none; }
+  .breakdown-label { font-size: 12px; color: #ccc; min-width: 140px; }
+  .breakdown-track { flex: 1; height: 20px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+  .breakdown-fill { height: 100%; background: #D4A843; border-radius: 4px; min-width: 2px; transition: width 0.3s; }
+  .breakdown-count { font-size: 11px; color: #888; min-width: 60px; text-align: right; }
+  .breakdown-sessions { font-size: 10px; color: #555; min-width: 80px; text-align: right; }
 </style>
 </head>
 <body>
@@ -111,6 +152,11 @@
 </div>
 
 <div id="dashboard" style="display:none">
+  <div class="admin-tabs">
+    <button class="admin-tab active" onclick="switchAdminTab('overview')">Overview</button>
+    <button class="admin-tab" onclick="switchAdminTab('features')">Features</button>
+  </div>
+
   <div class="date-filters">
     <label>From</label>
     <input type="date" id="date-start" onchange="applyDateFilter()">
@@ -124,50 +170,44 @@
     </label>
   </div>
 
-  <!-- User-level data -->
-  <div class="section">
-    <div class="section-header"><span class="icon">&#128100;</span> User-Level Data</div>
-    <div class="stats-grid" id="user-stats"></div>
-  </div>
-
-  <!-- Session-level data -->
-  <div class="section">
-    <div class="section-header"><span class="icon">&#9889;</span> Session-Level Data</div>
-    <div class="stats-grid" id="session-stats"></div>
-  </div>
-
-  <!-- Key Features Usage -->
-  <div class="section">
-    <div class="section-header"><span class="icon">&#128273;</span> Key Features Usage</div>
-    <div class="stats-grid" id="feature-stats"></div>
-  </div>
-
-  <div class="section">
-    <h2 id="chart-title">Sessions</h2>
-    <div class="chart-container">
-      <div class="chart-bars" id="chart-bars"></div>
-      <div class="chart-labels" id="chart-labels"></div>
+  <!-- ═══ OVERVIEW TAB ═══ -->
+  <div class="tab-content active" id="tab-overview">
+    <div class="section">
+      <div class="section-header"><span class="icon">&#128100;</span> User-Level Data</div>
+      <div class="stats-grid" id="user-stats"></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="icon">&#9889;</span> Session-Level Data</div>
+      <div class="stats-grid" id="session-stats"></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="icon">&#128273;</span> Key Features Usage</div>
+      <div class="stats-grid" id="feature-stats"></div>
+    </div>
+    <div class="section">
+      <h2 id="chart-title">Sessions</h2>
+      <div class="chart-container">
+        <div class="chart-bars" id="chart-bars"></div>
+        <div class="chart-labels" id="chart-labels"></div>
+      </div>
+    </div>
+    <div class="section">
+      <h2 id="users-table-title">All Users</h2>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Sessions</th><th>Status</th></tr>
+          </thead>
+          <tbody id="users-table"></tbody>
+        </table>
+      </div>
+      <button class="refresh-btn" id="users-show-more" style="display:none;margin-top:12px;width:100%" onclick="showMoreUsers()">Show more</button>
     </div>
   </div>
 
-  <div class="section">
-    <h2 id="users-table-title">All Users</h2>
-    <div class="table-wrap">
-      <table>
-        <thead>
-          <tr>
-            <th>Email</th>
-            <th>Name</th>
-            <th>First Seen</th>
-            <th>Last Seen</th>
-            <th>Sessions</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="users-table"></tbody>
-      </table>
-    </div>
-    <button class="refresh-btn" id="users-show-more" style="display:none;margin-top:12px;width:100%" onclick="showMoreUsers()">Show more</button>
+  <!-- ═══ FEATURES TAB ═══ -->
+  <div class="tab-content" id="tab-features">
+    <div id="features-breakdown"></div>
   </div>
 </div>
 
@@ -192,15 +232,10 @@ const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence);
 const db = getFirestore(app);
 
-// Admin email whitelist
 const ADMIN_EMAILS = ['juliangenoud@gmail.com'];
 
 window.doSignIn = async function() {
-  try {
-    await signInWithPopup(auth, new GoogleAuthProvider());
-  } catch (e) {
-    alert('Sign in failed: ' + e.message);
-  }
+  try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert('Sign in failed: ' + e.message); }
 };
 
 onAuthStateChanged(auth, (user) => {
@@ -219,12 +254,19 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
-// Cache fetched data so date filter changes don't re-fetch
+// ─── Tab switching ─────────────────────────────────────────────────────────
+window.switchAdminTab = function(tab) {
+  document.querySelectorAll('.admin-tab').forEach(t => t.classList.remove('active'));
+  document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+  document.querySelector(`.admin-tab[onclick*="${tab}"]`).classList.add('active');
+  document.getElementById('tab-' + tab).classList.add('active');
+};
+
+// ─── Data cache ────────────────────────────────────────────────────────────
 let _allUsers = [];
 let _allSessions = [];
 let _allActions = [];
 
-// Set default dates (today)
 const today = new Date().toISOString().slice(0, 10);
 document.getElementById('date-start').value = today;
 document.getElementById('date-end').value = today;
@@ -232,23 +274,18 @@ document.getElementById('date-end').value = today;
 window.loadDashboard = async function() {
   try {
     const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
-    const usersSnap = await getDocs(usersQ);
-    _allUsers = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() }));
+    _allUsers = (await getDocs(usersQ)).docs.map(d => ({ uid: d.id, ...d.data() }));
 
     const sessionsQ = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
-    const sessionsSnap = await getDocs(sessionsQ);
-    _allSessions = sessionsSnap.docs.map(d => d.data());
+    _allSessions = (await getDocs(sessionsQ)).docs.map(d => d.data());
 
     try {
       const actionsQ = query(collection(db, 'tactica_actions'), orderBy('timestamp', 'desc'));
-      const actionsSnap = await getDocs(actionsQ);
-      _allActions = actionsSnap.docs.map(d => d.data());
-    } catch (e) { console.warn('Actions fetch failed (may need Firestore index/rules):', e); _allActions = []; }
+      _allActions = (await getDocs(actionsQ)).docs.map(d => d.data());
+    } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
 
     applyDateFilter();
-  } catch (e) {
-    console.error('Dashboard error:', e);
-  }
+  } catch (e) { console.error('Dashboard error:', e); }
 };
 
 window.applyDateFilter = function() {
@@ -260,8 +297,7 @@ window.applyDateFilter = function() {
   const endMs = new Date(endStr + 'T23:59:59.999').getTime();
 
   const excludeMe = document.getElementById('exclude-me').checked;
-  const ADMIN_UID_EMAILS = ['juliangenoud@gmail.com'];
-  const excludeUids = excludeMe ? new Set(_allUsers.filter(u => ADMIN_UID_EMAILS.includes(u.email)).map(u => u.uid)) : new Set();
+  const excludeUids = excludeMe ? new Set(_allUsers.filter(u => ADMIN_EMAILS.includes(u.email)).map(u => u.uid)) : new Set();
 
   const filteredSessions = _allSessions.filter(s => s.timestamp >= startMs && s.timestamp <= endMs && !excludeUids.has(s.uid));
   const filteredActions = _allActions.filter(a => a.timestamp >= startMs && a.timestamp <= endMs && !excludeUids.has(a.uid));
@@ -270,11 +306,13 @@ window.applyDateFilter = function() {
 
   const allUsersFiltered = excludeMe ? _allUsers.filter(u => !excludeUids.has(u.uid)) : _allUsers;
   const signUps = allUsersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
+
   renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids, signUps);
   renderSessionStats(filteredSessions, filteredActions);
   renderFeatureStats(filteredActions, activeUids.size);
   renderChart(filteredSessions, startStr, endStr);
   renderUsersTable(filteredUsers);
+  renderFeaturesTab(filteredActions, activeUids.size);
 };
 
 // ─── User-Level Stats ───────────────────────────────────────────────────────
@@ -282,11 +320,9 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
   const totalUsers = allUsers.length;
   const activeUsers = activeUids.size;
   const returningUsers = users.filter(u => u.sessionCount > 1).length;
-
   const analysisUsers = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
   const saveUsers = new Set((actions || []).filter(a => a.action === 'save').map(a => a.uid)).size;
   const exportUsers = new Set((actions || []).filter(a => a.action === 'export').map(a => a.uid)).size;
-
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
 
   document.getElementById('user-stats').innerHTML = `
@@ -303,15 +339,12 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
 // ─── Session-Level Stats ────────────────────────────────────────────────────
 function renderSessionStats(sessions, actions) {
   const totalSessions = sessions.length;
-
   const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started').length;
   const saves = (actions || []).filter(a => a.action === 'save').length;
   const exports = (actions || []).filter(a => a.action === 'export').length;
-
   const desktopSessions = sessions.filter(s => s.device === 'desktop').length;
   const mobileSessions = sessions.filter(s => s.device === 'mobile').length;
   const unknownSessions = sessions.filter(s => !s.device).length;
-
   const pct = (n) => totalSessions > 0 ? Math.round(n / totalSessions * 100) : 0;
 
   document.getElementById('session-stats').innerHTML = `
@@ -324,62 +357,110 @@ function renderSessionStats(sessions, actions) {
   `;
 }
 
-// ─── Key Features Usage ────────────────────────────────────────────────────
+// ─── Key Features (overview cards) ──────────────────────────────────────────
 function featureData(actions, actionName) {
   const items = (actions || []).filter(a => a.action === actionName);
-  const totalEvents = items.length;
-  const uniqueSessions = new Set(items.map(a => a.sessionId).filter(Boolean)).size;
-  const uniqueUsers = new Set(items.map(a => a.uid)).size;
-  return { totalEvents, uniqueSessions, uniqueUsers };
+  return {
+    totalEvents: items.length,
+    uniqueSessions: new Set(items.map(a => a.sessionId).filter(Boolean)).size,
+    uniqueUsers: new Set(items.map(a => a.uid)).size,
+  };
 }
 
 function renderFeatureStats(actions, activeUsers) {
-  const save = featureData(actions, 'save');
-  const xport = featureData(actions, 'export');
-  const animation = featureData(actions, 'feature_animation');
-  const pitch = featureData(actions, 'feature_pitch_change');
-  const image = featureData(actions, 'feature_image_upload');
-  const formation = featureData(actions, 'feature_formation');
-  const clubTeam = featureData(actions, 'feature_club_team');
-  const nationalTeam = featureData(actions, 'feature_national_team');
-  const elInserted = featureData(actions, 'element_inserted');
-  const elSelected = featureData(actions, 'element_selected');
-
+  const features = [
+    ['Save', 'save'], ['Export', 'export'], ['Animation', 'feature_animation'],
+    ['Pitch Change', 'feature_pitch_change'], ['Image Upload', 'feature_image_upload'],
+    ['Formation', 'feature_formation'], ['Club Team', 'feature_club_team'],
+    ['National Team', 'feature_national_team'], ['Element Inserted', 'element_inserted'],
+    ['Element Selected', 'element_selected'],
+  ];
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
-
-  function card(label, d, detail) {
-    let html = `<div class="stat-card">
+  document.getElementById('feature-stats').innerHTML = features.map(([label, action]) => {
+    const d = featureData(actions, action);
+    return `<div class="stat-card">
       <div class="label">${label}</div>
       <div class="value">${d.uniqueSessions}</div>
-      <div class="sub">sessions used &middot; ${d.uniqueUsers} users (${pct(d.uniqueUsers)}% of active)</div>
-      <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>`;
-    if (detail) html += `<div class="sub" style="margin-top:4px;color:#555;font-size:9px;line-height:1.4">${detail}</div>`;
+      <div class="sub">sessions &middot; ${d.uniqueUsers} users (${pct(d.uniqueUsers)}%)</div>
+      <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>
+    </div>`;
+  }).join('');
+}
+
+// ─── Features Tab (detailed breakdowns) ─────────────────────────────────────
+const FEATURE_CONFIGS = [
+  { label: 'Pitch Type', action: 'feature_pitch_change', metaKey: 'type', filterFn: a => a.meta && a.meta.type },
+  { label: 'Pitch Color', action: 'feature_pitch_change', metaKey: 'color', filterFn: a => a.meta && a.meta.color },
+  { label: 'Formation', action: 'feature_formation', metaKey: 'formation' },
+  { label: 'Club Team', action: 'feature_club_team', metaKey: 'team' },
+  { label: 'National Team', action: 'feature_national_team', metaKey: 'team' },
+  { label: 'Element Inserted', action: 'element_inserted', metaKey: 'element' },
+  { label: 'Element Selected', action: 'element_selected', metaKey: 'element' },
+  { label: 'Animation', action: 'feature_animation', metaKey: 'trigger' },
+  { label: 'Save', action: 'save', metaKey: null },
+  { label: 'Export', action: 'export', metaKey: null },
+  { label: 'Image Upload', action: 'feature_image_upload', metaKey: null },
+];
+
+function renderFeaturesTab(actions, activeUsers) {
+  let html = '';
+
+  FEATURE_CONFIGS.forEach(cfg => {
+    let items = (actions || []).filter(a => a.action === cfg.action);
+    if (cfg.filterFn) items = items.filter(cfg.filterFn);
+
+    const totalEvents = items.length;
+    const uniqueSessions = new Set(items.map(a => a.sessionId).filter(Boolean)).size;
+    const uniqueUsers = new Set(items.map(a => a.uid)).size;
+
+    html += `<div class="feature-card">
+      <div class="feature-card-header">
+        <span class="feature-card-title">${cfg.label}</span>
+        <span class="feature-card-summary">${uniqueSessions} sessions &middot; ${uniqueUsers} users &middot; ${totalEvents} events</span>
+      </div>`;
+
+    if (cfg.metaKey) {
+      // Build breakdown by meta value
+      const counts = {};
+      const sessionSets = {};
+      const userSets = {};
+      items.forEach(a => {
+        const v = a.meta && a.meta[cfg.metaKey];
+        if (!v) return;
+        counts[v] = (counts[v] || 0) + 1;
+        if (!sessionSets[v]) sessionSets[v] = new Set();
+        if (!userSets[v]) userSets[v] = new Set();
+        if (a.sessionId) sessionSets[v].add(a.sessionId);
+        userSets[v].add(a.uid);
+      });
+
+      const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+      const maxCount = sorted.length > 0 ? sorted[0][1] : 1;
+
+      if (sorted.length === 0) {
+        html += `<div style="color:#555;font-size:12px;padding:8px 0">No data yet</div>`;
+      } else {
+        sorted.forEach(([name, count]) => {
+          const pctBar = Math.round((count / maxCount) * 100);
+          const sessions = sessionSets[name] ? sessionSets[name].size : 0;
+          const users = userSets[name] ? userSets[name].size : 0;
+          html += `<div class="breakdown-bar">
+            <span class="breakdown-label">${name}</span>
+            <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
+            <span class="breakdown-count">${count} events</span>
+            <span class="breakdown-sessions">${sessions} sessions</span>
+            <span class="breakdown-sessions">${users} users</span>
+          </div>`;
+        });
+      }
+    } else {
+      html += `<div style="color:#555;font-size:12px;padding:8px 0">No type breakdown &mdash; binary feature (used/not used)</div>`;
+    }
+
     html += `</div>`;
-    return html;
-  }
+  });
 
-  // Build breakdowns for features with types
-  function breakdown(items, metaKey, limit) {
-    const counts = {};
-    items.forEach(a => { const v = a.meta && a.meta[metaKey]; if (v) counts[v] = (counts[v] || 0) + 1; });
-    return Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, limit || 5).map(([k,v]) => `${k}: ${v}`).join(' · ');
-  }
-
-  const pitchItems = (actions || []).filter(a => a.action === 'feature_pitch_change');
-  const formationItems = (actions || []).filter(a => a.action === 'feature_formation');
-  const clubItems = (actions || []).filter(a => a.action === 'feature_club_team');
-  const nationalItems = (actions || []).filter(a => a.action === 'feature_national_team');
-  const insertedItems = (actions || []).filter(a => a.action === 'element_inserted');
-
-  document.getElementById('feature-stats').innerHTML =
-    card('Save', save) + card('Export', xport) + card('Animation', animation) +
-    card('Pitch Change', pitch, breakdown(pitchItems, 'type') + (breakdown(pitchItems, 'color') ? '<br>' + breakdown(pitchItems, 'color') : '')) +
-    card('Image Upload', image) +
-    card('Formation', formation, breakdown(formationItems, 'formation')) +
-    card('Club Team', clubTeam, breakdown(clubItems, 'team')) +
-    card('National Team', nationalTeam, breakdown(nationalItems, 'team')) +
-    card('Element Inserted', elInserted, breakdown(insertedItems, 'element', 10)) +
-    card('Element Selected', elSelected);
+  document.getElementById('features-breakdown').innerHTML = html;
 }
 
 // ─── Chart ──────────────────────────────────────────────────────────────────
@@ -401,28 +482,19 @@ function renderChart(sessions, startStr, endStr) {
 
   const buckets = {};
   for (let i = 0; i < diffDays; i++) {
-    const d = new Date(start);
-    d.setDate(d.getDate() + i);
-    const key = localDateStr(d);
-    buckets[key] = { count: 0, uniqueUsers: new Set() };
+    const d = new Date(start); d.setDate(d.getDate() + i);
+    buckets[localDateStr(d)] = { count: 0, uniqueUsers: new Set() };
   }
-
   sessions.forEach(s => {
     const key = localDateStr(new Date(s.timestamp));
-    if (buckets[key]) {
-      buckets[key].count++;
-      buckets[key].uniqueUsers.add(s.uid);
-    }
+    if (buckets[key]) { buckets[key].count++; buckets[key].uniqueUsers.add(s.uid); }
   });
 
   const keys = Object.keys(buckets);
   const maxCount = Math.max(1, ...keys.map(k => buckets[k].count));
-
   const barsEl = document.getElementById('chart-bars');
   const labelsEl = document.getElementById('chart-labels');
-  barsEl.innerHTML = '';
-  labelsEl.innerHTML = '';
-
+  barsEl.innerHTML = ''; labelsEl.innerHTML = '';
   const showEvery = diffDays > 30 ? Math.ceil(diffDays / 15) : 1;
 
   keys.forEach((key, i) => {
@@ -430,13 +502,12 @@ function renderChart(sessions, startStr, endStr) {
     const pct = (b.count / maxCount) * 100;
     const dayLabel = key.slice(5);
     const weekday = new Date(key + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
-
     barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%"><div class="tooltip">${weekday} ${dayLabel}: ${b.count} sessions, ${b.uniqueUsers.size} users</div></div>`;
     labelsEl.innerHTML += `<span>${i % showEvery === 0 ? dayLabel.slice(3) : ''}</span>`;
   });
 }
 
-// ─── Users Table (paginated, 50 at a time) ─────────────────────────────────
+// ─── Users Table (paginated) ────────────────────────────────────────────────
 let _tableUsers = [];
 let _tableShown = 0;
 const PAGE_SIZE = 50;
