@@ -288,7 +288,7 @@ export function select(el) {
     : type === 'freeform' ? 'Freeform Zone'
     : type === 'motion' ? 'Motion Path'
     : type === 'headline' ? 'Headline'
-    : type === 'tag' ? 'Quick Tag'
+    : type === 'tag' ? 'Tag'
     : 'Zone';
   const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
