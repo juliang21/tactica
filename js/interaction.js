@@ -15,6 +15,10 @@ export function registerVisionUpdate(fn) { _updateVisionFn = fn; }
 let _rewrapHeadlineFn = null;
 export function registerHeadlineRewrap(fn) { _rewrapHeadlineFn = fn; }
 
+// ─── Tag reposition callback ──────────────────────────────────────────────
+let _repositionTagFn = null;
+export function registerTagReposition(fn) { _repositionTagFn = fn; }
+
 // ─── Freeform path update callback ─────────────────────────────────────────
 let _updateFreeformFn = null;
 export function registerFreeformUpdate(fn) { _updateFreeformFn = fn; }
@@ -71,6 +75,8 @@ export function applyTransform(el) {
 
   if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
+  } else if (t === 'tag') {
+    if (_repositionTagFn) _repositionTagFn(el);
   } else if (t === 'vision') {
     // Vision uses absolute polygon points (no transform needed)
     el.removeAttribute('transform');
@@ -178,6 +184,7 @@ function moveElement(el, nx, ny) {
   else if (t === 'arrow') updateArrowVisual(el);
   else if (t === 'motion') applyTransform(el);
   else if (t === 'spotlight') applyTransform(el);
+  else if (t === 'tag') applyTransform(el);
   else if (t === 'freeform') applyTransform(el);
   else if (t.startsWith('shadow')) applyTransform(el);
 }
@@ -255,6 +262,19 @@ export function select(el) {
     }
     showMotionHandles(el);
   }
+  if (type === 'tag') {
+    const tagLine = el.querySelector('.tag-line');
+    if (tagLine) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = tagLine.getAttribute('stroke');
+      tagLine.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+    const tagDot = el.querySelector('.tag-dot');
+    if (tagDot) {
+      if (!el.dataset.savedDotFill) el.dataset.savedDotFill = tagDot.getAttribute('fill');
+      tagDot.setAttribute('fill', 'rgba(79,156,249,0.9)');
+    }
+    showTagHandles(el);
+  }
 
   // Info label
   const typeLabel = type === 'player' ? 'Player #' + el.dataset.label
@@ -268,6 +288,7 @@ export function select(el) {
     : type === 'freeform' ? 'Freeform Zone'
     : type === 'motion' ? 'Motion Path'
     : type === 'headline' ? 'Headline'
+    : type === 'tag' ? 'Quick Tag'
     : 'Zone';
   const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
@@ -290,6 +311,7 @@ export function select(el) {
   const headlineSec = document.getElementById('headline-edit-section');
   const spotlightSec = document.getElementById('spotlight-edit-section');
   const visionSec = document.getElementById('vision-edit-section');
+  const tagSec = document.getElementById('tag-edit-section');
   const delSec = document.getElementById('del-section');
   const layerSec = document.getElementById('layer-section');
 
@@ -303,6 +325,7 @@ export function select(el) {
   if (headlineSec) headlineSec.style.display = 'none';
   spotlightSec.style.display = 'none';
   visionSec.style.display = 'none';
+  if (tagSec) tagSec.style.display = 'none';
   delSec.style.display = '';
   layerSec.style.display = '';
 
@@ -310,7 +333,8 @@ export function select(el) {
   const isZone = type?.startsWith('shadow');
   const isText = type === 'textbox';
   const isHeadline = type === 'headline';
-  const showSize = !isArrow && !isZone && !isText && !isHeadline;
+  const isTag = type === 'tag';
+  const showSize = !isArrow && !isZone && !isText && !isHeadline && !isTag;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
   // Vision and zones use the standalone rotation-section; players use inline arm-rotation-group
   const showStandaloneRot = type === 'vision' || isZone;
@@ -386,6 +410,20 @@ export function select(el) {
     document.getElementById('spot-name-size-val').textContent = sNameSize + 'px';
   } else if (type === 'vision') {
     visionSec.style.display = '';
+  } else if (type === 'tag') {
+    if (tagSec) {
+      tagSec.style.display = '';
+      document.getElementById('tag-label-input').value = el.dataset.tagLabel || 'TOP SPEED';
+      document.getElementById('tag-value-input').value = el.dataset.tagValue || '8.7km/h';
+      const tAnchor = el.dataset.tagTextAnchor || 'bottom';
+      document.querySelectorAll('[data-taganchor]').forEach(b => b.classList.toggle('active', b.dataset.taganchor === tAnchor));
+      const lineLen = el.dataset.tagLineLen || '80';
+      document.getElementById('tag-line-len-slider').value = lineLen;
+      document.getElementById('tag-line-len-val').textContent = lineLen + 'px';
+      const lineAngle = el.dataset.tagLineAngle || '-35';
+      document.getElementById('tag-line-angle-slider').value = lineAngle;
+      document.getElementById('tag-line-angle-val').textContent = Math.round(parseFloat(lineAngle)) + '°';
+    }
   } else if (isZone) {
     zoneSec.style.display = '';
     // Set active border style button based on current shape
@@ -500,6 +538,18 @@ export function deselectVisual(el) {
       delete el.dataset.savedStroke;
     }
   }
+  if (t === 'tag') {
+    const tagLine = el.querySelector('.tag-line');
+    if (tagLine && el.dataset.savedStroke) {
+      tagLine.setAttribute('stroke', el.dataset.savedStroke);
+      delete el.dataset.savedStroke;
+    }
+    const tagDot = el.querySelector('.tag-dot');
+    if (tagDot && el.dataset.savedDotFill) {
+      tagDot.setAttribute('fill', el.dataset.savedDotFill);
+      delete el.dataset.savedDotFill;
+    }
+  }
 }
 
 export function deselect() {
@@ -517,6 +567,8 @@ export function deselect() {
   document.getElementById('textbox-edit-section').style.display = 'none';
   document.getElementById('spotlight-edit-section').style.display = 'none';
   document.getElementById('vision-edit-section').style.display = 'none';
+  const tagSec = document.getElementById('tag-edit-section');
+  if (tagSec) tagSec.style.display = 'none';
   document.getElementById('rotation-section').style.display = 'none';
   document.getElementById('size-section').style.display = 'none';
 }
@@ -544,6 +596,8 @@ export function deleteSelected() {
   document.getElementById('textbox-edit-section').style.display = 'none';
   document.getElementById('spotlight-edit-section').style.display = 'none';
   document.getElementById('vision-edit-section').style.display = 'none';
+  const tagDelSec = document.getElementById('tag-edit-section');
+  if (tagDelSec) tagDelSec.style.display = 'none';
 }
 
 // ─── Tab Switcher ─────────────────────────────────────────────────────────────
@@ -793,6 +847,19 @@ export function showMotionHandles(el) {
   S.svg.appendChild(handleGroup);
 }
 
+function showTagHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'tag';
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  // The dot is the draggable handle — drag it to change angle/length
+  handleGroup.appendChild(createHandle(ns, cx, cy, 'dot'));
+  S.svg.appendChild(handleGroup);
+}
+
 export function removeHandles() {
   if (handleGroup) { handleGroup.remove(); handleGroup = null; }
   S.setEndpointDragging(null);
@@ -807,6 +874,39 @@ function moveHandleTo(h, x, y) {
   } else {
     h.querySelectorAll('circle').forEach(c => { c.setAttribute('cx', x); c.setAttribute('cy', y); });
   }
+}
+
+function onTagHandleDrag(el, pt) {
+  // Keep text end fixed, move the dot to mouse position
+  const oldCx = parseFloat(el.dataset.cx), oldCy = parseFloat(el.dataset.cy);
+  const oldLen = parseFloat(el.dataset.tagLineLen || '80');
+  const oldAngle = parseFloat(el.dataset.tagLineAngle || '-35') * Math.PI / 180;
+  // Text end position (stays fixed)
+  const textX = oldCx + oldLen * Math.cos(oldAngle);
+  const textY = oldCy + oldLen * Math.sin(oldAngle);
+  // New dot position = mouse
+  const newCx = pt.x, newCy = pt.y;
+  // Compute new length and angle from new dot to text
+  const dx = textX - newCx, dy = textY - newCy;
+  const newLen = Math.max(20, Math.sqrt(dx * dx + dy * dy));
+  const newAngleDeg = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  el.dataset.cx = newCx; el.dataset.cy = newCy;
+  el.dataset.tagLineLen = Math.round(newLen);
+  el.dataset.tagLineAngle = Math.round(newAngleDeg);
+  applyTransform(el);
+
+  // Sync sliders
+  const lenSlider = document.getElementById('tag-line-len-slider');
+  const lenVal = document.getElementById('tag-line-len-val');
+  if (lenSlider) lenSlider.value = Math.round(newLen);
+  if (lenVal) lenVal.textContent = Math.round(newLen) + 'px';
+  const angleSlider = document.getElementById('tag-line-angle-slider');
+  const angleVal = document.getElementById('tag-line-angle-val');
+  if (angleSlider) angleSlider.value = Math.round(newAngleDeg);
+  if (angleVal) angleVal.textContent = Math.round(newAngleDeg) + '°';
+
+  updateHandlePositions(el);
 }
 
 function updateHandlePositions(el) {
@@ -902,6 +1002,9 @@ function updateHandlePositions(el) {
       moveHandleTo(children[0], parseFloat(trail.getAttribute('x1')), parseFloat(trail.getAttribute('y1')));
       moveHandleTo(children[1], parseFloat(trail.getAttribute('x2')), parseFloat(trail.getAttribute('y2')));
     }
+  } else if (type === 'tag') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    moveHandleTo(handleGroup.children[0], cx, cy);
   }
 }
 
@@ -930,6 +1033,8 @@ function onEndpointDrag(e) {
     onFreeformHandleDrag(el, pt);
   } else if (t === 'motion') {
     onMotionEndpointDrag(el, pt);
+  } else if (t === 'tag') {
+    onTagHandleDrag(el, pt);
   } else if (t.startsWith('shadow') || t === 'textbox' || t === 'headline') {
     onZoneHandleDrag(el, pt);
   }

@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg } from './interaction.js';
-import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms } from './elements.js';
+import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag } from './elements.js';
 import { trackElementEdited } from './analytics.js';
 
 // ─── Tool Selection ───────────────────────────────────────────────────────────
@@ -802,6 +802,77 @@ export function applyZoneBorderStyle(style) {
   } else {
     shape.setAttribute('stroke-dasharray', '4,3');
   }
+}
+
+// ─── Tag Properties ──────────────────────────────────────────────────────────
+export function liveUpdateTagLabel(val) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  S.selectedEl.dataset.tagLabel = val;
+  repositionTag(S.selectedEl);
+}
+
+export function liveUpdateTagValue(val) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  S.selectedEl.dataset.tagValue = val;
+  repositionTag(S.selectedEl);
+}
+
+export function applyTagLabelColor(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  trackElementEdited('tag', 'label_color');
+  const color = swatchEl.dataset.color;
+  S.selectedEl.dataset.tagLabelColor = color;
+  repositionTag(S.selectedEl);
+}
+
+export function applyTagValueColor(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  trackElementEdited('tag', 'value_color');
+  const color = swatchEl.dataset.color;
+  S.selectedEl.dataset.tagValueColor = color;
+  repositionTag(S.selectedEl);
+}
+
+export function applyTagLineColor(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  trackElementEdited('tag', 'line_color');
+  const color = swatchEl.dataset.color;
+  S.selectedEl.dataset.tagLineColor = color;
+  // Also update the dot fill to match
+  S.selectedEl.dataset.tagLabelColor = color;
+  repositionTag(S.selectedEl);
+}
+
+export function applyTagLineDash(style) {
+  document.querySelectorAll('[data-tagline]').forEach(b => b.classList.toggle('active', b.dataset.tagline === style));
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  trackElementEdited('tag', 'line_style');
+  S.selectedEl.dataset.tagLineDash = style === 'solid' ? 'none' : '6,4';
+  repositionTag(S.selectedEl);
+}
+
+export function applyTagLineLen(val) {
+  document.getElementById('tag-line-len-val').textContent = val + 'px';
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  trackElementEdited('tag', 'line_length');
+  S.selectedEl.dataset.tagLineLen = val;
+  repositionTag(S.selectedEl);
+}
+
+export function applyTagTextAnchor(anchor) {
+  document.querySelectorAll('[data-taganchor]').forEach(b => b.classList.toggle('active', b.dataset.taganchor === anchor));
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  trackElementEdited('tag', 'text_anchor');
+  S.selectedEl.dataset.tagTextAnchor = anchor;
+  repositionTag(S.selectedEl);
+}
+
+export function applyTagLineAngle(val) {
+  document.getElementById('tag-line-angle-val').textContent = Math.round(parseFloat(val)) + '°';
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'tag') return;
+  trackElementEdited('tag', 'line_angle');
+  S.selectedEl.dataset.tagLineAngle = val;
+  repositionTag(S.selectedEl);
 }
 
 // ─── Sliders ──────────────────────────────────────────────────────────────────

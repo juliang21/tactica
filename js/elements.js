@@ -1054,3 +1054,229 @@ export function updateVisionPolygon(g) {
 
   tri.setAttribute('points', `${ax},${ay} ${tx},${ty} ${bx},${by}`);
 }
+
+// ─── Add Tag (stat annotation callout) ──────────────────────────────────────
+let _tagCount = 0;
+
+export function addTag(x, y, label, value) {
+  label = label || 'TOP SPEED';
+  value = value || '8.7km/h';
+  const id = 'tag-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'tag';
+  g.dataset.cx = x; g.dataset.cy = y;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.tagLabel = label;
+  g.dataset.tagValue = value;
+  g.dataset.tagLabelColor = 'rgba(255,255,255,0.9)';
+  g.dataset.tagValueColor = '#39FF14';
+  g.dataset.tagLineColor = 'rgba(255,255,255,0.7)';
+  g.dataset.tagLineDash = '6,4';
+  g.dataset.tagLineLen = '80';
+  g.dataset.tagLineAngle = '-35';
+  g.dataset.tagTextAnchor = 'bottom';  // top, bottom, left, right — where line meets text
+
+  // Dashed line
+  const line = document.createElementNS(ns, 'line');
+  line.classList.add('tag-line');
+  line.setAttribute('stroke', 'rgba(255,255,255,0.7)');
+  line.setAttribute('stroke-width', '1.5');
+  line.setAttribute('stroke-dasharray', '6,4');
+
+  // Anchor circle (filled)
+  const circle = document.createElementNS(ns, 'circle');
+  circle.classList.add('tag-dot');
+  circle.setAttribute('r', '5');
+  circle.setAttribute('fill', 'rgba(255,255,255,0.9)');
+  circle.setAttribute('stroke', 'none');
+
+  // Label text (white, upper)
+  const labelEl = document.createElementNS(ns, 'text');
+  labelEl.classList.add('tag-label');
+  labelEl.setAttribute('font-family', 'Poppins, sans-serif');
+  labelEl.setAttribute('font-size', '12');
+  labelEl.setAttribute('font-weight', '600');
+  labelEl.setAttribute('fill', 'rgba(255,255,255,0.9)');
+  labelEl.setAttribute('pointer-events', 'none');
+  labelEl.setAttribute('letter-spacing', '0.5');
+
+  // Value text (green, lower — same font size)
+  const valueEl = document.createElementNS(ns, 'text');
+  valueEl.classList.add('tag-value');
+  valueEl.setAttribute('font-family', 'Poppins, sans-serif');
+  valueEl.setAttribute('font-size', '12');
+  valueEl.setAttribute('font-weight', '700');
+  valueEl.setAttribute('fill', '#39FF14');
+  valueEl.setAttribute('pointer-events', 'none');
+
+  // Hit area at the dot
+  const hitDot = document.createElementNS(ns, 'circle');
+  hitDot.classList.add('hit-area');
+  hitDot.setAttribute('r', '24');
+  hitDot.setAttribute('fill', 'transparent');
+  hitDot.setAttribute('stroke', 'none');
+
+  // Hit area at the text end (repositioned in repositionTag)
+  const hitText = document.createElementNS(ns, 'rect');
+  hitText.classList.add('hit-area', 'tag-hit-text');
+  hitText.setAttribute('fill', 'transparent');
+  hitText.setAttribute('stroke', 'none');
+  hitText.setAttribute('pointer-events', 'all');
+
+  // Wide hit area along the line
+  const hitLine = document.createElementNS(ns, 'line');
+  hitLine.classList.add('hit-area', 'tag-hit-line');
+  hitLine.setAttribute('stroke', 'transparent');
+  hitLine.setAttribute('stroke-width', '16');
+  hitLine.setAttribute('pointer-events', 'stroke');
+
+  g.appendChild(hitLine);
+  g.appendChild(line);
+  g.appendChild(circle);
+  g.appendChild(labelEl);
+  g.appendChild(valueEl);
+  g.appendChild(hitDot);
+  g.appendChild(hitText);
+  S.playersLayer.appendChild(g);
+  repositionTag(g);
+
+  makeDraggable(g);
+  g.addEventListener('click', e => {
+    if (S.tool !== 'select') return;
+    e.stopPropagation();
+    select(g);
+  });
+  _tagCount++;
+  return g;
+}
+
+export function repositionTag(g) {
+  const cx = parseFloat(g.dataset.cx);
+  const cy = parseFloat(g.dataset.cy);
+  const len = parseFloat(g.dataset.tagLineLen || '80');
+  const angleDeg = parseFloat(g.dataset.tagLineAngle || '-35');
+  const angleRad = angleDeg * Math.PI / 180;
+
+  // Circle dot is at (cx, cy) — the anchor point
+  const circle = g.querySelector('.tag-dot');
+  if (circle) { circle.setAttribute('cx', cx); circle.setAttribute('cy', cy); }
+
+  // Hit area centered on the dot
+  const hitDot = g.querySelector('.hit-area:not(.tag-hit-text):not(.tag-hit-line)');
+  if (hitDot) { hitDot.setAttribute('cx', cx); hitDot.setAttribute('cy', cy); }
+
+  // Line extends from dot to text area
+  const ex = cx + len * Math.cos(angleRad);
+  const ey = cy + len * Math.sin(angleRad);
+  const line = g.querySelector('.tag-line');
+  if (line) {
+    line.setAttribute('x1', cx); line.setAttribute('y1', cy);
+    line.setAttribute('x2', ex); line.setAttribute('y2', ey);
+    line.setAttribute('stroke', g.dataset.tagLineColor || 'rgba(255,255,255,0.7)');
+    const dash = g.dataset.tagLineDash || '6,4';
+    if (dash === 'none') line.removeAttribute('stroke-dasharray');
+    else line.setAttribute('stroke-dasharray', dash);
+  }
+
+  // Hit area along the line
+  const hitLine = g.querySelector('.tag-hit-line');
+  if (hitLine) {
+    hitLine.setAttribute('x1', cx); hitLine.setAttribute('y1', cy);
+    hitLine.setAttribute('x2', ex); hitLine.setAttribute('y2', ey);
+  }
+
+  // Text positioning: anchor describes where the line meets the text block
+  // "top"    → line connects at top-center of text; text hangs below
+  // "bottom" → line connects at bottom-center; text sits above
+  // "left"   → line connects at left-center; text extends right
+  // "right"  → line connects at right-center; text extends left
+  const gap = 6;
+  const anchor = g.dataset.tagTextAnchor || 'bottom';
+  const fontSize = 12;
+  const lineH = fontSize * 1.4;
+  const textBlockH = lineH * 2;  // two lines (label + value)
+
+  const labelEl = g.querySelector('.tag-label');
+  const valueEl = g.querySelector('.tag-value');
+
+  let labelX, labelY, valueX, valueY, svgAnchor, labelBaseline, valueBaseline;
+
+  if (anchor === 'top') {
+    // Line meets top-center → text below the connection point
+    svgAnchor = 'middle';
+    labelX = ex; labelY = ey + gap;
+    valueX = ex; valueY = labelY + lineH;
+    labelBaseline = 'hanging'; valueBaseline = 'hanging';
+  } else if (anchor === 'bottom') {
+    // Line meets bottom-center → text above the connection point
+    svgAnchor = 'middle';
+    valueY = ey - gap;
+    labelY = valueY - lineH;
+    labelX = ex; valueX = ex;
+    labelBaseline = 'auto'; valueBaseline = 'auto';
+  } else if (anchor === 'left') {
+    // Line meets left-center of text → text extends right
+    svgAnchor = 'start';
+    labelX = ex + gap; valueX = ex + gap;
+    labelY = ey - lineH * 0.55;
+    valueY = labelY + lineH;
+    labelBaseline = 'auto'; valueBaseline = 'auto';
+  } else if (anchor === 'right') {
+    // Line meets right-center of text → text extends left
+    svgAnchor = 'end';
+    labelX = ex - gap; valueX = ex - gap;
+    labelY = ey - lineH * 0.55;
+    valueY = labelY + lineH;
+    labelBaseline = 'auto'; valueBaseline = 'auto';
+  }
+
+  if (labelEl) {
+    labelEl.setAttribute('x', labelX);
+    labelEl.setAttribute('y', labelY);
+    labelEl.setAttribute('fill', g.dataset.tagLabelColor || 'rgba(255,255,255,0.9)');
+    labelEl.setAttribute('font-size', fontSize);
+    labelEl.setAttribute('text-anchor', svgAnchor);
+    labelEl.setAttribute('dominant-baseline', labelBaseline);
+    labelEl.textContent = g.dataset.tagLabel || '';
+  }
+  if (valueEl) {
+    valueEl.setAttribute('x', valueX);
+    valueEl.setAttribute('y', valueY);
+    valueEl.setAttribute('fill', g.dataset.tagValueColor || '#39FF14');
+    valueEl.setAttribute('font-size', fontSize);
+    valueEl.setAttribute('text-anchor', svgAnchor);
+    valueEl.setAttribute('dominant-baseline', valueBaseline);
+    valueEl.textContent = g.dataset.tagValue || '';
+  }
+
+  // Hit area at text end — dynamically sized to cover both text lines
+  const hitText = g.querySelector('.tag-hit-text');
+  if (hitText) {
+    const pad = 10;
+    // Measure actual text widths if available
+    let maxW = 80;
+    if (labelEl && labelEl.getComputedTextLength) {
+      const lw = labelEl.getComputedTextLength();
+      const vw = valueEl ? valueEl.getComputedTextLength() : 0;
+      maxW = Math.max(lw, vw, 40) + pad * 2;
+    }
+    const hitH = textBlockH + pad * 2;
+    let hx, hy;
+
+    if (anchor === 'top') {
+      hx = ex - maxW / 2; hy = ey;
+    } else if (anchor === 'bottom') {
+      hx = ex - maxW / 2; hy = ey - hitH;
+    } else if (anchor === 'left') {
+      hx = ex; hy = ey - hitH / 2;
+    } else if (anchor === 'right') {
+      hx = ex - maxW; hy = ey - hitH / 2;
+    }
+    hitText.setAttribute('x', hx);
+    hitText.setAttribute('y', hy);
+    hitText.setAttribute('width', maxW);
+    hitText.setAttribute('height', hitH);
+  }
+}

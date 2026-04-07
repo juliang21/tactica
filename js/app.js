@@ -1,6 +1,6 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerDragEnd, makeDraggable, registerSelectTracker } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms } from './elements.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerDragEnd, makeDraggable, registerSelectTracker } from './interaction.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, repositionTag } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -13,6 +13,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyZoneFill, applyZoneBorder, applyZoneBorderStyle,
          liveUpdateTextBox, confirmTextBox, applyTextBoxSize, applyTextBoxColor, applyTextBoxBg, applyTextBoxAlign,
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
+         liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
          applySize, applyRotation, clearAll } from './ui.js';
 import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
@@ -29,6 +30,7 @@ registerHeadlineRewrap(rewrapHeadline);
 registerVisionUpdate(updateVisionPolygon);
 registerFreeformUpdate(updateFreeformPath);
 registerMotionUpdate(updateMotionVisual);
+registerTagReposition(repositionTag);
 // ─── Initialize subscription UI ────────────────────────────────────────────
 updateLockedUI();
 
@@ -247,6 +249,15 @@ window.applyHeadlineTitleSize = applyHeadlineTitleSize;
 window.applyHeadlineBodySize = applyHeadlineBodySize;
 window.applyHeadlineTextColor = applyHeadlineTextColor;
 window.applyHeadlineBg = applyHeadlineBg;
+window.liveUpdateTagLabel = liveUpdateTagLabel;
+window.liveUpdateTagValue = liveUpdateTagValue;
+window.applyTagLabelColor = applyTagLabelColor;
+window.applyTagValueColor = applyTagValueColor;
+window.applyTagLineColor = applyTagLineColor;
+window.applyTagLineDash = applyTagLineDash;
+window.applyTagLineLen = applyTagLineLen;
+window.applyTagLineAngle = applyTagLineAngle;
+window.applyTagTextAnchor = applyTagTextAnchor;
 window.triggerImageUpload = triggerImageUpload;
 window.handleImageUpload = function(input) {
   handleImageUpload(input);
@@ -389,6 +400,7 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'vision') placed = addVision(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
   else if (S.tool === 'headline') placed = addHeadline(pt.x, pt.y);
+  else if (S.tool === 'tag') placed = addTag(pt.x, pt.y);
   if (placed) {
     const elType = placed.dataset.type;
     trackElementInserted(elType);
@@ -1293,6 +1305,17 @@ function copySelected() {
     data.visionColor = el.dataset.visionColor || 'rgba(147,197,253,0.5)';
     data.visionLength = el.dataset.visionLength || '80';
     data.visionSpread = el.dataset.visionSpread || '35';
+  } else if (t === 'tag') {
+    data.tagLabel = el.dataset.tagLabel || 'TOP SPEED';
+    data.tagValue = el.dataset.tagValue || '8.7km/h';
+    data.tagLabelColor = el.dataset.tagLabelColor || 'rgba(255,255,255,0.9)';
+    data.tagValueColor = el.dataset.tagValueColor || '#39FF14';
+    data.tagLineColor = el.dataset.tagLineColor || 'rgba(255,255,255,0.7)';
+    data.tagLineDash = el.dataset.tagLineDash || '6,4';
+    data.tagLineLen = el.dataset.tagLineLen || '80';
+    data.tagLineAngle = el.dataset.tagLineAngle || '-35';
+    data.tagTextAnchor = el.dataset.tagTextAnchor || 'bottom';
+    data.scale = el.dataset.scale || '1';
   } else if (t?.startsWith('shadow')) {
     const shape = el.querySelector('rect,ellipse');
     data.hw = el.dataset.hw || '30'; data.hh = el.dataset.hh || '20';
@@ -1424,6 +1447,19 @@ function pasteClipboard() {
       placed.dataset.visionSpread = d.visionSpread;
       const shape = placed.querySelector('.vision-shape');
       if (shape) shape.setAttribute('fill', d.visionColor);
+    }
+  } else if (d.type === 'tag') {
+    placed = addTag(x, y, d.tagLabel, d.tagValue);
+    if (placed) {
+      placed.dataset.tagLabelColor = d.tagLabelColor;
+      placed.dataset.tagValueColor = d.tagValueColor;
+      placed.dataset.tagLineColor = d.tagLineColor;
+      placed.dataset.tagLineDash = d.tagLineDash;
+      placed.dataset.tagLineLen = d.tagLineLen;
+      placed.dataset.tagLineAngle = d.tagLineAngle;
+      placed.dataset.tagTextAnchor = d.tagTextAnchor;
+      placed.dataset.scale = d.scale;
+      repositionTag(placed);
     }
   } else if (d.type?.startsWith('shadow')) {
     placed = addShadow(x, y, d.type);
