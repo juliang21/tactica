@@ -101,6 +101,9 @@ export function doExport() {
   const isHalf = S.currentPitchLayout.startsWith('half');
   const hasGoals = !S.currentPitchLayout.includes('-ng');
   const hasD = !S.currentPitchLayout.includes('-nd');
+  const hasGrid = S.currentPitchLayout.includes('-grid');
+  const pbHW = hasGrid ? 130 : 100;  // penalty box half-width
+  const gaHW = hasGrid ? 60 : 55;    // goal area half-width
 
   const SCALE = 3; // 3x resolution for crisp exports
   const canvas = document.createElement('canvas');
@@ -160,13 +163,13 @@ export function doExport() {
       pl(() => { ctx.beginPath(); ctx.moveTo(cx,py); ctx.lineTo(cx,py+ph); ctx.stroke(); });
       pl(() => { ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2); ctx.stroke(); });
       ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      pl(() => { ctx.strokeRect(pad,cy-100,105,200); });
-      pl(() => { ctx.strokeRect(pad,cy-55,40,110); });
+      pl(() => { ctx.strokeRect(pad,cy-pbHW,105,pbHW*2); });
+      pl(() => { ctx.strokeRect(pad,cy-gaHW,40,gaHW*2); });
       ctx.beginPath(); ctx.arc(pad+67,cy,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
       const arcA = Math.acos(38/55);
       pl(() => { ctx.beginPath(); ctx.arc(pad+67,cy,55,-arcA,arcA); ctx.stroke(); });
-      pl(() => { ctx.strokeRect(pad+pw-105,cy-100,105,200); });
-      pl(() => { ctx.strokeRect(pad+pw-40,cy-55,40,110); });
+      pl(() => { ctx.strokeRect(pad+pw-105,cy-pbHW,105,pbHW*2); });
+      pl(() => { ctx.strokeRect(pad+pw-40,cy-gaHW,40,gaHW*2); });
       ctx.beginPath(); ctx.arc(pad+pw-67,cy,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
       pl(() => { ctx.beginPath(); ctx.arc(pad+pw-67,cy,55,Math.PI-arcA,Math.PI+arcA); ctx.stroke(); });
       ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
@@ -197,13 +200,13 @@ export function doExport() {
       pl(() => { ctx.beginPath(); ctx.moveTo(pad,cy); ctx.lineTo(pad+pw,cy); ctx.stroke(); });
       pl(() => { ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2); ctx.stroke(); });
       ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      pl(() => { ctx.strokeRect(cx-100,px,200,105); });
-      pl(() => { ctx.strokeRect(cx-55,px,110,40); });
+      pl(() => { ctx.strokeRect(cx-pbHW,px,pbHW*2,105); });
+      pl(() => { ctx.strokeRect(cx-gaHW,px,gaHW*2,40); });
       ctx.beginPath(); ctx.arc(cx,px+67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
       const vArcA = Math.acos(38/55);
       if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+67,55,Math.PI/2-vArcA,Math.PI/2+vArcA); ctx.stroke(); });
-      pl(() => { ctx.strokeRect(cx-100,px+ph-105,200,105); });
-      pl(() => { ctx.strokeRect(cx-55,px+ph-40,110,40); });
+      pl(() => { ctx.strokeRect(cx-pbHW,px+ph-105,pbHW*2,105); });
+      pl(() => { ctx.strokeRect(cx-gaHW,px+ph-40,gaHW*2,40); });
       ctx.beginPath(); ctx.arc(cx,px+ph-67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
       if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+ph-67,55,Math.PI*1.5-vArcA,Math.PI*1.5+vArcA); ctx.stroke(); });
       ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
@@ -211,6 +214,34 @@ export function doExport() {
       ctx.fillRect(cx-35,px+ph,70,14); ctx.strokeRect(cx-35,px+ph,70,14);
       ctx.restore();
     }
+  }
+
+  // ── Grid lines (thirds + channels aligned to penalty/goal area) for export ──
+  if (hasGrid) {
+    const gridColor = PL.replace(/[\d.]+\)$/, m => `${parseFloat(m)*0.55})`);
+    ctx.save();
+    ctx.strokeStyle = gridColor;
+    ctx.lineWidth = 1;
+    ctx.setLineDash([6, 4]);
+
+    function gl(x1,y1,x2,y2) { ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
+
+    if (isHalf) {
+      const pad=30, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
+      for (let i=1; i<=2; i++) gl(pad, py+ph*i/3, pad+pw, py+ph*i/3);
+      [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => gl(x, py, x, py+ph));
+    } else if (isV) {
+      const pad=20, px=20, pw=W-pad*2, ph=H-px*2, cx=W/2;
+      for (let i=1; i<=2; i++) gl(pad, px+ph*i/3, pad+pw, px+ph*i/3);
+      [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => gl(x, px, x, px+ph));
+    } else {
+      const pad=30, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
+      for (let i=1; i<=2; i++) gl(pad+pw*i/3, py, pad+pw*i/3, py+ph);
+      [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => gl(pad, y, pad+pw, y));
+    }
+
+    ctx.setLineDash([]);
+    ctx.restore();
   }
 
   renderOverlays(ctx, W, H, SCALE, canvas, prevSelected);

@@ -534,7 +534,8 @@ input[type=range]::-webkit-slider-thumb {
 .pitch-thumb {
   cursor: pointer; border: 2px solid transparent;
   transition: transform 0.1s, border-color 0.1s;
-  overflow: hidden; aspect-ratio: 16/10; position: relative;
+  overflow: hidden; position: relative;
+  height: 64px;
 }
 .pitch-thumb:hover { transform: scale(1.06); }
 .pitch-thumb.selected { border-color: var(--accent); }
