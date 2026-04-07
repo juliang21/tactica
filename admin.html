@@ -151,7 +151,7 @@
   </div>
 
   <div class="section">
-    <h2>All Users</h2>
+    <h2 id="users-table-title">All Users</h2>
     <div class="table-wrap">
       <table>
         <thead>
@@ -167,6 +167,7 @@
         <tbody id="users-table"></tbody>
       </table>
     </div>
+    <button class="refresh-btn" id="users-show-more" style="display:none;margin-top:12px;width:100%" onclick="showMoreUsers()">Show more</button>
   </div>
 </div>
 
@@ -338,20 +339,47 @@ function renderFeatureStats(actions, activeUsers) {
   const animation = featureData(actions, 'feature_animation');
   const pitch = featureData(actions, 'feature_pitch_change');
   const image = featureData(actions, 'feature_image_upload');
+  const formation = featureData(actions, 'feature_formation');
+  const clubTeam = featureData(actions, 'feature_club_team');
+  const nationalTeam = featureData(actions, 'feature_national_team');
+  const elInserted = featureData(actions, 'element_inserted');
+  const elSelected = featureData(actions, 'element_selected');
 
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
 
-  function card(label, d) {
-    return `<div class="stat-card">
+  function card(label, d, detail) {
+    let html = `<div class="stat-card">
       <div class="label">${label}</div>
       <div class="value">${d.uniqueSessions}</div>
       <div class="sub">sessions used &middot; ${d.uniqueUsers} users (${pct(d.uniqueUsers)}% of active)</div>
-      <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>
-    </div>`;
+      <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>`;
+    if (detail) html += `<div class="sub" style="margin-top:4px;color:#555;font-size:9px;line-height:1.4">${detail}</div>`;
+    html += `</div>`;
+    return html;
   }
 
+  // Build breakdowns for features with types
+  function breakdown(items, metaKey, limit) {
+    const counts = {};
+    items.forEach(a => { const v = a.meta && a.meta[metaKey]; if (v) counts[v] = (counts[v] || 0) + 1; });
+    return Object.entries(counts).sort((a,b) => b[1] - a[1]).slice(0, limit || 5).map(([k,v]) => `${k}: ${v}`).join(' · ');
+  }
+
+  const pitchItems = (actions || []).filter(a => a.action === 'feature_pitch_change');
+  const formationItems = (actions || []).filter(a => a.action === 'feature_formation');
+  const clubItems = (actions || []).filter(a => a.action === 'feature_club_team');
+  const nationalItems = (actions || []).filter(a => a.action === 'feature_national_team');
+  const insertedItems = (actions || []).filter(a => a.action === 'element_inserted');
+
   document.getElementById('feature-stats').innerHTML =
-    card('Save', save) + card('Export', xport) + card('Animation', animation) + card('Pitch Change', pitch) + card('Image Upload', image);
+    card('Save', save) + card('Export', xport) + card('Animation', animation) +
+    card('Pitch Change', pitch, breakdown(pitchItems, 'type') + (breakdown(pitchItems, 'color') ? '<br>' + breakdown(pitchItems, 'color') : '')) +
+    card('Image Upload', image) +
+    card('Formation', formation, breakdown(formationItems, 'formation')) +
+    card('Club Team', clubTeam, breakdown(clubItems, 'team')) +
+    card('National Team', nationalTeam, breakdown(nationalItems, 'team')) +
+    card('Element Inserted', elInserted, breakdown(insertedItems, 'element', 10)) +
+    card('Element Selected', elSelected);
 }
 
 // ─── Chart ──────────────────────────────────────────────────────────────────
@@ -408,10 +436,23 @@ function renderChart(sessions, startStr, endStr) {
   });
 }
 
-// ─── Users Table ────────────────────────────────────────────────────────────
+// ─── Users Table (paginated, 50 at a time) ─────────────────────────────────
+let _tableUsers = [];
+let _tableShown = 0;
+const PAGE_SIZE = 50;
+
 function renderUsersTable(users) {
+  _tableUsers = users;
+  _tableShown = 0;
+  document.getElementById('users-table').innerHTML = '';
+  document.getElementById('users-table-title').textContent = `All Users (${users.length})`;
+  showMoreUsers();
+}
+
+window.showMoreUsers = function() {
   const tbody = document.getElementById('users-table');
-  tbody.innerHTML = users.map(u => {
+  const batch = _tableUsers.slice(_tableShown, _tableShown + PAGE_SIZE);
+  tbody.innerHTML += batch.map(u => {
     const firstSeen = u.firstSeen ? new Date(u.firstSeen).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
     const lastSeen = u.lastSeen ? timeAgo(u.lastSeen) : '\u2014';
     const isReturning = u.sessionCount > 1;
@@ -424,7 +465,11 @@ function renderUsersTable(users) {
       <td><span class="${isReturning ? 'returning' : 'new'}">${isReturning ? 'Returning' : 'New'}</span></td>
     </tr>`;
   }).join('');
-}
+  _tableShown += batch.length;
+  const btn = document.getElementById('users-show-more');
+  btn.style.display = _tableShown < _tableUsers.length ? 'block' : 'none';
+  btn.textContent = `Show more (${_tableUsers.length - _tableShown} remaining)`;
+};
 
 function timeAgo(ts) {
   const diff = Date.now() - ts;

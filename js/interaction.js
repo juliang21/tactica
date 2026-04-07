@@ -3,6 +3,8 @@ import { trackElementSelected } from './analytics.js';
 
 // ─── Textbox rewrap callback (set from app.js to avoid circular import) ──────
 let _rewrapFn = null;
+let _selectTrackFn = null;
+export function registerSelectTracker(fn) { _selectTrackFn = fn; }
 export function registerRewrap(fn) { _rewrapFn = fn; }
 
 // ─── Vision polygon update callback ─────────────────────────────────────────
@@ -186,6 +188,7 @@ export function select(el) {
   S.setSelectedEl(el);
   const type = el.dataset.type;
   trackElementSelected(type);
+  if (_selectTrackFn) _selectTrackFn(type);
 
   // Visual highlight
   if (type === 'player' || type === 'referee' || type === 'ball' || type === 'cone') {

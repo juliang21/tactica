@@ -1,5 +1,5 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerDragEnd, makeDraggable } from './interaction.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerDragEnd, makeDraggable, registerSelectTracker } from './interaction.js';
 import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
@@ -36,6 +36,10 @@ updateLockedUI();
 registerAnalysisTracker(() => {
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'analysis_started').catch(() => {});
+});
+registerSelectTracker((type) => {
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'element_selected', { element: type }).catch(() => {});
 });
 
 registerDragEnd((el) => {
@@ -154,7 +158,13 @@ window.setTool = function(t) {
 };
 window.setArrowType = setArrowType;
 window.selectTeamContext = selectTeamContext;
-window.applyKit = applyKit;
+window.applyKit = function(el) {
+  applyKit(el);
+  const teamName = el.getAttribute('title') || el.querySelector('.kit-label')?.textContent || 'unknown';
+  const isNational = !!el.closest('#kit-grid-national');
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, isNational ? 'feature_national_team' : 'feature_club_team', { team: teamName }).catch(() => {});
+};
 window.applyColor = applyColor;
 window.switchKitTab = function(tab, btn) {
   document.getElementById('kit-grid-clubs').style.display = tab === 'clubs' ? '' : 'none';
@@ -162,7 +172,11 @@ window.switchKitTab = function(tab, btn) {
   document.querySelectorAll('.kit-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
 };
-window.placeFormation = placeFormation;
+window.placeFormation = function(name) {
+  placeFormation(name);
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_formation', { formation: name }).catch(() => {});
+};
 window.liveUpdateNumber = liveUpdateNumber;
 window.confirmNumber = confirmNumber;
 window.liveUpdateName = liveUpdateName;
@@ -174,12 +188,15 @@ window.deleteSelected = deleteSelected;
 window.switchTab = switchTab;
 window.setPitch = function(layout) {
   setPitch(layout);
-  if (layout !== 'full-h') {
-    const u = getCurrentUser();
-    if (u) logAction(u.uid, u.email, 'feature_pitch_change', { layout }).catch(() => {});
-  }
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_pitch_change', { type: layout }).catch(() => {});
 };
-window.setPitchColor = setPitchColor;
+window.setPitchColor = function(dotEl) {
+  setPitchColor(dotEl);
+  const colorName = dotEl.getAttribute('title') || 'unknown';
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_pitch_change', { color: colorName }).catch(() => {});
+};
 window.hideUpgradePrompt = hideUpgradePrompt;
 window.setUserTier = setUserTier;
 window.exportImage = exportImage;
@@ -373,7 +390,11 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
   else if (S.tool === 'headline') placed = addHeadline(pt.x, pt.y);
   if (placed) {
-    trackElementInserted(placed.dataset.type);
+    const elType = placed.dataset.type;
+    trackElementInserted(elType);
+    // Log element insertion to Firestore
+    const u = getCurrentUser();
+    if (u) logAction(u.uid, u.email, 'element_inserted', { element: elType }).catch(() => {});
     // Players stay in placement mode so you can keep adding
     if (S.tool === 'player-a' || S.tool === 'player-b') {
       // Don't switch tool — stay in player mode
