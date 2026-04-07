@@ -8,7 +8,8 @@ export function addPlayer(x, y, team, num, isGK) {
   if (num === undefined) { S.playerCounts[team]++; num = S.playerCounts[team]; }
   isGK = isGK || false;
   const fillColor = isGK ? S.gkColors[team] : S.teamColors[team];
-  const isDark = S.isDarkColor(fillColor);
+  const isPattern = fillColor.startsWith('url(');
+  const isDark = !isPattern && S.isDarkColor(fillColor);
   const textColor = isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)';
 
   const id = 'pl-' + S.nextObjectId();
@@ -30,6 +31,11 @@ export function addPlayer(x, y, team, num, isGK) {
   numText.setAttribute('font-family','Poppins,sans-serif');
   numText.setAttribute('font-size','10'); numText.setAttribute('font-weight','700');
   numText.setAttribute('fill', textColor); numText.setAttribute('pointer-events','none');
+  if (isPattern) {
+    numText.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+    numText.setAttribute('stroke-width', '3');
+    numText.setAttribute('paint-order', 'stroke');
+  }
   numText.textContent = num;
 
   const nameLabel = document.createElementNS('http://www.w3.org/2000/svg', 'text');
