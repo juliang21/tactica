@@ -80,6 +80,38 @@
   .returning { color: #4ade80; font-weight: 600; }
   .new { color: #888; }
 
+  /* Milestone bar */
+  .milestone-card {
+    background: #1a1a22; border-radius: 12px; padding: 20px;
+    border: 1px solid rgba(255,255,255,0.06);
+    grid-column: 1 / -1;
+  }
+  .milestone-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 12px; }
+  .milestone-track {
+    position: relative; height: 28px; background: rgba(255,255,255,0.04);
+    border-radius: 14px; overflow: visible; margin-bottom: 8px;
+  }
+  .milestone-fill {
+    height: 100%; border-radius: 14px;
+    background: linear-gradient(90deg, #D4A843, #e8c96a);
+    transition: width 0.6s ease; position: relative;
+  }
+  .milestone-fill .milestone-count {
+    position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+    font-size: 13px; font-weight: 700; color: #000;
+  }
+  .milestone-markers {
+    display: flex; position: relative; height: 22px; margin-top: 2px;
+  }
+  .milestone-marker {
+    position: absolute; transform: translateX(-50%);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .milestone-marker .tick { width: 1px; height: 8px; background: rgba(255,255,255,0.15); }
+  .milestone-marker .m-label { font-size: 9px; color: #555; font-weight: 600; margin-top: 2px; }
+  .milestone-marker.reached .m-label { color: #D4A843; }
+  .milestone-marker.next .m-label { color: #e0e0e0; }
+
   /* Activity chart */
   .chart-container { background: #1a1a22; border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
   .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 120px; margin-top: 12px; }
@@ -173,7 +205,7 @@
   <!-- ═══ OVERVIEW TAB ═══ -->
   <div class="tab-content active" id="tab-overview">
     <div class="section">
-      <div class="section-header"><span class="icon">&#128100;</span> User-Level Data</div>
+      <div class="section-header"><span class="icon">&#128100;</span> Coach-Level Data</div>
       <div class="stats-grid" id="user-stats"></div>
     </div>
     <div class="section">
@@ -192,7 +224,7 @@
       </div>
     </div>
     <div class="section">
-      <h2 id="users-table-title">All Users</h2>
+      <h2 id="users-table-title">All Coaches</h2>
       <div class="table-wrap">
         <table>
           <thead>
@@ -317,22 +349,47 @@ window.applyDateFilter = function() {
 
 // ─── User-Level Stats ───────────────────────────────────────────────────────
 function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps) {
-  const totalUsers = allUsers.length;
-  const activeUsers = activeUids.size;
-  const returningUsers = users.filter(u => u.sessionCount > 1).length;
-  const analysisUsers = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
-  const saveUsers = new Set((actions || []).filter(a => a.action === 'save').map(a => a.uid)).size;
-  const exportUsers = new Set((actions || []).filter(a => a.action === 'export').map(a => a.uid)).size;
-  const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
+  const totalCoaches = allUsers.length;
+  const activeCoaches = activeUids.size;
+  const returningCoaches = users.filter(u => u.sessionCount > 1).length;
+  const analysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
+  const saveCoaches = new Set((actions || []).filter(a => a.action === 'save').map(a => a.uid)).size;
+  const exportCoaches = new Set((actions || []).filter(a => a.action === 'export').map(a => a.uid)).size;
+  const pct = (n) => activeCoaches > 0 ? Math.round(n / activeCoaches * 100) : 0;
 
-  document.getElementById('user-stats').innerHTML = `
-    <div class="stat-card"><div class="label">Total Users (all time)</div><div class="value">${totalUsers}</div></div>
+  // Milestone bar
+  const milestones = [100, 200, 500, 1000];
+  const nextM = milestones.find(m => totalCoaches < m) || milestones[milestones.length - 1];
+  const prevM = milestones[milestones.indexOf(nextM) - 1] || 0;
+  const barPct = Math.min(100, Math.round(((totalCoaches - prevM) / (nextM - prevM)) * 100));
+  const overallPct = Math.min(100, Math.round((totalCoaches / milestones[milestones.length - 1]) * 100));
+  const milestoneHTML = `<div class="milestone-card">
+    <div class="label">Total Coaches &mdash; Road to ${nextM}</div>
+    <div class="milestone-track">
+      <div class="milestone-fill" style="width:${overallPct}%">
+        <span class="milestone-count">${totalCoaches}</span>
+      </div>
+    </div>
+    <div class="milestone-markers">
+      ${milestones.map(m => {
+        const pos = Math.round((m / milestones[milestones.length - 1]) * 100);
+        const reached = totalCoaches >= m;
+        const isNext = m === nextM && !reached;
+        return `<div class="milestone-marker${reached ? ' reached' : ''}${isNext ? ' next' : ''}" style="left:${pos}%">
+          <div class="tick"></div>
+          <span class="m-label">${m >= 1000 ? (m/1000)+'K' : m}</span>
+        </div>`;
+      }).join('')}
+    </div>
+  </div>`;
+
+  document.getElementById('user-stats').innerHTML = milestoneHTML + `
     <div class="stat-card"><div class="label">Sign Ups in Period</div><div class="value">${signUps}</div></div>
-    <div class="stat-card"><div class="label">Active Users in Period</div><div class="value">${activeUsers}</div></div>
-    <div class="stat-card"><div class="label">Returning Users</div><div class="value">${returningUsers}</div><div class="sub">${pct(returningUsers)}% of active</div></div>
-    <div class="stat-card"><div class="label">Users w/ an Analysis</div><div class="value">${pct(analysisUsers)}%</div><div class="sub">${analysisUsers} of ${activeUsers} active</div></div>
-    <div class="stat-card"><div class="label">Users w/ a Save</div><div class="value">${pct(saveUsers)}%</div><div class="sub">${saveUsers} of ${activeUsers} active</div></div>
-    <div class="stat-card"><div class="label">Users w/ an Export</div><div class="value">${pct(exportUsers)}%</div><div class="sub">${exportUsers} of ${activeUsers} active</div></div>
+    <div class="stat-card"><div class="label">Active Coaches in Period</div><div class="value">${activeCoaches}</div></div>
+    <div class="stat-card"><div class="label">Returning Coaches</div><div class="value">${returningCoaches}</div><div class="sub">${pct(returningCoaches)}% of active</div></div>
+    <div class="stat-card"><div class="label">Coaches w/ an Analysis</div><div class="value">${pct(analysisCoaches)}%</div><div class="sub">${analysisCoaches} of ${activeCoaches} active</div></div>
+    <div class="stat-card"><div class="label">Coaches w/ a Save</div><div class="value">${pct(saveCoaches)}%</div><div class="sub">${saveCoaches} of ${activeCoaches} active</div></div>
+    <div class="stat-card"><div class="label">Coaches w/ an Export</div><div class="value">${pct(exportCoaches)}%</div><div class="sub">${exportCoaches} of ${activeCoaches} active</div></div>
   `;
 }
 
@@ -381,7 +438,7 @@ function renderFeatureStats(actions, activeUsers) {
     return `<div class="stat-card">
       <div class="label">${label}</div>
       <div class="value">${d.uniqueSessions}</div>
-      <div class="sub">sessions &middot; ${d.uniqueUsers} users (${pct(d.uniqueUsers)}%)</div>
+      <div class="sub">sessions &middot; ${d.uniqueUsers} coaches (${pct(d.uniqueUsers)}%)</div>
       <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>
     </div>`;
   }).join('');
@@ -416,7 +473,7 @@ function renderFeaturesTab(actions, activeUsers) {
     html += `<div class="feature-card">
       <div class="feature-card-header">
         <span class="feature-card-title">${cfg.label}</span>
-        <span class="feature-card-summary">${uniqueSessions} sessions &middot; ${uniqueUsers} users &middot; ${totalEvents} events</span>
+        <span class="feature-card-summary">${uniqueSessions} sessions &middot; ${uniqueUsers} coaches &middot; ${totalEvents} events</span>
       </div>`;
 
     if (cfg.metaKey) {
@@ -449,7 +506,7 @@ function renderFeaturesTab(actions, activeUsers) {
             <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
             <span class="breakdown-count">${count} events</span>
             <span class="breakdown-sessions">${sessions} sessions</span>
-            <span class="breakdown-sessions">${users} users</span>
+            <span class="breakdown-sessions">${users} coaches</span>
           </div>`;
         });
       }
@@ -502,7 +559,7 @@ function renderChart(sessions, startStr, endStr) {
     const pct = (b.count / maxCount) * 100;
     const dayLabel = key.slice(5);
     const weekday = new Date(key + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
-    barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%"><div class="tooltip">${weekday} ${dayLabel}: ${b.count} sessions, ${b.uniqueUsers.size} users</div></div>`;
+    barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%"><div class="tooltip">${weekday} ${dayLabel}: ${b.count} sessions, ${b.uniqueUsers.size} coaches</div></div>`;
     labelsEl.innerHTML += `<span>${i % showEvery === 0 ? dayLabel.slice(3) : ''}</span>`;
   });
 }
@@ -516,7 +573,7 @@ function renderUsersTable(users) {
   _tableUsers = users;
   _tableShown = 0;
   document.getElementById('users-table').innerHTML = '';
-  document.getElementById('users-table-title').textContent = `All Users (${users.length})`;
+  document.getElementById('users-table-title').textContent = `All Coaches (${users.length})`;
   showMoreUsers();
 }
 
