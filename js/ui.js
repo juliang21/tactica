@@ -75,7 +75,19 @@ function setPlayerColor(g, color) {
   }
   delete g.dataset.borderColor;
   const txt = g.querySelectorAll('text')[0];
-  if (txt) txt.setAttribute('fill', (!isPattern && S.isDarkColor(color)) ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
+  if (txt) {
+    txt.setAttribute('fill', (!isPattern && S.isDarkColor(color)) ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
+    // Add a readable halo behind number text on patterned fills
+    if (isPattern) {
+      txt.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+      txt.setAttribute('stroke-width', '3');
+      txt.setAttribute('paint-order', 'stroke');
+    } else {
+      txt.removeAttribute('stroke');
+      txt.removeAttribute('stroke-width');
+      txt.removeAttribute('paint-order');
+    }
+  }
   // Sync arms to match new color
   if (g.dataset.arms === '1') updatePlayerArms(g);
 }
