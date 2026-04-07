@@ -46,7 +46,17 @@ body {
   padding: 0; gap: 0; z-index: 150; overflow: visible; position: relative;
   margin: 54px 0 12px 12px;
   align-self: flex-start;
+  max-height: calc(100vh - 70px);
 }
+.toolbar-scroll {
+  display: flex; flex-direction: column;
+  overflow-y: auto; overflow-x: visible;
+  flex: 1; min-height: 0;
+  scrollbar-width: thin;
+  padding: 0;
+}
+.toolbar-scroll::-webkit-scrollbar { width: 3px; }
+.toolbar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
 .tool-logo {
   position: fixed; top: 10px; left: 72px; z-index: 200;
   font-family: 'Playfair Display', serif;
@@ -82,7 +92,9 @@ body {
   border-bottom: none;
 }
 .sidebar-terms-link {
-  display: block; text-align: center; padding: 8px 0 4px;
+  display: flex; align-items: center; justify-content: center;
+  flex: 1; min-height: 32px;
+  text-align: center; padding: 8px 0;
   font-size: 10px; color: rgba(255,255,255,0.2); text-decoration: none;
   transition: color 0.15s;
 }
@@ -164,7 +176,7 @@ body {
 }
 .tool-btn.save-btn:hover { background: #d4b46e; color: #1a1a1a; }
 .save-label {
-  font-size: 9px; font-weight: 600; letter-spacing: 0.02em;
+  font-size: 11px; font-weight: 600; letter-spacing: 0.02em;
   line-height: 1;
 }
 .tool-tooltip { display: none; }
@@ -885,8 +897,13 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
     flex-shrink: 0;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
+    max-height: none;
   }
   #toolbar::-webkit-scrollbar { display: none; }
+  .toolbar-scroll {
+    display: contents; /* flatten on mobile — let toolbar handle horizontal scroll */
+    overflow: visible;
+  }
   /* Scroll fade hint on right edge */
   #toolbar::after {
     content: '';
