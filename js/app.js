@@ -1144,19 +1144,26 @@ function openBundle(id) {
   document.querySelectorAll('.tool-bundle.open').forEach(b => b.classList.remove('open'));
   if (!isOpen) {
     el.classList.add('open');
-    // On mobile, move bundle menu to body and position it above the button
-    if (window.innerWidth <= 768) {
-      const menuEl = el.querySelector('.bundle-menu');
-      const btn = el.querySelector('.tool-btn');
-      if (menuEl && btn) {
-        document.body.appendChild(menuEl);
-        const rect = btn.getBoundingClientRect();
-        menuEl.style.position = 'fixed';
+    const menuEl = el.querySelector('.bundle-menu') || document.querySelector(`.bundle-menu[data-bundle="${id}"]`);
+    const btn = el.querySelector('.tool-btn');
+    if (menuEl && btn) {
+      document.body.appendChild(menuEl);
+      menuEl.dataset.bundle = id;
+      const rect = btn.getBoundingClientRect();
+      menuEl.style.position = 'fixed';
+      menuEl.style.display = 'block';
+      menuEl.style.zIndex = '10000';
+      menuEl._parentBundle = el;
+      if (window.innerWidth <= 768) {
+        // Mobile: position above the button
         menuEl.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 200)) + 'px';
         menuEl.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
         menuEl.style.top = 'auto';
-        menuEl.style.display = 'block';
-        menuEl._parentBundle = el;
+      } else {
+        // Desktop: position to the right of the button
+        menuEl.style.left = (rect.right + 10) + 'px';
+        menuEl.style.top = rect.top + 'px';
+        menuEl.style.bottom = 'auto';
       }
     }
   }
@@ -1165,17 +1172,16 @@ function closeBundle(id) {
   const el = document.getElementById(id);
   if (!el) return;
   el.classList.remove('open');
-  // On mobile, move menu back into the bundle
-  if (window.innerWidth <= 768) {
-    const detached = document.querySelector('.bundle-menu[style*="position: fixed"]');
-    if (detached && detached._parentBundle === el) {
-      detached.style.display = '';
-      detached.style.position = '';
-      detached.style.left = '';
-      detached.style.bottom = '';
-      detached.style.top = '';
-      el.appendChild(detached);
-    }
+  // Move detached menu back into the bundle
+  const detached = document.querySelector(`.bundle-menu[data-bundle="${id}"]`);
+  if (detached && detached._parentBundle === el) {
+    detached.style.display = '';
+    detached.style.position = '';
+    detached.style.left = '';
+    detached.style.bottom = '';
+    detached.style.top = '';
+    detached.style.zIndex = '';
+    el.appendChild(detached);
   }
 }
 
@@ -1201,8 +1207,10 @@ function updateBundleIcon(bundleId, toolName) {
 
 // Close bundles when clicking elsewhere
 document.addEventListener('click', (e) => {
-  if (!e.target.closest('.tool-bundle')) {
-    document.querySelectorAll('.tool-bundle.open').forEach(b => b.classList.remove('open'));
+  if (!e.target.closest('.tool-bundle') && !e.target.closest('.bundle-menu')) {
+    document.querySelectorAll('.tool-bundle.open').forEach(b => {
+      closeBundle(b.id);
+    });
   }
 });
 
