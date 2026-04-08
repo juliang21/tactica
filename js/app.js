@@ -23,7 +23,6 @@ import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAn
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
 import { logSession, logAction, setSessionId } from './firestore.js?v=3';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
-import { initTraining, showTrainingPane } from './training.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
@@ -34,8 +33,6 @@ registerMotionUpdate(updateMotionVisual);
 registerTagReposition(repositionTag);
 // ─── Initialize subscription UI ────────────────────────────────────────────
 updateLockedUI();
-// ─── Initialize training session builder ─────────────────────────────────────
-initTraining();
 
 // ─── "Analysis started" session tracker ────────────────────────────────────
 registerAnalysisTracker(() => {
@@ -165,12 +162,10 @@ window.setArrowType = setArrowType;
 window.selectTeamContext = selectTeamContext;
 window.applyKit = function(el) {
   applyKit(el);
-  const teamName = el.dataset.trackName || el.getAttribute('title') || el.querySelector('.kit-label')?.textContent || 'unknown';
+  const teamName = el.getAttribute('title') || el.querySelector('.kit-label')?.textContent || 'unknown';
   const isNational = !!el.closest('#kit-grid-national');
   const u = getCurrentUser();
-  const action = isNational ? 'feature_national_team' : 'feature_club_team';
-  if (u) logAction(u.uid, u.email, action, { team: teamName }).catch(() => {});
-  if (typeof window.gtag === 'function') window.gtag('event', action, { team_name: teamName, tool_name: 'tactica' });
+  if (u) logAction(u.uid, u.email, isNational ? 'feature_national_team' : 'feature_club_team', { team: teamName }).catch(() => {});
 };
 window.applyColor = applyColor;
 window.switchKitTab = function(tab, btn) {
@@ -183,7 +178,6 @@ window.placeFormation = function(name) {
   placeFormation(name);
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_formation', { formation: name }).catch(() => {});
-  if (typeof window.gtag === 'function') window.gtag('event', 'feature_formation', { formation_name: name, tool_name: 'tactica' });
 };
 window.liveUpdateNumber = liveUpdateNumber;
 window.confirmNumber = confirmNumber;
@@ -198,14 +192,12 @@ window.setPitch = function(layout) {
   setPitch(layout);
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_pitch_change', { type: layout }).catch(() => {});
-  if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_type', { pitch_type: layout, tool_name: 'tactica' });
 };
 window.setPitchColor = function(dotEl) {
   setPitchColor(dotEl);
-  const colorName = dotEl.dataset.trackName || dotEl.getAttribute('title') || 'unknown';
+  const colorName = dotEl.getAttribute('title') || 'unknown';
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_pitch_change', { color: colorName }).catch(() => {});
-  if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_color', { color_name: colorName, tool_name: 'tactica' });
 };
 window.hideUpgradePrompt = hideUpgradePrompt;
 window.setUserTier = setUserTier;
@@ -300,102 +292,44 @@ function hideImageUploadPane() {
 function switchMode(mode) {
   const pitchBtn = document.getElementById('mode-pitch-btn');
   const imageBtn = document.getElementById('mode-image-btn');
-  const trainingBtn = document.getElementById('mode-training-btn');
-
-  function clearAllActive() {
-    pitchBtn.classList.remove('active');
-    imageBtn.classList.remove('active');
-    trainingBtn.classList.remove('active');
-  }
-
-  if (mode === 'training') {
-    if (S.appMode === 'training') return;
-    clearAllActive();
-    trainingBtn.classList.add('active');
-    // Hide pitch & image panes
-    hideImageUploadPane();
-    const pitchWrap = document.getElementById('pitch-wrap');
-    const trainingWrap = document.getElementById('training-wrap');
-    const motionControls = document.getElementById('motion-controls');
-    if (pitchWrap) pitchWrap.style.display = 'none';
-    if (motionControls) motionControls.style.display = 'none';
-    if (trainingWrap) trainingWrap.style.display = '';
-    // Show training in side panel
-    document.querySelectorAll('#side-panel .tab-pane').forEach(p => p.style.display = 'none');
-    document.querySelectorAll('#side-panel .panel-tabs').forEach(p => p.style.display = 'none');
-    const trainingPane = document.getElementById('training-pane');
-    if (trainingPane) trainingPane.style.display = '';
-    S.setAppMode('training');
-    showTrainingPane();
-    // Also render in the main content area
-    renderTrainingMain();
-    return;
-  }
 
   if (mode === 'image') {
     if (S.appMode === 'image') return;
     // If there's work on the tactical board, confirm before switching
-    if (S.appMode === 'pitch' && hasCanvasWork()) {
+    if (hasCanvasWork()) {
       showModeSwitchModal('Switching to Upload Image will erase all elements on your tactical board. Are you sure?', () => {
-        clearAllActive();
+        pitchBtn.classList.remove('active');
         imageBtn.classList.add('active');
-        exitTrainingView();
         showImageUploadPane();
       });
       return;
     }
-    clearAllActive();
+    pitchBtn.classList.remove('active');
     imageBtn.classList.add('active');
-    exitTrainingView();
     showImageUploadPane();
   } else {
-    // mode === 'pitch'
-    clearAllActive();
-    pitchBtn.classList.add('active');
-    exitTrainingView();
+    // Hide upload pane if it's showing (user clicked back to pitch before uploading)
     hideImageUploadPane();
     const pitchPane = document.getElementById('pane-pitch');
     if (pitchPane) pitchPane.style.display = '';
-    const panelTabs = document.querySelector('#side-panel .panel-tabs');
-    if (panelTabs) panelTabs.style.display = '';
-    if (S.appMode === 'image') {
-      if (hasCanvasWork()) {
-        showModeSwitchModal('Switching to Tactical Board will erase all elements on your image. Are you sure?', () => {
-          exitImageMode();
-          clearAllActive();
-          pitchBtn.classList.add('active');
-        });
-        return;
-      }
-      exitImageMode();
+    if (S.appMode !== 'image') {
+      pitchBtn.classList.add('active');
+      imageBtn.classList.remove('active');
+      return;
     }
-    S.setAppMode('pitch');
+    // If there's work on the image, confirm before switching
+    if (hasCanvasWork()) {
+      showModeSwitchModal('Switching to Tactical Board will erase all elements on your image. Are you sure?', () => {
+        exitImageMode();
+        pitchBtn.classList.add('active');
+        imageBtn.classList.remove('active');
+      });
+      return;
+    }
+    exitImageMode();
+    pitchBtn.classList.add('active');
+    imageBtn.classList.remove('active');
   }
-}
-
-function exitTrainingView() {
-  const trainingWrap = document.getElementById('training-wrap');
-  const pitchWrap = document.getElementById('pitch-wrap');
-  const motionControls = document.getElementById('motion-controls');
-  const trainingPane = document.getElementById('training-pane');
-  const panelTabs = document.querySelector('#side-panel .panel-tabs');
-  const sidePanel = document.getElementById('side-panel');
-  const toolbar = document.getElementById('toolbar');
-  if (trainingWrap) trainingWrap.style.display = 'none';
-  if (pitchWrap) pitchWrap.style.display = '';
-  if (motionControls) motionControls.style.display = '';
-  if (trainingPane) trainingPane.style.display = 'none';
-  if (panelTabs) panelTabs.style.display = '';
-  if (sidePanel) sidePanel.style.display = '';
-  if (toolbar) toolbar.style.display = '';
-}
-
-function renderTrainingMain() {
-  // Hide the side panel and toolbar in training mode — training uses full width
-  const sidePanel = document.getElementById('side-panel');
-  const toolbar = document.getElementById('toolbar');
-  if (sidePanel) sidePanel.style.display = 'none';
-  if (toolbar) toolbar.style.display = 'none';
 }
 window.switchMode = switchMode;
 
@@ -431,7 +365,7 @@ function selectModeDropdown(mode) {
   const label = document.getElementById('mode-dropdown-label');
   const options = document.querySelectorAll('.mode-dropdown-option');
   options.forEach(o => o.classList.toggle('active', o.dataset.mode === mode));
-  label.textContent = mode === 'pitch' ? 'Tactical Board' : mode === 'image' ? 'Upload Image' : 'Training';
+  label.textContent = mode === 'pitch' ? 'Tactical Board' : 'Upload Image';
   // Also sync with the desktop tab bar buttons
   switchMode(mode);
 }
