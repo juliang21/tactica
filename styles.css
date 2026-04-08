@@ -1401,21 +1401,6 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   .auth-modal-box { width: 92vw !important; padding: 24px 20px !important; }
 }
 
-/* ─── Detect Formation ──────────────────────────────────────────────────── */
-.detect-spinner {
-  width: 28px; height: 28px; margin: 0 auto;
-  border: 3px solid var(--border);
-  border-top-color: var(--accent);
-  border-radius: 50%;
-  animation: detect-spin 0.7s linear infinite;
-}
-@keyframes detect-spin { to { transform: rotate(360deg); } }
-
-#detect-dropzone:hover, #detect-dropzone.dragover {
-  border-color: var(--accent);
-  background: rgba(201,169,98,0.05);
-}
-
 /* ─── Landing Gate ──────────────────────────────────────────────────────── */
 .landing-gate {
   position: fixed; inset: 0; z-index: 2000;
