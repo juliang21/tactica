@@ -2,6 +2,7 @@
 export let tool = 'select';
 export let arrowType = 'run';
 export let selectedEl = null;
+export const selectedEls = new Set();
 export let teamContext = 'a';
 export let teamColors = { a: '#8B5CF6', b: '#FBBF24' };
 export let gkColors   = { a: '#a8f0d0', b: '#f4cca8' };
@@ -48,6 +49,9 @@ export function pushUndo() {
 export function setTool(v) { tool = v; }
 export function setArrowType(v) { arrowType = v; }
 export function setSelectedEl(v) { selectedEl = v; }
+export function addSelectedEl(el) { selectedEls.add(el); }
+export function removeSelectedEl(el) { selectedEls.delete(el); }
+export function clearSelectedEls() { selectedEls.clear(); }
 export function setTeamContext(v) { teamContext = v; }
 export function setObjectCounter(v) { objectCounter = v; }
 export function nextObjectId() { return ++objectCounter; }

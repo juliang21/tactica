@@ -1,5 +1,5 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerDragEnd, makeDraggable, registerSelectTracker } from './interaction.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerDragEnd, makeDraggable, registerSelectTracker, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
 import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, repositionTag } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
@@ -67,11 +67,11 @@ function undo() {
   // Re-attach event listeners to all restored elements
   S.objectsLayer.querySelectorAll('[data-type]').forEach(g => {
     makeDraggable(g);
-    g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+    g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   });
   S.playersLayer.querySelectorAll('[data-type]').forEach(g => {
     makeDraggable(g);
-    g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+    g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
     if (g.dataset.type === 'textbox') {
       g.addEventListener('dblclick', e => {
         e.stopPropagation();
@@ -420,8 +420,54 @@ S.svg.addEventListener('click', e => {
     }
   }
   else if (S.tool === 'select') {
-    // Only deselect if click was on empty pitch, not on an element
-    if (!e.target.closest('[data-type]')) deselect();
+    // Only deselect if click was on empty pitch, not on an element, and no marquee just ended
+    if (!e.target.closest('[data-type]') && !_marqueeJustEnded) deselect();
+  }
+  _marqueeJustEnded = false;
+});
+
+// ─── Marquee Selection ──────────────────────────────────────────────────────
+let _isMarqueeing = false;
+let _marqueeJustEnded = false;
+let _marqueeDidDrag = false;
+
+S.svg.addEventListener('mousedown', e => {
+  if (S.tool !== 'select') return;
+  // Don't start marquee if clicking on an element or handle
+  if (e.target.closest('[data-type]') || e.target.closest('[data-handle]')) return;
+  // Don't start if dragging
+  if (S.isDragging) return;
+  _isMarqueeing = true;
+  _marqueeDidDrag = false;
+  startMarquee(e);
+});
+
+S.svg.addEventListener('mousemove', e => {
+  if (!_isMarqueeing) return;
+  _marqueeDidDrag = true;
+  updateMarquee(e);
+});
+
+S.svg.addEventListener('mouseup', e => {
+  if (!_isMarqueeing) return;
+  _isMarqueeing = false;
+  if (_marqueeDidDrag) {
+    endMarquee(e);
+    // Only block click-to-deselect if a real marquee drag happened
+    _marqueeJustEnded = true;
+    setTimeout(() => { _marqueeJustEnded = false; }, 50);
+  } else {
+    // Was just a click (no drag) — clean up marquee rect and let click handler deselect
+    endMarquee(e); // this removes the rect; returns early if too small
+  }
+});
+
+// Also clean up if mouseup happens outside SVG
+document.addEventListener('mouseup', () => {
+  if (_isMarqueeing) {
+    _isMarqueeing = false;
+    _marqueeDidDrag = false;
+    cleanupMarquee();
   }
 });
 
@@ -1238,6 +1284,71 @@ window.updateArrowBundleIcon = updateArrowBundleIcon;
 
 // ─── Copy / Paste ────────────────────────────────────────────────────────────
 let clipboard = null;
+let clipboardMulti = null;
+
+// Helper: extract copy data from a single element (used by both single & multi copy)
+function _copyElementData(el) {
+  const t = el.dataset.type;
+  const data = { type: t, cx: parseFloat(el.dataset.cx), cy: parseFloat(el.dataset.cy) };
+  if (t === 'player') {
+    const circ = el.querySelector('circle:not(.hit-area):not(.player-arm)');
+    data.team = el.dataset.team; data.label = el.dataset.label;
+    data.isGK = el.dataset.isGK === '1';
+    data.fill = circ?.getAttribute('fill'); data.stroke = circ?.getAttribute('stroke');
+    data.borderColor = el.dataset.borderColor;
+    data.playerName = el.dataset.playerName || '';
+    data.nameSize = el.dataset.nameSize || '11';
+    data.nameColor = el.querySelector('.player-name')?.getAttribute('fill') || 'rgba(255,255,255,0.9)';
+    data.scale = el.dataset.scale || '1';
+    data.arms = el.dataset.arms || '0'; data.rotation = el.dataset.rotation || '0';
+  } else if (t === 'referee') {
+    data.label = el.dataset.label;
+    data.fillColor = el.dataset.fillColor || '#1a1a1a';
+    data.borderColor = el.dataset.borderColor || '#FBBF24';
+    data.scale = el.dataset.scale || '0.9';
+  } else if (t === 'ball') {
+    data.scale = el.dataset.scale || '0.7';
+  } else if (t === 'cone') {
+    data.scale = el.dataset.scale || '1';
+  } else if (t === 'arrow') {
+    const line = el.querySelector('.arrow-line');
+    data.arrowType = el.dataset.arrowType;
+    data.color = line?.getAttribute('stroke'); data.dash = line?.getAttribute('stroke-dasharray') || '';
+    data.width = el.dataset.arrowWidth || '2.5'; data.marker = line?.getAttribute('marker-end') || '';
+    data.dx1 = el.dataset.dx1; data.dy1 = el.dataset.dy1;
+    data.dx2 = el.dataset.dx2; data.dy2 = el.dataset.dy2;
+    data.curve = el.dataset.curve || '0';
+  } else if (t === 'textbox') {
+    data.textContent = el.dataset.textContent || 'Text'; data.textSize = el.dataset.textSize || '14';
+    data.textColor = el.dataset.textColor || 'rgba(255,255,255,0.9)';
+    data.textBg = el.dataset.textBg || 'rgba(0,0,0,0.5)';
+    data.textAlign = el.dataset.textAlign || 'center';
+    data.hw = el.dataset.hw || '60'; data.hh = el.dataset.hh || '20';
+    data.rotation = el.dataset.rotation || '0';
+  } else if (t === 'spotlight') {
+    data.rx = el.dataset.rx || '28'; data.ry = el.dataset.ry || '5';
+    data.spotColor = el.dataset.spotColor || 'rgba(255,255,255,0.85)';
+    data.spotName = el.dataset.spotName || ''; data.spotNameSize = el.dataset.spotNameSize || '11';
+    data.scale = el.dataset.scale || '1';
+  } else if (t === 'vision') {
+    data.scale = el.dataset.scale || '1'; data.rotation = el.dataset.rotation || '0';
+    data.visionColor = el.dataset.visionColor || 'rgba(147,197,253,0.5)';
+    data.visionLength = el.dataset.visionLength || '80'; data.visionSpread = el.dataset.visionSpread || '35';
+  } else if (t === 'tag') {
+    data.tagLabel = el.dataset.tagLabel || 'TOP SPEED'; data.tagValue = el.dataset.tagValue || '8.7km/h';
+    data.tagLineLen = el.dataset.tagLineLen || '80'; data.tagLineAngle = el.dataset.tagLineAngle || '-35';
+    data.tagTextAnchor = el.dataset.tagTextAnchor || 'bottom';
+    data.scale = el.dataset.scale || '1';
+  } else if (t?.startsWith('shadow')) {
+    const shape = el.querySelector('rect,ellipse');
+    data.hw = el.dataset.hw || '30'; data.hh = el.dataset.hh || '20';
+    data.rotation = el.dataset.rotation || '0';
+    data.fill = shape?.getAttribute('fill');
+    data.stroke = el.dataset.savedStroke || shape?.getAttribute('stroke');
+    data.dash = shape?.getAttribute('stroke-dasharray') || '';
+  }
+  return data;
+}
 let lastMouseSVG = { x: 350, y: 240 }; // default to center
 
 S.svg.addEventListener('mousemove', e => {
@@ -1246,7 +1357,17 @@ S.svg.addEventListener('mousemove', e => {
 });
 
 function copySelected() {
-  if (!S.selectedEl) return;
+  if (!S.selectedEl && S.selectedEls.size === 0) return;
+  // Multi-copy: store all selected elements' data
+  if (S.selectedEls.size > 1) {
+    clipboardMulti = [];
+    for (const el of S.selectedEls) {
+      clipboardMulti.push(_copyElementData(el));
+    }
+    clipboard = null;
+    return;
+  }
+  clipboardMulti = null;
   const el = S.selectedEl;
   const t = el.dataset.type;
   const data = { type: t };
@@ -1342,10 +1463,57 @@ function copySelected() {
 }
 
 function pasteClipboard() {
+  // Multi-paste
+  if (clipboardMulti && clipboardMulti.length > 0) {
+    S.pushUndo();
+    deselect();
+    const x = lastMouseSVG.x, y = lastMouseSVG.y;
+    // Find center of copied group
+    const avgX = clipboardMulti.reduce((a, d) => a + d.cx, 0) / clipboardMulti.length;
+    const avgY = clipboardMulti.reduce((a, d) => a + d.cy, 0) / clipboardMulti.length;
+    for (const d of clipboardMulti) {
+      const ox = x + (d.cx - avgX), oy = y + (d.cy - avgY);
+      const placed = _pasteOne(d, ox, oy);
+      if (placed) {
+        S.addSelectedEl(placed);
+        S.setSelectedEl(placed);
+        // Apply highlight
+        const circ = placed.querySelector('circle:not(.hit-area),polygon');
+        if (circ) circ.setAttribute('stroke-width', '3');
+        if (placed.dataset.type === 'player' || placed.dataset.type === 'referee') {
+          placed.querySelector('circle:not(.hit-area)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+        }
+      }
+    }
+    if (S.selectedEls.size > 1) {
+      // Import to trigger multi-select UI
+      import('./interaction.js').then(m => {
+        // Force re-trigger multi-select UI via select
+      });
+      // Inline multi-select UI update
+      S.selInfo.innerHTML = `<strong>${S.selectedEls.size} elements selected</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move · Ctrl+click to toggle</span>`;
+      document.getElementById('del-section').style.display = '';
+    }
+    return;
+  }
   if (!clipboard) return;
   S.pushUndo();
   const d = clipboard;
   const x = lastMouseSVG.x, y = lastMouseSVG.y;
+  let placed = _pasteOne(d, x, y);
+
+  if (placed) {
+    if (d.type === 'arrow') {
+      updateArrowVisual(placed);
+    } else {
+      applyTransform(placed);
+    }
+    setTool('select');
+    select(placed);
+  }
+}
+
+function _pasteOne(d, x, y) {
   let placed = null;
 
   if (d.type === 'player') {
@@ -1495,16 +1663,15 @@ function pasteClipboard() {
     } else {
       applyTransform(placed);
     }
-    setTool('select');
-    select(placed);
   }
+  return placed;
 }
 
 // ─── Keyboard Shortcuts ───────────────────────────────────────────────────────
 document.addEventListener('keydown', e => {
   const typing = document.activeElement && (document.activeElement.tagName === 'INPUT' || document.activeElement.tagName === 'TEXTAREA');
   if (e.key === 'Escape') { if (typing) document.activeElement.blur(); else { setTool('select'); deselect(); } }
-  if ((e.key === 'Delete' || e.key === 'Backspace') && S.selectedEl && !typing) deleteSelected();
+  if ((e.key === 'Delete' || e.key === 'Backspace') && (S.selectedEl || S.selectedEls.size > 0) && !typing) deleteSelected();
 
   // Undo (Cmd+Z)
   if ((e.metaKey || e.ctrlKey) && e.key === 'z' && !typing) { e.preventDefault(); undo(); return; }
@@ -1845,7 +2012,7 @@ function reattachListeners() {
   [S.objectsLayer, S.playersLayer].forEach(layer => {
     layer.querySelectorAll('[data-type]').forEach(g => {
       makeDraggable(g);
-      g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+      g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
       if (g.dataset.type === 'textbox') {
         g.addEventListener('dblclick', e => {
           e.stopPropagation();

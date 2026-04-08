@@ -189,10 +189,48 @@ function moveElement(el, nx, ny) {
   else if (t.startsWith('shadow')) applyTransform(el);
 }
 
+// ─── Multi-drag offsets ─────────────────────────────────────────────────────
+const _dragOffsets = new Map(); // el → { dx, dy }
+
+// ─── Marquee state ──────────────────────────────────────────────────────────
+let _marquee = null;      // SVG rect element
+let _marqueeOrigin = null; // { x, y } in SVG coords
+
 // ─── Selection ────────────────────────────────────────────────────────────────
-export function select(el) {
-  if (S.selectedEl && S.selectedEl !== el) deselectVisual(S.selectedEl);
-  S.setSelectedEl(el);
+export function select(el, opts = {}) {
+  const additive = opts.additive || false;
+
+  if (additive) {
+    // Toggle: if already selected, remove it
+    if (S.selectedEls.has(el)) {
+      deselectVisual(el);
+      S.removeSelectedEl(el);
+      // Update primary to another element or null
+      if (S.selectedEl === el) {
+        const remaining = [...S.selectedEls];
+        S.setSelectedEl(remaining.length ? remaining[remaining.length - 1] : null);
+      }
+      _updateMultiSelectUI();
+      return;
+    }
+    // Add to selection (don't deselect previous)
+    S.addSelectedEl(el);
+    S.setSelectedEl(el);
+  } else {
+    // Non-additive: clear previous selection
+    if (S.selectedEls.size > 0) {
+      for (const prev of S.selectedEls) {
+        if (prev !== el) deselectVisual(prev);
+      }
+      S.clearSelectedEls();
+    } else if (S.selectedEl && S.selectedEl !== el) {
+      deselectVisual(S.selectedEl);
+    }
+    S.clearSelectedEls();
+    S.addSelectedEl(el);
+    S.setSelectedEl(el);
+  }
+
   const type = el.dataset.type;
   trackElementSelected(type);
   if (_selectTrackFn) _selectTrackFn(type);
@@ -274,6 +312,12 @@ export function select(el) {
       tagDot.setAttribute('fill', 'rgba(79,156,249,0.9)');
     }
     showTagHandles(el);
+  }
+
+  // If multi-select, show multi-select UI instead of individual panels
+  if (S.selectedEls.size > 1) {
+    _updateMultiSelectUI();
+    return;
   }
 
   // Info label
@@ -553,8 +597,11 @@ export function deselectVisual(el) {
 }
 
 export function deselect() {
-  if (!S.selectedEl) return;
-  deselectVisual(S.selectedEl);
+  if (!S.selectedEl && S.selectedEls.size === 0) return;
+  // Deselect all multi-selected elements
+  for (const el of S.selectedEls) deselectVisual(el);
+  S.clearSelectedEls();
+  if (S.selectedEl) deselectVisual(S.selectedEl);
   S.setSelectedEl(null);
   S.selInfo.innerHTML = 'Nothing selected.<br><span style="font-size:10px;color:var(--text-muted)">Click to select · drag to move<br>Double-click player to rename</span>';
   // Hide mobile context bar & restore feedback
@@ -581,10 +628,16 @@ function hideMobileContext() {
 }
 
 export function deleteSelected() {
-  if (!S.selectedEl) return;
+  if (!S.selectedEl && S.selectedEls.size === 0) return;
   S.pushUndo();
   removeHandles();
-  S.selectedEl.remove();
+  // Delete all selected elements
+  if (S.selectedEls.size > 0) {
+    for (const el of S.selectedEls) el.remove();
+    S.clearSelectedEls();
+  } else if (S.selectedEl) {
+    S.selectedEl.remove();
+  }
   S.setSelectedEl(null);
   S.selInfo.innerHTML = 'Nothing selected.';
   hideMobileContext();
@@ -598,6 +651,8 @@ export function deleteSelected() {
   document.getElementById('vision-edit-section').style.display = 'none';
   const tagDelSec = document.getElementById('tag-edit-section');
   if (tagDelSec) tagDelSec.style.display = 'none';
+  const multiSec = document.getElementById('multi-select-section');
+  if (multiSec) multiSec.style.display = 'none';
 }
 
 // ─── Tab Switcher ─────────────────────────────────────────────────────────────
@@ -1296,15 +1351,42 @@ function startDrag(e) {
   if (e.target.dataset?.handle) return;
   e.stopPropagation(); e.preventDefault();
   const pt = S.getSVGPoint(e);
-  S.setDragOffX(pt.x - parseFloat(e.currentTarget.dataset.cx));
-  S.setDragOffY(pt.y - parseFloat(e.currentTarget.dataset.cy));
+  const target = e.currentTarget;
+  const additive = e.ctrlKey || e.metaKey;
+
+  // If target is already in multi-selection, start multi-drag without re-selecting
+  if (S.selectedEls.has(target) && S.selectedEls.size > 1) {
+    // Compute offsets for all selected elements
+    _dragOffsets.clear();
+    for (const el of S.selectedEls) {
+      _dragOffsets.set(el, {
+        dx: pt.x - parseFloat(el.dataset.cx),
+        dy: pt.y - parseFloat(el.dataset.cy)
+      });
+    }
+    S.setSelectedEl(target);
+    S.setIsDragging(true);
+    S.setDragMoved(false);
+    S.pushUndo();
+    return;
+  }
+
+  S.setDragOffX(pt.x - parseFloat(target.dataset.cx));
+  S.setDragOffY(pt.y - parseFloat(target.dataset.cy));
   S.setIsDragging(true);
   S.setDragMoved(false);
   S.pushUndo();
-  const target = e.currentTarget;
-  if (S.selectedEl && S.selectedEl !== target) deselectVisual(S.selectedEl);
-  S.setSelectedEl(target);
-  select(target);
+
+  select(target, { additive });
+
+  // Compute offsets for all selected elements (for multi-drag)
+  _dragOffsets.clear();
+  for (const el of S.selectedEls) {
+    _dragOffsets.set(el, {
+      dx: pt.x - parseFloat(el.dataset.cx),
+      dy: pt.y - parseFloat(el.dataset.cy)
+    });
+  }
 }
 
 function onDrag(e) {
@@ -1314,10 +1396,21 @@ function onDrag(e) {
   e.preventDefault();
   S.setDragMoved(true);
   const pt = S.getSVGPoint(e);
-  moveElement(S.selectedEl, pt.x - S.dragOffX, pt.y - S.dragOffY);
-  // Update handles if dragging the whole element
-  const dt = S.selectedEl.dataset.type;
-  if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight' || dt === 'vision') updateHandlePositions(S.selectedEl);
+
+  // Multi-drag: move all selected elements
+  if (S.selectedEls.size > 1 && _dragOffsets.size > 0) {
+    for (const el of S.selectedEls) {
+      const off = _dragOffsets.get(el);
+      if (off) moveElement(el, pt.x - off.dx, pt.y - off.dy);
+    }
+    // Update handles for the primary selected element
+    removeHandles();
+  } else {
+    moveElement(S.selectedEl, pt.x - S.dragOffX, pt.y - S.dragOffY);
+    // Update handles if dragging the whole element
+    const dt = S.selectedEl.dataset.type;
+    if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight' || dt === 'vision') updateHandlePositions(S.selectedEl);
+  }
 }
 
 let _onDragEndFn = null;
@@ -1330,6 +1423,250 @@ function stopDrag() {
   S.setIsDragging(false);
   S.setEndpointDragging(null);
   if (S.dragMoved) setTimeout(() => { S.setDragMoved(false); }, 0);
+}
+
+// ─── Multi-select UI ─────────────────────────────────────────────────────────
+function _updateMultiSelectUI() {
+  const count = S.selectedEls.size;
+  if (count <= 1) return;
+
+  // Collect types
+  const types = new Set();
+  for (const el of S.selectedEls) types.add(el.dataset.type);
+
+  // Hide all individual edit sections
+  const sections = ['player-edit-section', 'referee-edit-section', 'arrow-edit-section',
+    'zone-edit-section', 'textbox-edit-section', 'headline-edit-section',
+    'spotlight-edit-section', 'vision-edit-section', 'tag-edit-section'];
+  for (const id of sections) {
+    const sec = document.getElementById(id);
+    if (sec) sec.style.display = 'none';
+  }
+  document.getElementById('rotation-section').style.display = 'none';
+
+  switchTab('element');
+  document.getElementById('del-section').style.display = '';
+  document.getElementById('layer-section').style.display = 'none';
+
+  // Remove handles (no individual element handles in multi-select)
+  removeHandles();
+
+  // Info label
+  const typeSummary = types.size === 1 ? [...types][0] + 's' : 'elements';
+  S.selInfo.innerHTML = `<strong>${count} ${typeSummary} selected</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move · Ctrl+click to toggle</span>`;
+
+  // Mobile context bar
+  if (window.innerWidth <= 768) {
+    const ctxBar = document.getElementById('mobile-context-bar');
+    if (ctxBar) {
+      document.getElementById('ctx-label').textContent = `${count} ${typeSummary}`;
+      ctxBar.classList.add('show');
+    }
+  }
+
+  // Show/hide multi-select section
+  let multiSec = document.getElementById('multi-select-section');
+  if (!multiSec) _createMultiSelectSection();
+  multiSec = document.getElementById('multi-select-section');
+  if (multiSec) multiSec.style.display = '';
+
+  // Show size slider only if all selected elements support size
+  const allSupportSize = [...S.selectedEls].every(el => {
+    const t = el.dataset.type;
+    return t !== 'arrow' && !t?.startsWith('shadow') && t !== 'textbox' && t !== 'headline' && t !== 'tag';
+  });
+  document.getElementById('size-section').style.display = allSupportSize ? '' : 'none';
+  if (allSupportSize) {
+    // Show average size
+    const sizes = [...S.selectedEls].map(el => parseFloat(el.dataset.scale || '1') * 100);
+    const avg = sizes.reduce((a, b) => a + b, 0) / sizes.length;
+    document.getElementById('size-slider').value = avg;
+    document.getElementById('size-val').textContent = (avg / 100).toFixed(1) + '×';
+  }
+
+  // Show player-specific multi-edit if all are players
+  if (types.size === 1 && types.has('player')) {
+    const playerSec = document.getElementById('player-edit-section');
+    if (playerSec) {
+      playerSec.style.display = '';
+      // Clear individual fields — they apply to all
+      document.getElementById('number-input').value = '';
+      document.getElementById('number-input').placeholder = 'mixed';
+      document.getElementById('name-input').value = '';
+      document.getElementById('name-input').placeholder = 'mixed';
+    }
+  }
+}
+
+function _createMultiSelectSection() {
+  // The multi-select section is just a visual indicator — the real controls
+  // are reused from existing sections (size, delete, player color via team color dots)
+  // Nothing extra needed since we reuse the existing size slider and delete button
+}
+
+// ─── Marquee Selection ──────────────────────────────────────────────────────
+export function startMarquee(e) {
+  if (S.tool !== 'select') return;
+  const pt = S.getSVGPoint(e);
+  _marqueeOrigin = { x: pt.x, y: pt.y };
+
+  const ns = 'http://www.w3.org/2000/svg';
+  _marquee = document.createElementNS(ns, 'rect');
+  _marquee.setAttribute('class', 'marquee-rect');
+  _marquee.setAttribute('x', pt.x);
+  _marquee.setAttribute('y', pt.y);
+  _marquee.setAttribute('width', 0);
+  _marquee.setAttribute('height', 0);
+  _marquee.setAttribute('fill', 'rgba(79,156,249,0.1)');
+  _marquee.setAttribute('stroke', 'rgba(79,156,249,0.6)');
+  _marquee.setAttribute('stroke-width', '1');
+  _marquee.setAttribute('stroke-dasharray', '4,3');
+  _marquee.setAttribute('pointer-events', 'none');
+  S.svg.appendChild(_marquee);
+}
+
+export function updateMarquee(e) {
+  if (!_marquee || !_marqueeOrigin) return;
+  const pt = S.getSVGPoint(e);
+  const x = Math.min(_marqueeOrigin.x, pt.x);
+  const y = Math.min(_marqueeOrigin.y, pt.y);
+  const w = Math.abs(pt.x - _marqueeOrigin.x);
+  const h = Math.abs(pt.y - _marqueeOrigin.y);
+  _marquee.setAttribute('x', x);
+  _marquee.setAttribute('y', y);
+  _marquee.setAttribute('width', w);
+  _marquee.setAttribute('height', h);
+}
+
+export function cleanupMarquee() {
+  if (_marquee) { _marquee.remove(); _marquee = null; }
+  _marqueeOrigin = null;
+}
+
+export function endMarquee(e) {
+  if (!_marquee || !_marqueeOrigin) { cleanupMarquee(); return; }
+  const pt = S.getSVGPoint(e);
+  const x1 = Math.min(_marqueeOrigin.x, pt.x);
+  const y1 = Math.min(_marqueeOrigin.y, pt.y);
+  const x2 = Math.max(_marqueeOrigin.x, pt.x);
+  const y2 = Math.max(_marqueeOrigin.y, pt.y);
+
+  _marquee.remove();
+  _marquee = null;
+  _marqueeOrigin = null;
+
+  // Don't select if marquee is too small (probably a click)
+  if (x2 - x1 < 5 && y2 - y1 < 5) return;
+
+  // Find all elements whose center falls inside the marquee
+  const additive = e.ctrlKey || e.metaKey;
+  if (!additive) {
+    // Clear previous selection
+    for (const el of S.selectedEls) deselectVisual(el);
+    S.clearSelectedEls();
+    if (S.selectedEl) { deselectVisual(S.selectedEl); S.setSelectedEl(null); }
+  }
+
+  const layers = [S.playersLayer, S.objectsLayer];
+  for (const layer of layers) {
+    for (const el of layer.children) {
+      if (!el.dataset?.type) continue;
+      const cx = parseFloat(el.dataset.cx);
+      const cy = parseFloat(el.dataset.cy);
+      if (cx >= x1 && cx <= x2 && cy >= y1 && cy <= y2) {
+        // Add visual highlight without opening panel
+        _applySelectHighlight(el);
+        S.addSelectedEl(el);
+        S.setSelectedEl(el);
+      }
+    }
+  }
+
+  if (S.selectedEls.size === 1) {
+    // Single element selected — show normal panel
+    const el = [...S.selectedEls][0];
+    select(el);
+  } else if (S.selectedEls.size > 1) {
+    _updateMultiSelectUI();
+  }
+}
+
+function _applySelectHighlight(el) {
+  const type = el.dataset.type;
+  if (type === 'player' || type === 'referee' || type === 'ball' || type === 'cone') {
+    el.querySelector('circle:not(.hit-area),polygon')?.setAttribute('stroke-width', '3');
+    if (type === 'player' || type === 'referee') el.querySelector('circle:not(.hit-area)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+  }
+  if (type === 'arrow') {
+    const w = parseFloat(el.dataset.arrowWidth || '2.5');
+    el.querySelector('.arrow-line')?.setAttribute('stroke-width', w + 1.5);
+  }
+  if (type?.startsWith('shadow')) {
+    const shape = el.querySelector('rect,ellipse');
+    if (shape) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke');
+      shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+  }
+  if (type === 'spotlight') {
+    const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
+    if (ring) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = ring.getAttribute('stroke');
+      ring.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+  }
+  if (type === 'textbox') {
+    const bg = el.querySelector('.textbox-bg');
+    if (bg) { bg.setAttribute('stroke', 'rgba(79,156,249,0.8)'); bg.setAttribute('stroke-width', '1.5'); }
+  }
+  if (type === 'headline') {
+    const bg = el.querySelector('.headline-bg');
+    if (bg) { bg.setAttribute('stroke', 'rgba(79,156,249,0.8)'); bg.setAttribute('stroke-width', '1.5'); }
+  }
+  if (type === 'freeform') {
+    const shape = el.querySelector('.freeform-shape');
+    if (shape) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke');
+      shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+  }
+  if (type === 'motion') {
+    const trail = el.querySelector('.motion-trail');
+    if (trail) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = trail.getAttribute('stroke');
+      trail.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+      trail.setAttribute('opacity', '1');
+    }
+  }
+  if (type === 'tag') {
+    const tagLine = el.querySelector('.tag-line');
+    if (tagLine) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = tagLine.getAttribute('stroke');
+      tagLine.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+    const tagDot = el.querySelector('.tag-dot');
+    if (tagDot) {
+      if (!el.dataset.savedDotFill) el.dataset.savedDotFill = tagDot.getAttribute('fill');
+      tagDot.setAttribute('fill', 'rgba(79,156,249,0.9)');
+    }
+  }
+  if (type === 'vision') {
+    const shape = el.querySelector('.vision-shape');
+    if (shape) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke') || 'none';
+      if (!el.dataset.savedStrokeWidth) el.dataset.savedStrokeWidth = shape.getAttribute('stroke-width') || '1';
+      shape.setAttribute('stroke', 'rgba(255,255,255,0.6)');
+      shape.setAttribute('stroke-width', '1.5');
+      shape.setAttribute('stroke-dasharray', '4,3');
+    }
+  }
+}
+
+// ─── Helper for multi-select property editing ─────────────────────────────────
+export function forEachSelected(type, fn) {
+  for (const el of S.selectedEls) {
+    if (!type || el.dataset.type === type) fn(el);
+  }
 }
 
 // ─── Bind drag events ────────────────────────────────────────────────────────

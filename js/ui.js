@@ -54,6 +54,12 @@ export function applyColor(swatchEl) {
   document.querySelectorAll('.color-swatch, .custom-swatch').forEach(s => s.classList.remove('selected'));
   swatchEl.classList.add('selected');
   const color = swatchEl.dataset.color;
+  // Multi-select: apply to all selected players
+  const selectedPlayers = [...S.selectedEls].filter(el => el.dataset.type === 'player');
+  if (selectedPlayers.length > 1) {
+    for (const p of selectedPlayers) setPlayerColor(p, color);
+    return;
+  }
   if (S.selectedEl && S.selectedEl.dataset.type === 'player') {
     setPlayerColor(S.selectedEl, color);
   } else {
@@ -259,17 +265,35 @@ export function updatePlayerNameBg(g) {
 
 // ─── Player Fill & Border ─────────────────────────────────────────────────────
 export function applyPlayerFill(swatchEl) {
+  const color = swatchEl.dataset.color;
+  // Multi-select: apply to all selected players
+  const selectedPlayers = [...S.selectedEls].filter(el => el.dataset.type === 'player');
+  if (selectedPlayers.length > 1) {
+    trackElementEdited('player', 'fill_color');
+    for (const p of selectedPlayers) setPlayerColor(p, color);
+    return;
+  }
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
   trackElementEdited('player', 'fill_color');
-  const color = swatchEl.dataset.color;
   setPlayerColor(S.selectedEl, color);
 }
 
 export function applyPlayerBorder(swatchEl) {
+  const color = swatchEl.dataset.color;
+  // Multi-select: apply to all selected players
+  const targets = [...S.selectedEls].filter(el => el.dataset.type === 'player');
+  if (targets.length > 1) {
+    trackElementEdited('player', 'border_color');
+    for (const el of targets) _applyBorderToPlayer(el, color);
+    return;
+  }
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
   trackElementEdited('player', 'border_color');
-  const color = swatchEl.dataset.color;
-  const circ = S.selectedEl.querySelector('circle:not(.hit-area):not(.player-arm)');
+  _applyBorderToPlayer(S.selectedEl, color);
+}
+
+function _applyBorderToPlayer(el, color) {
+  const circ = el.querySelector('circle:not(.hit-area):not(.player-arm)');
   if (!circ) return;
   if (color === 'none') {
     circ.setAttribute('stroke', 'transparent');
@@ -278,13 +302,29 @@ export function applyPlayerBorder(swatchEl) {
     circ.setAttribute('stroke', color);
     circ.setAttribute('stroke-width', '2');
   }
-  S.selectedEl.dataset.borderColor = color;
-  // Sync arms to match
-  if (S.selectedEl.dataset.arms === '1') updatePlayerArms(S.selectedEl);
+  el.dataset.borderColor = color;
+  if (el.dataset.arms === '1') updatePlayerArms(el);
 }
 
 // ─── Player Arms Toggle ──────────────────────────────────────────────────────
 export function togglePlayerArms(checked) {
+  // Multi-select: apply to all selected players
+  const targets = [...S.selectedEls].filter(el => el.dataset.type === 'player');
+  if (targets.length > 1) {
+    trackElementEdited('player', 'arms');
+    for (const el of targets) {
+      el.dataset.arms = checked ? '1' : '0';
+      if (checked && (!el.dataset.rotation || el.dataset.rotation === '0')) {
+        el.dataset.rotation = el.dataset.team === 'b' ? '270' : '90';
+      }
+      if (!checked) el.dataset.rotation = '0';
+      updatePlayerArms(el);
+      applyTransform(el);
+    }
+    const armRotGroup = document.getElementById('arm-rotation-group');
+    if (armRotGroup) armRotGroup.style.display = checked ? '' : 'none';
+    return;
+  }
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
   trackElementEdited('player', 'arms');
   S.selectedEl.dataset.arms = checked ? '1' : '0';
@@ -890,12 +930,15 @@ export function applyTagLineAngle(val) {
 // ─── Sliders ──────────────────────────────────────────────────────────────────
 export function applySize(val) {
   document.getElementById('size-val').textContent = (val/100).toFixed(1) + '×';
-  if (!S.selectedEl) return;
-  trackElementEdited(S.selectedEl.dataset.type, 'scale');
-  S.selectedEl.dataset.scale = val/100;
-  const t = S.selectedEl.dataset.type;
-  if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision' || t.startsWith('shadow')) applyTransform(S.selectedEl);
-  else if (t === 'arrow') updateArrowVisual(S.selectedEl);
+  // Apply to all selected elements (multi-select support)
+  const targets = S.selectedEls.size > 0 ? [...S.selectedEls] : (S.selectedEl ? [S.selectedEl] : []);
+  for (const el of targets) {
+    trackElementEdited(el.dataset.type, 'scale');
+    el.dataset.scale = val/100;
+    const t = el.dataset.type;
+    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision' || t.startsWith('shadow')) applyTransform(el);
+    else if (t === 'arrow') updateArrowVisual(el);
+  }
 }
 
 export function applyRotation(val) {

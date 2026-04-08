@@ -56,7 +56,7 @@ export function addPlayer(x, y, team, num, isGK) {
   g.appendChild(hitArea); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
   g.setAttribute('transform', `translate(${x},${y}) scale(0.9)`);
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   g.addEventListener('dblclick', e => { e.stopPropagation(); openPlayerEdit(g); });
   S.playersLayer.appendChild(g);
   return g;
@@ -144,7 +144,7 @@ export function addBall(x, y) {
   g.appendChild(hitArea); g.appendChild(c);
   g.setAttribute('transform', `translate(${x},${y}) scale(0.7)`);
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.playersLayer.appendChild(g);
   return g;
 }
@@ -197,7 +197,7 @@ export function addReferee(x, y, label, fillColor, borderColor) {
   g.appendChild(hitArea); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
   g.setAttribute('transform', `translate(${x},${y}) scale(0.9)`);
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   g.addEventListener('dblclick', e => { e.stopPropagation(); select(g); });
   S.playersLayer.appendChild(g);
   return g;
@@ -234,7 +234,7 @@ export function addCone(x, y) {
   g.appendChild(hitArea); g.appendChild(sh); g.appendChild(tri); g.appendChild(stripe);
   g.setAttribute('transform', `translate(${x},${y})`);
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.playersLayer.appendChild(g);
   return g;
 }
@@ -270,7 +270,7 @@ export function addArrow(x1, y1, x2, y2, type) {
   g.appendChild(line); g.appendChild(hit);
   updateArrowVisual(g);
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.objectsLayer.appendChild(g);
   return g;
 }
@@ -700,7 +700,7 @@ export function addShadow(x, y, type) {
 
   g.appendChild(shape);
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.objectsLayer.appendChild(g);
   return g;
 }
@@ -815,7 +815,7 @@ export function addSpotlight(x, y) {
   g.appendChild(nameLabel);
   g.setAttribute('transform', `translate(0,0)`);
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.objectsLayer.appendChild(g);
   return g;
 }
@@ -843,7 +843,7 @@ export function addVision(x, y) {
   g.appendChild(tri);
   updateVisionPolygon(g);
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.objectsLayer.appendChild(g);
   return g;
 }
@@ -882,7 +882,7 @@ export function addFreeformZone(points) {
   updateFreeformPath(g); // compute the smooth SVG d= from points
 
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.objectsLayer.appendChild(g);
   return g;
 }
@@ -976,7 +976,7 @@ export function addMotion(x1, y1, x2, y2, color) {
   updateMotionVisual(g);
 
   makeDraggable(g);
-  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g); } });
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.objectsLayer.appendChild(g);
   return g;
 }
