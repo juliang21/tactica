@@ -139,81 +139,81 @@ export function doExport() {
 
   function pl(fn) { ctx.save(); ctx.strokeStyle = PL; ctx.lineWidth = 1.5; fn(); ctx.restore(); }
 
-  if (!isV) {
-    const pad=30, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2, cy=H/2;
-    if (isHalf) {
-      pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,py,pw,ph); });
-      const paW=pw*0.42, paH=ph*0.45, paX=pad+(pw-paW)/2, paY=py+ph-paH;
-      pl(() => { ctx.strokeRect(paX,paY,paW,paH); });
-      const gaW=pw*0.18, gaH=ph*0.18, gaX=pad+(pw-gaW)/2, gaY=py+ph-gaH;
-      pl(() => { ctx.strokeRect(gaX,gaY,gaW,gaH); });
-      const psX=cx, psY=py+ph-paH*0.78;
-      ctx.beginPath(); ctx.arc(psX,psY,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      const hArcDist = psY - paY;
-      const hArcA = Math.acos(Math.min(1, hArcDist/55));
-      pl(() => { ctx.beginPath(); ctx.arc(psX,psY,55,Math.PI*1.5-hArcA,Math.PI*1.5+hArcA,true); ctx.stroke(); });
-      pl(() => { ctx.beginPath(); ctx.moveTo(pad,py); ctx.lineTo(pad+pw,py); ctx.stroke(); });
-      if (hasGoals) {
-        const gW=pw*0.075, gH=14, gX=pad+(pw-gW)/2;
-        ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
-        ctx.fillRect(gX,py+ph,gW,gH); ctx.strokeRect(gX,py+ph,gW,gH); ctx.restore();
-      }
-    } else {
-      pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,py,pw,ph); });
-      pl(() => { ctx.beginPath(); ctx.moveTo(cx,py); ctx.lineTo(cx,py+ph); ctx.stroke(); });
-      pl(() => { ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2); ctx.stroke(); });
-      ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      pl(() => { ctx.strokeRect(pad,cy-pbHW,105,pbHW*2); });
-      pl(() => { ctx.strokeRect(pad,cy-gaHW,40,gaHW*2); });
-      ctx.beginPath(); ctx.arc(pad+67,cy,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+  if (isHalf) {
+    // ── Half pitch (matches SVG in pitch.js exactly) ──
+    const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
+    const bot = py + ph;
+    // Outer boundary
+    pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,py,pw,ph); });
+    // Penalty area (fixed dimensions, centered)
+    pl(() => { ctx.strokeRect(cx-pbHW,bot-105,pbHW*2,105); });
+    // Goal area
+    pl(() => { ctx.strokeRect(cx-gaHW,bot-40,gaHW*2,40); });
+    // Penalty spot
+    ctx.beginPath(); ctx.arc(cx,bot-67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+    // Penalty arc
+    if (hasD) {
       const arcA = Math.acos(38/55);
-      pl(() => { ctx.beginPath(); ctx.arc(pad+67,cy,55,-arcA,arcA); ctx.stroke(); });
-      pl(() => { ctx.strokeRect(pad+pw-105,cy-pbHW,105,pbHW*2); });
-      pl(() => { ctx.strokeRect(pad+pw-40,cy-gaHW,40,gaHW*2); });
-      ctx.beginPath(); ctx.arc(pad+pw-67,cy,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      pl(() => { ctx.beginPath(); ctx.arc(pad+pw-67,cy,55,Math.PI-arcA,Math.PI+arcA); ctx.stroke(); });
+      pl(() => { ctx.beginPath(); ctx.arc(cx,bot-67,55,Math.PI*1.5-arcA,Math.PI*1.5+arcA); ctx.stroke(); });
+    }
+    // Halfway line at top
+    pl(() => { ctx.beginPath(); ctx.moveTo(pad,py); ctx.lineTo(pad+pw,py); ctx.stroke(); });
+    // Center circle arc (bottom half peeking in)
+    pl(() => { ctx.beginPath(); ctx.arc(cx,py,55,0,Math.PI); ctx.stroke(); });
+    // Corner arcs at bottom
+    pl(() => { ctx.beginPath(); ctx.arc(pad,bot,8,Math.PI*1.5,Math.PI*2); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(pad+pw,bot,8,Math.PI,Math.PI*1.5); ctx.stroke(); });
+    // Goal
+    if (hasGoals) {
       ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
-      ctx.fillRect(pad-14,cy-35,14,70); ctx.strokeRect(pad-14,cy-35,14,70);
-      ctx.fillRect(pad+pw,cy-35,14,70); ctx.strokeRect(pad+pw,cy-35,14,70);
+      ctx.strokeRect(cx-35,bot,70,14); ctx.restore();
+    }
+  } else if (!isV) {
+    const pad=30, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2, cy=H/2;
+    pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,py,pw,ph); });
+    pl(() => { ctx.beginPath(); ctx.moveTo(cx,py); ctx.lineTo(cx,py+ph); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2); ctx.stroke(); });
+    ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+    pl(() => { ctx.strokeRect(pad,cy-pbHW,105,pbHW*2); });
+    pl(() => { ctx.strokeRect(pad,cy-gaHW,40,gaHW*2); });
+    ctx.beginPath(); ctx.arc(pad+67,cy,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+    const arcA = Math.acos(38/55);
+    pl(() => { ctx.beginPath(); ctx.arc(pad+67,cy,55,-arcA,arcA); ctx.stroke(); });
+    pl(() => { ctx.strokeRect(pad+pw-105,cy-pbHW,105,pbHW*2); });
+    pl(() => { ctx.strokeRect(pad+pw-40,cy-gaHW,40,gaHW*2); });
+    ctx.beginPath(); ctx.arc(pad+pw-67,cy,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+    pl(() => { ctx.beginPath(); ctx.arc(pad+pw-67,cy,55,Math.PI-arcA,Math.PI+arcA); ctx.stroke(); });
+    // Corner arcs
+    pl(() => { ctx.beginPath(); ctx.arc(pad,py,8,Math.PI/2,0,true); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(pad+pw,py,8,Math.PI/2,Math.PI); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(pad,py+ph,8,0,Math.PI*1.5,true); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(pad+pw,py+ph,8,Math.PI,Math.PI*1.5); ctx.stroke(); });
+    // Goals
+    if (hasGoals) {
+      ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
+      ctx.strokeRect(pad-14,cy-35,14,70); ctx.strokeRect(pad+pw,cy-35,14,70);
       ctx.restore();
     }
   } else {
+    // ── Full vertical pitch ──
     const pad=20, px=20, pw=W-pad*2, ph=H-px*2, cx=W/2, cy=H/2;
-    if (isHalf) {
-      pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,px,pw,ph); });
-      const paH=ph*0.42, paW=pw*0.80, paX=pad+(pw-paW)/2;
-      pl(() => { ctx.strokeRect(paX,px,paW,paH); });
-      const gaH=ph*0.18, gaW=pw*0.36, gaX=pad+(pw-gaW)/2;
-      pl(() => { ctx.strokeRect(gaX,px,gaW,gaH); });
-      const psY=px+paH*0.78;
-      ctx.beginPath(); ctx.arc(cx,psY,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      const vhArcDist = psY - (px + paH);
-      const vhArcA = Math.acos(Math.min(1, Math.abs(vhArcDist)/55));
-      pl(() => { ctx.beginPath(); ctx.arc(cx,psY,55,Math.PI/2-vhArcA,Math.PI/2+vhArcA); ctx.stroke(); });
-      if (hasGoals) {
-        const gH=14, gW=pw*0.38, gX=pad+(pw-gW)/2;
-        ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
-        ctx.fillRect(gX,px-14,gW,14); ctx.strokeRect(gX,px-14,gW,14); ctx.restore();
-      }
-    } else {
-      pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,px,pw,ph); });
-      pl(() => { ctx.beginPath(); ctx.moveTo(pad,cy); ctx.lineTo(pad+pw,cy); ctx.stroke(); });
-      pl(() => { ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2); ctx.stroke(); });
-      ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      pl(() => { ctx.strokeRect(cx-pbHW,px,pbHW*2,105); });
-      pl(() => { ctx.strokeRect(cx-gaHW,px,gaHW*2,40); });
-      ctx.beginPath(); ctx.arc(cx,px+67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      const vArcA = Math.acos(38/55);
-      if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+67,55,Math.PI/2-vArcA,Math.PI/2+vArcA); ctx.stroke(); });
-      pl(() => { ctx.strokeRect(cx-pbHW,px+ph-105,pbHW*2,105); });
-      pl(() => { ctx.strokeRect(cx-gaHW,px+ph-40,gaHW*2,40); });
-      ctx.beginPath(); ctx.arc(cx,px+ph-67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-      if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+ph-67,55,Math.PI*1.5-vArcA,Math.PI*1.5+vArcA); ctx.stroke(); });
-      ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
-      ctx.fillRect(cx-35,px-14,70,14); ctx.strokeRect(cx-35,px-14,70,14);
-      ctx.fillRect(cx-35,px+ph,70,14); ctx.strokeRect(cx-35,px+ph,70,14);
-      ctx.restore();
-    }
+    pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,px,pw,ph); });
+    pl(() => { ctx.beginPath(); ctx.moveTo(pad,cy); ctx.lineTo(pad+pw,cy); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2); ctx.stroke(); });
+    ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+    pl(() => { ctx.strokeRect(cx-pbHW,px,pbHW*2,105); });
+    pl(() => { ctx.strokeRect(cx-gaHW,px,gaHW*2,40); });
+    ctx.beginPath(); ctx.arc(cx,px+67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+    const vArcA = Math.acos(38/55);
+    if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+67,55,Math.PI/2-vArcA,Math.PI/2+vArcA); ctx.stroke(); });
+    pl(() => { ctx.strokeRect(cx-pbHW,px+ph-105,pbHW*2,105); });
+    pl(() => { ctx.strokeRect(cx-gaHW,px+ph-40,gaHW*2,40); });
+    ctx.beginPath(); ctx.arc(cx,px+ph-67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+    if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+ph-67,55,Math.PI*1.5-vArcA,Math.PI*1.5+vArcA); ctx.stroke(); });
+    ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
+    ctx.fillRect(cx-35,px-14,70,14); ctx.strokeRect(cx-35,px-14,70,14);
+    ctx.fillRect(cx-35,px+ph,70,14); ctx.strokeRect(cx-35,px+ph,70,14);
+    ctx.restore();
   }
 
   // ── Grid lines (thirds + channels aligned to penalty/goal area) for export ──
@@ -227,7 +227,7 @@ export function doExport() {
     function gl(x1,y1,x2,y2) { ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
 
     if (isHalf) {
-      const pad=30, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
       for (let i=1; i<=2; i++) gl(pad, py+ph*i/3, pad+pw, py+ph*i/3);
       [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => gl(x, py, x, py+ph));
     } else if (isV) {
