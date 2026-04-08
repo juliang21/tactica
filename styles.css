@@ -1696,3 +1696,177 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   transition: opacity 0.15s;
 }
 .mobile-hint-btn:hover { opacity: 0.9; }
+
+/* ══════════════════════════════════════════════════════════════════════════════
+   TRAINING SESSION BUILDER
+   ══════════════════════════════════════════════════════════════════════════════ */
+
+/* Main content area */
+#training-wrap {
+  background: var(--bg);
+  border-radius: 12px;
+  min-height: 460px;
+  padding: 0;
+  overflow-y: auto;
+}
+#training-main-content {
+  max-width: 680px;
+  margin: 0 auto;
+  padding: 28px 24px;
+}
+
+/* Header */
+.ts-header {
+  display: flex; align-items: center; gap: 10px; margin-bottom: 20px;
+}
+.ts-title {
+  flex: 1; margin: 0; font-family: 'Manrope', sans-serif;
+  font-size: 18px; font-weight: 700; color: var(--text); letter-spacing: -0.3px;
+}
+.ts-subtitle {
+  margin: 0; font-family: 'Manrope', sans-serif;
+  font-size: 13px; font-weight: 700; color: var(--text); letter-spacing: -0.2px;
+}
+.ts-back-btn {
+  width: 32px; height: 32px; border-radius: 8px; border: 1px solid var(--border);
+  background: var(--panel2); color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+}
+.ts-back-btn:hover { color: var(--text); border-color: var(--text-muted); }
+
+.ts-session-name-input {
+  flex: 1; font-family: 'Manrope', sans-serif; font-size: 17px; font-weight: 700;
+  color: var(--text); background: none; border: none; outline: none;
+  padding: 4px 0; letter-spacing: -0.3px;
+  border-bottom: 1px solid transparent; transition: border-color 0.15s;
+}
+.ts-session-name-input:focus { border-bottom-color: var(--accent); }
+
+/* Buttons */
+.ts-btn {
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+  border: none; border-radius: 8px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 8px 14px; transition: all 0.15s;
+}
+.ts-btn-primary {
+  background: var(--accent); color: #0A0A0A;
+}
+.ts-btn-primary:hover { opacity: 0.9; }
+.ts-btn-sm { padding: 6px 10px; font-size: 11px; }
+
+/* Empty state */
+.ts-empty {
+  text-align: center; padding: 48px 20px;
+}
+.ts-empty-sm { padding: 24px 16px; }
+.ts-empty-text {
+  font-family: 'Manrope', sans-serif; font-size: 15px; font-weight: 600;
+  color: var(--text); margin: 14px 0 6px;
+}
+.ts-empty-sub {
+  font-family: 'Manrope', sans-serif; font-size: 12px;
+  color: var(--text-muted); line-height: 1.5; margin: 0;
+}
+
+/* Session cards */
+.ts-session-list { display: flex; flex-direction: column; gap: 8px; }
+.ts-session-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 14px 16px; cursor: pointer; transition: all 0.15s;
+}
+.ts-session-card:hover { border-color: var(--text-dim); }
+.ts-card-main { flex: 1; min-width: 0; }
+.ts-card-name {
+  font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600;
+  color: var(--text); margin-bottom: 3px;
+}
+.ts-card-meta {
+  font-family: 'Manrope', sans-serif; font-size: 11px;
+  color: var(--text-muted);
+}
+.ts-card-obj {
+  font-family: 'Manrope', sans-serif; font-size: 11px;
+  color: var(--text-dim); margin-top: 4px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.ts-card-delete {
+  width: 28px; height: 28px; border-radius: 6px; border: none;
+  background: transparent; color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s; flex-shrink: 0;
+}
+.ts-card-delete:hover { background: rgba(255,80,80,0.15); color: #f66; }
+
+/* Form fields */
+.ts-form { display: flex; flex-direction: column; gap: 14px; margin-bottom: 20px; }
+.ts-field { display: flex; flex-direction: column; gap: 4px; }
+.ts-field-row { display: flex; gap: 12px; }
+.ts-field-row .ts-field { flex: 1; }
+.ts-label {
+  font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;
+}
+.ts-input, .ts-textarea {
+  font-family: 'Manrope', sans-serif; font-size: 13px; color: var(--text);
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 8px;
+  padding: 8px 10px; outline: none; resize: vertical; transition: border-color 0.15s;
+}
+.ts-input:focus, .ts-textarea:focus { border-color: var(--accent); }
+.ts-textarea { min-height: 36px; }
+
+/* Objectives badges */
+.ts-objectives-group { display: flex; flex-direction: column; gap: 6px; }
+.ts-obj-tabs { display: flex; gap: 6px; margin-bottom: 2px; }
+.ts-obj-badge {
+  font-family: 'Manrope', sans-serif; font-size: 10px; font-weight: 600;
+  padding: 3px 8px; border-radius: 4px; text-transform: uppercase; letter-spacing: 0.3px;
+}
+.ts-obj-general { background: rgba(201,169,98,0.15); color: var(--accent); }
+.ts-obj-offensive { background: rgba(74,222,128,0.15); color: #4ADE80; }
+.ts-obj-defensive { background: rgba(249,94,79,0.15); color: #F95E4F; }
+
+/* Drill list */
+.ts-drills-header {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 12px;
+}
+.ts-drill-list { display: flex; flex-direction: column; gap: 6px; }
+.ts-drill-card {
+  display: flex; align-items: center; gap: 12px;
+  background: var(--panel2); border: 1px solid var(--border); border-radius: 10px;
+  padding: 12px 14px; cursor: pointer; transition: all 0.15s;
+}
+.ts-drill-card:hover { border-color: var(--text-dim); }
+.ts-drill-num {
+  width: 28px; height: 28px; border-radius: 7px;
+  background: var(--accent); color: #0A0A0A;
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700;
+  display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+}
+.ts-drill-info { flex: 1; min-width: 0; }
+.ts-drill-name {
+  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600; color: var(--text);
+}
+.ts-drill-meta {
+  font-family: 'Manrope', sans-serif; font-size: 11px; color: var(--text-muted); margin-top: 2px;
+}
+
+/* Diagram placeholder */
+.ts-diagram-section { margin-top: 8px; }
+.ts-diagram-placeholder {
+  text-align: center; padding: 32px 16px;
+  background: var(--panel2); border: 1px dashed var(--border); border-radius: 10px;
+}
+.ts-diagram-placeholder p {
+  font-family: 'Manrope', sans-serif; font-size: 12px;
+  color: var(--text-dim); margin: 10px 0 0;
+}
+
+/* Side panel training pane */
+#training-pane .ts-header { margin-bottom: 14px; }
+#training-pane .ts-title { font-size: 15px; }
+#training-pane .ts-session-card { padding: 10px 12px; }
+#training-pane .ts-card-name { font-size: 13px; }
