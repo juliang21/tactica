@@ -162,10 +162,12 @@ window.setArrowType = setArrowType;
 window.selectTeamContext = selectTeamContext;
 window.applyKit = function(el) {
   applyKit(el);
-  const teamName = el.getAttribute('title') || el.querySelector('.kit-label')?.textContent || 'unknown';
+  const teamName = el.dataset.trackName || el.getAttribute('title') || el.querySelector('.kit-label')?.textContent || 'unknown';
   const isNational = !!el.closest('#kit-grid-national');
+  const action = isNational ? 'feature_national_team' : 'feature_club_team';
   const u = getCurrentUser();
-  if (u) logAction(u.uid, u.email, isNational ? 'feature_national_team' : 'feature_club_team', { team: teamName }).catch(() => {});
+  if (u) logAction(u.uid, u.email, action, { team: teamName }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', action, { team_name: teamName, tool_name: 'tactica' });
 };
 window.applyColor = applyColor;
 window.switchKitTab = function(tab, btn) {
@@ -178,6 +180,7 @@ window.placeFormation = function(name) {
   placeFormation(name);
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_formation', { formation: name }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'feature_formation', { formation_name: name, tool_name: 'tactica' });
 };
 window.liveUpdateNumber = liveUpdateNumber;
 window.confirmNumber = confirmNumber;
@@ -192,12 +195,14 @@ window.setPitch = function(layout) {
   setPitch(layout);
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_pitch_change', { type: layout }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_type', { pitch_type: layout, tool_name: 'tactica' });
 };
 window.setPitchColor = function(dotEl) {
   setPitchColor(dotEl);
-  const colorName = dotEl.getAttribute('title') || 'unknown';
+  const colorName = dotEl.dataset.trackName || dotEl.getAttribute('title') || 'unknown';
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_pitch_change', { color: colorName }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_color', { color_name: colorName, tool_name: 'tactica' });
 };
 window.hideUpgradePrompt = hideUpgradePrompt;
 window.setUserTier = setUserTier;
