@@ -963,6 +963,7 @@ export function clearAll() {
   S.objectsLayer.innerHTML = '';
   S.playerCounts.a = 0;
   S.playerCounts.b = 0;
+  S.playerCounts.joker = 0;
   S.setObjectCounter(0);
   deselect();
 }

@@ -18,6 +18,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
 import { setPitch, setPitchColor } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
+import { processImage, hasApiKey, setApiKey, getApiKey, getProvider, setProvider } from './image-to-formation.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
@@ -62,6 +63,7 @@ function undo() {
   S.playersLayer.innerHTML = snap.players;
   S.playerCounts.a = snap.playerCounts.a;
   S.playerCounts.b = snap.playerCounts.b;
+  S.playerCounts.joker = snap.playerCounts.joker || 0;
   S.setObjectCounter(snap.objectCounter);
 
   // Re-attach event listeners to all restored elements
@@ -358,6 +360,142 @@ function closeModeSwitch() {
 }
 window.closeModeSwitch = closeModeSwitch;
 
+// ─── Detect Formation from Image ─────────────────────────────────────────────
+let _detectFile = null;
+
+function openDetectFormation() {
+  const modal = document.getElementById('detect-formation-modal');
+  modal.style.display = 'flex';
+  // Reset states
+  _detectFile = null;
+  document.getElementById('detect-preview').style.display = 'none';
+  document.getElementById('detect-dropzone-content').style.display = '';
+  document.getElementById('detect-processing').style.display = 'none';
+  document.getElementById('detect-error').style.display = 'none';
+  document.getElementById('detect-result').style.display = 'none';
+  document.getElementById('detect-go-btn').style.display = 'none';
+  // Show key step if no key saved, otherwise show upload step
+  if (!hasApiKey()) {
+    document.getElementById('detect-step-key').style.display = '';
+    document.getElementById('detect-step-upload').style.display = 'none';
+  } else {
+    document.getElementById('detect-step-key').style.display = 'none';
+    document.getElementById('detect-step-upload').style.display = '';
+  }
+}
+window.openDetectFormation = openDetectFormation;
+
+function closeDetectFormation() {
+  document.getElementById('detect-formation-modal').style.display = 'none';
+  _detectFile = null;
+}
+window.closeDetectFormation = closeDetectFormation;
+
+function showDetectKeyStep() {
+  document.getElementById('detect-step-key').style.display = '';
+  document.getElementById('detect-step-upload').style.display = 'none';
+  document.getElementById('detect-key-input').value = getApiKey();
+  // Sync provider buttons
+  const p = getProvider();
+  document.querySelectorAll('.detect-provider-btn').forEach(b => b.classList.toggle('active', b.dataset.provider === p));
+  ['gemini','groq','anthropic','openai'].forEach(id => {
+    const el = document.getElementById('detect-key-instructions-' + id);
+    if (el) el.style.display = p === id ? '' : 'none';
+  });
+}
+window.showDetectKeyStep = showDetectKeyStep;
+
+function selectDetectProvider(provider) {
+  setProvider(provider);
+  document.querySelectorAll('.detect-provider-btn').forEach(b => b.classList.toggle('active', b.dataset.provider === provider));
+  ['gemini','groq','anthropic','openai'].forEach(id => {
+    const el = document.getElementById('detect-key-instructions-' + id);
+    if (el) el.style.display = provider === id ? '' : 'none';
+  });
+  // Load saved key for this provider
+  document.getElementById('detect-key-input').value = getApiKey();
+}
+window.selectDetectProvider = selectDetectProvider;
+
+function saveDetectKeyAndContinue() {
+  const key = document.getElementById('detect-key-input').value.trim();
+  if (!key) return;
+  setApiKey(key);
+  document.getElementById('detect-step-key').style.display = 'none';
+  document.getElementById('detect-step-upload').style.display = '';
+}
+window.saveDetectKeyAndContinue = saveDetectKeyAndContinue;
+
+function onDetectFileSelected(input) {
+  const file = input.files?.[0];
+  if (!file) return;
+  _detectFile = file;
+  // Show preview
+  const preview = document.getElementById('detect-preview');
+  const content = document.getElementById('detect-dropzone-content');
+  const reader = new FileReader();
+  reader.onload = () => {
+    preview.src = reader.result;
+    preview.style.display = 'block';
+    content.style.display = 'none';
+  };
+  reader.readAsDataURL(file);
+  document.getElementById('detect-go-btn').style.display = '';
+  document.getElementById('detect-error').style.display = 'none';
+  document.getElementById('detect-result').style.display = 'none';
+}
+window.onDetectFileSelected = onDetectFileSelected;
+
+async function runDetection() {
+  if (!_detectFile) return;
+  const goBtn = document.getElementById('detect-go-btn');
+  const proc = document.getElementById('detect-processing');
+  const errDiv = document.getElementById('detect-error');
+  const resDiv = document.getElementById('detect-result');
+
+  goBtn.style.display = 'none';
+  proc.style.display = '';
+  errDiv.style.display = 'none';
+  resDiv.style.display = 'none';
+
+  try {
+    const result = await processImage(_detectFile);
+    proc.style.display = 'none';
+    resDiv.style.display = '';
+    resDiv.textContent = `Detected ${result.count} players! Formation placed on pitch.`;
+    // Close modal after brief delay
+    setTimeout(() => closeDetectFormation(), 1500);
+  } catch (err) {
+    proc.style.display = 'none';
+    errDiv.style.display = '';
+    errDiv.textContent = err.message;
+    goBtn.style.display = '';
+  }
+}
+window.runDetection = runDetection;
+
+// Drag-and-drop for the detect dropzone
+document.addEventListener('DOMContentLoaded', () => {
+  const dz = document.getElementById('detect-dropzone');
+  if (!dz) return;
+  dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('dragover'); });
+  dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+  dz.addEventListener('drop', e => {
+    e.preventDefault(); dz.classList.remove('dragover');
+    const file = e.dataTransfer.files?.[0];
+    if (file && file.type.startsWith('image/')) {
+      _detectFile = file;
+      const preview = document.getElementById('detect-preview');
+      const content = document.getElementById('detect-dropzone-content');
+      const reader = new FileReader();
+      reader.onload = () => { preview.src = reader.result; preview.style.display = 'block'; content.style.display = 'none'; };
+      reader.readAsDataURL(file);
+      document.getElementById('detect-go-btn').style.display = '';
+      document.getElementById('detect-error').style.display = 'none';
+    }
+  });
+});
+
 // ─── Mobile Mode Dropdown ────────────────────────────────────────────────────
 function toggleModeDropdown() {
   const menu = document.getElementById('mode-dropdown-menu');
@@ -396,6 +534,7 @@ S.svg.addEventListener('click', e => {
   if (S.tool !== 'select' && S.tool !== 'arrow') S.pushUndo();
   if (S.tool === 'player-a') placed = addPlayer(pt.x, pt.y, 'a');
   else if (S.tool === 'player-b') placed = addPlayer(pt.x, pt.y, 'b');
+  else if (S.tool === 'player-joker') placed = addPlayer(pt.x, pt.y, 'joker');
   else if (S.tool === 'ball') placed = addBall(pt.x, pt.y);
   else if (S.tool === 'cone') placed = addCone(pt.x, pt.y);
   else if (S.tool === 'referee') placed = addReferee(pt.x, pt.y);
@@ -413,7 +552,7 @@ S.svg.addEventListener('click', e => {
     const u = getCurrentUser();
     if (u) logAction(u.uid, u.email, 'element_inserted', { element: elType }).catch(() => {});
     // Players stay in placement mode so you can keep adding
-    if (S.tool === 'player-a' || S.tool === 'player-b') {
+    if (S.tool === 'player-a' || S.tool === 'player-b' || S.tool === 'player-joker') {
       // Don't switch tool — stay in player mode
     } else {
       setTool('select'); select(placed);
@@ -2064,6 +2203,7 @@ function newAnalysisFromDashboard() {
   S.playersLayer.innerHTML = '';
   S.playerCounts.a = 0;
   S.playerCounts.b = 0;
+  S.playerCounts.joker = 0;
   S.setObjectCounter(0);
   S.undoStack.length = 0;
   closeMyAnalyses();

@@ -258,6 +258,7 @@ export async function loadAnalysis(id, onReady) {
 
   S.playerCounts.a = d.playerCounts?.a || 0;
   S.playerCounts.b = d.playerCounts?.b || 0;
+  S.playerCounts.joker = d.playerCounts?.joker || 0;
   S.setObjectCounter(d.objectCounter || 0);
   S.undoStack.length = 0;
 

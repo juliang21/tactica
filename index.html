@@ -165,6 +165,10 @@
       <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#FBBF24"/></svg>
       <span class="tool-label">Team B</span>
     </button>
+    <button class="tool-btn" data-tool="player-joker" onclick="setTool('player-joker')">
+      <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#EF4444"/></svg>
+      <span class="tool-label">Joker</span>
+    </button>
     <button class="tool-btn" data-tool="ball" onclick="setTool('ball')">
       <svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="white" stroke="#444" stroke-width="1.3"/><polygon points="10,4.5 11.8,8.1 15.8,8.4 12.9,11.1 13.8,15 10,12.8 6.2,15 7.1,11.1 4.2,8.4 8.2,8.1" fill="none" stroke="#333" stroke-width="0.8" stroke-linejoin="round"/></svg>
       <span class="tool-label">Ball</span>
@@ -507,6 +511,19 @@
       <div style="font-size:9px;color:var(--text-muted);margin-top:8px;line-height:1.6">GK shown in lighter shade · replaces existing team</div>
     </div>
 
+    <!-- Detect formation from image -->
+    <div class="panel-section">
+      <div class="sub-label">From screenshot</div>
+      <button class="action-btn" onclick="openDetectFormation()" style="width:100%;justify-content:center;padding:10px 16px;font-size:12px;gap:8px">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/>
+          <path d="M14 3v4h4" opacity="0.5"/><path d="M17 7l-3-4" opacity="0.5"/>
+        </svg>
+        Detect Formation from Image
+      </button>
+      <div style="font-size:9px;color:var(--text-muted);margin-top:6px;line-height:1.5">Upload a match screenshot · AI detects both teams</div>
+    </div>
+
     <!-- KIT COLOUR -->
     <div class="panel-section">
       <h3>Kit colour</h3>
@@ -524,7 +541,7 @@
         <div class="kit-btn" style="background:#034694" data-color="#034694" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Chelsea" title="Chelsea"><div class="kit-label">CHE</div></div>
         <div class="kit-btn" style="background:#e62333" data-color="#e62333" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Roma" title="Roma"><div class="kit-label">ROM</div></div>
         <div class="kit-btn" style="background:#000000" data-color="#1a1a1a" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Juventus" title="Juventus"><div class="kit-label">JUV</div></div>
-        <div class="kit-btn" style="background:#d9021b" data-color="#d9021b" data-gk="#a8f0d0" onclick="applyKit(this)" data-track-name="Sevilla" title="Sevilla"><div class="kit-label">SEV</div></div>
+        <div class="kit-btn" style="background:#ffffff;border:2px solid #d9021b" data-color="#ffffff" data-border="#d9021b" data-gk="#a8f0d0" onclick="applyKit(this)" data-track-name="Sevilla" title="Sevilla"><div class="kit-label" style="color:#000">SEV</div></div>
         <div class="kit-btn" style="background:repeating-linear-gradient(90deg,#cb3524 0 5px,#fff 5px 10px);border:2px solid #1e4d8c" data-pattern="kit-atm" data-color="#cb3524" data-border="#1e4d8c" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Atlético Madrid" title="Atlético Madrid"><div class="kit-label" style="color:#1e4d8c;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff">ATM</div></div>
         <div class="kit-btn" style="background:#003da5;border:2px solid #fde100" data-color="#003da5" data-border="#fde100" data-gk="#fde100" onclick="applyKit(this)" data-track-name="Boca Juniors" title="Boca Juniors"><div class="kit-label">BOC</div></div>
         <div class="kit-btn" style="background:#ffffff;border:2px solid #cd1e2b" data-color="#ffffff" data-border="#cd1e2b" data-gk="#00a651" onclick="applyKit(this)" data-track-name="River Plate" title="River Plate"><div class="kit-label" style="color:#000">RIV</div></div>
@@ -1266,6 +1283,111 @@
     <div class="modal-row">
       <button class="modal-btn cancel" onclick="closeExport()">Cancel</button>
       <button class="modal-btn confirm" onclick="doExport()">Download</button>
+    </div>
+  </div>
+</div>
+
+<!-- Detect Formation Modal -->
+<div class="modal-backdrop" id="detect-formation-modal" style="display:none">
+  <div class="modal-box" style="width:380px">
+    <div class="modal-title" style="display:flex;align-items:center;gap:8px">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><path d="M21 15l-5-5L5 21"/></svg>
+      Detect Formation
+    </div>
+
+    <!-- Step 1: API key (shown only if no key saved) -->
+    <div id="detect-step-key" style="display:none">
+      <!-- Provider selector -->
+      <div style="display:flex;gap:6px;margin-bottom:14px">
+        <button class="formation-btn detect-provider-btn active" data-provider="gemini" onclick="selectDetectProvider('gemini')" style="flex:1;font-size:11px;padding:7px 0">Gemini <span style="opacity:0.5;font-size:9px">(free)</span></button>
+        <button class="formation-btn detect-provider-btn" data-provider="groq" onclick="selectDetectProvider('groq')" style="flex:1;font-size:11px;padding:7px 0">Groq <span style="opacity:0.5;font-size:9px">(free)</span></button>
+        <button class="formation-btn detect-provider-btn" data-provider="anthropic" onclick="selectDetectProvider('anthropic')" style="flex:1;font-size:11px;padding:7px 0">Claude</button>
+        <button class="formation-btn detect-provider-btn" data-provider="openai" onclick="selectDetectProvider('openai')" style="flex:1;font-size:11px;padding:7px 0">OpenAI</button>
+      </div>
+
+      <div id="detect-key-instructions-gemini">
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;line-height:1.5">
+          Get a free Gemini API key:
+        </p>
+        <ol style="font-size:11px;color:var(--text-muted);margin:0 0 12px;padding-left:18px;line-height:1.8">
+          <li>Go to <a href="https://aistudio.google.com/apikey" target="_blank" style="color:var(--accent)">Google AI Studio</a></li>
+          <li>Click <strong>"Create API Key"</strong></li>
+          <li>Copy and paste it below</li>
+        </ol>
+      </div>
+      <div id="detect-key-instructions-groq" style="display:none">
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;line-height:1.5">
+          Get a free Groq API key:
+        </p>
+        <ol style="font-size:11px;color:var(--text-muted);margin:0 0 12px;padding-left:18px;line-height:1.8">
+          <li>Go to <a href="https://console.groq.com/keys" target="_blank" style="color:var(--accent)">Groq Console</a></li>
+          <li>Sign up (free) and create an API key</li>
+          <li>Copy and paste it below</li>
+        </ol>
+      </div>
+      <div id="detect-key-instructions-anthropic" style="display:none">
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;line-height:1.5">
+          Get an Anthropic API key:
+        </p>
+        <ol style="font-size:11px;color:var(--text-muted);margin:0 0 12px;padding-left:18px;line-height:1.8">
+          <li>Go to <a href="https://console.anthropic.com/settings/keys" target="_blank" style="color:var(--accent)">Anthropic Console</a></li>
+          <li>Click <strong>"Create Key"</strong></li>
+          <li>Copy and paste it below</li>
+        </ol>
+      </div>
+      <div id="detect-key-instructions-openai" style="display:none">
+        <p style="font-size:12px;color:var(--text-muted);margin:0 0 10px;line-height:1.5">
+          Get an OpenAI API key:
+        </p>
+        <ol style="font-size:11px;color:var(--text-muted);margin:0 0 12px;padding-left:18px;line-height:1.8">
+          <li>Go to <a href="https://platform.openai.com/api-keys" target="_blank" style="color:var(--accent)">OpenAI Platform</a></li>
+          <li>Click <strong>"Create new secret key"</strong></li>
+          <li>Copy and paste it below</li>
+        </ol>
+      </div>
+
+      <input type="text" id="detect-key-input" placeholder="Paste your API key" style="width:100%;box-sizing:border-box;padding:9px 12px;border-radius:8px;border:1.5px solid var(--border);background:var(--panel2);font-family:'Poppins',sans-serif;font-size:12px;color:var(--text);outline:none;margin-bottom:12px">
+      <button class="modal-btn confirm" onclick="saveDetectKeyAndContinue()" style="width:100%">Save & Continue</button>
+    </div>
+
+    <!-- Step 2: Upload image -->
+    <div id="detect-step-upload">
+      <div id="detect-dropzone" style="border:2px dashed var(--border);border-radius:10px;padding:28px 16px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;margin-bottom:12px"
+           onclick="document.getElementById('detect-file-input').click()">
+        <div id="detect-dropzone-content">
+          <svg width="32" height="32" viewBox="0 0 32 32" fill="none" style="margin-bottom:8px;opacity:0.4">
+            <rect x="4" y="6" width="24" height="20" rx="3" stroke="currentColor" stroke-width="1.5"/>
+            <circle cx="12" cy="14" r="2.5" fill="currentColor" opacity="0.3"/>
+            <path d="M4 22l7-7 4 4 5-5 8 8" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" opacity="0.4"/>
+          </svg>
+          <div style="font-size:13px;font-weight:500;margin-bottom:4px">Drop image here</div>
+          <div style="font-size:11px;color:var(--text-muted)">or click to browse</div>
+        </div>
+        <img id="detect-preview" style="display:none;max-width:100%;max-height:180px;border-radius:6px">
+      </div>
+      <input type="file" id="detect-file-input" accept="image/*" style="display:none" onchange="onDetectFileSelected(this)">
+
+      <!-- Processing state -->
+      <div id="detect-processing" style="display:none;text-align:center;padding:12px 0">
+        <div class="detect-spinner"></div>
+        <div style="font-size:12px;color:var(--text-muted);margin-top:10px">Analyzing image with AI...</div>
+      </div>
+
+      <!-- Error state -->
+      <div id="detect-error" style="display:none;padding:10px 12px;border-radius:8px;background:rgba(239,68,68,0.1);border:1px solid rgba(239,68,68,0.2);font-size:12px;color:#f87171;margin-bottom:12px;line-height:1.5"></div>
+
+      <!-- Result state -->
+      <div id="detect-result" style="display:none;padding:10px 12px;border-radius:8px;background:rgba(34,197,94,0.1);border:1px solid rgba(34,197,94,0.2);font-size:12px;color:#4ade80;margin-bottom:12px;line-height:1.5"></div>
+    </div>
+
+    <div class="modal-row" style="margin-top:8px">
+      <button class="modal-btn cancel" onclick="closeDetectFormation()">Cancel</button>
+      <button class="modal-btn confirm" id="detect-go-btn" onclick="runDetection()" style="display:none">Detect Players</button>
+    </div>
+
+    <!-- Settings link -->
+    <div style="text-align:center;margin-top:8px">
+      <button onclick="showDetectKeyStep()" style="background:none;border:none;color:var(--text-muted);font-size:10px;cursor:pointer;text-decoration:underline;font-family:inherit">Change API key</button>
     </div>
   </div>
 </div>

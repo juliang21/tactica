@@ -70,6 +70,7 @@ export function enterImageMode(dataUrl, natW, natH) {
   S.playersLayer.innerHTML = '';
   S.playerCounts.a = 0;
   S.playerCounts.b = 0;
+  S.playerCounts.joker = 0;
 
   // Insert image as background
   const imgEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
@@ -111,6 +112,7 @@ export function exitImageMode() {
   S.playersLayer.innerHTML = '';
   S.playerCounts.a = 0;
   S.playerCounts.b = 0;
+  S.playerCounts.joker = 0;
 
   // Remove CSS class
   document.body.classList.remove('image-mode');
