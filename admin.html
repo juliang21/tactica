@@ -353,7 +353,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
   const activeCoaches = activeUids.size;
   const returningCoaches = users.filter(u => u.sessionCount > 1).length;
   const analysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
-  const exportOrSaveCoaches = new Set((actions || []).filter(a => a.action === 'save' || a.action === 'export' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export_video'))).map(a => a.uid)).size;
+  const exportOrSaveCoaches = new Set((actions || []).filter(a => a.action === 'save' || a.action === 'export' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).map(a => a.uid)).size;
   const pct = (n) => activeCoaches > 0 ? Math.round(n / activeCoaches * 100) : 0;
 
   // Milestone bar
@@ -395,7 +395,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
 function renderSessionStats(sessions, actions) {
   const totalSessions = sessions.length;
   const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started').length;
-  const exportAndSave = (actions || []).filter(a => a.action === 'save' || a.action === 'export' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export_video'))).length;
+  const exportAndSave = (actions || []).filter(a => a.action === 'save' || a.action === 'export' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).length;
   const desktopSessions = sessions.filter(s => s.device === 'desktop').length;
   const mobileSessions = sessions.filter(s => s.device === 'mobile').length;
   const unknownSessions = sessions.filter(s => !s.device).length;
@@ -444,14 +444,14 @@ function renderFeatureStats(actions, activeUsers) {
     { label: 'Export PNG', ...featureDataFiltered(actions, 'export', a => !a.meta || !a.meta.format || a.meta.format === 'png') },
     { label: 'Export JPG', ...featureDataFiltered(actions, 'export', a => a.meta && a.meta.format === 'jpg') },
     { label: 'Save', ...featureData(actions, 'save') },
-    { label: 'Export GIF Animation', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && a.meta.trigger === 'export_gif') },
+    { label: 'Export GIF Animation', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export')) },
     { label: 'Export Video', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && a.meta.trigger === 'export_video') },
   ];
   const esTotalEvents = exportSaveItems.reduce((s, i) => s + i.totalEvents, 0);
   const esUniqueUsers = new Set([
     ...(actions || []).filter(a => a.action === 'export').map(a => a.uid),
     ...(actions || []).filter(a => a.action === 'save').map(a => a.uid),
-    ...(actions || []).filter(a => a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export_video')).map(a => a.uid),
+    ...(actions || []).filter(a => a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video')).map(a => a.uid),
   ]).size;
 
   let html = `<div class="stat-card" style="grid-column: span 2;">
@@ -486,7 +486,7 @@ const FEATURE_CONFIGS = [
     { label: 'Export PNG', action: 'export', metaKey: null, filterFn: a => !a.meta || !a.meta.format || a.meta.format === 'png' },
     { label: 'Export JPG', action: 'export', metaKey: null, filterFn: a => a.meta && a.meta.format === 'jpg' },
     { label: 'Save', action: 'save', metaKey: null },
-    { label: 'Export GIF Animation', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_gif' },
+    { label: 'Export GIF Animation', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export') },
     { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_video' },
   ]},
   { label: 'Pitch Type', action: 'feature_pitch_change', metaKey: 'type', filterFn: a => a.meta && a.meta.type },

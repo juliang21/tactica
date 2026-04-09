@@ -296,7 +296,7 @@ body {
 
 /* ── Mode Selector Tab Bar ── */
 #mode-bar {
-  position: absolute; top: 0; left: 0; right: 0;
+  position: fixed; top: 0; left: 0; right: 0;
   height: 44px; z-index: 100;
   background: #0A0A0A;
   border-bottom: 1px solid #1F1F1F;
@@ -359,8 +359,8 @@ body {
   display: flex; flex-direction: column;
   padding: 0; gap: 0; z-index: 10; overflow-y: auto;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.2);
-  margin: 54px 12px 12px 0;
-  max-height: calc(100vh - 68px);
+  margin: 58px 12px 12px 0;
+  max-height: calc(100vh - 72px);
   align-self: flex-start;
 }
 .panel-section {
