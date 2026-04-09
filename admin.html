@@ -353,8 +353,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
   const activeCoaches = activeUids.size;
   const returningCoaches = users.filter(u => u.sessionCount > 1).length;
   const analysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
-  const saveCoaches = new Set((actions || []).filter(a => a.action === 'save').map(a => a.uid)).size;
-  const exportCoaches = new Set((actions || []).filter(a => a.action === 'export').map(a => a.uid)).size;
+  const exportOrSaveCoaches = new Set((actions || []).filter(a => a.action === 'save' || a.action === 'export' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export_video'))).map(a => a.uid)).size;
   const pct = (n) => activeCoaches > 0 ? Math.round(n / activeCoaches * 100) : 0;
 
   // Milestone bar
@@ -388,8 +387,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
     <div class="stat-card"><div class="label">Active Coaches in Period</div><div class="value">${activeCoaches}</div></div>
     <div class="stat-card"><div class="label">Returning Coaches</div><div class="value">${returningCoaches}</div><div class="sub">${pct(returningCoaches)}% of active</div></div>
     <div class="stat-card"><div class="label">Coaches w/ an Analysis</div><div class="value">${pct(analysisCoaches)}%</div><div class="sub">${analysisCoaches} of ${activeCoaches} active</div></div>
-    <div class="stat-card"><div class="label">Coaches w/ a Save</div><div class="value">${pct(saveCoaches)}%</div><div class="sub">${saveCoaches} of ${activeCoaches} active</div></div>
-    <div class="stat-card"><div class="label">Coaches w/ an Image Export</div><div class="value">${pct(exportCoaches)}%</div><div class="sub">${exportCoaches} of ${activeCoaches} active</div></div>
+    <div class="stat-card"><div class="label">Coaches w/ Export or Save</div><div class="value">${pct(exportOrSaveCoaches)}%</div><div class="sub">${exportOrSaveCoaches} of ${activeCoaches} active</div></div>
   `;
 }
 
@@ -397,8 +395,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
 function renderSessionStats(sessions, actions) {
   const totalSessions = sessions.length;
   const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started').length;
-  const saves = (actions || []).filter(a => a.action === 'save').length;
-  const exports = (actions || []).filter(a => a.action === 'export').length;
+  const exportAndSave = (actions || []).filter(a => a.action === 'save' || a.action === 'export' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export_video'))).length;
   const desktopSessions = sessions.filter(s => s.device === 'desktop').length;
   const mobileSessions = sessions.filter(s => s.device === 'mobile').length;
   const unknownSessions = sessions.filter(s => !s.device).length;
@@ -409,8 +406,7 @@ function renderSessionStats(sessions, actions) {
     <div class="stat-card"><div class="label">Desktop Sessions</div><div class="value">${desktopSessions}</div><div class="sub">${pct(desktopSessions)}% of sessions${unknownSessions ? ' &middot; ' + unknownSessions + ' unknown' : ''}</div></div>
     <div class="stat-card"><div class="label">Mobile Sessions</div><div class="value">${mobileSessions}</div><div class="sub">${pct(mobileSessions)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Sessions w/ an Analysis</div><div class="value">${analysisStarted}</div><div class="sub">${pct(analysisStarted)}% of sessions</div></div>
-    <div class="stat-card"><div class="label">Total Saves</div><div class="value">${saves}</div><div class="sub">${pct(saves)}% of sessions</div></div>
-    <div class="stat-card"><div class="label">Total Image Exports</div><div class="value">${exports}</div><div class="sub">${pct(exports)}% of sessions</div></div>
+    <div class="stat-card"><div class="label">Total Exports &amp; Saves</div><div class="value">${exportAndSave}</div><div class="sub">${pct(exportAndSave)}% of sessions</div></div>
   `;
 }
 
@@ -424,16 +420,54 @@ function featureData(actions, actionName) {
   };
 }
 
+function featureDataFiltered(actions, actionName, filterFn) {
+  let items = (actions || []).filter(a => a.action === actionName);
+  if (filterFn) items = items.filter(filterFn);
+  return {
+    totalEvents: items.length,
+    uniqueSessions: new Set(items.map(a => a.sessionId).filter(Boolean)).size,
+    uniqueUsers: new Set(items.map(a => a.uid)).size,
+  };
+}
+
 function renderFeatureStats(actions, activeUsers) {
   const features = [
-    ['Save', 'save'], ['Export Image', 'export'], ['Animation', 'feature_animation'],
     ['Pitch Change', 'feature_pitch_change'], ['Image Upload', 'feature_image_upload'],
     ['Formation', 'feature_formation'], ['Club Team', 'feature_club_team'],
     ['National Team', 'feature_national_team'], ['Element Inserted', 'element_inserted'],
     ['Element Selected', 'element_selected'],
   ];
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
-  document.getElementById('feature-stats').innerHTML = features.map(([label, action]) => {
+
+  // Export & Save grouped section
+  const exportSaveItems = [
+    { label: 'Export PNG', ...featureDataFiltered(actions, 'export', a => !a.meta || !a.meta.format || a.meta.format === 'png') },
+    { label: 'Export JPG', ...featureDataFiltered(actions, 'export', a => a.meta && a.meta.format === 'jpg') },
+    { label: 'Save', ...featureData(actions, 'save') },
+    { label: 'Export GIF Animation', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && a.meta.trigger === 'export_gif') },
+    { label: 'Export Video', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && a.meta.trigger === 'export_video') },
+  ];
+  const esTotalEvents = exportSaveItems.reduce((s, i) => s + i.totalEvents, 0);
+  const esUniqueUsers = new Set([
+    ...(actions || []).filter(a => a.action === 'export').map(a => a.uid),
+    ...(actions || []).filter(a => a.action === 'save').map(a => a.uid),
+    ...(actions || []).filter(a => a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export_video')).map(a => a.uid),
+  ]).size;
+
+  let html = `<div class="stat-card" style="grid-column: span 2;">
+    <div class="label">Export &amp; Save</div>
+    <div class="value">${esTotalEvents}</div>
+    <div class="sub">${esUniqueUsers} coaches (${pct(esUniqueUsers)}%)</div>
+    <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
+      ${exportSaveItems.map(i => `<div style="background:rgba(255,255,255,0.04);border:1px solid rgba(255,255,255,0.06);border-radius:6px;padding:6px 10px;font-size:11px">
+        <div style="color:#888;margin-bottom:2px">${i.label}</div>
+        <div style="font-weight:600;color:#eee">${i.totalEvents} <span style="color:#555;font-weight:400">events</span></div>
+        <div style="color:#555;font-size:10px">${i.uniqueUsers} coaches &middot; ${i.uniqueSessions} sessions</div>
+      </div>`).join('')}
+    </div>
+  </div>`;
+
+  html += features.map(([label, action]) => {
     const d = featureData(actions, action);
     return `<div class="stat-card">
       <div class="label">${label}</div>
@@ -442,10 +476,19 @@ function renderFeatureStats(actions, activeUsers) {
       <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>
     </div>`;
   }).join('');
+
+  document.getElementById('feature-stats').innerHTML = html;
 }
 
 // ─── Features Tab (detailed breakdowns) ─────────────────────────────────────
 const FEATURE_CONFIGS = [
+  { label: 'Export & Save', isGroup: true, children: [
+    { label: 'Export PNG', action: 'export', metaKey: null, filterFn: a => !a.meta || !a.meta.format || a.meta.format === 'png' },
+    { label: 'Export JPG', action: 'export', metaKey: null, filterFn: a => a.meta && a.meta.format === 'jpg' },
+    { label: 'Save', action: 'save', metaKey: null },
+    { label: 'Export GIF Animation', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_gif' },
+    { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_video' },
+  ]},
   { label: 'Pitch Type', action: 'feature_pitch_change', metaKey: 'type', filterFn: a => a.meta && a.meta.type },
   { label: 'Pitch Color', action: 'feature_pitch_change', metaKey: 'color', filterFn: a => a.meta && a.meta.color },
   { label: 'Formation', action: 'feature_formation', metaKey: 'formation' },
@@ -454,15 +497,73 @@ const FEATURE_CONFIGS = [
   { label: 'Element Inserted', action: 'element_inserted', metaKey: 'element' },
   { label: 'Element Selected', action: 'element_selected', metaKey: 'element' },
   { label: 'Animation', action: 'feature_animation', metaKey: 'trigger' },
-  { label: 'Save', action: 'save', metaKey: null },
-  { label: 'Export Image', action: 'export', metaKey: null },
   { label: 'Image Upload', action: 'feature_image_upload', metaKey: null },
 ];
+
+function renderFeatureCard(cfg, actions, html) {
+  let items = (actions || []).filter(a => a.action === cfg.action);
+  if (cfg.filterFn) items = items.filter(cfg.filterFn);
+
+  const totalEvents = items.length;
+  const uniqueSessions = new Set(items.map(a => a.sessionId).filter(Boolean)).size;
+  const uniqueUsers = new Set(items.map(a => a.uid)).size;
+
+  html += `<div class="feature-card" style="${cfg._nested ? 'margin-left:16px;border-left:2px solid rgba(212,168,67,0.2);padding-left:12px;' : ''}">
+    <div class="feature-card-header">
+      <span class="feature-card-title">${cfg.label}</span>
+      <span class="feature-card-summary">${uniqueSessions} sessions &middot; ${uniqueUsers} coaches &middot; ${totalEvents} events</span>
+    </div>`;
+  return html;
+}
 
 function renderFeaturesTab(actions, activeUsers) {
   let html = '';
 
   FEATURE_CONFIGS.forEach(cfg => {
+    if (cfg.isGroup) {
+      // Render group header
+      const allGroupItems = cfg.children.flatMap(child => {
+        let items = (actions || []).filter(a => a.action === child.action);
+        if (child.filterFn) items = items.filter(child.filterFn);
+        return items;
+      });
+      const groupTotal = allGroupItems.length;
+      const groupSessions = new Set(allGroupItems.map(a => a.sessionId).filter(Boolean)).size;
+      const groupUsers = new Set(allGroupItems.map(a => a.uid)).size;
+
+      html += `<div class="feature-card" style="border-color:rgba(212,168,67,0.3);">
+        <div class="feature-card-header">
+          <span class="feature-card-title" style="color:#D4A843">${cfg.label}</span>
+          <span class="feature-card-summary">${groupSessions} sessions &middot; ${groupUsers} coaches &middot; ${groupTotal} events</span>
+        </div>`;
+
+      // Render each child as a sub-row with bar
+      const maxCount = Math.max(...cfg.children.map(child => {
+        let items = (actions || []).filter(a => a.action === child.action);
+        if (child.filterFn) items = items.filter(child.filterFn);
+        return items.length;
+      }), 1);
+
+      cfg.children.forEach(child => {
+        let items = (actions || []).filter(a => a.action === child.action);
+        if (child.filterFn) items = items.filter(child.filterFn);
+        const count = items.length;
+        const sessions = new Set(items.map(a => a.sessionId).filter(Boolean)).size;
+        const users = new Set(items.map(a => a.uid)).size;
+        const pctBar = Math.round((count / maxCount) * 100);
+        html += `<div class="breakdown-bar">
+          <span class="breakdown-label">${child.label}</span>
+          <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
+          <span class="breakdown-count">${count} events</span>
+          <span class="breakdown-sessions">${sessions} sessions</span>
+          <span class="breakdown-sessions">${users} coaches</span>
+        </div>`;
+      });
+
+      html += `</div>`;
+      return;
+    }
+
     let items = (actions || []).filter(a => a.action === cfg.action);
     if (cfg.filterFn) items = items.filter(cfg.filterFn);
 
