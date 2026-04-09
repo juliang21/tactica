@@ -317,6 +317,9 @@ window.setLinkStyle = function(style) {
   S.pushUndo();
   S.selectedEl.dataset.linkStyle = style;
   updateLink(S.selectedEl);
+  trackElementEdited('connect', 'style');
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'element_edited', { element: 'connect', property: 'style', value: style }).catch(() => {});
   // Update active button state
   const sec = document.getElementById('link-edit-section');
   if (sec) sec.querySelectorAll('.formation-btn').forEach(b => b.classList.toggle('active', b.dataset.linkstyle === style));
@@ -327,6 +330,9 @@ window.applyLinkColor = function(dotEl) {
   const color = dotEl.dataset.linkColor;
   S.selectedEl.dataset.linkColor = color;
   updateLink(S.selectedEl);
+  trackElementEdited('connect', 'color');
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'element_edited', { element: 'connect', property: 'color' }).catch(() => {});
   // Also update the visible selection stroke
   const linkLine = S.selectedEl.querySelector('.link-line');
   if (linkLine) linkLine.setAttribute('stroke', 'rgba(79,156,249,0.9)');
@@ -2424,6 +2430,81 @@ function hideNotification() {
 }
 window.hideNotification = hideNotification;
 
+// ─── Reusable Feature Announcement Tooltip ──────────────────────────────────
+// Usage: showFeatureAnnounce({ id, anchorEl, img, title, text, cta })
+//   id:       unique string — shown only once per user via localStorage
+//   anchorEl: DOM element to point at (tooltip appears to its right)
+//   img:      image URL or data URI for the header visual
+//   title:    headline string
+//   text:     description string
+//   cta:      button label (default "Got it")
+//   onCta:    optional callback when CTA is clicked
+let _activeAnnounce = null;
+function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', onCta }) {
+  const key = 'tactica_announce_' + id;
+  if (localStorage.getItem(key)) return; // already seen
+
+  // Close any existing announcement
+  if (_activeAnnounce) { _activeAnnounce.remove(); _activeAnnounce = null; }
+
+  const el = document.createElement('div');
+  el.className = 'feature-announce';
+
+  let imgHTML = '';
+  if (img) imgHTML = `<img class="feature-announce-img" src="${img}" alt="">`;
+
+  el.innerHTML = `
+    <button class="feature-announce-close" aria-label="Close">&times;</button>
+    ${imgHTML}
+    <div class="feature-announce-body">
+      <div class="feature-announce-badge">New</div>
+      <div class="feature-announce-title">${title}</div>
+      <div class="feature-announce-text">${text}</div>
+      <button class="feature-announce-cta">${cta}</button>
+    </div>
+  `;
+
+  document.body.appendChild(el);
+  _activeAnnounce = el;
+
+  // Position next to the anchor element
+  function positionTooltip() {
+    if (!anchorEl || !el.parentNode) return;
+    const rect = anchorEl.getBoundingClientRect();
+    const tooltipH = el.offsetHeight;
+    let top = rect.top + rect.height / 2 - 28; // align arrow with anchor center
+    // Keep within viewport
+    if (top + tooltipH > window.innerHeight - 12) top = window.innerHeight - tooltipH - 12;
+    if (top < 12) top = 12;
+    el.style.left = (rect.right + 14) + 'px';
+    el.style.top = top + 'px';
+  }
+  positionTooltip();
+
+  // Track announcement shown
+  if (typeof window.gtag === 'function') window.gtag('event', 'feature_announce_shown', { feature_id: id });
+  const au = getCurrentUser();
+  if (au) logAction(au.uid, au.email, 'feature_announce_shown', { feature: id }).catch(() => {});
+
+  function dismiss(action) {
+    localStorage.setItem(key, '1');
+    if (typeof window.gtag === 'function') window.gtag('event', 'feature_announce_' + action, { feature_id: id });
+    const du = getCurrentUser();
+    if (du) logAction(du.uid, du.email, 'feature_announce_' + action, { feature: id }).catch(() => {});
+    el.style.transition = 'opacity 0.2s, transform 0.2s';
+    el.style.opacity = '0';
+    el.style.transform = 'translateY(4px) scale(0.97)';
+    setTimeout(() => { el.remove(); _activeAnnounce = null; }, 200);
+  }
+
+  el.querySelector('.feature-announce-close').addEventListener('click', () => dismiss('dismissed'));
+  el.querySelector('.feature-announce-cta').addEventListener('click', () => {
+    if (onCta) onCta();
+    dismiss('cta_clicked');
+  });
+}
+window.showFeatureAnnounce = showFeatureAnnounce;
+
 // ─── Analyses Dashboard ──────────────────────────────────────────────────────
 function openMyAnalyses() {
   closeSaveMenu();
@@ -2901,6 +2982,22 @@ onAuthChange(async (user) => {
       const name = user.displayName || user.email || 'User';
       showNotification('Welcome to Táctica, ' + name + '!', 'success', 4000);
     }
+
+    // Feature announcements (shown once per user)
+    setTimeout(() => {
+      const connectBtn = document.getElementById('connect-btn');
+      if (connectBtn && window.innerWidth > 768) {
+        showFeatureAnnounce({
+          id: 'connect-v1',
+          anchorEl: connectBtn,
+          img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#1a2a1a"/><rect x="10" y="10" width="260" height="120" rx="6" fill="#2d5a2d" opacity="0.6"/><line x1="140" y1="10" x2="140" y2="130" stroke="rgba(255,255,255,0.15)" stroke-width="1"/><circle cx="60" cy="50" r="18" fill="#8B5CF6" opacity="0.9"/><text x="60" y="55" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">2</text><circle cx="140" cy="40" r="18" fill="#8B5CF6" opacity="0.9"/><text x="140" y="45" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">6</text><circle cx="220" cy="55" r="18" fill="#8B5CF6" opacity="0.9"/><text x="220" y="60" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">9</text><circle cx="140" cy="100" r="18" fill="#FBBF24" opacity="0.9"/><text x="140" y="105" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">4</text><line x1="78" y1="50" x2="122" y2="40" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="158" y1="40" x2="202" y2="55" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="140" y1="58" x2="140" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/></svg>`),
+          title: 'Connect Players',
+          text: 'Draw tactical connections between players. Click multiple players to chain them together — great for showing passing lanes and pressing triggers.',
+          cta: 'Try it out',
+          onCta: () => { setTool('link'); }
+        });
+      }
+    }, 1500);
 
     // Welcome modals (show for first 2 sessions)
     if (window.innerWidth <= 768) {

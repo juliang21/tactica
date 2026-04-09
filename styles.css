@@ -137,6 +137,81 @@ body {
 .tool-btn.danger:hover { background: rgba(248,113,113,0.1); border-color: rgba(248,113,113,0.2); }
 .tool-btn.danger .tool-label { color: #F87171; }
 
+/* ─── Reusable "New" badge — add class .has-badge to any .tool-btn ─── */
+.badge-new {
+  position: absolute; top: 2px; right: 2px;
+  font-size: 7px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #fff; background: linear-gradient(135deg, #f43f5e, #e11d48);
+  padding: 1.5px 4px; border-radius: 4px; line-height: 1.1;
+  box-shadow: 0 1px 4px rgba(228,30,72,0.4);
+  pointer-events: none; z-index: 2;
+  animation: badge-pulse 2.5s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+
+/* ─── Reusable Feature Announcement Tooltip ─── */
+.feature-announce {
+  position: fixed; z-index: 10001;
+  width: 280px; background: #1e1e2a;
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 14px; padding: 0;
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55), 0 0 0 1px rgba(255,255,255,0.04);
+  overflow: hidden;
+  animation: announce-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes announce-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+.feature-announce-img {
+  width: 100%; height: 140px; object-fit: cover;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+  display: block;
+}
+.feature-announce-body { padding: 16px 18px 14px; }
+.feature-announce-badge {
+  display: inline-block; font-size: 9px; font-weight: 800; text-transform: uppercase;
+  letter-spacing: 0.06em; color: #fff;
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  padding: 3px 7px; border-radius: 5px; margin-bottom: 8px;
+}
+.feature-announce-title {
+  font-size: 15px; font-weight: 700; color: #fff;
+  margin-bottom: 6px; line-height: 1.3;
+}
+.feature-announce-text {
+  font-size: 12px; color: rgba(255,255,255,0.55); line-height: 1.5;
+  margin-bottom: 14px;
+}
+.feature-announce-cta {
+  display: inline-block; padding: 7px 18px;
+  background: var(--accent); color: #1a1a2e;
+  font-size: 12px; font-weight: 700; border-radius: 7px;
+  border: none; cursor: pointer; transition: background 0.15s;
+}
+.feature-announce-cta:hover { background: #d4b46e; }
+.feature-announce-close {
+  position: absolute; top: 8px; right: 8px;
+  width: 24px; height: 24px; border-radius: 50%;
+  background: rgba(0,0,0,0.5); border: none; cursor: pointer;
+  color: rgba(255,255,255,0.6); font-size: 14px; line-height: 1;
+  display: flex; align-items: center; justify-content: center;
+  transition: background 0.15s;
+}
+.feature-announce-close:hover { background: rgba(0,0,0,0.8); color: #fff; }
+/* Arrow pointer on left side */
+.feature-announce::before {
+  content: ''; position: absolute;
+  left: -7px; top: 20px;
+  width: 14px; height: 14px;
+  background: #1e1e2a; border-left: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  transform: rotate(45deg);
+}
+
 /* Tool bundles (flyout sub-options) */
 .tool-bundle { position: relative; }
 /* Small triangle indicator in bottom-right corner */
