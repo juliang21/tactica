@@ -1,6 +1,8 @@
 // ─── Global State ─────────────────────────────────────────────────────────────
 export let tool = 'select';
 export let arrowType = 'run';
+export let visionType = 'pointed';
+export function setVisionType(v) { visionType = v; }
 export let selectedEl = null;
 export const selectedEls = new Set();
 export let teamContext = 'a';

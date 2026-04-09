@@ -631,7 +631,7 @@ body.tool-motion #pitch-svg { cursor: crosshair; }
   padding: 10px 0 0;
 }
 #motion-controls #step-bar { display: flex; gap: 4px; }
-#motion-play-btn, #motion-reset-btn, #motion-export-btn, #motion-clear-btn {
+#motion-play-btn, #motion-reset-btn, #motion-export-btn, #motion-export-video-btn, #motion-clear-btn {
   display: none; align-items: center; gap: 5px;
   padding: 7px 14px; border-radius: 8px;
   background: rgba(15,15,15,0.85); backdrop-filter: blur(12px);
@@ -641,7 +641,7 @@ body.tool-motion #pitch-svg { cursor: crosshair; }
 #motion-play-btn {
   border: 1px solid rgba(201,169,98,0.4); color: var(--accent);
 }
-#motion-export-btn {
+#motion-export-btn, #motion-export-video-btn {
   border: 1px solid rgba(255,255,255,0.15); color: var(--text-muted);
 }
 #motion-reset-btn {
@@ -681,7 +681,7 @@ body.tool-motion #pitch-svg { cursor: crosshair; }
   background: rgba(255,255,255,0.08);
   border-color: rgba(255,255,255,0.3);
 }
-#motion-export-btn:hover {
+#motion-export-btn:hover, #motion-export-video-btn:hover {
   background: rgba(255,255,255,0.08);
   border-color: rgba(255,255,255,0.3);
   color: var(--text);

@@ -11,6 +11,14 @@ export function registerRewrap(fn) { _rewrapFn = fn; }
 let _updateVisionFn = null;
 export function registerVisionUpdate(fn) { _updateVisionFn = fn; }
 
+// ─── Link update callback ──────────────────────────────────────────────────
+let _updateAllLinksFn = null;
+export function registerLinkUpdate(fn) { _updateAllLinksFn = fn; }
+
+// ─── Select team context callback (set from app.js to avoid circular import) ─
+let _selectTeamContextFn = null;
+export function registerSelectTeamContext(fn) { _selectTeamContextFn = fn; }
+
 // ─── Headline rewrap callback ──────────────────────────────────────────────
 let _rewrapHeadlineFn = null;
 export function registerHeadlineRewrap(fn) { _rewrapHeadlineFn = fn; }
@@ -313,6 +321,14 @@ export function select(el, opts = {}) {
     }
     showTagHandles(el);
   }
+  if (type === 'link') {
+    const linkLine = el.querySelector('.link-line');
+    if (linkLine) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = linkLine.getAttribute('stroke');
+      linkLine.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+      linkLine.setAttribute('stroke-width', '3');
+    }
+  }
 
   // If multi-select, show multi-select UI instead of individual panels
   if (S.selectedEls.size > 1) {
@@ -333,6 +349,7 @@ export function select(el, opts = {}) {
     : type === 'motion' ? 'Motion Path'
     : type === 'headline' ? 'Headline'
     : type === 'tag' ? 'Tag'
+    : type === 'link' ? 'Player Link'
     : 'Zone';
   const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
@@ -356,6 +373,7 @@ export function select(el, opts = {}) {
   const spotlightSec = document.getElementById('spotlight-edit-section');
   const visionSec = document.getElementById('vision-edit-section');
   const tagSec = document.getElementById('tag-edit-section');
+  const linkSec = document.getElementById('link-edit-section');
   const delSec = document.getElementById('del-section');
   const layerSec = document.getElementById('layer-section');
 
@@ -370,6 +388,7 @@ export function select(el, opts = {}) {
   spotlightSec.style.display = 'none';
   visionSec.style.display = 'none';
   if (tagSec) tagSec.style.display = 'none';
+  if (linkSec) linkSec.style.display = 'none';
   delSec.style.display = '';
   layerSec.style.display = '';
 
@@ -378,7 +397,8 @@ export function select(el, opts = {}) {
   const isText = type === 'textbox';
   const isHeadline = type === 'headline';
   const isTag = type === 'tag';
-  const showSize = !isArrow && !isZone && !isText && !isHeadline && !isTag;
+  const isLink = type === 'link';
+  const showSize = !isArrow && !isZone && !isText && !isHeadline && !isTag && !isLink;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
   // Vision and zones use the standalone rotation-section; players use inline arm-rotation-group
   const showStandaloneRot = type === 'vision' || isZone;
@@ -407,6 +427,10 @@ export function select(el, opts = {}) {
       document.getElementById('arm-rot-val').textContent = Math.round(parseFloat(rv)) + '°';
     } else {
       if (armRotGroup) armRotGroup.style.display = 'none';
+    }
+    // Switch right panel to the player's team context
+    if ((el.dataset.team === 'a' || el.dataset.team === 'b') && _selectTeamContextFn) {
+      _selectTeamContextFn(el.dataset.team);
     }
   } else if (type === 'referee') {
     if (refereeSec) {
@@ -454,6 +478,11 @@ export function select(el, opts = {}) {
     document.getElementById('spot-name-size-val').textContent = sNameSize + 'px';
   } else if (type === 'vision') {
     visionSec.style.display = '';
+    const opVal = parseFloat(el.dataset.visionOpacity || '0.55');
+    const opSlider = document.getElementById('vision-opacity-slider');
+    const opLabel = document.getElementById('vision-opacity-value');
+    if (opSlider) opSlider.value = opVal;
+    if (opLabel) opLabel.textContent = Math.round(opVal * 100) + '%';
   } else if (type === 'tag') {
     if (tagSec) {
       tagSec.style.display = '';
@@ -467,6 +496,12 @@ export function select(el, opts = {}) {
       const lineAngle = el.dataset.tagLineAngle || '-35';
       document.getElementById('tag-line-angle-slider').value = lineAngle;
       document.getElementById('tag-line-angle-val').textContent = Math.round(parseFloat(lineAngle)) + '°';
+    }
+  } else if (type === 'link') {
+    if (linkSec) {
+      linkSec.style.display = '';
+      const lStyle = el.dataset.linkStyle || 'dashed';
+      linkSec.querySelectorAll('.formation-btn').forEach(b => b.classList.toggle('active', b.dataset.linkstyle === lStyle));
     }
   } else if (isZone) {
     zoneSec.style.display = '';
@@ -594,6 +629,15 @@ export function deselectVisual(el) {
       delete el.dataset.savedDotFill;
     }
   }
+  if (t === 'link') {
+    const linkLine = el.querySelector('.link-line');
+    if (linkLine) {
+      const saved = el.dataset.savedStroke || el.dataset.linkColor || 'rgba(255,255,255,0.4)';
+      linkLine.setAttribute('stroke', saved);
+      linkLine.setAttribute('stroke-width', '2');
+      delete el.dataset.savedStroke;
+    }
+  }
 }
 
 export function deselect() {
@@ -651,6 +695,8 @@ export function deleteSelected() {
   document.getElementById('vision-edit-section').style.display = 'none';
   const tagDelSec = document.getElementById('tag-edit-section');
   if (tagDelSec) tagDelSec.style.display = 'none';
+  const linkDelSec = document.getElementById('link-edit-section');
+  if (linkDelSec) linkDelSec.style.display = 'none';
   const multiSec = document.getElementById('multi-select-section');
   if (multiSec) multiSec.style.display = 'none';
 }
@@ -1411,6 +1457,8 @@ function onDrag(e) {
     const dt = S.selectedEl.dataset.type;
     if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight' || dt === 'vision') updateHandlePositions(S.selectedEl);
   }
+  // Update player links after any drag
+  if (_updateAllLinksFn) _updateAllLinksFn();
 }
 
 let _onDragEndFn = null;
@@ -1437,7 +1485,7 @@ function _updateMultiSelectUI() {
   // Hide all individual edit sections
   const sections = ['player-edit-section', 'referee-edit-section', 'arrow-edit-section',
     'zone-edit-section', 'textbox-edit-section', 'headline-edit-section',
-    'spotlight-edit-section', 'vision-edit-section', 'tag-edit-section'];
+    'spotlight-edit-section', 'vision-edit-section', 'tag-edit-section', 'link-edit-section'];
   for (const id of sections) {
     const sec = document.getElementById(id);
     if (sec) sec.style.display = 'none';

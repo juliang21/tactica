@@ -157,11 +157,11 @@
   <!-- 2. Players & Objects -->
   <div class="tool-group">
     <h3 class="tool-group-title">Essentials</h3>
-    <button class="tool-btn" data-tool="player-a" onclick="setTool('player-a')">
+    <button class="tool-btn" data-tool="player-a" onclick="selectTeamContext('a');switchTab('players');setTool('player-a')">
       <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#8B5CF6"/></svg>
       <span class="tool-label">Team A</span>
     </button>
-    <button class="tool-btn" data-tool="player-b" onclick="setTool('player-b')">
+    <button class="tool-btn" data-tool="player-b" onclick="selectTeamContext('b');switchTab('players');setTool('player-b')">
       <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#FBBF24"/></svg>
       <span class="tool-label">Team B</span>
     </button>
@@ -215,10 +215,24 @@
         </svg>
         <span class="tool-label">Highlight</span>
     </button>
-    <button class="tool-btn" data-tool="vision" onclick="setTool('vision')">
-        <svg width="18" height="18" viewBox="0 0 22 22" fill="none"><polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/></svg>
+    <div class="tool-bundle" id="vision-bundle">
+      <button class="tool-btn" id="vision-main-btn" data-tool="vision" onclick="openBundle('vision-bundle')">
+        <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+          <polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/>
+        </svg>
         <span class="tool-label">Vision</span>
-    </button>
+      </button>
+      <div class="bundle-menu">
+        <button class="bundle-option" onclick="setVisionType('pointed');setTool('vision');closeBundle('vision-bundle')">
+          <svg width="16" height="16" viewBox="0 0 22 22" fill="none"><polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/></svg>
+          Pointed
+        </button>
+        <button class="bundle-option" onclick="setVisionType('rounded');setTool('vision');closeBundle('vision-bundle')">
+          <svg width="16" height="16" viewBox="0 0 22 22" fill="none"><path d="M3,11 Q19,2 19,11 Q19,20 3,11Z" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/></svg>
+          Rounded
+        </button>
+      </div>
+    </div>
     <div class="tool-bundle" id="arrow-bundle">
       <button class="tool-btn" id="arrow-main-btn" data-tool="arrow" onclick="openBundle('arrow-bundle')">
         <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>
@@ -239,6 +253,14 @@
         </button>
       </div>
     </div>
+    <button class="tool-btn" data-tool="link" onclick="setTool('link')">
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+        <circle cx="4" cy="11" r="3" fill="#8B5CF6" opacity="0.7"/>
+        <circle cx="18" cy="11" r="3" fill="#FBBF24" opacity="0.7"/>
+        <line x1="7" y1="11" x2="15" y2="11" stroke="rgba(255,255,255,0.5)" stroke-width="1.5"/>
+      </svg>
+      <span class="tool-label">Connect</span>
+    </button>
     <button class="tool-btn" data-tool="textbox" onclick="setTool('textbox')">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><text x="4" y="14" font-family="sans-serif" font-size="14" font-weight="700" fill="currentColor">T</text></svg>
       <span class="tool-label">Text</span>
@@ -434,6 +456,10 @@
     <button id="motion-export-btn" onclick="exportAnimation()">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M6 1v7M3 5l3 3 3-3M2 10h8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
       Export GIF
+    </button>
+    <button id="motion-export-video-btn" onclick="exportVideo()">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1 3a1 1 0 011-1h5a1 1 0 011 1v6a1 1 0 01-1 1H2a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M8 4.5l3-1.5v6l-3-1.5" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none"/></svg>
+      Export Video
     </button>
     <button id="motion-clear-btn" onclick="clearAllSteps()">
       <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 2l8 8M10 2l-8 8" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
@@ -1103,7 +1129,7 @@
     <div class="panel-section" id="vision-edit-section" style="display:none">
       <h3>Player's Vision</h3>
       <div class="field-group">
-        <div class="field-label">Colour</div>
+        <div class="field-label">Background</div>
         <div class="picker-row">
           <div class="color-swatch mini" style="background:rgba(147,197,253,0.7)" data-vision-color="rgba(147,197,253,0.55)" onclick="applyVisionColor(this)"></div>
           <div class="color-swatch mini" style="background:rgba(200,210,230,0.7)" data-vision-color="rgba(200,210,230,0.55)" onclick="applyVisionColor(this)"></div>
@@ -1112,6 +1138,25 @@
           <div class="color-swatch mini" style="background:rgba(245,158,11,0.7)" data-vision-color="rgba(245,158,11,0.55)" onclick="applyVisionColor(this)"></div>
           <div class="color-swatch mini" style="background:#ffffff" data-vision-color="rgba(255,255,255,0.55)" onclick="applyVisionColor(this)"></div>
           <button class="color-picker-btn" onclick="openColorPicker('vision')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:rgba(147,197,253,0.6)" data-vision-border="rgba(147,197,253,0.4)" onclick="applyVisionBorder(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(200,210,230,0.6)" data-vision-border="rgba(200,210,230,0.4)" onclick="applyVisionBorder(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(74,222,128,0.6)" data-vision-border="rgba(74,222,128,0.4)" onclick="applyVisionBorder(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(248,113,113,0.6)" data-vision-border="rgba(248,113,113,0.4)" onclick="applyVisionBorder(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(245,158,11,0.6)" data-vision-border="rgba(245,158,11,0.4)" onclick="applyVisionBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-vision-border="rgba(255,255,255,0.4)" onclick="applyVisionBorder(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('vision-border')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Opacity</div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="range" id="vision-opacity-slider" min="0.05" max="1" step="0.05" value="0.55" style="flex:1" oninput="applyVisionOpacity(this.value)">
+          <span id="vision-opacity-value" style="font-size:11px;color:var(--text-muted);min-width:32px;text-align:right">55%</span>
         </div>
       </div>
     </div>
@@ -1212,6 +1257,27 @@
           <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
           <span>To front</span>
         </button>
+      </div>
+    </div>
+
+    <div class="panel-section" id="link-edit-section" style="display:none">
+      <h3>Connection</h3>
+      <div class="field-group">
+        <div class="field-label">Style</div>
+        <div style="display:flex;gap:6px">
+          <button class="formation-btn" data-linkstyle="dashed" onclick="setLinkStyle('dashed')">Dashed</button>
+          <button class="formation-btn" data-linkstyle="solid" onclick="setLinkStyle('solid')">Solid</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:rgba(255,255,255,0.5)" data-link-color="rgba(255,255,255,0.4)" onclick="applyLinkColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(239,68,68,0.5)" data-link-color="rgba(239,68,68,0.4)" onclick="applyLinkColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(59,130,246,0.5)" data-link-color="rgba(59,130,246,0.4)" onclick="applyLinkColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(34,197,94,0.5)" data-link-color="rgba(34,197,94,0.4)" onclick="applyLinkColor(this)"></div>
+          <div class="color-swatch mini" style="background:rgba(251,191,36,0.5)" data-link-color="rgba(251,191,36,0.4)" onclick="applyLinkColor(this)"></div>
+        </div>
       </div>
     </div>
 

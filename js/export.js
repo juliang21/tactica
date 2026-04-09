@@ -415,6 +415,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
     const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
     const sc = parseFloat(g.dataset.scale || '1');
     const color = g.dataset.visionColor || 'rgba(147,197,253,0.55)';
+    const style = g.dataset.visionStyle || 'pointed';
 
     const cosR = Math.cos(rot), sinR = Math.sin(rot);
     const sLen = vLen * sc, sSpread = spread * sc;
@@ -432,7 +433,15 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
     ctx.beginPath();
     ctx.moveTo(ax, ay);
     ctx.lineTo(tx, ty);
-    ctx.lineTo(bx, by);
+    if (style === 'rounded') {
+      // Quadratic bezier for rounded base
+      const cpLocalX = sLen * 1.25, cpLocalY = 0;
+      const cpx = cx + (cpLocalX * cosR - cpLocalY * sinR);
+      const cpy = cy + (cpLocalX * sinR + cpLocalY * cosR);
+      ctx.quadraticCurveTo(cpx, cpy, bx, by);
+    } else {
+      ctx.lineTo(bx, by);
+    }
     ctx.closePath();
     ctx.fillStyle = color;
     ctx.fill();

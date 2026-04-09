@@ -1,6 +1,6 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerDragEnd, makeDraggable, registerSelectTracker, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, repositionTag } from './elements.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, repositionTag, addLink, updateLink, updateAllLinks } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -8,7 +8,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateRefName, confirmRefName, applyRefFill, applyRefBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
          applyArrowColor, applyArrowStyle, applyArrowWidth, applyArrowCurve,
-         applySpotlightColor, setSpotlightColor, applyVisionColor,
+         applySpotlightColor, setSpotlightColor, applyVisionColor, applyVisionBorder, applyVisionOpacity,
          liveUpdateSpotName, confirmSpotName, applySpotNameSize, applySpotNameColor, applySpotNameBg,
          applyZoneFill, applyZoneBorder, applyZoneBorderStyle,
          liveUpdateTextBox, confirmTextBox, applyTextBoxSize, applyTextBoxColor, applyTextBoxBg, applyTextBoxAlign,
@@ -27,10 +27,12 @@ import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.j
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
 registerHeadlineRewrap(rewrapHeadline);
+registerSelectTeamContext(selectTeamContext);
 registerVisionUpdate(updateVisionPolygon);
 registerFreeformUpdate(updateFreeformPath);
 registerMotionUpdate(updateMotionVisual);
 registerTagReposition(repositionTag);
+registerLinkUpdate(updateAllLinks);
 // ─── Initialize subscription UI ────────────────────────────────────────────
 updateLockedUI();
 
@@ -65,9 +67,14 @@ function undo() {
   S.playerCounts.joker = snap.playerCounts.joker || 0;
   S.setObjectCounter(snap.objectCounter);
 
+  // Restore animation frame elementIds if saved (from animation-mode delete)
+  if (snap._frameIds && frames.length === snap._frameIds.length) {
+    snap._frameIds.forEach((ids, i) => { frames[i].elementIds = ids; });
+  }
+
   // Re-attach event listeners to all restored elements
   S.objectsLayer.querySelectorAll('[data-type]').forEach(g => {
-    makeDraggable(g);
+    if (g.dataset.type !== 'link') makeDraggable(g);
     g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   });
   S.playersLayer.querySelectorAll('[data-type]').forEach(g => {
@@ -81,6 +88,10 @@ function undo() {
       });
     }
   });
+  // Refresh link positions after restoring
+  updateAllLinks();
+  // Re-apply current frame if in animation mode
+  if (frames.length > 0) applyFrame(currentFrame);
 }
 window.undo = undo;
 
@@ -157,9 +168,15 @@ window.setTool = function(t) {
     const dotsG = document.getElementById('freeform-dots');
     if (dotsG) dotsG.remove();
   }
+  // Clean up link tool state if leaving link mode
+  if (S.tool === 'link' && t !== 'link') {
+    _linkStartPlayer = null;
+    clearLinkHighlight();
+  }
   _baseSetTool(t);
 };
 window.setArrowType = setArrowType;
+window.setVisionType = S.setVisionType;
 window.selectTeamContext = selectTeamContext;
 window.applyKit = function(el) {
   applyKit(el);
@@ -190,7 +207,36 @@ window.confirmName = confirmName;
 window.applySize = applySize;
 window.applyRotation = applyRotation;
 window.clearAll = clearAll;
-window.deleteSelected = deleteSelected;
+window.deleteSelected = function() {
+  // In animation mode: hide element from current + future steps instead of removing from DOM
+  if (frames.length > 0) {
+    const elsToHide = [];
+    if (S.selectedEls.size > 0) {
+      for (const el of S.selectedEls) elsToHide.push(el);
+    } else if (S.selectedEl) {
+      elsToHide.push(S.selectedEl);
+    }
+    if (elsToHide.length === 0) return;
+    // Save frame elementIds snapshot for undo
+    const frameIdsBefore = frames.map(f => new Set(f.elementIds));
+    S.pushUndo();
+    // Attach frame snapshot to the undo entry so we can restore it
+    S.undoStack[S.undoStack.length - 1]._frameIds = frameIdsBefore;
+    for (const el of elsToHide) {
+      el.style.display = 'none';
+      // Remove from current frame and all future frames
+      for (let i = currentFrame; i < frames.length; i++) {
+        frames[i].elementIds.delete(el.id);
+      }
+    }
+    S.clearSelectedEls();
+    S.setSelectedEl(null);
+    deselect();
+    return;
+  }
+  // Normal mode: permanently remove
+  deleteSelected();
+};
 window.switchTab = switchTab;
 window.setPitch = function(layout) {
   setPitch(layout);
@@ -235,6 +281,8 @@ window.applyArrowWidth = applyArrowWidth;
 window.applyArrowCurve = applyArrowCurve;
 window.applySpotlightColor = applySpotlightColor;
 window.applyVisionColor = applyVisionColor;
+window.applyVisionBorder = applyVisionBorder;
+window.applyVisionOpacity = applyVisionOpacity;
 window.liveUpdateSpotName = liveUpdateSpotName;
 window.confirmSpotName = confirmSpotName;
 window.applySpotNameSize = applySpotNameSize;
@@ -264,6 +312,25 @@ window.applyTagLineDash = applyTagLineDash;
 window.applyTagLineLen = applyTagLineLen;
 window.applyTagLineAngle = applyTagLineAngle;
 window.applyTagTextAnchor = applyTagTextAnchor;
+window.setLinkStyle = function(style) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'link') return;
+  S.pushUndo();
+  S.selectedEl.dataset.linkStyle = style;
+  updateLink(S.selectedEl);
+  // Update active button state
+  const sec = document.getElementById('link-edit-section');
+  if (sec) sec.querySelectorAll('.formation-btn').forEach(b => b.classList.toggle('active', b.dataset.linkstyle === style));
+};
+window.applyLinkColor = function(dotEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'link') return;
+  S.pushUndo();
+  const color = dotEl.dataset.linkColor;
+  S.selectedEl.dataset.linkColor = color;
+  updateLink(S.selectedEl);
+  // Also update the visible selection stroke
+  const linkLine = S.selectedEl.querySelector('.link-line');
+  if (linkLine) linkLine.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+};
 window.triggerImageUpload = triggerImageUpload;
 window.handleImageUpload = function(input) {
   handleImageUpload(input);
@@ -388,10 +455,87 @@ document.addEventListener('click', e => {
 // Expose teamContext as a live getter so inline onclick handlers can read it
 Object.defineProperty(window, 'teamContext', { get: () => S.teamContext });
 
+// ─── Link Tool State ────────────────────────────────────────────────────────
+let _linkStartPlayer = null;
+let _linkHighlight = null;
+
+function clearLinkHighlight() {
+  if (_linkHighlight) {
+    _linkHighlight.remove();
+    _linkHighlight = null;
+  }
+}
+
+function highlightLinkStart(playerEl) {
+  clearLinkHighlight();
+  const cx = parseFloat(playerEl.dataset.cx);
+  const cy = parseFloat(playerEl.dataset.cy);
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', 'link-start-ring');
+  g.setAttribute('pointer-events', 'none');
+  // White glow background
+  const bg = document.createElementNS(ns, 'circle');
+  bg.setAttribute('cx', cx); bg.setAttribute('cy', cy);
+  bg.setAttribute('r', '24');
+  bg.setAttribute('fill', 'rgba(255,255,255,0.25)');
+  bg.setAttribute('stroke', 'none');
+  // Thick animated border ring
+  const ring = document.createElementNS(ns, 'circle');
+  ring.setAttribute('cx', cx); ring.setAttribute('cy', cy);
+  ring.setAttribute('r', '24');
+  ring.setAttribute('fill', 'none');
+  ring.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+  ring.setAttribute('stroke-width', '3.5');
+  ring.setAttribute('stroke-dasharray', '6,4');
+  g.appendChild(bg);
+  g.appendChild(ring);
+  S.playersLayer.appendChild(g);
+  _linkHighlight = g;
+}
+
 // ─── SVG Click ────────────────────────────────────────────────────────────────
 S.svg.addEventListener('click', e => {
   if (S.dragMoved) return;
   if (S.tool === 'freeform') return; // handled by freeform click handler
+
+  // ── Link tool handling ────────────────────────────────────────────────────
+  if (S.tool === 'link') {
+    const clickedEl = e.target.closest('[data-type="player"]') || e.target.closest('[data-type="referee"]');
+    if (!clickedEl) {
+      // Clicked on empty area — cancel link
+      _linkStartPlayer = null;
+      clearLinkHighlight();
+      return;
+    }
+    if (!_linkStartPlayer) {
+      // First click — store the start player
+      _linkStartPlayer = clickedEl;
+      highlightLinkStart(clickedEl);
+      return;
+    }
+    // Second click
+    if (clickedEl === _linkStartPlayer || clickedEl.id === _linkStartPlayer.id) {
+      // Same player — cancel
+      _linkStartPlayer = null;
+      clearLinkHighlight();
+      return;
+    }
+    // Create the connection and continue chain — second player becomes new start
+    S.pushUndo();
+    const link = addLink(_linkStartPlayer.id, clickedEl.id);
+    if (link) {
+      trackElementInserted('connect');
+      const u = getCurrentUser();
+      if (u) logAction(u.uid, u.email, 'element_inserted', { element: 'connect' }).catch(() => {});
+    }
+    // Chain: make the second player the new start for the next connection
+    _linkStartPlayer = clickedEl;
+    clearLinkHighlight();
+    highlightLinkStart(clickedEl);
+    return;
+  }
+
   const pt = S.getSVGPoint(e);
   let placed = null;
   if (S.tool !== 'select' && S.tool !== 'arrow') S.pushUndo();
@@ -630,16 +774,50 @@ function getAllElements() {
   return els;
 }
 
+// Keys whose numeric values should be interpolated between animation steps
+const _numericKeys = new Set([
+  'cx','cy','dx1','dy1','dx2','dy2','scale','rotation','curve',
+  'hw','hh','rx','ry','visionLength','visionSpread'
+]);
+
 function snapshotPositions() {
   const positions = {};
   getAllElements().forEach(el => {
-    positions[el.id] = { x: parseFloat(el.dataset.cx), y: parseFloat(el.dataset.cy) };
+    // Capture ALL dataset properties so arrows, zones, visions etc. restore fully per step
+    const snap = {};
+    for (const key in el.dataset) {
+      snap[key] = el.dataset[key];
+    }
+    // Also store cx/cy as numbers for interpolation
+    snap._x = parseFloat(el.dataset.cx);
+    snap._y = parseFloat(el.dataset.cy);
+    positions[el.id] = snap;
   });
   return positions;
 }
 
+// Interpolate all dataset properties between two snapshots
+function _interpolateSnap(el, from, to, ease) {
+  for (const key in to) {
+    if (key.startsWith('_')) continue;
+    if (_numericKeys.has(key)) {
+      const a = parseFloat(from[key]);
+      const b = parseFloat(to[key]);
+      if (!isNaN(a) && !isNaN(b)) {
+        el.dataset[key] = a + (b - a) * ease;
+      } else {
+        el.dataset[key] = to[key];
+      }
+    } else {
+      // Non-numeric: snap to target value at halfway
+      el.dataset[key] = ease < 0.5 ? (from[key] ?? to[key]) : to[key];
+    }
+  }
+}
+
 function snapshotElementIds() {
-  return new Set(getAllElements().map(e => e.id));
+  // Only include visible elements — hidden ones were "deleted" from this step
+  return new Set(getAllElements().filter(e => e.style.display !== 'none').map(e => e.id));
 }
 
 function applyFrame(idx) {
@@ -650,15 +828,23 @@ function applyFrame(idx) {
   getAllElements().forEach(el => {
     if (f.elementIds.has(el.id)) {
       el.style.display = '';
-      const pos = f.positions[el.id];
-      if (pos) {
-        el.dataset.cx = pos.x; el.dataset.cy = pos.y;
+      const snap = f.positions[el.id];
+      if (snap) {
+        // Restore ALL dataset properties so arrows, zones, visions etc. are fully correct per step
+        for (const key in snap) {
+          if (key.startsWith('_')) continue; // skip internal keys
+          el.dataset[key] = snap[key];
+        }
         applyTransform(el);
+        // Re-render arrow visuals if the element is an arrow (endpoints may have changed)
+        if (el.dataset.type === 'arrow') updateArrowVisual(el);
       }
     } else {
       el.style.display = 'none';
     }
   });
+  // Update connection lines to follow player positions in this frame
+  updateAllLinks();
 }
 
 function saveCurrentToFrame() {
@@ -750,21 +936,24 @@ function drawTrails() {
     if (!currIds.has(id)) return;
     const pPrev = prev[id], pCurr = curr[id];
     if (!pPrev || !pCurr) return;
-    const dx = pCurr.x - pPrev.x, dy = pCurr.y - pPrev.y;
+    const dx = parseFloat(pCurr.cx) - parseFloat(pPrev.cx), dy = parseFloat(pCurr.cy) - parseFloat(pPrev.cy);
     if (Math.hypot(dx, dy) < 3) return;
 
     // Determine color
     const circ = el.querySelector('circle:not(.hit-area)');
     const color = circ ? circ.getAttribute('fill') : 'rgba(255,255,255,0.5)';
 
+    const prevX = parseFloat(pPrev.cx), prevY = parseFloat(pPrev.cy);
+    const currX = parseFloat(pCurr.cx), currY = parseFloat(pCurr.cy);
+
     const trail = document.createElementNS(ns, 'line');
-    trail.setAttribute('x1', pPrev.x); trail.setAttribute('y1', pPrev.y);
-    trail.setAttribute('x2', pCurr.x); trail.setAttribute('y2', pCurr.y);
+    trail.setAttribute('x1', prevX); trail.setAttribute('y1', prevY);
+    trail.setAttribute('x2', currX); trail.setAttribute('y2', currY);
     trail.setAttribute('stroke', color); trail.setAttribute('stroke-width', '2');
     trail.setAttribute('stroke-dasharray', '6,4'); trail.setAttribute('opacity', '0.5');
     trail.setAttribute('stroke-linecap', 'round');
 
-    const mx = (pPrev.x + pCurr.x) / 2, my = (pPrev.y + pCurr.y) / 2;
+    const mx = (prevX + currX) / 2, my = (prevY + currY) / 2;
     const angle = Math.atan2(dy, dx);
     const sz = 5;
     const chev = document.createElementNS(ns, 'polygon');
@@ -775,7 +964,7 @@ function drawTrails() {
     chev.setAttribute('fill', color); chev.setAttribute('opacity', '0.4');
 
     const ghost = document.createElementNS(ns, 'circle');
-    ghost.setAttribute('cx', pPrev.x); ghost.setAttribute('cy', pPrev.y);
+    ghost.setAttribute('cx', prevX); ghost.setAttribute('cy', prevY);
     ghost.setAttribute('r', '8'); ghost.setAttribute('fill', color);
     ghost.setAttribute('opacity', '0.15');
     ghost.setAttribute('stroke', color); ghost.setAttribute('stroke-width', '1');
@@ -808,6 +997,7 @@ function renderStepBar() {
   const playBtn = document.getElementById('motion-play-btn');
   const resetBtn = document.getElementById('motion-reset-btn');
   const exportBtn = document.getElementById('motion-export-btn');
+  const exportVideoBtn = document.getElementById('motion-export-video-btn');
   const clearBtn = document.getElementById('motion-clear-btn');
   const separator = document.getElementById('motion-separator');
   const hasMultiple = frames.length >= 2;
@@ -815,6 +1005,7 @@ function renderStepBar() {
   if (resetBtn) resetBtn.style.display = (hasMultiple && currentFrame > 0) ? 'flex' : 'none';
   if (separator) separator.style.display = hasMultiple ? 'inline-block' : 'none';
   if (exportBtn) exportBtn.style.display = hasMultiple ? 'flex' : 'none';
+  if (exportVideoBtn) exportVideoBtn.style.display = hasMultiple ? 'flex' : 'none';
   if (clearBtn) clearBtn.style.display = frames.length >= 1 ? 'flex' : 'none';
 }
 
@@ -866,27 +1057,32 @@ function playAllSteps() {
         const inFrom = fromIds.has(id), inTo = toIds.has(id);
 
         if (inFrom && inTo) {
-          // Animate position
           el.style.display = '';
           const from = fromFrame.positions[id], to = toFrame.positions[id];
           if (from && to) {
-            el.dataset.cx = from.x + (to.x - from.x) * ease;
-            el.dataset.cy = from.y + (to.y - from.y) * ease;
+            // Interpolate all numeric dataset properties between steps
+            _interpolateSnap(el, from, to, ease);
             applyTransform(el);
+            if (el.dataset.type === 'arrow') updateArrowVisual(el);
           }
         } else if (!inFrom && inTo) {
-          // Fade in new element
           el.style.display = '';
           el.style.opacity = ease;
-          const pos = toFrame.positions[id];
-          if (pos) { el.dataset.cx = pos.x; el.dataset.cy = pos.y; applyTransform(el); }
+          const snap = toFrame.positions[id];
+          if (snap) {
+            for (const key in snap) { if (!key.startsWith('_')) el.dataset[key] = snap[key]; }
+            applyTransform(el);
+            if (el.dataset.type === 'arrow') updateArrowVisual(el);
+          }
         } else if (inFrom && !inTo) {
-          // Fade out removed element
           el.style.opacity = 1 - ease;
         } else {
           el.style.display = 'none';
         }
       });
+
+      // Update connection lines to follow animated player positions
+      updateAllLinks();
 
       if (t < 1) {
         animationId = requestAnimationFrame(tick);
@@ -927,7 +1123,8 @@ function exportAnimation() {
   saveCurrentToFrame();
   // Track animation export
   const u = getCurrentUser();
-  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'export', steps: frames.length }).catch(() => {});
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'export_gif', steps: frames.length }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'export_gif', { steps: frames.length });
 
   const svgEl = S.svg;
   const w = parseInt(svgEl.getAttribute('width'));
@@ -1181,12 +1378,264 @@ function buildGIF(frameImages, width, height, onDone) {
   onDone();
 }
 
+// ─── Video (WebM) Export ────────────────────────────────────────────────────
+async function exportVideo() {
+  if (frames.length < 2) { showNotification('Add at least 2 steps before exporting.', 'error', 4000); return; }
+  saveCurrentToFrame();
+
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'export_video', steps: frames.length }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'export_video', { steps: frames.length });
+
+  const svgEl = S.svg;
+  const w = parseInt(svgEl.getAttribute('width'));
+  const h = parseInt(svgEl.getAttribute('height'));
+  const scale = 2;
+  // Ensure dimensions are even (required by H.264)
+  const cw = Math.round(w * scale / 2) * 2;
+  const ch = Math.round(h * scale / 2) * 2;
+
+  const canvas = document.createElement('canvas');
+  canvas.width = cw; canvas.height = ch;
+  const ctx = canvas.getContext('2d');
+
+  // Show progress
+  const exportBtn = document.getElementById('motion-export-video-btn');
+  const origText = exportBtn ? exportBtn.innerHTML : '';
+  if (exportBtn) exportBtn.innerHTML = '<span style="animation:pulse 1s infinite">Exporting…</span>';
+
+  // Hide trails during capture
+  if (trailsGroup) trailsGroup.style.display = 'none';
+
+  const fps = 30;
+  const frameDuration = 1000 / fps;
+  const stepDuration = 1200;
+  const pauseDuration = 400;
+  const framesPerStep = Math.ceil(stepDuration / frameDuration);
+  const pauseFrames = Math.ceil(pauseDuration / frameDuration);
+
+  // Try MP4 via WebCodecs + mp4-muxer, fall back to WebM
+  const useMP4 = typeof VideoEncoder !== 'undefined';
+  let mp4Muxer = null, videoEncoder = null;
+  let recorder = null, stream = null, chunks = [];
+  let frameIndex = 0;
+
+  if (useMP4) {
+    try {
+      const mp4Module = await import('https://cdn.jsdelivr.net/npm/mp4-muxer@5.1.3/build/mp4-muxer.mjs');
+      mp4Muxer = new mp4Module.Muxer({
+        target: new mp4Module.ArrayBufferTarget(),
+        video: {
+          codec: 'avc',
+          width: cw,
+          height: ch,
+        },
+        fastStart: 'in-memory',
+      });
+
+      videoEncoder = new VideoEncoder({
+        output: (chunk, meta) => mp4Muxer.addVideoChunk(chunk, meta),
+        error: (e) => console.error('VideoEncoder error:', e),
+      });
+
+      videoEncoder.configure({
+        codec: 'avc1.640028',
+        width: cw,
+        height: ch,
+        bitrate: 5_000_000,
+        framerate: fps,
+      });
+    } catch (e) {
+      console.warn('MP4 setup failed, falling back to WebM:', e);
+      mp4Muxer = null;
+      videoEncoder = null;
+    }
+  }
+
+  // Fall back to WebM if MP4 not available
+  if (!mp4Muxer) {
+    stream = canvas.captureStream(0);
+    const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9')
+      ? 'video/webm;codecs=vp9' : 'video/webm';
+    recorder = new MediaRecorder(stream, { mimeType, videoBitsPerSecond: 5000000 });
+    recorder.ondataavailable = e => { if (e.data.size) chunks.push(e.data); };
+    recorder.start();
+  }
+
+  // Helper: render current SVG state to canvas
+  function renderSVGToCanvas() {
+    return new Promise((resolve, reject) => {
+      const svgData = new XMLSerializer().serializeToString(svgEl);
+      const svgBlob = new Blob([svgData], { type: 'image/svg+xml;charset=utf-8' });
+      const blobUrl = URL.createObjectURL(svgBlob);
+      const img = new Image();
+      img.onload = () => {
+        ctx.clearRect(0, 0, cw, ch);
+        ctx.drawImage(img, 0, 0, cw, ch);
+        URL.revokeObjectURL(blobUrl);
+        resolve();
+      };
+      img.onerror = () => { URL.revokeObjectURL(blobUrl); reject(new Error('SVG render failed')); };
+      img.src = blobUrl;
+    });
+  }
+
+  async function captureVideoFrame() {
+    await renderSVGToCanvas();
+    if (mp4Muxer && videoEncoder) {
+      const vf = new VideoFrame(canvas, { timestamp: frameIndex * (1_000_000 / fps) });
+      const isKey = frameIndex % (fps * 2) === 0; // keyframe every 2s
+      videoEncoder.encode(vf, { keyFrame: isKey });
+      vf.close();
+      frameIndex++;
+    } else if (stream) {
+      stream.getVideoTracks()[0].requestFrame();
+    }
+  }
+
+  // Helper: interpolate between two frames
+  function interpolate(fromIdx, toIdx, ease) {
+    const fromFrame = frames[fromIdx];
+    const toFrame = frames[toIdx];
+    const fromIds = fromFrame.elementIds;
+    const toIds = toFrame.elementIds;
+
+    getAllElements().forEach(el => {
+      const id = el.id;
+      const inFrom = fromIds.has(id), inTo = toIds.has(id);
+
+      if (inFrom && inTo) {
+        el.style.display = '';
+        el.style.opacity = '';
+        const from = fromFrame.positions[id], to = toFrame.positions[id];
+        if (from && to) {
+          _interpolateSnap(el, from, to, ease);
+          applyTransform(el);
+          if (el.dataset.type === 'arrow') updateArrowVisual(el);
+        }
+      } else if (!inFrom && inTo) {
+        el.style.display = '';
+        el.style.opacity = ease;
+        const snap = toFrame.positions[id];
+        if (snap) {
+          for (const key in snap) { if (!key.startsWith('_')) el.dataset[key] = snap[key]; }
+          applyTransform(el);
+          if (el.dataset.type === 'arrow') updateArrowVisual(el);
+        }
+      } else if (inFrom && !inTo) {
+        el.style.display = '';
+        el.style.opacity = 1 - ease;
+      } else {
+        el.style.display = 'none';
+      }
+    });
+    updateAllLinks();
+  }
+
+  const delay = ms => new Promise(r => setTimeout(r, ms));
+
+  try {
+    for (let i = 0; i < frames.length; i++) {
+      applyFrame(i);
+      for (let p = 0; p < pauseFrames; p++) {
+        await captureVideoFrame();
+        await delay(frameDuration);
+      }
+
+      if (i < frames.length - 1) {
+        for (let f = 1; f <= framesPerStep; f++) {
+          const t = f / framesPerStep;
+          const ease = t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+          interpolate(i, i + 1, ease);
+          await captureVideoFrame();
+          await delay(frameDuration);
+        }
+        getAllElements().forEach(el => { el.style.opacity = ''; });
+      }
+    }
+
+    // Hold last frame longer
+    applyFrame(frames.length - 1);
+    for (let p = 0; p < pauseFrames * 3; p++) {
+      await captureVideoFrame();
+      await delay(frameDuration);
+    }
+  } catch (err) {
+    console.error('Video export error:', err);
+    showNotification('Video export failed.', 'error', 4000);
+    if (recorder) recorder.stop();
+    if (trailsGroup) trailsGroup.style.display = '';
+    if (exportBtn) exportBtn.innerHTML = origText;
+    applyFrame(currentFrame);
+    return;
+  }
+
+  // Finalize
+  let blob, filename;
+  if (mp4Muxer && videoEncoder) {
+    await videoEncoder.flush();
+    mp4Muxer.finalize();
+    const buf = mp4Muxer.target.buffer;
+    blob = new Blob([buf], { type: 'video/mp4' });
+    filename = `tactica-${Date.now()}.mp4`;
+  } else {
+    recorder.stop();
+    await new Promise(resolve => { recorder.onstop = resolve; });
+    blob = new Blob(chunks, { type: 'video/webm' });
+    filename = `tactica-${Date.now()}.webm`;
+  }
+
+  // Restore state
+  if (trailsGroup) trailsGroup.style.display = '';
+  getAllElements().forEach(el => { el.style.opacity = ''; });
+  applyFrame(currentFrame);
+  if (exportBtn) exportBtn.innerHTML = origText;
+
+  const url = URL.createObjectURL(blob);
+
+  // Show download modal
+  let overlay = document.getElementById('video-download-overlay');
+  if (overlay) overlay.remove();
+  overlay = document.createElement('div');
+  overlay.id = 'video-download-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:center;justify-content:center;';
+  const modal = document.createElement('div');
+  modal.style.cssText = 'background:#1e1e2a;border-radius:16px;padding:28px 32px;text-align:center;color:#fff;max-width:360px;box-shadow:0 12px 40px rgba(0,0,0,0.5);';
+  const preview = document.createElement('video');
+  preview.src = url;
+  preview.autoplay = true;
+  preview.loop = true;
+  preview.muted = true;
+  preview.playsInline = true;
+  preview.style.cssText = 'max-width:280px;max-height:200px;border-radius:8px;margin-bottom:16px;border:1px solid rgba(255,255,255,0.1);';
+  const title = document.createElement('div');
+  title.textContent = 'Your video is ready!';
+  title.style.cssText = 'font-size:16px;font-weight:600;margin-bottom:16px;';
+  const formatNote = document.createElement('div');
+  formatNote.textContent = mp4Muxer ? 'MP4 format — share anywhere' : 'WebM format';
+  formatNote.style.cssText = 'font-size:11px;color:rgba(255,255,255,0.4);margin-bottom:12px;';
+  const dlBtn = document.createElement('a');
+  dlBtn.href = url;
+  dlBtn.download = filename;
+  dlBtn.textContent = 'Download Video';
+  dlBtn.style.cssText = 'display:inline-block;padding:10px 28px;background:#c8a94e;color:#1a1a2e;font-weight:700;border-radius:8px;text-decoration:none;font-size:14px;cursor:pointer;';
+  const closeBtn = document.createElement('button');
+  closeBtn.textContent = 'Close';
+  closeBtn.style.cssText = 'display:block;margin:12px auto 0;background:none;border:1px solid rgba(255,255,255,0.2);color:rgba(255,255,255,0.6);padding:6px 20px;border-radius:6px;cursor:pointer;font-size:13px;';
+  closeBtn.onclick = () => { overlay.remove(); URL.revokeObjectURL(url); };
+  overlay.onclick = (e) => { if (e.target === overlay) { overlay.remove(); URL.revokeObjectURL(url); } };
+  modal.append(preview, title, formatNote, dlBtn, closeBtn);
+  overlay.appendChild(modal);
+  document.body.appendChild(overlay);
+}
+
 window.addStep = addStep;
 window.goToStep = goToStep;
 window.deleteStep = deleteStep;
 window.playAllSteps = playAllSteps;
 window.resetToBase = resetToBase;
 window.exportAnimation = exportAnimation;
+window.exportVideo = exportVideo;
 window.clearAllSteps = clearAllSteps;
 
 // ─── Bundle menus (toolbar flyouts) ─────────────────────────────────────────
@@ -1194,7 +1643,7 @@ function openBundle(id) {
   const el = document.getElementById(id);
   if (!el) return;
   const isOpen = el.classList.contains('open');
-  document.querySelectorAll('.tool-bundle.open').forEach(b => b.classList.remove('open'));
+  document.querySelectorAll('.tool-bundle.open').forEach(b => { if (b.id !== id) closeBundle(b.id); });
   if (!isOpen) {
     el.classList.add('open');
     const menuEl = el.querySelector('.bundle-menu') || document.querySelector(`.bundle-menu[data-bundle="${id}"]`);
@@ -1258,14 +1707,17 @@ function updateBundleIcon(bundleId, toolName) {
   mainBtn.setAttribute('data-tool', toolName);
 }
 
-// Close bundles when clicking elsewhere
-document.addEventListener('click', (e) => {
+// Close bundles when clicking elsewhere — use CAPTURE phase so it fires
+// before any element handler can call stopPropagation()
+function closeBundlesOnOutsideClick(e) {
   if (!e.target.closest('.tool-bundle') && !e.target.closest('.bundle-menu')) {
     document.querySelectorAll('.tool-bundle.open').forEach(b => {
       closeBundle(b.id);
     });
   }
-});
+}
+document.addEventListener('mousedown', closeBundlesOnOutsideClick, true);
+document.addEventListener('click', closeBundlesOnOutsideClick, true);
 
 const arrowIcons = {
   'run': `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>`,
@@ -1336,11 +1788,18 @@ function _copyElementData(el) {
     data.scale = el.dataset.scale || '1'; data.rotation = el.dataset.rotation || '0';
     data.visionColor = el.dataset.visionColor || 'rgba(147,197,253,0.5)';
     data.visionLength = el.dataset.visionLength || '80'; data.visionSpread = el.dataset.visionSpread || '35';
+    data.visionStyle = el.dataset.visionStyle || 'pointed';
+    data.visionBorder = el.dataset.visionBorder || '';
+    data.visionOpacity = el.dataset.visionOpacity || '';
   } else if (t === 'tag') {
     data.tagLabel = el.dataset.tagLabel || 'TOP SPEED'; data.tagValue = el.dataset.tagValue || '8.7km/h';
     data.tagLineLen = el.dataset.tagLineLen || '80'; data.tagLineAngle = el.dataset.tagLineAngle || '-35';
     data.tagTextAnchor = el.dataset.tagTextAnchor || 'bottom';
     data.scale = el.dataset.scale || '1';
+  } else if (t === 'link') {
+    data.player1 = el.dataset.player1; data.player2 = el.dataset.player2;
+    data.linkColor = el.dataset.linkColor || 'rgba(255,255,255,0.4)';
+    data.linkStyle = el.dataset.linkStyle || 'dashed';
   } else if (t?.startsWith('shadow')) {
     const shape = el.querySelector('rect,ellipse');
     data.hw = el.dataset.hw || '30'; data.hh = el.dataset.hh || '20';
@@ -1441,6 +1900,9 @@ function copySelected() {
     data.visionColor = el.dataset.visionColor || 'rgba(147,197,253,0.5)';
     data.visionLength = el.dataset.visionLength || '80';
     data.visionSpread = el.dataset.visionSpread || '35';
+    data.visionStyle = el.dataset.visionStyle || 'pointed';
+    data.visionBorder = el.dataset.visionBorder || '';
+    data.visionOpacity = el.dataset.visionOpacity || '';
   } else if (t === 'tag') {
     data.tagLabel = el.dataset.tagLabel || 'TOP SPEED';
     data.tagValue = el.dataset.tagValue || '8.7km/h';
@@ -1452,6 +1914,11 @@ function copySelected() {
     data.tagLineAngle = el.dataset.tagLineAngle || '-35';
     data.tagTextAnchor = el.dataset.tagTextAnchor || 'bottom';
     data.scale = el.dataset.scale || '1';
+  } else if (t === 'link') {
+    data.player1 = el.dataset.player1;
+    data.player2 = el.dataset.player2;
+    data.linkColor = el.dataset.linkColor || 'rgba(255,255,255,0.4)';
+    data.linkStyle = el.dataset.linkStyle || 'dashed';
   } else if (t?.startsWith('shadow')) {
     const shape = el.querySelector('rect,ellipse');
     data.hw = el.dataset.hw || '30'; data.hh = el.dataset.hh || '20';
@@ -1628,8 +2095,16 @@ function _pasteOne(d, x, y) {
       placed.dataset.visionColor = d.visionColor;
       placed.dataset.visionLength = d.visionLength;
       placed.dataset.visionSpread = d.visionSpread;
+      placed.dataset.visionStyle = d.visionStyle || 'pointed';
+      if (d.visionBorder) placed.dataset.visionBorder = d.visionBorder;
+      if (d.visionOpacity) placed.dataset.visionOpacity = d.visionOpacity;
       const shape = placed.querySelector('.vision-shape');
-      if (shape) shape.setAttribute('fill', d.visionColor);
+      if (shape) {
+        shape.setAttribute('fill', d.visionColor);
+        if (d.visionBorder) { shape.setAttribute('stroke', d.visionBorder); placed.dataset.savedStroke = d.visionBorder; }
+        if (d.visionOpacity) shape.setAttribute('opacity', d.visionOpacity);
+      }
+      updateVisionPolygon(placed);
     }
   } else if (d.type === 'tag') {
     placed = addTag(x, y, d.tagLabel, d.tagValue);
@@ -1643,6 +2118,11 @@ function _pasteOne(d, x, y) {
       placed.dataset.tagTextAnchor = d.tagTextAnchor;
       placed.dataset.scale = d.scale;
       repositionTag(placed);
+    }
+  } else if (d.type === 'link') {
+    // Only paste link if both players still exist
+    if (document.getElementById(d.player1) && document.getElementById(d.player2)) {
+      placed = addLink(d.player1, d.player2, { color: d.linkColor, style: d.linkStyle });
     }
   } else if (d.type?.startsWith('shadow')) {
     placed = addShadow(x, y, d.type);
@@ -2013,7 +2493,7 @@ function reattachListeners() {
   // Re-attach drag + click listeners to all restored elements
   [S.objectsLayer, S.playersLayer].forEach(layer => {
     layer.querySelectorAll('[data-type]').forEach(g => {
-      makeDraggable(g);
+      if (g.dataset.type !== 'link') makeDraggable(g);
       g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
       if (g.dataset.type === 'textbox') {
         g.addEventListener('dblclick', e => {
@@ -2023,6 +2503,8 @@ function reattachListeners() {
       }
     });
   });
+  // Refresh link positions after loading
+  updateAllLinks();
 }
 
 async function duplicateFromCard(id) {

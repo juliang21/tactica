@@ -6,6 +6,16 @@ import { trackElementEdited } from './analytics.js';
 // ─── Tool Selection ───────────────────────────────────────────────────────────
 export function setTool(t) {
   S.setTool(t);
+  // Close any open bundle menus
+  document.querySelectorAll('.tool-bundle.open').forEach(b => {
+    b.classList.remove('open');
+    const detached = document.querySelector(`.bundle-menu[data-bundle="${b.id}"]`);
+    if (detached && detached._parentBundle === b) {
+      detached.style.display = ''; detached.style.position = ''; detached.style.left = '';
+      detached.style.bottom = ''; detached.style.top = ''; detached.style.zIndex = '';
+      b.appendChild(detached);
+    }
+  });
   document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
   const btn = document.querySelector(`[data-tool="${t}"]`);
   if (btn) btn.classList.add('active');
@@ -486,6 +496,16 @@ export function confirmColorPicker() {
     S.selectedEl.dataset.visionColor = color;
     const shape = S.selectedEl.querySelector('.vision-shape');
     if (shape) shape.setAttribute('fill', color);
+  } else if (colorPickerTarget === 'vision-border') {
+    trackElementEdited('vision', 'border');
+    const r = parseInt(hex.slice(1,3), 16);
+    const g = parseInt(hex.slice(3,5), 16);
+    const b = parseInt(hex.slice(5,7), 16);
+    const borderColor = `rgba(${r},${g},${b},0.5)`;
+    S.selectedEl.dataset.visionBorder = borderColor;
+    S.selectedEl.dataset.savedStroke = borderColor;
+    const shape = S.selectedEl.querySelector('.vision-shape');
+    if (shape) shape.setAttribute('stroke', borderColor);
   } else if (colorPickerTarget === 'ref-fill') {
     const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
     if (circ) circ.setAttribute('fill', hex);
@@ -762,6 +782,29 @@ export function applyVisionColor(swatchEl) {
     const borderColor = color.replace(/[\d.]+\)$/, '0.4)');
     S.selectedEl.dataset.savedStroke = borderColor;
   }
+}
+
+// ─── Vision Border ───────────────────────────────────────────────────────────
+export function applyVisionBorder(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'vision') return;
+  trackElementEdited('vision', 'border');
+  const color = swatchEl.dataset.visionBorder;
+  S.selectedEl.dataset.visionBorder = color;
+  S.selectedEl.dataset.savedStroke = color;
+  const shape = S.selectedEl.querySelector('.vision-shape');
+  if (shape) shape.setAttribute('stroke', color);
+}
+
+// ─── Vision Opacity ──────────────────────────────────────────────────────────
+export function applyVisionOpacity(val) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'vision') return;
+  trackElementEdited('vision', 'opacity');
+  const opacity = parseFloat(val);
+  S.selectedEl.dataset.visionOpacity = opacity;
+  const shape = S.selectedEl.querySelector('.vision-shape');
+  if (shape) shape.setAttribute('opacity', opacity);
+  const label = document.getElementById('vision-opacity-value');
+  if (label) label.textContent = Math.round(opacity * 100) + '%';
 }
 
 // ─── Spotlight Name ──────────────────────────────────────────────────────────

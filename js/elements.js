@@ -832,8 +832,9 @@ export function addVision(x, y) {
   g.dataset.visionLength = '80';   // depth from apex to base
   g.dataset.visionSpread = '35';   // half-width at base
   g.dataset.visionColor = 'rgba(147,197,253,0.55)';
+  g.dataset.visionStyle = S.visionType || 'pointed';
 
-  const tri = document.createElementNS(ns, 'polygon');
+  const tri = document.createElementNS(ns, 'path');
   tri.setAttribute('fill', 'rgba(147,197,253,0.55)');
   tri.setAttribute('stroke', 'rgba(147,197,253,0.4)');
   tri.setAttribute('stroke-width', '1');
@@ -1033,14 +1034,15 @@ export function updateMotionVisual(el) {
 
 // Update the vision polygon points from stored dimensions
 export function updateVisionPolygon(g) {
-  const tri = g.querySelector('.vision-shape');
-  if (!tri) return;
+  const shape = g.querySelector('.vision-shape');
+  if (!shape) return;
   const cx = parseFloat(g.dataset.cx);
   const cy = parseFloat(g.dataset.cy);
   const len = parseFloat(g.dataset.visionLength || '80');
   const spread = parseFloat(g.dataset.visionSpread || '35');
   const rot = parseFloat(g.dataset.rotation || '0');
   const scale = parseFloat(g.dataset.scale || '1');
+  const style = g.dataset.visionStyle || 'pointed';
 
   // Compute the 3 world-space vertices
   const r = rot * Math.PI / 180;
@@ -1058,7 +1060,37 @@ export function updateVisionPolygon(g) {
   const bx = cx + (sLen * cosR - sSpread * sinR);
   const by = cy + (sLen * sinR + sSpread * cosR);
 
-  tri.setAttribute('points', `${ax},${ay} ${tx},${ty} ${bx},${by}`);
+  // Ensure we have a <path> element (upgrade legacy <polygon> if needed)
+  if (shape.tagName === 'polygon') {
+    const ns = 'http://www.w3.org/2000/svg';
+    const p = document.createElementNS(ns, 'path');
+    p.setAttribute('fill', shape.getAttribute('fill'));
+    p.setAttribute('stroke', shape.getAttribute('stroke'));
+    p.setAttribute('stroke-width', shape.getAttribute('stroke-width'));
+    p.setAttribute('stroke-linejoin', shape.getAttribute('stroke-linejoin') || 'round');
+    p.classList.add('vision-shape');
+    shape.replaceWith(p);
+    // Re-query and set the path
+    const newShape = g.querySelector('.vision-shape');
+    setVisionPath(newShape, style, ax, ay, tx, ty, bx, by, cx, cy, sLen, cosR, sinR);
+    return;
+  }
+
+  setVisionPath(shape, style, ax, ay, tx, ty, bx, by, cx, cy, sLen, cosR, sinR);
+}
+
+function setVisionPath(shape, style, ax, ay, tx, ty, bx, by, cx, cy, sLen, cosR, sinR) {
+  if (style === 'rounded') {
+    // Control point for quadratic bezier: bulge the base outward
+    // In local space it's at (len * 1.25, 0) — past the base, centered
+    const cpLocalX = sLen * 1.25, cpLocalY = 0;
+    const cpx = cx + (cpLocalX * cosR - cpLocalY * sinR);
+    const cpy = cy + (cpLocalX * sinR + cpLocalY * cosR);
+    shape.setAttribute('d', `M ${ax},${ay} L ${tx},${ty} Q ${cpx},${cpy} ${bx},${by} Z`);
+  } else {
+    // Pointed: straight triangle
+    shape.setAttribute('d', `M ${ax},${ay} L ${tx},${ty} L ${bx},${by} Z`);
+  }
 }
 
 // ─── Add Tag (stat annotation callout) ──────────────────────────────────────
@@ -1285,4 +1317,98 @@ export function repositionTag(g) {
     hitText.setAttribute('width', maxW);
     hitText.setAttribute('height', hitH);
   }
+}
+
+// ─── Add Link (player-to-player connecting line) ────────────────────────────
+export function addLink(player1Id, player2Id, opts = {}) {
+  const id = 'link-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'link';
+  g.dataset.player1 = player1Id;
+  g.dataset.player2 = player2Id;
+  g.dataset.linkColor = opts.color || 'rgba(255,255,255,0.4)';
+  g.dataset.linkStyle = opts.style || 'dashed'; // 'dashed' or 'solid'
+  // cx/cy for compat with moveElement (midpoint of the two players)
+  g.dataset.cx = '0'; g.dataset.cy = '0';
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+
+  // Visible line
+  const line = document.createElementNS(ns, 'line');
+  line.classList.add('link-line');
+  line.setAttribute('stroke', g.dataset.linkColor);
+  line.setAttribute('stroke-width', '3');
+  if (g.dataset.linkStyle === 'dashed') line.setAttribute('stroke-dasharray', '6,4');
+  line.setAttribute('stroke-linecap', 'round');
+  line.setAttribute('pointer-events', 'none');
+
+  // Thicker invisible hit line for click targeting
+  const hit = document.createElementNS(ns, 'line');
+  hit.classList.add('link-hit');
+  hit.setAttribute('stroke', 'transparent');
+  hit.setAttribute('stroke-width', '14');
+  hit.setAttribute('pointer-events', 'stroke');
+
+  g.appendChild(hit);
+  g.appendChild(line);
+  S.objectsLayer.appendChild(g);
+
+  // Position the line from player positions
+  updateLink(g);
+
+  // Click handler for selection (NOT draggable individually)
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
+  });
+
+  return g;
+}
+
+export function updateLink(linkEl) {
+  if (!linkEl || linkEl.dataset.type !== 'link') return;
+  const p1Id = linkEl.dataset.player1;
+  const p2Id = linkEl.dataset.player2;
+  const p1 = document.getElementById(p1Id);
+  const p2 = document.getElementById(p2Id);
+
+  const line = linkEl.querySelector('.link-line');
+  const hit = linkEl.querySelector('.link-hit');
+  if (!line || !hit) return;
+
+  let x1, y1, x2, y2;
+  if (p1) { x1 = parseFloat(p1.dataset.cx); y1 = parseFloat(p1.dataset.cy); }
+  else { x1 = parseFloat(linkEl.dataset.lastX1 || '0'); y1 = parseFloat(linkEl.dataset.lastY1 || '0'); }
+  if (p2) { x2 = parseFloat(p2.dataset.cx); y2 = parseFloat(p2.dataset.cy); }
+  else { x2 = parseFloat(linkEl.dataset.lastX2 || '0'); y2 = parseFloat(linkEl.dataset.lastY2 || '0'); }
+
+  // Store last known positions
+  linkEl.dataset.lastX1 = x1; linkEl.dataset.lastY1 = y1;
+  linkEl.dataset.lastX2 = x2; linkEl.dataset.lastY2 = y2;
+  // Update cx/cy to midpoint
+  linkEl.dataset.cx = (x1 + x2) / 2; linkEl.dataset.cy = (y1 + y2) / 2;
+
+  line.setAttribute('x1', x1); line.setAttribute('y1', y1);
+  line.setAttribute('x2', x2); line.setAttribute('y2', y2);
+  hit.setAttribute('x1', x1); hit.setAttribute('y1', y1);
+  hit.setAttribute('x2', x2); hit.setAttribute('y2', y2);
+
+  // Apply style
+  const color = linkEl.dataset.linkColor || 'rgba(255,255,255,0.4)';
+  line.setAttribute('stroke', color);
+  line.setAttribute('stroke-width', '3');
+  line.setAttribute('stroke-linecap', 'round');
+  if (linkEl.dataset.linkStyle === 'solid') {
+    line.removeAttribute('stroke-dasharray');
+  } else {
+    line.setAttribute('stroke-dasharray', '6,4');
+  }
+}
+
+export function updateAllLinks() {
+  const links = S.objectsLayer.querySelectorAll('g[data-type="link"]');
+  links.forEach(updateLink);
+  // Also check players layer in case links were moved there
+  const links2 = S.playersLayer.querySelectorAll('g[data-type="link"]');
+  links2.forEach(updateLink);
 }
