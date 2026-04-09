@@ -212,8 +212,14 @@ window.toggleToolbar = function() {
   const btn = document.getElementById('toolbar-toggle');
   tb.classList.toggle('collapsed');
   btn.classList.toggle('collapsed');
+  const isCollapsed = tb.classList.contains('collapsed');
   // Persist preference
-  try { localStorage.setItem('tactica_toolbar_collapsed', tb.classList.contains('collapsed') ? '1' : '0'); } catch(e) {}
+  try { localStorage.setItem('tactica_toolbar_collapsed', isCollapsed ? '1' : '0'); } catch(e) {}
+  // Track
+  const action = isCollapsed ? 'hide' : 'show';
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_toolbar_toggle', { type: action }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'toolbar_toggle', { type: action });
 };
 window.deleteSelected = function() {
   // In animation mode: hide element from current + future steps instead of removing from DOM

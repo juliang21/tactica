@@ -432,7 +432,7 @@ function featureDataFiltered(actions, actionName, filterFn) {
 
 function renderFeatureStats(actions, activeUsers) {
   const features = [
-    ['Pitch Change', 'feature_pitch_change'], ['Image Upload', 'feature_image_upload'],
+    ['Toolbar Toggle', 'feature_toolbar_toggle'], ['Pitch Change', 'feature_pitch_change'], ['Image Upload', 'feature_image_upload'],
     ['Formation', 'feature_formation'], ['Club Team', 'feature_club_team'],
     ['National Team', 'feature_national_team'], ['Element Inserted', 'element_inserted'],
     ['Element Selected', 'element_selected'],
@@ -497,6 +497,7 @@ const FEATURE_CONFIGS = [
   { label: 'Element Inserted', action: 'element_inserted', metaKey: 'element' },
   { label: 'Element Selected', action: 'element_selected', metaKey: 'element' },
   { label: 'Animation', action: 'feature_animation', metaKey: 'trigger' },
+  { label: 'Toolbar Toggle', action: 'feature_toolbar_toggle', metaKey: 'type' },
   { label: 'Image Upload', action: 'feature_image_upload', metaKey: null },
 ];
 
