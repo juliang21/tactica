@@ -19,7 +19,7 @@
   --gk-a:   #a8f0d0;
   --gk-b:   #f4cca8;
 
-  --toolbar-w: 148px;
+  --toolbar-w: 210px;
   --panel-w: 320px;
 }
 * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -36,7 +36,7 @@ body {
 
 /* ── Toolbar ── */
 #toolbar {
-  width: var(--toolbar-w);
+  width: 210px; min-width: 210px;
   background: rgba(30, 30, 42, 0.55);
   backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
   border: 1px solid rgba(255, 255, 255, 0.1);
@@ -57,6 +57,32 @@ body {
 }
 .toolbar-scroll::-webkit-scrollbar { width: 3px; }
 .toolbar-scroll::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+
+/* Toolbar collapse toggle */
+.toolbar-toggle {
+  position: fixed; left: calc(var(--toolbar-w) + 12px); top: 50%; transform: translateY(-50%);
+  width: 14px; height: 48px; z-index: 160;
+  background: rgba(30, 30, 42, 0.85); border: 1px solid rgba(255,255,255,0.1);
+  border-left: none; border-radius: 0 8px 8px 0;
+  color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.15s, background 0.15s, left 0.3s ease;
+  padding: 0;
+}
+.toolbar-toggle:hover { color: var(--text); background: rgba(30, 30, 42, 1); }
+.toolbar-toggle svg { transition: transform 0.3s ease; }
+
+/* Toolbar collapse/expand */
+#toolbar { transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease, border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease; }
+#toolbar .toolbar-scroll,
+#toolbar .tool-group-save,
+#toolbar .sidebar-terms-link { transition: opacity 0.2s ease; }
+#toolbar.collapsed { width: 0 !important; min-width: 0 !important; padding: 0; border-color: transparent; background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; overflow: hidden; }
+#toolbar.collapsed .toolbar-scroll,
+#toolbar.collapsed .tool-group-save,
+#toolbar.collapsed .sidebar-terms-link { opacity: 0; pointer-events: none; }
+.toolbar-toggle.collapsed { left: 12px; }
+.toolbar-toggle.collapsed svg { transform: rotate(180deg); }
 .tool-logo {
   position: fixed; top: 10px; left: 72px; z-index: 200;
   font-family: 'Playfair Display', serif;
@@ -75,7 +101,7 @@ body {
 
 /* Tool groups — panel sections with 2-column grid */
 .tool-group {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;
   padding: 10px 12px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
 }

@@ -207,6 +207,14 @@ window.confirmName = confirmName;
 window.applySize = applySize;
 window.applyRotation = applyRotation;
 window.clearAll = clearAll;
+window.toggleToolbar = function() {
+  const tb = document.getElementById('toolbar');
+  const btn = document.getElementById('toolbar-toggle');
+  tb.classList.toggle('collapsed');
+  btn.classList.toggle('collapsed');
+  // Persist preference
+  try { localStorage.setItem('tactica_toolbar_collapsed', tb.classList.contains('collapsed') ? '1' : '0'); } catch(e) {}
+};
 window.deleteSelected = function() {
   // In animation mode: hide element from current + future steps instead of removing from DOM
   if (frames.length > 0) {
