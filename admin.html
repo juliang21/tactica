@@ -389,7 +389,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
     <div class="stat-card"><div class="label">Returning Coaches</div><div class="value">${returningCoaches}</div><div class="sub">${pct(returningCoaches)}% of active</div></div>
     <div class="stat-card"><div class="label">Coaches w/ an Analysis</div><div class="value">${pct(analysisCoaches)}%</div><div class="sub">${analysisCoaches} of ${activeCoaches} active</div></div>
     <div class="stat-card"><div class="label">Coaches w/ a Save</div><div class="value">${pct(saveCoaches)}%</div><div class="sub">${saveCoaches} of ${activeCoaches} active</div></div>
-    <div class="stat-card"><div class="label">Coaches w/ an Export</div><div class="value">${pct(exportCoaches)}%</div><div class="sub">${exportCoaches} of ${activeCoaches} active</div></div>
+    <div class="stat-card"><div class="label">Coaches w/ an Image Export</div><div class="value">${pct(exportCoaches)}%</div><div class="sub">${exportCoaches} of ${activeCoaches} active</div></div>
   `;
 }
 
@@ -410,7 +410,7 @@ function renderSessionStats(sessions, actions) {
     <div class="stat-card"><div class="label">Mobile Sessions</div><div class="value">${mobileSessions}</div><div class="sub">${pct(mobileSessions)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Sessions w/ an Analysis</div><div class="value">${analysisStarted}</div><div class="sub">${pct(analysisStarted)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Total Saves</div><div class="value">${saves}</div><div class="sub">${pct(saves)}% of sessions</div></div>
-    <div class="stat-card"><div class="label">Total Exports</div><div class="value">${exports}</div><div class="sub">${pct(exports)}% of sessions</div></div>
+    <div class="stat-card"><div class="label">Total Image Exports</div><div class="value">${exports}</div><div class="sub">${pct(exports)}% of sessions</div></div>
   `;
 }
 
@@ -426,7 +426,7 @@ function featureData(actions, actionName) {
 
 function renderFeatureStats(actions, activeUsers) {
   const features = [
-    ['Save', 'save'], ['Export', 'export'], ['Animation', 'feature_animation'],
+    ['Save', 'save'], ['Export Image', 'export'], ['Animation', 'feature_animation'],
     ['Pitch Change', 'feature_pitch_change'], ['Image Upload', 'feature_image_upload'],
     ['Formation', 'feature_formation'], ['Club Team', 'feature_club_team'],
     ['National Team', 'feature_national_team'], ['Element Inserted', 'element_inserted'],
@@ -455,7 +455,7 @@ const FEATURE_CONFIGS = [
   { label: 'Element Selected', action: 'element_selected', metaKey: 'element' },
   { label: 'Animation', action: 'feature_animation', metaKey: 'trigger' },
   { label: 'Save', action: 'save', metaKey: null },
-  { label: 'Export', action: 'export', metaKey: null },
+  { label: 'Export Image', action: 'export', metaKey: null },
   { label: 'Image Upload', action: 'feature_image_upload', metaKey: null },
 ];
 
