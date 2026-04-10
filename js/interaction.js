@@ -271,7 +271,8 @@ export function select(el, opts = {}) {
       if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke');
       shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
     }
-    showZoneHandles(el);
+    // Pair shape is driven by player positions — no resize handles needed
+    if (type !== 'pair') showZoneHandles(el);
   }
   if (type === 'spotlight') {
     const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
@@ -402,7 +403,8 @@ export function select(el, opts = {}) {
   const showSize = !isArrow && !isZone && !isText && !isHeadline && !isTag && !isLink;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
   // Vision and zones use the standalone rotation-section; players use inline arm-rotation-group
-  const showStandaloneRot = type === 'vision' || isZone;
+  // Pair rotation is driven by player positions, not editable
+  const showStandaloneRot = (type === 'vision' || isZone) && type !== 'pair';
   document.getElementById('rotation-section').style.display = showStandaloneRot ? '' : 'none';
   if (isZone) {
     const rv = el.dataset.rotation || '0';
