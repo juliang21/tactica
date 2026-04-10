@@ -436,7 +436,7 @@ function renderFeatureStats(actions, activeUsers) {
     ['Toolbar Toggle', 'feature_toolbar_toggle'], ['Pitch Change', 'feature_pitch_change'],
     ['Image Upload', 'feature_image_upload'], ['Formation', 'feature_formation'],
     ['Club Team', 'feature_club_team'], ['National Team', 'feature_national_team'],
-    ['Animation', 'feature_animation'],
+    ['Custom Color', 'feature_custom_color'], ['Animation', 'feature_animation'],
   ];
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
 
@@ -513,6 +513,7 @@ const FEATURE_CONFIGS = [
   { label: 'Formation', action: 'feature_formation', metaKey: 'formation' },
   { label: 'Club Team', action: 'feature_club_team', metaKey: 'team' },
   { label: 'National Team', action: 'feature_national_team', metaKey: 'team' },
+  { label: 'Custom Color', action: 'feature_custom_color', metaKey: 'color' },
   { label: 'Element Inserted', action: 'element_inserted', metaKey: 'element' },
   { label: 'Element Selected', action: 'element_selected', metaKey: 'element' },
   { label: 'Animation', action: 'feature_animation', metaKey: 'trigger' },
@@ -563,7 +564,16 @@ function renderFeaturesTab(actions, activeUsers) {
         return items.length;
       }), 1);
 
-      cfg.children.forEach(child => {
+      // Sort children by event count descending
+      const sortedChildren = [...cfg.children].sort((a, b) => {
+        let aItems = (actions || []).filter(x => x.action === a.action);
+        if (a.filterFn) aItems = aItems.filter(a.filterFn);
+        let bItems = (actions || []).filter(x => x.action === b.action);
+        if (b.filterFn) bItems = bItems.filter(b.filterFn);
+        return bItems.length - aItems.length;
+      });
+
+      sortedChildren.forEach(child => {
         let items = (actions || []).filter(a => a.action === child.action);
         if (child.filterFn) items = items.filter(child.filterFn);
         const count = items.length;

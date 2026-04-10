@@ -192,7 +192,11 @@ window.applyKit = function(el) {
   if (u) logAction(u.uid, u.email, action, { team: teamName }).catch(() => {});
   if (typeof window.gtag === 'function') window.gtag('event', action, { team_name: teamName, tool_name: 'tactica' });
 };
-window.applyColor = applyColor;
+window.applyColor = function(swatchEl) {
+  applyColor(swatchEl);
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_custom_color', { color: swatchEl.dataset.color }).catch(() => {});
+};
 window.switchKitTab = function(tab, btn) {
   document.getElementById('kit-grid-clubs').style.display = tab === 'clubs' ? '' : 'none';
   document.getElementById('kit-grid-national').style.display = tab === 'national' ? '' : 'none';
