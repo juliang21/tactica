@@ -84,7 +84,7 @@ body {
 .toolbar-toggle.collapsed { left: 12px; }
 .toolbar-toggle.collapsed svg { transform: rotate(180deg); }
 .tool-logo {
-  position: fixed; top: 10px; left: 72px; z-index: 200;
+  position: fixed; top: 14px; left: 72px; z-index: 200;
   font-family: 'Playfair Display', serif;
   font-size: 14px; font-weight: 600; letter-spacing: 3px;
   color: var(--accent); text-transform: uppercase;
@@ -294,47 +294,45 @@ body {
 /* (arrow sub-buttons removed — arrows now use .tool-btn) */
 .arrow-sub-btn .tool-tooltip { display: none; }
 
-/* ── Mode Selector Tab Bar ── */
+/* ── Top Bar with Mode Tabs ── */
 #mode-bar {
   position: fixed; top: 0; left: 0; right: 0;
-  height: 44px; z-index: 100;
+  height: 52px; z-index: 100;
   background: #0A0A0A;
   border-bottom: 1px solid #1F1F1F;
   display: flex; align-items: center; justify-content: center;
 }
-#mode-tabs-bar {
-  position: absolute; top: 54px; left: 0; right: 0;
-  height: 38px; z-index: 99;
-  display: flex; align-items: center; justify-content: center;
-  background: transparent;
-}
 .mode-tab-group {
-  display: flex; gap: 2px;
-  background: #141414; border-radius: 8px;
-  height: 32px; padding: 0 4px;
+  display: flex; gap: 3px;
+  background: #111111; border-radius: 10px;
+  height: 38px; padding: 0 4px;
   align-items: center;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.06);
 }
 .mode-tab {
-  display: flex; align-items: center; gap: 6px;
-  padding: 0 14px; height: 26px;
-  border-radius: 6px; border: none;
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 18px; height: 30px;
+  border-radius: 7px;
+  border: 1px solid rgba(255,255,255,0.1);
   font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500;
-  color: #777777; background: transparent;
+  color: #888888; background: transparent;
   cursor: pointer; transition: all 0.15s;
   white-space: nowrap;
 }
-.mode-tab:hover { color: #999999; }
+.mode-tab:hover { color: #aaaaaa; border-color: rgba(255,255,255,0.18); }
 .mode-tab.active {
   background: #C9A962; color: #0A0A0A;
   font-weight: 600;
+  border-color: rgba(201,169,98,0.6);
+  box-shadow: 0 1px 4px rgba(201,169,98,0.3);
 }
-.mode-tab svg { opacity: 0.7; }
+.mode-tab svg { opacity: 0.6; }
 .mode-tab.active svg { opacity: 1; color: #0A0A0A; }
 
 /* ── Canvas ── */
 #canvas-wrap {
   flex: 1; display: flex; align-items: center; justify-content: center;
-  padding: 96px 20px 20px; position: relative; overflow: hidden;
+  padding: 64px 20px 20px; position: relative; overflow: hidden;
   background: var(--bg);
 }
 #pitch-wrap {
@@ -359,8 +357,8 @@ body {
   display: flex; flex-direction: column;
   padding: 0; gap: 0; z-index: 10; overflow-y: auto;
   box-shadow: 0 8px 40px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(0,0,0,0.2);
-  margin: 58px 12px 12px 0;
-  max-height: calc(100vh - 72px);
+  margin: 64px 12px 12px 0;
+  max-height: calc(100vh - 78px);
   align-self: flex-start;
 }
 .panel-section {
@@ -1249,7 +1247,7 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
 /* ── App Menu (top-right) ── */
 .app-menu-wrapper {
-  position: fixed; top: 10px; right: 16px; z-index: 300;
+  position: fixed; top: 8px; right: 16px; z-index: 300;
 }
 .app-menu-btn {
   width: 36px; height: 36px; border-radius: 50%;
@@ -1471,14 +1469,15 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 .current-analysis-bar {
   display: none;
   align-items: center; gap: 6px;
-  padding: 0 12px; height: 44px;
+  padding: 0 8px; height: 52px;
+  position: absolute; left: 220px;
 }
 .current-analysis-bar.show { display: flex; }
 .analysis-name-input {
-  font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600;
-  color: var(--text-muted); letter-spacing: 0.3px;
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 500;
+  color: var(--text-muted); letter-spacing: 0.2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  min-width: 300px; max-width: 400px;
+  min-width: 120px; max-width: 180px;
   background: rgba(255,255,255,0.04);
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 5px;
