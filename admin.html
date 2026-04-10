@@ -432,10 +432,11 @@ function featureDataFiltered(actions, actionName, filterFn) {
 
 function renderFeatureStats(actions, activeUsers) {
   const features = [
-    ['Toolbar Toggle', 'feature_toolbar_toggle'], ['Pitch Change', 'feature_pitch_change'], ['Image Upload', 'feature_image_upload'],
-    ['Formation', 'feature_formation'], ['Club Team', 'feature_club_team'],
-    ['National Team', 'feature_national_team'], ['Element Inserted', 'element_inserted'],
-    ['Element Selected', 'element_selected'], ['Animation', 'feature_animation'],
+    ['Element Selected', 'element_selected'], ['Element Inserted', 'element_inserted'],
+    ['Toolbar Toggle', 'feature_toolbar_toggle'], ['Pitch Change', 'feature_pitch_change'],
+    ['Image Upload', 'feature_image_upload'], ['Formation', 'feature_formation'],
+    ['Club Team', 'feature_club_team'], ['National Team', 'feature_national_team'],
+    ['Animation', 'feature_animation'],
   ];
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
 
@@ -454,7 +455,17 @@ function renderFeatureStats(actions, activeUsers) {
     ...(actions || []).filter(a => a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video')).map(a => a.uid),
   ]).size;
 
-  let html = `<div class="stat-card" style="grid-column: span 2;">
+  let html = features.map(([label, action]) => {
+    const d = featureData(actions, action);
+    return `<div class="stat-card">
+      <div class="label">${label}</div>
+      <div class="value">${d.uniqueSessions}</div>
+      <div class="sub">sessions &middot; ${d.uniqueUsers} coaches (${pct(d.uniqueUsers)}%)</div>
+      <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>
+    </div>`;
+  }).join('');
+
+  html += `<div class="stat-card" style="grid-column: span 2;">
     <div class="label">Export &amp; Save</div>
     <div class="value">${esTotalEvents}</div>
     <div class="sub">${esUniqueUsers} coaches (${pct(esUniqueUsers)}%)</div>
@@ -466,16 +477,6 @@ function renderFeatureStats(actions, activeUsers) {
       </div>`).join('')}
     </div>
   </div>`;
-
-  html += features.map(([label, action]) => {
-    const d = featureData(actions, action);
-    return `<div class="stat-card">
-      <div class="label">${label}</div>
-      <div class="value">${d.uniqueSessions}</div>
-      <div class="sub">sessions &middot; ${d.uniqueUsers} coaches (${pct(d.uniqueUsers)}%)</div>
-      <div class="sub" style="margin-top:2px;color:#555">${d.totalEvents} total events</div>
-    </div>`;
-  }).join('');
 
   document.getElementById('feature-stats').innerHTML = html;
 }
