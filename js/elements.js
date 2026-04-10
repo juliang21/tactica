@@ -1357,9 +1357,9 @@ export function addLink(player1Id, player2Id, opts = {}) {
   // Position the line from player positions
   updateLink(g);
 
-  // Click handler for selection (NOT draggable individually)
+  // Click handler: select all connected players as a group
   g.addEventListener('click', e => {
-    if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
+    if (S.tool === 'select') { e.stopPropagation(); selectConnectedGroup(g, e); }
   });
 
   return g;
@@ -1411,4 +1411,124 @@ export function updateAllLinks() {
   // Also check players layer in case links were moved there
   const links2 = S.playersLayer.querySelectorAll('g[data-type="link"]');
   links2.forEach(updateLink);
+  // Also update pair elements
+  updateAllPairs();
+}
+
+// ─── Select Connected Group ──────────────────────────────────────────────────
+// When clicking a link line, find all transitively connected players and select them
+function selectConnectedGroup(linkEl, e) {
+  const allLinks = [...S.objectsLayer.querySelectorAll('g[data-type="link"]'),
+                     ...S.playersLayer.querySelectorAll('g[data-type="link"]')];
+  // Build adjacency graph
+  const adj = {};
+  for (const lk of allLinks) {
+    if (lk.style.display === 'none') continue;
+    const a = lk.dataset.player1, b = lk.dataset.player2;
+    if (!adj[a]) adj[a] = new Set();
+    if (!adj[b]) adj[b] = new Set();
+    adj[a].add(b); adj[b].add(a);
+  }
+  // BFS from both endpoints of the clicked link
+  const seed1 = linkEl.dataset.player1, seed2 = linkEl.dataset.player2;
+  const visited = new Set();
+  const queue = [seed1, seed2];
+  while (queue.length) {
+    const id = queue.shift();
+    if (visited.has(id)) continue;
+    visited.add(id);
+    if (adj[id]) for (const n of adj[id]) if (!visited.has(n)) queue.push(n);
+  }
+  // Select all connected players
+  const additive = e.ctrlKey || e.metaKey;
+  let first = true;
+  for (const pid of visited) {
+    const pEl = document.getElementById(pid);
+    if (!pEl) continue;
+    if (first && !additive) {
+      select(pEl, { additive: false });
+      first = false;
+    } else {
+      select(pEl, { additive: true });
+    }
+  }
+}
+
+// ─── Pair Element ────────────────────────────────────────────────────────────
+// Ellipse zone around two players: red fill, white dashed border
+export function addPair(player1Id, player2Id) {
+  const id = 'pair-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'pair';
+  g.dataset.player1 = player1Id;
+  g.dataset.player2 = player2Id;
+  g.dataset.cx = '0'; g.dataset.cy = '0';
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.pairColor = 'rgba(239,68,68,0.18)';
+
+  const ellipse = document.createElementNS(ns, 'ellipse');
+  ellipse.classList.add('pair-ellipse');
+  ellipse.setAttribute('fill', 'rgba(239,68,68,0.18)');
+  ellipse.setAttribute('stroke', 'rgba(255,255,255,0.5)');
+  ellipse.setAttribute('stroke-width', '1.5');
+  ellipse.setAttribute('stroke-dasharray', '4,3');
+
+  g.appendChild(ellipse);
+  // Insert at the beginning of objectsLayer so it's behind players
+  S.objectsLayer.insertBefore(g, S.objectsLayer.firstChild);
+
+  updatePair(g);
+
+  // Click handler for selection
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
+  });
+
+  makeDraggable(g);
+  return g;
+}
+
+export function updatePair(pairEl) {
+  if (!pairEl || pairEl.dataset.type !== 'pair') return;
+  const p1 = document.getElementById(pairEl.dataset.player1);
+  const p2 = document.getElementById(pairEl.dataset.player2);
+  const ellipse = pairEl.querySelector('.pair-ellipse');
+  if (!ellipse) return;
+
+  let x1, y1, x2, y2;
+  if (p1) { x1 = parseFloat(p1.dataset.cx); y1 = parseFloat(p1.dataset.cy); }
+  else { x1 = parseFloat(pairEl.dataset.lastX1 || '0'); y1 = parseFloat(pairEl.dataset.lastY1 || '0'); }
+  if (p2) { x2 = parseFloat(p2.dataset.cx); y2 = parseFloat(p2.dataset.cy); }
+  else { x2 = parseFloat(pairEl.dataset.lastX2 || '0'); y2 = parseFloat(pairEl.dataset.lastY2 || '0'); }
+
+  pairEl.dataset.lastX1 = x1; pairEl.dataset.lastY1 = y1;
+  pairEl.dataset.lastX2 = x2; pairEl.dataset.lastY2 = y2;
+
+  const cx = (x1 + x2) / 2;
+  const cy = (y1 + y2) / 2;
+  const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
+  const rx = dist / 2 + 22; // padding beyond players
+  const ry = 22; // fixed height to wrap players snugly
+  const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
+
+  pairEl.dataset.cx = cx; pairEl.dataset.cy = cy;
+
+  ellipse.setAttribute('cx', cx);
+  ellipse.setAttribute('cy', cy);
+  ellipse.setAttribute('rx', rx);
+  ellipse.setAttribute('ry', ry);
+  ellipse.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`);
+
+  // Apply color
+  const color = pairEl.dataset.pairColor || 'rgba(239,68,68,0.18)';
+  ellipse.setAttribute('fill', color);
+}
+
+export function updateAllPairs() {
+  const pairs = S.objectsLayer.querySelectorAll('g[data-type="pair"]');
+  pairs.forEach(updatePair);
+  const pairs2 = S.playersLayer.querySelectorAll('g[data-type="pair"]');
+  pairs2.forEach(updatePair);
 }

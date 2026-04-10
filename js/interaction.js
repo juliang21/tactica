@@ -330,6 +330,14 @@ export function select(el, opts = {}) {
       linkLine.setAttribute('stroke-width', '3');
     }
   }
+  if (type === 'pair') {
+    const pairEllipse = el.querySelector('.pair-ellipse');
+    if (pairEllipse) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = pairEllipse.getAttribute('stroke');
+      pairEllipse.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+    showZoneHandles(el);
+  }
 
   // If multi-select, show multi-select UI instead of individual panels
   if (S.selectedEls.size > 1) {
@@ -636,6 +644,13 @@ export function deselectVisual(el) {
       const saved = el.dataset.savedStroke || el.dataset.linkColor || 'rgba(255,255,255,0.4)';
       linkLine.setAttribute('stroke', saved);
       linkLine.setAttribute('stroke-width', '2');
+      delete el.dataset.savedStroke;
+    }
+  }
+  if (t === 'pair') {
+    const pairEllipse = el.querySelector('.pair-ellipse');
+    if (pairEllipse && el.dataset.savedStroke) {
+      pairEllipse.setAttribute('stroke', el.dataset.savedStroke);
       delete el.dataset.savedStroke;
     }
   }

@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, repositionTag, addLink, updateLink, updateAllLinks } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -171,6 +171,11 @@ window.setTool = function(t) {
   // Clean up link tool state if leaving link mode
   if (S.tool === 'link' && t !== 'link') {
     _linkStartPlayer = null;
+    clearLinkHighlight();
+  }
+  // Clean up pair tool state if leaving pair mode
+  if (S.tool === 'pair' && t !== 'pair') {
+    _pairStartPlayer = null;
     clearLinkHighlight();
   }
   _baseSetTool(t);
@@ -479,6 +484,9 @@ Object.defineProperty(window, 'teamContext', { get: () => S.teamContext });
 let _linkStartPlayer = null;
 let _linkHighlight = null;
 
+// ─── Pair Tool State ────────────────────────────────────────────────────────
+let _pairStartPlayer = null;
+
 function clearLinkHighlight() {
   if (_linkHighlight) {
     _linkHighlight.remove();
@@ -553,6 +561,38 @@ S.svg.addEventListener('click', e => {
     _linkStartPlayer = clickedEl;
     clearLinkHighlight();
     highlightLinkStart(clickedEl);
+    return;
+  }
+
+  // ── Pair tool handling ───────────────────────────────────────────────────
+  if (S.tool === 'pair') {
+    const clickedEl = e.target.closest('[data-type="player"]') || e.target.closest('[data-type="referee"]');
+    if (!clickedEl) {
+      _pairStartPlayer = null;
+      clearLinkHighlight();
+      return;
+    }
+    if (!_pairStartPlayer) {
+      _pairStartPlayer = clickedEl;
+      highlightLinkStart(clickedEl);
+      return;
+    }
+    if (clickedEl === _pairStartPlayer || clickedEl.id === _pairStartPlayer.id) {
+      _pairStartPlayer = null;
+      clearLinkHighlight();
+      return;
+    }
+    S.pushUndo();
+    const pair = addPair(_pairStartPlayer.id, clickedEl.id);
+    if (pair) {
+      trackElementInserted('pair');
+      const u = getCurrentUser();
+      if (u) logAction(u.uid, u.email, 'element_inserted', { element: 'pair' }).catch(() => {});
+    }
+    _pairStartPlayer = null;
+    clearLinkHighlight();
+    setTool('select');
+    if (pair) select(pair);
     return;
   }
 
