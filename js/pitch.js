@@ -72,23 +72,6 @@ export function setPitch(layout) {
   rebuildPitch();
 }
 
-function layoutLabel(id) {
-  const labels = {
-    'full-h': 'Full Horizontal',
-    'full-v': 'Full Vertical',
-    'full-h-nd': 'Full H (No D)',
-    'full-v-nd': 'Full V (No D)',
-    'full-h-grid': 'Full H (Grid)',
-    'full-v-grid': 'Full V (Grid)',
-    'half-h': 'Half Pitch',
-    'half-h-nd': 'Half (No D)',
-    'half-h-ng': 'Half (No Goal)',
-    'half-h-ng-nd': 'Half (Clean)',
-    'half-h-grid': 'Half (Grid)',
-  };
-  return labels[id] || id;
-}
-
 export function setPitchColor(dotEl) {
   document.querySelectorAll('.pitch-color-dot').forEach(d => d.classList.remove('selected'));
   dotEl.classList.add('selected');

@@ -649,23 +649,6 @@ input[type=range]::-webkit-slider-thumb {
   text-transform: uppercase; color: var(--text-dim); margin-bottom: 8px;
 }
 
-/* Pitch picker */
-.pitch-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-bottom: 10px; }
-.pitch-thumb {
-  cursor: pointer; border: 2px solid transparent;
-  transition: transform 0.1s, border-color 0.1s;
-  overflow: hidden; position: relative;
-  height: 64px;
-}
-.pitch-thumb:hover { transform: scale(1.06); }
-.pitch-thumb.selected { border-color: var(--accent); }
-.pitch-thumb svg { width: 100%; height: 100%; display: block; }
-.pitch-thumb .pt-label {
-  position: absolute; bottom: 0; left: 0; right: 0;
-  font-size: 7px; font-weight: 600; text-align: center;
-  background: rgba(0,0,0,0.55); padding: 2px 0; color: #fff;
-  text-transform: uppercase; letter-spacing: 0.05em;
-}
 /* ── Pitch Toggle Buttons ── */
 .pitch-toggle-row {
   display: flex; gap: 4px;
@@ -716,22 +699,6 @@ input[type=range]::-webkit-slider-thumb {
 }
 .pitch-color-dot:hover, .pitch-line-dot:hover { transform: scale(1.1); }
 .pitch-color-dot.selected, .pitch-line-dot.selected { border-color: var(--accent); }
-
-/* ── Locked / Premium pitch thumbnails ── */
-.pitch-thumb.locked {
-  opacity: 0.45;
-  cursor: pointer;
-  position: relative;
-}
-.pitch-thumb.locked:hover { opacity: 0.6; }
-.pitch-thumb.locked .lock-badge {
-  position: absolute; top: 4px; right: 4px;
-  background: rgba(0,0,0,0.65); border-radius: 50%;
-  width: 18px; height: 18px; display: flex;
-  align-items: center; justify-content: center;
-  color: #F59E0B;
-}
-.pitch-thumb:not(.locked) .lock-badge { display: none; }
 
 /* ── Upgrade overlay ── */
 .upgrade-overlay {

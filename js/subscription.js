@@ -7,7 +7,6 @@ let userTier = 'free';
 const PREMIUM_FEATURES = new Set([
   // Pitch layouts (free: full-h, full-v, half-h)
   'pitch:half-h-ng',
-  'pitch:half-h-ng-nd',
 ]);
 
 // ─── Feature tagging API ─────────────────────────────────────────────────────
