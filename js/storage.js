@@ -67,7 +67,7 @@ export function generateThumbnail() {
     ctx.scale(SCALE, SCALE);
 
     const s1 = S.pitchColors.s1, s2 = S.pitchColors.s2;
-    const isV = S.currentPitchLayout.endsWith('-v');
+    const isV = (/full-v|half-v/).test(S.currentPitchLayout);
     if (isV) {
       for (let y = 0; y < H; y += 40) {
         ctx.fillStyle = s1; ctx.fillRect(0, y, W, 20);
@@ -206,6 +206,9 @@ export async function loadAnalysis(id, onReady) {
         S.pitchColors.s1 = d.pitchColors.s1;
         S.pitchColors.s2 = d.pitchColors.s2;
         S.pitchColors.line = d.pitchColors.line;
+        // Sync stripes toggle
+        const stripesEl = document.getElementById('pitch-toggle-stripes');
+        if (stripesEl) stripesEl.checked = d.pitchColors.s1 !== d.pitchColors.s2;
       }
     });
   }

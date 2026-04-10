@@ -491,7 +491,25 @@ const FEATURE_CONFIGS = [
     { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_video' },
   ]},
   { label: 'Pitch Type', action: 'feature_pitch_change', metaKey: 'type', filterFn: a => a.meta && a.meta.type },
-  { label: 'Pitch Color', action: 'feature_pitch_change', metaKey: 'color', filterFn: a => a.meta && a.meta.color },
+  { label: 'Pitch Color', action: 'feature_pitch_color', metaKey: 'color', filterFn: a => a.meta && a.meta.color,
+    legacyAction: 'feature_pitch_change', legacyFilterFn: a => a.meta && a.meta.color,
+    normalizeFn: (counts, sessionSets, userSets) => {
+      // Normalize custom/unknown color names into a single "Custom" bucket
+      const defaultColors = ['Classic Green', 'White', 'Neon Green', 'Navy Blue', 'Black', 'Light Green'];
+      const customKeys = Object.keys(counts).filter(k => !defaultColors.includes(k));
+      if (customKeys.length > 0) {
+        counts['Custom'] = (counts['Custom'] || 0);
+        if (!sessionSets['Custom']) sessionSets['Custom'] = new Set();
+        if (!userSets['Custom']) userSets['Custom'] = new Set();
+        customKeys.forEach(k => {
+          counts['Custom'] += counts[k];
+          if (sessionSets[k]) sessionSets[k].forEach(s => sessionSets['Custom'].add(s));
+          if (userSets[k]) userSets[k].forEach(u => userSets['Custom'].add(u));
+          delete counts[k]; delete sessionSets[k]; delete userSets[k];
+        });
+      }
+    }
+  },
   { label: 'Formation', action: 'feature_formation', metaKey: 'formation' },
   { label: 'Club Team', action: 'feature_club_team', metaKey: 'team' },
   { label: 'National Team', action: 'feature_national_team', metaKey: 'team' },
@@ -499,7 +517,6 @@ const FEATURE_CONFIGS = [
   { label: 'Element Selected', action: 'element_selected', metaKey: 'element' },
   { label: 'Animation', action: 'feature_animation', metaKey: 'trigger' },
   { label: 'Toolbar Toggle', action: 'feature_toolbar_toggle', metaKey: 'type' },
-  { label: 'Image Upload', action: 'feature_image_upload', metaKey: null },
 ];
 
 function renderFeatureCard(cfg, actions, html) {
@@ -568,6 +585,12 @@ function renderFeaturesTab(actions, activeUsers) {
 
     let items = (actions || []).filter(a => a.action === cfg.action);
     if (cfg.filterFn) items = items.filter(cfg.filterFn);
+    // Merge legacy events (e.g. old feature_pitch_change with color → new feature_pitch_color)
+    if (cfg.legacyAction) {
+      const legacy = (actions || []).filter(a => a.action === cfg.legacyAction);
+      const legacyFiltered = cfg.legacyFilterFn ? legacy.filter(cfg.legacyFilterFn) : legacy;
+      items = items.concat(legacyFiltered);
+    }
 
     const totalEvents = items.length;
     const uniqueSessions = new Set(items.map(a => a.sessionId).filter(Boolean)).size;
@@ -605,6 +628,9 @@ function renderFeaturesTab(actions, activeUsers) {
         delete sessionSets['link'];
         delete userSets['link'];
       }
+
+      // Apply custom normalization (e.g. bucket unknown colors into "Custom")
+      if (cfg.normalizeFn) cfg.normalizeFn(counts, sessionSets, userSets);
 
       const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
       const maxCount = sorted.length > 0 ? sorted[0][1] : 1;

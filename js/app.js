@@ -15,7 +15,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
          applySize, applyRotation, clearAll } from './ui.js';
-import { setPitch, setPitchColor } from './pitch.js';
+import { setPitch, setPitchColor, setPitchOpt, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
@@ -257,18 +257,60 @@ window.deleteSelected = function() {
   deleteSelected();
 };
 window.switchTab = switchTab;
+// Parse layout string into granular fields for tracking
+function parsePitchLayout(lay) {
+  const isV = (/full-v|half-v/).test(lay);
+  return {
+    type: lay,
+    orientation: isV ? 'vertical' : 'horizontal',
+    size: lay.startsWith('half') ? 'half' : 'full',
+    goals: !lay.includes('-ng'),
+    gridH: lay.includes('-grid') && !lay.includes('-gridv') || lay.includes('-gridh'),
+    gridV: lay.includes('-grid') && !lay.includes('-gridh') || lay.includes('-gridv'),
+  };
+}
+
 window.setPitch = function(layout) {
   setPitch(layout);
   const u = getCurrentUser();
-  if (u) logAction(u.uid, u.email, 'feature_pitch_change', { type: layout }).catch(() => {});
+  if (u) logAction(u.uid, u.email, 'feature_pitch_change', parsePitchLayout(S.currentPitchLayout)).catch(() => {});
   if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_type', { pitch_type: layout, tool_name: 'tactica' });
 };
 window.setPitchColor = function(dotEl) {
   setPitchColor(dotEl);
   const colorName = dotEl.dataset.trackName || dotEl.getAttribute('title') || 'unknown';
+  const stripes = document.getElementById('pitch-toggle-stripes')?.checked ?? true;
   const u = getCurrentUser();
-  if (u) logAction(u.uid, u.email, 'feature_pitch_change', { color: colorName }).catch(() => {});
+  if (u) logAction(u.uid, u.email, 'feature_pitch_color', { color: colorName, stripes }).catch(() => {});
   if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_color', { color_name: colorName, tool_name: 'tactica' });
+};
+window.setPitchOpt = function(el) {
+  setPitchOpt(el);
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_pitch_change', parsePitchLayout(S.currentPitchLayout)).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_type', { pitch_type: S.currentPitchLayout, tool_name: 'tactica' });
+};
+window.updatePitchFromToggles = function() {
+  updatePitchFromToggles();
+  const stripes = document.getElementById('pitch-toggle-stripes')?.checked ?? true;
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_pitch_change', { ...parsePitchLayout(S.currentPitchLayout), stripes }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_type', { pitch_type: S.currentPitchLayout, tool_name: 'tactica' });
+};
+window.setPitchLineColor = function(dotEl) {
+  setPitchLineColor(dotEl);
+  const colorName = dotEl.getAttribute('title') || 'unknown';
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_pitch_change', { line_color: colorName }).catch(() => {});
+};
+window.openPitchColorPicker = function(target) {
+  openColorPicker('pitch-' + target);
+};
+window.toggleStripes = function() {
+  toggleStripes();
+  const stripes = document.getElementById('pitch-toggle-stripes')?.checked;
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_pitch_change', { stripes }).catch(() => {});
 };
 window.hideUpgradePrompt = hideUpgradePrompt;
 window.setUserTier = setUserTier;
@@ -2823,6 +2865,8 @@ window.toggleMobilePanel = toggleMobilePanel;
 // ─── Mobile: auto-switch to vertical pitch for better fit ─────────────────────
 if (window.innerWidth <= 768 && S.currentPitchLayout === 'full-h' && S.appMode !== 'image') {
   setPitch('full-v');
+} else if (S.appMode !== 'image') {
+  rebuildPitch();  // ensure initial pitch matches rebuildPitch output (no size jump on first toggle)
 }
 
 // ─── Mobile Hint Modal ──────────────────────────────────────────────────────

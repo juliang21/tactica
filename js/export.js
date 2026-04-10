@@ -97,13 +97,14 @@ export function doExport() {
   const S1 = S.pitchColors.s1;
   const S2 = S.pitchColors.s2;
   const PL = S.pitchColors.line;
-  const isV = S.currentPitchLayout.includes('full-v');
+  const isV = (/full-v|half-v/).test(S.currentPitchLayout);  // full-v or half-v
   const isHalf = S.currentPitchLayout.startsWith('half');
   const hasGoals = !S.currentPitchLayout.includes('-ng');
-  const hasD = !S.currentPitchLayout.includes('-nd');
-  const hasGrid = S.currentPitchLayout.includes('-grid');
-  const pbHW = hasGrid ? 130 : 100;  // penalty box half-width
-  const gaHW = hasGrid ? 60 : 55;    // goal area half-width
+  const hasGridBoth = S.currentPitchLayout.includes('-grid') && !S.currentPitchLayout.includes('-gridh') && !S.currentPitchLayout.includes('-gridv');
+  const hasGridH = hasGridBoth || S.currentPitchLayout.includes('-gridh');
+  const hasGridV = hasGridBoth || S.currentPitchLayout.includes('-gridv');
+  const pbHW = 130;  // penalty box half-width (~59% of pitch width, realistic proportions)
+  const gaHW = 60;   // goal area half-width
 
   const SCALE = 3; // 3x resolution for crisp exports
   const canvas = document.createElement('canvas');
@@ -124,7 +125,7 @@ export function doExport() {
     return;
   }
 
-  // Pitch stripes
+  // Pitch stripes (vertical orientations get horizontal stripes)
   if (isV) {
     for (let y = 0; y < H; y += 40) {
       ctx.fillStyle = S1; ctx.fillRect(0, y, W, 20);
@@ -139,38 +140,46 @@ export function doExport() {
 
   function pl(fn) { ctx.save(); ctx.strokeStyle = PL; ctx.lineWidth = 1.5; fn(); ctx.restore(); }
 
-  if (isHalf) {
-    // ── Half pitch (matches SVG in pitch.js exactly) ──
+  if (isHalf && !isV) {
+    // ── Horizontal half pitch (goal on right) ──
+    const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
+    const right = pad + pw;
+    pl(() => { ctx.strokeRect(pad,py,pw,ph); });
+    pl(() => { ctx.strokeRect(right-105,cy-pbHW,105,pbHW*2); });
+    pl(() => { ctx.strokeRect(right-40,cy-gaHW,40,gaHW*2); });
+    ctx.beginPath(); ctx.arc(right-67,cy,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
+    const arcA = Math.acos(38/55);
+    pl(() => { ctx.beginPath(); ctx.arc(right-67,cy,55,-arcA,arcA); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.moveTo(pad,py); ctx.lineTo(pad,py+ph); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(pad,cy,55,-Math.PI/2,Math.PI/2); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(right,py,8,Math.PI/2,Math.PI); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(right,py+ph,8,Math.PI,Math.PI*1.5); ctx.stroke(); });
+    if (hasGoals) {
+      ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
+      ctx.strokeRect(right,cy-35,14,70); ctx.restore();
+    }
+  } else if (isHalf && isV) {
+    // ── Vertical half pitch (goal at bottom) ──
     const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
     const bot = py + ph;
-    // Outer boundary
-    pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,py,pw,ph); });
-    // Penalty area (fixed dimensions, centered)
+    pl(() => { ctx.strokeRect(pad,py,pw,ph); });
     pl(() => { ctx.strokeRect(cx-pbHW,bot-105,pbHW*2,105); });
-    // Goal area
     pl(() => { ctx.strokeRect(cx-gaHW,bot-40,gaHW*2,40); });
-    // Penalty spot
     ctx.beginPath(); ctx.arc(cx,bot-67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-    // Penalty arc
-    if (hasD) {
-      const arcA = Math.acos(38/55);
-      pl(() => { ctx.beginPath(); ctx.arc(cx,bot-67,55,Math.PI*1.5-arcA,Math.PI*1.5+arcA); ctx.stroke(); });
-    }
-    // Halfway line at top
+    const arcA = Math.acos(38/55);
+    pl(() => { ctx.beginPath(); ctx.arc(cx,bot-67,55,Math.PI*1.5-arcA,Math.PI*1.5+arcA); ctx.stroke(); });
     pl(() => { ctx.beginPath(); ctx.moveTo(pad,py); ctx.lineTo(pad+pw,py); ctx.stroke(); });
-    // Center circle arc (bottom half peeking in)
     pl(() => { ctx.beginPath(); ctx.arc(cx,py,55,0,Math.PI); ctx.stroke(); });
-    // Corner arcs at bottom
     pl(() => { ctx.beginPath(); ctx.arc(pad,bot,8,Math.PI*1.5,Math.PI*2); ctx.stroke(); });
     pl(() => { ctx.beginPath(); ctx.arc(pad+pw,bot,8,Math.PI,Math.PI*1.5); ctx.stroke(); });
-    // Goal
     if (hasGoals) {
       ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
       ctx.strokeRect(cx-35,bot,70,14); ctx.restore();
     }
   } else if (!isV) {
+    // ── Full horizontal pitch ──
     const pad=30, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2, cy=H/2;
-    pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,py,pw,ph); });
+    pl(() => { ctx.strokeRect(pad,py,pw,ph); });
     pl(() => { ctx.beginPath(); ctx.moveTo(cx,py); ctx.lineTo(cx,py+ph); ctx.stroke(); });
     pl(() => { ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2); ctx.stroke(); });
     ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
@@ -183,12 +192,10 @@ export function doExport() {
     pl(() => { ctx.strokeRect(pad+pw-40,cy-gaHW,40,gaHW*2); });
     ctx.beginPath(); ctx.arc(pad+pw-67,cy,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
     pl(() => { ctx.beginPath(); ctx.arc(pad+pw-67,cy,55,Math.PI-arcA,Math.PI+arcA); ctx.stroke(); });
-    // Corner arcs
     pl(() => { ctx.beginPath(); ctx.arc(pad,py,8,Math.PI/2,0,true); ctx.stroke(); });
     pl(() => { ctx.beginPath(); ctx.arc(pad+pw,py,8,Math.PI/2,Math.PI); ctx.stroke(); });
     pl(() => { ctx.beginPath(); ctx.arc(pad,py+ph,8,0,Math.PI*1.5,true); ctx.stroke(); });
     pl(() => { ctx.beginPath(); ctx.arc(pad+pw,py+ph,8,Math.PI,Math.PI*1.5); ctx.stroke(); });
-    // Goals
     if (hasGoals) {
       ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
       ctx.strokeRect(pad-14,cy-35,14,70); ctx.strokeRect(pad+pw,cy-35,14,70);
@@ -197,7 +204,7 @@ export function doExport() {
   } else {
     // ── Full vertical pitch ──
     const pad=20, px=20, pw=W-pad*2, ph=H-px*2, cx=W/2, cy=H/2;
-    pl(() => { ctx.lineWidth=2; ctx.strokeRect(pad,px,pw,ph); });
+    pl(() => { ctx.strokeRect(pad,px,pw,ph); });
     pl(() => { ctx.beginPath(); ctx.moveTo(pad,cy); ctx.lineTo(pad+pw,cy); ctx.stroke(); });
     pl(() => { ctx.beginPath(); ctx.arc(cx,cy,55,0,Math.PI*2); ctx.stroke(); });
     ctx.beginPath(); ctx.arc(cx,cy,3,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
@@ -205,19 +212,21 @@ export function doExport() {
     pl(() => { ctx.strokeRect(cx-gaHW,px,gaHW*2,40); });
     ctx.beginPath(); ctx.arc(cx,px+67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
     const vArcA = Math.acos(38/55);
-    if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+67,55,Math.PI/2-vArcA,Math.PI/2+vArcA); ctx.stroke(); });
+    pl(() => { ctx.beginPath(); ctx.arc(cx,px+67,55,Math.PI/2-vArcA,Math.PI/2+vArcA); ctx.stroke(); });
     pl(() => { ctx.strokeRect(cx-pbHW,px+ph-105,pbHW*2,105); });
     pl(() => { ctx.strokeRect(cx-gaHW,px+ph-40,gaHW*2,40); });
     ctx.beginPath(); ctx.arc(cx,px+ph-67,2.5,0,Math.PI*2); ctx.fillStyle=PL; ctx.fill();
-    if (hasD) pl(() => { ctx.beginPath(); ctx.arc(cx,px+ph-67,55,Math.PI*1.5-vArcA,Math.PI*1.5+vArcA); ctx.stroke(); });
-    ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
-    ctx.fillRect(cx-35,px-14,70,14); ctx.strokeRect(cx-35,px-14,70,14);
-    ctx.fillRect(cx-35,px+ph,70,14); ctx.strokeRect(cx-35,px+ph,70,14);
-    ctx.restore();
+    pl(() => { ctx.beginPath(); ctx.arc(cx,px+ph-67,55,Math.PI*1.5-vArcA,Math.PI*1.5+vArcA); ctx.stroke(); });
+    if (hasGoals) {
+      ctx.save(); ctx.fillStyle='rgba(0,0,0,0)'; ctx.strokeStyle=PL; ctx.lineWidth=1.5;
+      ctx.fillRect(cx-35,px-14,70,14); ctx.strokeRect(cx-35,px-14,70,14);
+      ctx.fillRect(cx-35,px+ph,70,14); ctx.strokeRect(cx-35,px+ph,70,14);
+      ctx.restore();
+    }
   }
 
-  // ── Grid lines (thirds + channels aligned to penalty/goal area) for export ──
-  if (hasGrid) {
+  // ── Grid lines (horizontal and/or vertical) for export ──
+  if (hasGridH || hasGridV) {
     const gridColor = PL.replace(/[\d.]+\)$/, m => `${parseFloat(m)*0.55})`);
     ctx.save();
     ctx.strokeStyle = gridColor;
@@ -226,18 +235,26 @@ export function doExport() {
 
     function gl(x1,y1,x2,y2) { ctx.beginPath(); ctx.moveTo(x1,y1); ctx.lineTo(x2,y2); ctx.stroke(); }
 
-    if (isHalf) {
+    // Grid labels are pitch-relative: on horizontal pitches we swap screen directions
+    const gH = isV ? hasGridH : hasGridV;  // horizontal screen lines
+    const gV = isV ? hasGridV : hasGridH;  // vertical screen lines
+
+    if (isHalf && !isV) {
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
+      if (gH) [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => gl(pad, y, pad+pw, y));
+      if (gV) for (let i=1; i<=2; i++) gl(pad+pw*i/3, py, pad+pw*i/3, py+ph);
+    } else if (isHalf && isV) {
       const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
-      for (let i=1; i<=2; i++) gl(pad, py+ph*i/3, pad+pw, py+ph*i/3);
-      [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => gl(x, py, x, py+ph));
+      if (gH) for (let i=1; i<=2; i++) gl(pad, py+ph*i/3, pad+pw, py+ph*i/3);
+      if (gV) [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => gl(x, py, x, py+ph));
     } else if (isV) {
       const pad=20, px=20, pw=W-pad*2, ph=H-px*2, cx=W/2;
-      for (let i=1; i<=2; i++) gl(pad, px+ph*i/3, pad+pw, px+ph*i/3);
-      [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => gl(x, px, x, px+ph));
+      if (gH) for (let i=1; i<=2; i++) gl(pad, px+ph*i/3, pad+pw, px+ph*i/3);
+      if (gV) [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => gl(x, px, x, px+ph));
     } else {
       const pad=30, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
-      for (let i=1; i<=2; i++) gl(pad+pw*i/3, py, pad+pw*i/3, py+ph);
-      [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => gl(pad, y, pad+pw, y));
+      if (gH) [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => gl(pad, y, pad+pw, y));
+      if (gV) for (let i=1; i<=2; i++) gl(pad+pw*i/3, py, pad+pw*i/3, py+ph);
     }
 
     ctx.setLineDash([]);

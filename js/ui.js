@@ -2,6 +2,7 @@ import * as S from './state.js';
 import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg } from './interaction.js';
 import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag } from './elements.js';
 import { trackElementEdited } from './analytics.js';
+import { rebuildPitch } from './pitch.js';
 
 // ─── Tool Selection ───────────────────────────────────────────────────────────
 export function setTool(t) {
@@ -131,7 +132,7 @@ export function placeFormation(name) {
   Array.from(S.playersLayer.querySelectorAll(`g[data-team="${team}"]`)).forEach(el => el.remove());
   S.playerCounts[team] = 0;
 
-  const isV = S.currentPitchLayout.endsWith('-v');
+  const isV = (/full-v|half-v/).test(S.currentPitchLayout);
   const isHalf = S.currentPitchLayout.startsWith('half');
   const W = parseFloat(S.svg.getAttribute('width'));
   const H = parseFloat(S.svg.getAttribute('height'));
@@ -143,8 +144,14 @@ export function placeFormation(name) {
     // Map depth so forwards reach ~60% (just past midfield), not into opponent's half
     const depth = 0.05 + xf * 0.88;  // GK ~0.10, forwards ~0.61
 
-    if (isHalf) {
-      // Half pitch (vertical): depth → Y axis (goal at bottom, halfway at top), lateral → X axis
+    if (isHalf && !isV) {
+      // Horizontal half pitch: depth → X axis (goal on right), lateral → Y axis
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2;
+      const d = (0.05 + xf * 1.30) * pw;
+      y = py + yf * ph;
+      x = team === 'a' ? pad + pw - d : pad + d;
+    } else if (isHalf && isV) {
+      // Vertical half pitch: depth → Y axis (goal at bottom), lateral → X axis
       const pad=20, py=20, pw=W-pad*2, ph=H-py*2;
       const d = (0.05 + xf * 1.30) * ph;
       x = pad + yf * pw;
@@ -415,6 +422,13 @@ export function openColorPicker(target) {
     current = S.selectedEl?.dataset.hlTextColor || '#ffffff';
   } else if (target === 'headline-bg') {
     current = S.selectedEl?.dataset.hlBg || '#ffffff';
+  } else if (target === 'pitch-pitch') {
+    current = S.pitchColors.s1 || '#1a3a1a';
+  } else if (target === 'pitch-line') {
+    current = S.pitchColors.line?.replace(/rgba?\(([^)]+)\)/, (_, c) => {
+      const parts = c.split(',').map(Number);
+      return '#' + parts.slice(0,3).map(v => v.toString(16).padStart(2,'0')).join('');
+    }) || '#ffffff';
   } else {
     const circ = S.selectedEl?.querySelector('circle:not(.hit-area)');
     if (circ && target === 'fill') current = circ.getAttribute('fill') || '#ffffff';
@@ -442,6 +456,27 @@ export function confirmColorPicker() {
   const hex = '#' + document.getElementById('color-picker-hex').value;
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
   closeColorPicker();
+  if (colorPickerTarget === 'pitch-pitch') {
+    const stripes = document.getElementById('pitch-toggle-stripes')?.checked;
+    S.pitchColors.s1 = hex;
+    if (stripes) {
+      const r = Math.min(255, parseInt(hex.slice(1,3), 16) + 8);
+      const g = Math.min(255, parseInt(hex.slice(3,5), 16) + 8);
+      const b = Math.min(255, parseInt(hex.slice(5,7), 16) + 8);
+      S.pitchColors.s2 = `#${r.toString(16).padStart(2,'0')}${g.toString(16).padStart(2,'0')}${b.toString(16).padStart(2,'0')}`;
+    } else {
+      S.pitchColors.s2 = hex;
+    }
+    document.querySelectorAll('.pitch-color-dot').forEach(d => d.classList.remove('selected'));
+    rebuildPitch();
+    return;
+  }
+  if (colorPickerTarget === 'pitch-line') {
+    S.pitchColors.line = hex;
+    document.querySelectorAll('.pitch-line-dot').forEach(d => d.classList.remove('selected'));
+    rebuildPitch();
+    return;
+  }
   if (colorPickerTarget === 'kit-custom') {
     // Apply custom color to team (same as applyColor)
     S.teamColors[S.teamContext] = hex;
