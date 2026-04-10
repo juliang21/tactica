@@ -240,8 +240,9 @@ export function select(el, opts = {}) {
   }
 
   const type = el.dataset.type;
-  trackElementSelected(type);
-  if (_selectTrackFn) _selectTrackFn(type);
+  const trackType = type === 'link' ? 'connect' : type;
+  trackElementSelected(trackType);
+  if (_selectTrackFn) _selectTrackFn(trackType);
 
   // Visual highlight
   if (type === 'player' || type === 'referee' || type === 'ball' || type === 'cone') {
