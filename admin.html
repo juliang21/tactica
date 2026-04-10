@@ -166,6 +166,31 @@
   .breakdown-fill { height: 100%; background: #D4A843; border-radius: 4px; min-width: 2px; transition: width 0.3s; }
   .breakdown-count { font-size: 11px; color: #888; min-width: 60px; text-align: right; }
   .breakdown-sessions { font-size: 10px; color: #555; min-width: 80px; text-align: right; }
+
+  /* Pitch analytics pie charts */
+  .pitch-analytics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
+  .pie-card {
+    background: #1a1a22; border-radius: 12px; padding: 16px;
+    border: 1px solid rgba(255,255,255,0.06);
+    display: flex; flex-direction: column; align-items: center;
+  }
+  .pie-card h4 { font-size: 12px; font-weight: 700; color: #D4A843; margin: 0 0 12px 0; letter-spacing: 0.5px; }
+  .pie-legend { margin-top: 10px; width: 100%; }
+  .pie-legend-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 11px; color: #ccc; }
+  .pie-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .pie-legend-pct { margin-left: auto; color: #888; font-size: 10px; }
+
+  /* Top combos table */
+  .combos-card {
+    background: #1a1a22; border-radius: 12px; padding: 16px;
+    border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px;
+  }
+  .combos-card h4 { font-size: 12px; font-weight: 700; color: #D4A843; margin: 0 0 12px 0; letter-spacing: 0.5px; }
+  .combos-table { width: 100%; border-collapse: collapse; }
+  .combos-table th { text-align: left; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
+  .combos-table td { font-size: 12px; color: #ccc; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); }
+  .combos-table tr:last-child td { border-bottom: none; }
+  .combos-rank { color: #D4A843; font-weight: 700; width: 24px; }
 </style>
 </head>
 <body>
@@ -536,8 +561,139 @@ function renderFeatureCard(cfg, actions, html) {
   return html;
 }
 
+function buildPieSVG(slices, size = 80) {
+  const r = size / 2, cx = r, cy = r;
+  let startAngle = -Math.PI / 2;
+  const total = slices.reduce((s, sl) => s + sl.value, 0);
+  if (total === 0) return `<svg width="${size}" height="${size}"><circle cx="${cx}" cy="${cy}" r="${r-1}" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="2"/></svg>`;
+  let paths = '';
+  slices.forEach(sl => {
+    const pct = sl.value / total;
+    const angle = pct * Math.PI * 2;
+    const endAngle = startAngle + angle;
+    const largeArc = angle > Math.PI ? 1 : 0;
+    const x1 = cx + (r - 1) * Math.cos(startAngle), y1 = cy + (r - 1) * Math.sin(startAngle);
+    const x2 = cx + (r - 1) * Math.cos(endAngle), y2 = cy + (r - 1) * Math.sin(endAngle);
+    if (pct >= 0.999) {
+      paths += `<circle cx="${cx}" cy="${cy}" r="${r-1}" fill="${sl.color}"/>`;
+    } else if (pct > 0) {
+      paths += `<path d="M${cx},${cy} L${x1},${y1} A${r-1},${r-1} 0 ${largeArc},1 ${x2},${y2} Z" fill="${sl.color}"/>`;
+    }
+    startAngle = endAngle;
+  });
+  return `<svg width="${size}" height="${size}">${paths}</svg>`;
+}
+
+function renderPitchAnalytics(actions) {
+  const pitchItems = (actions || []).filter(a => a.action === 'feature_pitch_change' && a.meta && a.meta.type);
+  const types = pitchItems.map(a => a.meta.type);
+  const total = types.length;
+  if (total === 0) return '';
+
+  // 1. Size: Full vs Half
+  const full = types.filter(t => t.startsWith('full')).length;
+  const half = total - full;
+
+  // 2. Orientation: Horizontal vs Vertical
+  const vert = types.filter(t => (/full-v|half-v/).test(t)).length;
+  const horiz = total - vert;
+
+  // 3. Goals vs No Goals
+  const noGoals = types.filter(t => t.includes('-ng')).length;
+  const goals = total - noGoals;
+
+  // 4. Grids
+  const gridBoth = types.filter(t => t.includes('-grid') && !t.includes('-gridh') && !t.includes('-gridv')).length;
+  const gridH = types.filter(t => t.includes('-gridh')).length;
+  const gridV = types.filter(t => t.includes('-gridv')).length;
+  const noGrid = total - gridBoth - gridH - gridV;
+
+  const colors = { a: '#D4A843', b: '#4A90D9', c: '#5BBD72', d: '#E87461', muted: 'rgba(255,255,255,0.08)' };
+
+  let html = '<div class="pitch-analytics">';
+
+  // Pie 1: Size + Orientation (combined as 2x2 but simplified as orientation)
+  html += `<div class="pie-card"><h4>Orientation</h4>`;
+  html += buildPieSVG([{ value: horiz, color: colors.a }, { value: vert, color: colors.b }]);
+  html += `<div class="pie-legend">
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.a}"></span>Horizontal<span class="pie-legend-pct">${total ? Math.round(horiz/total*100) : 0}%</span></div>
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.b}"></span>Vertical<span class="pie-legend-pct">${total ? Math.round(vert/total*100) : 0}%</span></div>
+  </div></div>`;
+
+  // Pie 2: Size (Full vs Half)
+  html += `<div class="pie-card"><h4>Size</h4>`;
+  html += buildPieSVG([{ value: full, color: colors.a }, { value: half, color: colors.b }]);
+  html += `<div class="pie-legend">
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.a}"></span>Full<span class="pie-legend-pct">${total ? Math.round(full/total*100) : 0}%</span></div>
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.b}"></span>Half<span class="pie-legend-pct">${total ? Math.round(half/total*100) : 0}%</span></div>
+  </div></div>`;
+
+  // Pie 3: Goals vs No Goals
+  html += `<div class="pie-card"><h4>Goals</h4>`;
+  html += buildPieSVG([{ value: goals, color: colors.c }, { value: noGoals, color: colors.d }]);
+  html += `<div class="pie-legend">
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.c}"></span>With goals<span class="pie-legend-pct">${total ? Math.round(goals/total*100) : 0}%</span></div>
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.d}"></span>No goals<span class="pie-legend-pct">${total ? Math.round(noGoals/total*100) : 0}%</span></div>
+  </div></div>`;
+
+  // Pie 3: Grids
+  html += `<div class="pie-card"><h4>Grids</h4>`;
+  html += buildPieSVG([
+    { value: noGrid, color: colors.muted },
+    { value: gridBoth, color: colors.a },
+    { value: gridH, color: colors.b },
+    { value: gridV, color: colors.c },
+  ]);
+  html += `<div class="pie-legend">
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.muted};border:1px solid rgba(255,255,255,0.15)"></span>No grid<span class="pie-legend-pct">${total ? Math.round(noGrid/total*100) : 0}%</span></div>
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.a}"></span>Both<span class="pie-legend-pct">${total ? Math.round(gridBoth/total*100) : 0}%</span></div>
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.b}"></span>H only<span class="pie-legend-pct">${total ? Math.round(gridH/total*100) : 0}%</span></div>
+    <div class="pie-legend-row"><span class="pie-legend-dot" style="background:${colors.c}"></span>V only<span class="pie-legend-pct">${total ? Math.round(gridV/total*100) : 0}%</span></div>
+  </div></div>`;
+
+  html += '</div>';
+
+  // Pie 4 replacement: Size (Full vs Half) as a 4th inline card? No — user asked for table.
+  // Top 5 combinations table
+  const comboCounts = {};
+  types.forEach(t => { comboCounts[t] = (comboCounts[t] || 0) + 1; });
+  const top5 = Object.entries(comboCounts).sort((a, b) => b[1] - a[1]).slice(0, 5);
+
+  // Human-readable labels
+  function describeLayout(lay) {
+    const isV = (/full-v|half-v/).test(lay);
+    const parts = [];
+    parts.push(lay.startsWith('half') ? 'Half' : 'Full');
+    parts.push(isV ? 'Vertical' : 'Horizontal');
+    if (lay.includes('-ng')) parts.push('No goals');
+    if (lay.includes('-grid') && !lay.includes('-gridh') && !lay.includes('-gridv')) parts.push('Both grids');
+    else if (lay.includes('-gridh')) parts.push('H grid');
+    else if (lay.includes('-gridv')) parts.push('V grid');
+    if (lay.includes('-nd')) parts.push('No D arc');
+    return parts.join(' · ');
+  }
+
+  html += `<div class="combos-card"><h4>Top 5 Pitch Combinations</h4>
+    <table class="combos-table">
+      <tr><th>#</th><th>Layout</th><th>Description</th><th style="text-align:right">Events</th><th style="text-align:right">%</th></tr>
+      ${top5.map(([lay, count], i) => `<tr>
+        <td class="combos-rank">${i + 1}</td>
+        <td><code style="font-size:11px;color:#aaa">${lay}</code></td>
+        <td>${describeLayout(lay)}</td>
+        <td style="text-align:right">${count}</td>
+        <td style="text-align:right;color:#888">${Math.round(count/total*100)}%</td>
+      </tr>`).join('')}
+    </table>
+  </div>`;
+
+  return html;
+}
+
 function renderFeaturesTab(actions, activeUsers) {
   let html = '';
+
+  // Pitch analytics section (pie charts + top combos)
+  html += renderPitchAnalytics(actions);
 
   FEATURE_CONFIGS.forEach(cfg => {
     if (cfg.isGroup) {
