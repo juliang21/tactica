@@ -593,6 +593,18 @@ function renderFeaturesTab(actions, activeUsers) {
         userSets[v].add(a.uid);
       });
 
+      // Normalize legacy meta values: "link" → "connect"
+      if (counts['link']) {
+        counts['connect'] = (counts['connect'] || 0) + counts['link'];
+        if (!sessionSets['connect']) sessionSets['connect'] = new Set();
+        if (sessionSets['link']) sessionSets['link'].forEach(s => sessionSets['connect'].add(s));
+        if (!userSets['connect']) userSets['connect'] = new Set();
+        if (userSets['link']) userSets['link'].forEach(u => userSets['connect'].add(u));
+        delete counts['link'];
+        delete sessionSets['link'];
+        delete userSets['link'];
+      }
+
       const sorted = Object.entries(counts).sort((a, b) => b[1] - a[1]);
       const maxCount = sorted.length > 0 ? sorted[0][1] : 1;
 
