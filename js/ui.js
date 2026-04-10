@@ -868,20 +868,15 @@ export function applySpotNameBg(swatchEl) {
 }
 
 // ─── Zone Properties ─────────────────────────────────────────────────────────
-function _isZoneType(t) { return t?.startsWith('shadow') || t === 'pair'; }
-
 export function applyZoneFill(swatchEl) {
-  if (!S.selectedEl || !_isZoneType(S.selectedEl.dataset.type)) return;
+  if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
   trackElementEdited(S.selectedEl.dataset.type, 'fill_color');
   const shape = S.selectedEl.querySelector('rect,ellipse');
-  if (shape) {
-    shape.setAttribute('fill', swatchEl.dataset.color);
-    if (S.selectedEl.dataset.type === 'pair') S.selectedEl.dataset.pairColor = swatchEl.dataset.color;
-  }
+  if (shape) shape.setAttribute('fill', swatchEl.dataset.color);
 }
 
 export function applyZoneBorder(swatchEl) {
-  if (!S.selectedEl || !_isZoneType(S.selectedEl.dataset.type)) return;
+  if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
   trackElementEdited(S.selectedEl.dataset.type, 'border_color');
   const shape = S.selectedEl.querySelector('rect,ellipse');
   if (shape) {
@@ -893,7 +888,7 @@ export function applyZoneBorder(swatchEl) {
 
 export function applyZoneBorderStyle(style) {
   document.querySelectorAll('[data-zstyle]').forEach(b => b.classList.toggle('active', b.dataset.zstyle === style));
-  if (!S.selectedEl || !_isZoneType(S.selectedEl.dataset.type)) return;
+  if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
   trackElementEdited(S.selectedEl.dataset.type, 'border_style');
   const shape = S.selectedEl.querySelector('rect,ellipse');
   if (!shape) return;
