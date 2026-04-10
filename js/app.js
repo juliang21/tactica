@@ -205,6 +205,7 @@ window.switchKitTab = function(tab, btn) {
 };
 window.placeFormation = function(name) {
   placeFormation(name);
+  maybeSendPitchSnapshot();
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_formation', { formation: name }).catch(() => {});
   if (typeof window.gtag === 'function') window.gtag('event', 'feature_formation', { formation_name: name, tool_name: 'tactica' });
@@ -261,6 +262,31 @@ window.deleteSelected = function() {
   deleteSelected();
 };
 window.switchTab = switchTab;
+// ─── Pitch state snapshot (once per session, on first meaningful interaction) ──
+let _pitchSnapshotSent = false;
+function maybeSendPitchSnapshot() {
+  if (_pitchSnapshotSent) return;
+  const u = getCurrentUser();
+  if (!u) return;
+  _pitchSnapshotSent = true;
+  const lay = S.currentPitchLayout;
+  const isV = (/full-v|half-v/).test(lay);
+  const stripes = document.getElementById('pitch-toggle-stripes')?.checked ?? true;
+  const selectedColor = document.querySelector('.pitch-color-dot.selected');
+  const selectedLine = document.querySelector('.pitch-line-dot.selected');
+  logAction(u.uid, u.email, 'pitch_state_snapshot', {
+    layout: lay,
+    orientation: isV ? 'vertical' : 'horizontal',
+    size: lay.startsWith('half') ? 'half' : 'full',
+    goals: !lay.includes('-ng'),
+    gridH: lay.includes('-grid') && !lay.includes('-gridv') || lay.includes('-gridh'),
+    gridV: lay.includes('-grid') && !lay.includes('-gridh') || lay.includes('-gridv'),
+    stripes,
+    color: selectedColor?.dataset.trackName || selectedColor?.getAttribute('title') || 'Classic Green',
+    lineColor: selectedLine?.getAttribute('title') || 'White',
+  }).catch(() => {});
+}
+
 // Parse layout string into granular fields for tracking
 function parsePitchLayout(lay) {
   const isV = (/full-v|half-v/).test(lay);
@@ -600,6 +626,7 @@ S.svg.addEventListener('click', e => {
     const link = addLink(_linkStartPlayer.id, clickedEl.id);
     if (link) {
       trackElementInserted('connect');
+      maybeSendPitchSnapshot();
       const u = getCurrentUser();
       if (u) logAction(u.uid, u.email, 'element_inserted', { element: 'connect' }).catch(() => {});
     }
@@ -632,6 +659,7 @@ S.svg.addEventListener('click', e => {
     const pair = addPair(_pairStartPlayer.id, clickedEl.id);
     if (pair) {
       trackElementInserted('pair');
+      maybeSendPitchSnapshot();
       const u = getCurrentUser();
       if (u) logAction(u.uid, u.email, 'element_inserted', { element: 'pair' }).catch(() => {});
     }
@@ -661,6 +689,7 @@ S.svg.addEventListener('click', e => {
   if (placed) {
     const elType = placed.dataset.type;
     trackElementInserted(elType);
+    maybeSendPitchSnapshot();
     // Log element insertion to Firestore
     const u = getCurrentUser();
     if (u) logAction(u.uid, u.email, 'element_inserted', { element: elType }).catch(() => {});
