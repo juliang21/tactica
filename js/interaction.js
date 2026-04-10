@@ -94,8 +94,8 @@ export function applyTransform(el) {
     if (_rewrapFn) _rewrapFn(el);
   } else if (t === 'headline') {
     if (_rewrapHeadlineFn) _rewrapHeadlineFn(el);
-  } else if (t === 'shadow-circle') {
-    const sh = el.querySelector('ellipse');
+  } else if (t === 'shadow-circle' || t === 'pair') {
+    const sh = el.querySelector('ellipse,.pair-ellipse');
     const hw = parseFloat(el.dataset.hw || '30') * scale;
     const hh = parseFloat(el.dataset.hh || '20') * scale;
     sh.setAttribute('cx', cx); sh.setAttribute('cy', cy);
@@ -1137,7 +1137,7 @@ function onEndpointDrag(e) {
     onMotionEndpointDrag(el, pt);
   } else if (t === 'tag') {
     onTagHandleDrag(el, pt);
-  } else if (t.startsWith('shadow') || t === 'textbox' || t === 'headline') {
+  } else if (t.startsWith('shadow') || t === 'textbox' || t === 'headline' || t === 'pair') {
     onZoneHandleDrag(el, pt);
   }
 }
@@ -1456,7 +1456,7 @@ function onDrag(e) {
     moveElement(S.selectedEl, pt.x - S.dragOffX, pt.y - S.dragOffY);
     // Update handles if dragging the whole element
     const dt = S.selectedEl.dataset.type;
-    if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight' || dt === 'vision') updateHandlePositions(S.selectedEl);
+    if (dt === 'arrow' || dt?.startsWith('shadow') || dt === 'textbox' || dt === 'spotlight' || dt === 'vision' || dt === 'pair') updateHandlePositions(S.selectedEl);
   }
   // Update player links after any drag
   if (_updateAllLinksFn) _updateAllLinksFn();

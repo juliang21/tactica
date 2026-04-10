@@ -1528,6 +1528,8 @@ export function updatePair(pairEl) {
   const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
 
   pairEl.dataset.cx = cx; pairEl.dataset.cy = cy;
+  pairEl.dataset.hw = rx; pairEl.dataset.hh = ry;
+  pairEl.dataset.rotation = angle;
 
   ellipse.setAttribute('cx', cx);
   ellipse.setAttribute('cy', cy);
