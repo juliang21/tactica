@@ -264,8 +264,8 @@ export function select(el, opts = {}) {
     el.querySelector('.arrow-line')?.setAttribute('stroke-width', w + 1.5);
     showArrowHandles(el);
   }
-  if (type.startsWith('shadow')) {
-    const shape = el.querySelector('rect,ellipse');
+  if (type.startsWith('shadow') || type === 'pair') {
+    const shape = el.querySelector('rect,ellipse,.pair-ellipse');
     if (shape) {
       // Save current stroke before applying selection highlight
       if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke');
@@ -330,15 +330,6 @@ export function select(el, opts = {}) {
       linkLine.setAttribute('stroke-width', '3');
     }
   }
-  if (type === 'pair') {
-    const pairEllipse = el.querySelector('.pair-ellipse');
-    if (pairEllipse) {
-      if (!el.dataset.savedStroke) el.dataset.savedStroke = pairEllipse.getAttribute('stroke');
-      pairEllipse.setAttribute('stroke', 'rgba(79,156,249,0.9)');
-    }
-    showZoneHandles(el);
-  }
-
   // If multi-select, show multi-select UI instead of individual panels
   if (S.selectedEls.size > 1) {
     _updateMultiSelectUI();
@@ -359,6 +350,7 @@ export function select(el, opts = {}) {
     : type === 'headline' ? 'Headline'
     : type === 'tag' ? 'Tag'
     : type === 'link' ? 'Player Link'
+    : type === 'pair' ? 'Pair'
     : 'Zone';
   const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
@@ -402,7 +394,7 @@ export function select(el, opts = {}) {
   layerSec.style.display = '';
 
   const isArrow = type === 'arrow';
-  const isZone = type?.startsWith('shadow');
+  const isZone = type?.startsWith('shadow') || type === 'pair';
   const isText = type === 'textbox';
   const isHeadline = type === 'headline';
   const isTag = type === 'tag';
@@ -584,8 +576,8 @@ export function deselectVisual(el) {
     const w = el.dataset.arrowWidth || '2.5';
     el.querySelector('.arrow-line')?.setAttribute('stroke-width', w);
   }
-  if (t.startsWith('shadow')) {
-    const shape = el.querySelector('rect,ellipse');
+  if (t.startsWith('shadow') || t === 'pair') {
+    const shape = el.querySelector('rect,ellipse,.pair-ellipse');
     if (shape && el.dataset.savedStroke) {
       shape.setAttribute('stroke', el.dataset.savedStroke);
       delete el.dataset.savedStroke;
@@ -644,13 +636,6 @@ export function deselectVisual(el) {
       const saved = el.dataset.savedStroke || el.dataset.linkColor || 'rgba(255,255,255,0.4)';
       linkLine.setAttribute('stroke', saved);
       linkLine.setAttribute('stroke-width', '2');
-      delete el.dataset.savedStroke;
-    }
-  }
-  if (t === 'pair') {
-    const pairEllipse = el.querySelector('.pair-ellipse');
-    if (pairEllipse && el.dataset.savedStroke) {
-      pairEllipse.setAttribute('stroke', el.dataset.savedStroke);
       delete el.dataset.savedStroke;
     }
   }

@@ -1361,6 +1361,20 @@ export function addLink(player1Id, player2Id, opts = {}) {
   g.addEventListener('click', e => {
     if (S.tool === 'select') { e.stopPropagation(); selectConnectedGroup(g, e); }
   });
+  // Mousedown handler: if players are already selected, start group drag
+  g.addEventListener('mousedown', e => {
+    if (S.tool !== 'select') return;
+    // Select connected group first if not already multi-selected
+    selectConnectedGroup(g, e);
+    // Now start the drag via a synthetic mousedown on the first connected player
+    const p1 = document.getElementById(g.dataset.player1);
+    if (p1) {
+      // The players are now in selectedEls; dispatch mousedown on one to trigger startDrag
+      const synth = new MouseEvent('mousedown', { bubbles: false, clientX: e.clientX, clientY: e.clientY, ctrlKey: e.ctrlKey, metaKey: e.metaKey });
+      e.stopPropagation(); e.preventDefault();
+      p1.dispatchEvent(synth);
+    }
+  });
 
   return g;
 }
@@ -1466,11 +1480,11 @@ export function addPair(player1Id, player2Id) {
   g.dataset.player2 = player2Id;
   g.dataset.cx = '0'; g.dataset.cy = '0';
   g.dataset.scale = '1'; g.dataset.rotation = '0';
-  g.dataset.pairColor = 'rgba(239,68,68,0.18)';
+  g.dataset.pairColor = 'rgba(220,38,38,0.4)';
 
   const ellipse = document.createElementNS(ns, 'ellipse');
   ellipse.classList.add('pair-ellipse');
-  ellipse.setAttribute('fill', 'rgba(239,68,68,0.18)');
+  ellipse.setAttribute('fill', 'rgba(220,38,38,0.4)');
   ellipse.setAttribute('stroke', 'rgba(255,255,255,0.5)');
   ellipse.setAttribute('stroke-width', '1.5');
   ellipse.setAttribute('stroke-dasharray', '4,3');
@@ -1509,8 +1523,8 @@ export function updatePair(pairEl) {
   const cx = (x1 + x2) / 2;
   const cy = (y1 + y2) / 2;
   const dist = Math.sqrt((x2 - x1) ** 2 + (y2 - y1) ** 2);
-  const rx = dist / 2 + 22; // padding beyond players
-  const ry = 22; // fixed height to wrap players snugly
+  const rx = dist / 2 + 24; // padding beyond players
+  const ry = 28; // height to wrap players comfortably
   const angle = Math.atan2(y2 - y1, x2 - x1) * 180 / Math.PI;
 
   pairEl.dataset.cx = cx; pairEl.dataset.cy = cy;
@@ -1522,7 +1536,7 @@ export function updatePair(pairEl) {
   ellipse.setAttribute('transform', `rotate(${angle} ${cx} ${cy})`);
 
   // Apply color
-  const color = pairEl.dataset.pairColor || 'rgba(239,68,68,0.18)';
+  const color = pairEl.dataset.pairColor || 'rgba(220,38,38,0.4)';
   ellipse.setAttribute('fill', color);
 }
 
