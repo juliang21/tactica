@@ -3051,38 +3051,53 @@ onAuthChange(async (user) => {
       showNotification('Welcome to Táctica, ' + name + '!', 'success', 4000);
     }
 
-    // Feature announcements — two-step guided flow, shown once per user
-    setTimeout(() => {
+    // Feature announcements — shown once on first click of each tool
+    if (window.innerWidth > 768) {
       const connectBtn = document.getElementById('connect-btn');
-      if (connectBtn && window.innerWidth > 768) {
-        showFeatureAnnounce({
-          id: 'new-features-apr2026',
-          anchorEl: connectBtn,
-          img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#1a2a1a"/><rect x="10" y="10" width="260" height="120" rx="6" fill="#2d5a2d" opacity="0.6"/><line x1="140" y1="10" x2="140" y2="130" stroke="rgba(255,255,255,0.15)" stroke-width="1"/><circle cx="60" cy="50" r="18" fill="#8B5CF6" opacity="0.9"/><text x="60" y="55" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">2</text><circle cx="140" cy="40" r="18" fill="#8B5CF6" opacity="0.9"/><text x="140" y="45" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">6</text><circle cx="220" cy="55" r="18" fill="#8B5CF6" opacity="0.9"/><text x="220" y="60" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">9</text><circle cx="140" cy="100" r="18" fill="#FBBF24" opacity="0.9"/><text x="140" y="105" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">4</text><line x1="78" y1="50" x2="122" y2="40" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="158" y1="40" x2="202" y2="55" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="140" y1="58" x2="140" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/></svg>`),
-          title: 'Connect Players',
-          text: 'Draw tactical connections between players. Click multiple players to chain them together — great for showing passing lanes and pressing triggers.',
-          cta: 'Next',
-          onCta: () => {
-            setTool('link');
-            // Step 2: Show Export Video tooltip anchored to the Animation Step button
-            setTimeout(() => {
-              const stepBtn = document.getElementById('step-btn');
-              if (stepBtn) {
-                showFeatureAnnounce({
-                  id: 'export-video-v1',
-                  anchorEl: stepBtn,
-                  skipCheck: true,
-                  img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#141420"/><rect x="20" y="16" width="240" height="108" rx="8" fill="#1e1e2a" stroke="rgba(255,255,255,0.08)" stroke-width="1"/><rect x="36" y="90" width="44" height="22" rx="4" fill="rgba(201,169,98,0.15)" stroke="rgba(201,169,98,0.4)" stroke-width="1"/><text x="58" y="104" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="600" fill="#c8a94e">Start</text><rect x="88" y="90" width="24" height="22" rx="4" fill="rgba(201,169,98,0.25)" stroke="rgba(201,169,98,0.5)" stroke-width="1"/><text x="100" y="104" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c8a94e">1</text><rect x="120" y="90" width="24" height="22" rx="4" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/><text x="132" y="104" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="600" fill="rgba(255,255,255,0.5)">2</text><polygon points="170,95 182,101 170,107" fill="none" stroke="#c8a94e" stroke-width="1.2"/><text x="190" y="104" font-family="sans-serif" font-size="8" font-weight="600" fill="#c8a94e">Play</text><circle cx="80" cy="50" r="12" fill="#8B5CF6" opacity="0.8"/><text x="80" y="54" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="white">7</text><circle cx="140" cy="42" r="12" fill="#8B5CF6" opacity="0.8"/><text x="140" y="46" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="white">10</text><circle cx="200" cy="50" r="12" fill="#8B5CF6" opacity="0.8"/><text x="200" y="54" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="white">11</text><line x1="92" y1="50" x2="128" y2="42" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/><path d="M110 46 L128 42" stroke="rgba(201,169,98,0.6)" stroke-width="1.5" marker-end="url(#arr)"/><line x1="152" y1="42" x2="188" y2="50" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/><rect x="210" y="88" width="40" height="24" rx="4" fill="rgba(201,169,98,0.12)" stroke="rgba(201,169,98,0.3)" stroke-width="1"/><text x="230" y="98" text-anchor="middle" font-family="sans-serif" font-size="6" fill="rgba(201,169,98,0.8)">Export</text><text x="230" y="107" text-anchor="middle" font-family="sans-serif" font-size="6" font-weight="700" fill="#c8a94e">MP4</text></svg>`),
-                  title: 'Animate & Export MP4',
-                  text: 'Create step-by-step animations and export them as MP4 videos you can share directly on Twitter, WhatsApp, or anywhere.',
-                  cta: 'Got it',
-                });
-              }
-            }, 400);
-          }
+      if (connectBtn) {
+        connectBtn.addEventListener('click', function _connectAnnounce() {
+          showFeatureAnnounce({
+            id: 'connect-tooltip-v1',
+            anchorEl: connectBtn,
+            img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#1a2a1a"/><rect x="10" y="10" width="260" height="120" rx="6" fill="#2d5a2d" opacity="0.6"/><line x1="140" y1="10" x2="140" y2="130" stroke="rgba(255,255,255,0.15)" stroke-width="1"/><circle cx="60" cy="50" r="18" fill="#8B5CF6" opacity="0.9"/><text x="60" y="55" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">2</text><circle cx="140" cy="40" r="18" fill="#8B5CF6" opacity="0.9"/><text x="140" y="45" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">6</text><circle cx="220" cy="55" r="18" fill="#8B5CF6" opacity="0.9"/><text x="220" y="60" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">9</text><circle cx="140" cy="100" r="18" fill="#FBBF24" opacity="0.9"/><text x="140" y="105" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">4</text><line x1="78" y1="50" x2="122" y2="40" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="158" y1="40" x2="202" y2="55" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="140" y1="58" x2="140" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/></svg>`),
+            title: 'Connect Players',
+            text: 'Draw tactical connections between players. Click multiple players to chain them together — great for showing passing lanes and pressing triggers.',
+            cta: 'Got it',
+          });
+          connectBtn.removeEventListener('click', _connectAnnounce);
         });
       }
-    }, 1500);
+
+      const stepBtn = document.getElementById('step-btn');
+      if (stepBtn) {
+        stepBtn.addEventListener('click', function _stepAnnounce() {
+          showFeatureAnnounce({
+            id: 'step-tooltip-v1',
+            anchorEl: stepBtn,
+            img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#141420"/><rect x="20" y="16" width="240" height="108" rx="8" fill="#1e1e2a" stroke="rgba(255,255,255,0.08)" stroke-width="1"/><rect x="36" y="90" width="44" height="22" rx="4" fill="rgba(201,169,98,0.15)" stroke="rgba(201,169,98,0.4)" stroke-width="1"/><text x="58" y="104" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="600" fill="#c8a94e">Start</text><rect x="88" y="90" width="24" height="22" rx="4" fill="rgba(201,169,98,0.25)" stroke="rgba(201,169,98,0.5)" stroke-width="1"/><text x="100" y="104" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="#c8a94e">1</text><rect x="120" y="90" width="24" height="22" rx="4" fill="rgba(255,255,255,0.05)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/><text x="132" y="104" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="600" fill="rgba(255,255,255,0.5)">2</text><polygon points="170,95 182,101 170,107" fill="none" stroke="#c8a94e" stroke-width="1.2"/><text x="190" y="104" font-family="sans-serif" font-size="8" font-weight="600" fill="#c8a94e">Play</text><circle cx="80" cy="50" r="12" fill="#8B5CF6" opacity="0.8"/><text x="80" y="54" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="white">7</text><circle cx="140" cy="42" r="12" fill="#8B5CF6" opacity="0.8"/><text x="140" y="46" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="white">10</text><circle cx="200" cy="50" r="12" fill="#8B5CF6" opacity="0.8"/><text x="200" y="54" text-anchor="middle" font-family="sans-serif" font-size="8" font-weight="700" fill="white">11</text><line x1="92" y1="50" x2="128" y2="42" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/><path d="M110 46 L128 42" stroke="rgba(201,169,98,0.6)" stroke-width="1.5" marker-end="url(#arr)"/><line x1="152" y1="42" x2="188" y2="50" stroke="rgba(255,255,255,0.3)" stroke-width="1.5" stroke-dasharray="4,3"/><rect x="210" y="88" width="40" height="24" rx="4" fill="rgba(201,169,98,0.12)" stroke="rgba(201,169,98,0.3)" stroke-width="1"/><text x="230" y="98" text-anchor="middle" font-family="sans-serif" font-size="6" fill="rgba(201,169,98,0.8)">Export</text><text x="230" y="107" text-anchor="middle" font-family="sans-serif" font-size="6" font-weight="700" fill="#c8a94e">MP4</text></svg>`),
+            title: 'Animate & Export MP4',
+            text: 'Create step-by-step animations and export them as MP4 videos you can share directly on Twitter, WhatsApp, or anywhere.',
+            cta: 'Got it',
+          });
+          stepBtn.removeEventListener('click', _stepAnnounce);
+        });
+      }
+
+      const pairBtn = document.getElementById('pair-btn');
+      if (pairBtn) {
+        pairBtn.addEventListener('click', function _pairAnnounce() {
+          showFeatureAnnounce({
+            id: 'pair-tooltip-v1',
+            anchorEl: pairBtn,
+            img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#1a2a1a"/><rect x="10" y="10" width="260" height="120" rx="6" fill="#2d5a2d" opacity="0.6"/><line x1="140" y1="10" x2="140" y2="130" stroke="rgba(255,255,255,0.15)" stroke-width="1"/><ellipse cx="140" cy="70" rx="80" ry="36" fill="rgba(234,179,8,0.35)" stroke="rgba(255,255,255,0.5)" stroke-width="2" stroke-dasharray="6,4"/><circle cx="100" cy="70" r="18" fill="#8B5CF6" opacity="0.9"/><text x="100" y="75" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">4</text><circle cx="180" cy="70" r="18" fill="#FBBF24" opacity="0.9"/><text x="180" y="75" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">6</text></svg>`),
+            title: 'Pair Players',
+            text: 'Visually group two players with an ellipse zone. Click two players to mark them as a pair — perfect for showing man-marking, partnerships, or 1v1 matchups.',
+            cta: 'Got it',
+          });
+          pairBtn.removeEventListener('click', _pairAnnounce);
+        });
+      }
+    }
 
     // Welcome modals (show for first 2 sessions)
     if (window.innerWidth <= 768) {

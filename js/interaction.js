@@ -271,8 +271,7 @@ export function select(el, opts = {}) {
       if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke');
       shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
     }
-    // Pair shape is driven by player positions — no resize handles needed
-    if (type !== 'pair') showZoneHandles(el);
+    showZoneHandles(el);
   }
   if (type === 'spotlight') {
     const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
@@ -1326,6 +1325,8 @@ function onZoneHandleDrag(el, pt) {
   const { minHW, minHH } = isText ? getTextBoxMinSize(el) : { minHW: defaultMin, minHH: defaultMin };
 
   if (h === 'rotate') {
+    // Pair rotation is driven by player positions, skip manual rotation
+    if (el.dataset.type === 'pair') return;
     const angle = Math.atan2(pt.y - cy, pt.x - cx) * 180 / Math.PI;
     const baseAngle = Math.atan2(-hh, hw) * 180 / Math.PI;
     rot = angle - baseAngle;
@@ -1384,6 +1385,14 @@ function onZoneHandleDrag(el, pt) {
 
   el.dataset.hw = hw; el.dataset.hh = hh;
   el.dataset.scale = '1';
+
+  // For pair elements, back-calculate padding offsets so updatePair preserves manual resize
+  if (el.dataset.type === 'pair') {
+    const dist = parseFloat(el.dataset.pairDist || '0');
+    el.dataset.pairPadX = Math.max(10, hw - dist / 2);
+    el.dataset.pairPadY = Math.max(10, hh);
+  }
+
   applyTransform(el);
   updateHandlePositions(el);
 }
