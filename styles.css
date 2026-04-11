@@ -1139,6 +1139,9 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   }
   .panel-close-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
 
+  /* Hide desktop toolbar toggle on mobile */
+  .toolbar-toggle { display: none !important; }
+
   /* Panel toggle button visible */
   #mobile-panel-toggle {
     display: flex;
