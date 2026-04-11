@@ -356,7 +356,11 @@ window.applyNameSize = applyNameSize;
 window.applyNameColor = applyNameColor;
 window.applyNameBg = applyNameBg;
 window.updatePlayerNameBg = updatePlayerNameBg;
-window.applyPlayerFill = applyPlayerFill;
+window.applyPlayerFill = function(swatchEl) {
+  applyPlayerFill(swatchEl);
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_custom_color', { color: swatchEl.dataset.color, source: 'player_fill' }).catch(() => {});
+};
 window.applyPlayerBorder = applyPlayerBorder;
 window.togglePlayerArms = togglePlayerArms;
 window.liveUpdateRefName = liveUpdateRefName;

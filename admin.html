@@ -543,7 +543,11 @@ const FEATURE_CONFIGS = [
   { label: 'Custom Color', action: 'feature_custom_color', metaKey: 'color' },
   { label: 'Element Inserted', action: 'element_inserted', metaKey: 'element' },
   { label: 'Element Selected', action: 'element_selected', metaKey: 'element' },
-  { label: 'Animation', action: 'feature_animation', metaKey: 'trigger' },
+  { label: 'Animation', isGroup: true, children: [
+    { label: 'Play', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'play' },
+    { label: 'Export GIF', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export') },
+    { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_video' },
+  ]},
   { label: 'Toolbar Toggle', action: 'feature_toolbar_toggle', metaKey: 'type' },
 ];
 
