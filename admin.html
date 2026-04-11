@@ -4,12 +4,12 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Tactica Admin Dashboard</title>
-<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700&family=Outfit:wght@800;900&display=swap" rel="stylesheet">
 <style>
   * { margin: 0; padding: 0; box-sizing: border-box; }
   body {
     font-family: 'Manrope', sans-serif;
-    background: #0f0f13; color: #e0e0e0;
+    background: #121212; color: #e0e0e0;
     min-height: 100vh; padding: 32px;
   }
   .header {
@@ -17,16 +17,17 @@
     margin-bottom: 0; padding-bottom: 16px;
     border-bottom: 1px solid rgba(255,255,255,0.1);
   }
-  .header h1 { font-size: 22px; font-weight: 700; letter-spacing: 2px; color: #D4A843; }
-  .header .badge { font-size: 10px; background: rgba(212,168,67,0.2); color: #D4A843; padding: 3px 8px; border-radius: 4px; font-weight: 600; letter-spacing: 1px; }
+  .header h1 { font-family: 'Outfit', sans-serif; font-size: 22px; font-weight: 800; letter-spacing: 3px; color: #e2e2e2; }
+  .header .badge { font-size: 10px; background: rgba(52,211,153,0.15); color: #34D399; padding: 3px 8px; border-radius: 6px; font-weight: 600; letter-spacing: 1px; }
   .loading { text-align: center; padding: 60px; color: #888; font-size: 14px; }
   .auth-gate { text-align: center; padding: 80px 20px; }
-  .auth-gate h2 { font-size: 18px; margin-bottom: 16px; color: #D4A843; }
+  .auth-gate h2 { font-size: 18px; margin-bottom: 16px; color: #34D399; }
   .auth-gate p { color: #888; font-size: 13px; margin-bottom: 24px; }
   .auth-gate button {
-    background: #D4A843; color: #000; border: none; padding: 10px 24px;
-    border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 13px;
+    background: #34D399; color: #000; border: none; padding: 10px 24px;
+    border-radius: 20px; font-weight: 600; cursor: pointer; font-size: 13px;
     font-family: 'Manrope', sans-serif;
+    box-shadow: 0 4px 16px rgba(52,211,153,0.35);
   }
 
   /* Tabs */
@@ -42,7 +43,7 @@
     transition: all 0.15s; letter-spacing: 0.3px;
   }
   .admin-tab:hover { color: #999; }
-  .admin-tab.active { background: #D4A843; color: #000; }
+  .admin-tab.active { background: #34D399; color: #000; border-radius: 20px; }
   .tab-content { display: none; }
   .tab-content.active { display: block; }
 
@@ -52,7 +53,7 @@
     gap: 16px; margin-bottom: 16px;
   }
   .stat-card {
-    background: #1a1a22; border-radius: 12px; padding: 20px;
+    background: #1a1a1a; border-radius: 12px; padding: 20px;
     border: 1px solid rgba(255,255,255,0.06);
   }
   .stat-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 8px; }
@@ -63,8 +64,8 @@
   .section { margin-bottom: 32px; }
   .section-header {
     font-size: 13px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase;
-    color: #D4A843; margin-bottom: 14px; padding-bottom: 8px;
-    border-bottom: 1px solid rgba(212,168,67,0.15);
+    color: #34D399; margin-bottom: 14px; padding-bottom: 8px;
+    border-bottom: 1px solid rgba(52,211,153,0.15);
     display: flex; align-items: center; gap: 8px;
   }
   .section-header .icon { font-size: 14px; opacity: 0.7; }
@@ -73,16 +74,16 @@
   /* Table */
   .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  th { text-align: left; padding: 10px 14px; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #666; background: #1a1a22; border-bottom: 1px solid rgba(255,255,255,0.06); }
+  th { text-align: left; padding: 10px 14px; font-size: 9px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: #666; background: #1a1a1a; border-bottom: 1px solid rgba(255,255,255,0.06); }
   td { padding: 10px 14px; border-bottom: 1px solid rgba(255,255,255,0.04); }
-  tr:hover td { background: rgba(212,168,67,0.03); }
-  .email { color: #D4A843; }
+  tr:hover td { background: rgba(52,211,153,0.03); }
+  .email { color: #34D399; }
   .returning { color: #4ade80; font-weight: 600; }
   .new { color: #888; }
 
   /* Milestone bar */
   .milestone-card {
-    background: #1a1a22; border-radius: 12px; padding: 20px;
+    background: #1a1a1a; border-radius: 12px; padding: 20px;
     border: 1px solid rgba(255,255,255,0.06);
     grid-column: 1 / -1;
   }
@@ -93,7 +94,7 @@
   }
   .milestone-fill {
     height: 100%; border-radius: 14px;
-    background: linear-gradient(90deg, #D4A843, #e8c96a);
+    background: linear-gradient(90deg, #34D399, #6EE7B7);
     transition: width 0.6s ease; position: relative;
   }
   .milestone-fill .milestone-count {
@@ -109,13 +110,13 @@
   }
   .milestone-marker .tick { width: 1px; height: 8px; background: rgba(255,255,255,0.15); }
   .milestone-marker .m-label { font-size: 9px; color: #555; font-weight: 600; margin-top: 2px; }
-  .milestone-marker.reached .m-label { color: #D4A843; }
+  .milestone-marker.reached .m-label { color: #34D399; }
   .milestone-marker.next .m-label { color: #e0e0e0; }
 
   /* Activity chart */
-  .chart-container { background: #1a1a22; border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
+  .chart-container { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
   .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 120px; margin-top: 12px; }
-  .chart-bar { flex: 1; background: #D4A843; border-radius: 3px 3px 0 0; min-width: 8px; position: relative; transition: all 0.2s; cursor: default; }
+  .chart-bar { flex: 1; background: #34D399; border-radius: 3px 3px 0 0; min-width: 8px; position: relative; transition: all 0.2s; cursor: default; }
   .chart-bar:hover { opacity: 0.8; }
   .chart-bar .tooltip {
     display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
@@ -131,21 +132,21 @@
     padding: 6px 14px; border-radius: 6px; font-size: 11px; cursor: pointer;
     font-family: 'Manrope', sans-serif; font-weight: 500; transition: all 0.15s;
   }
-  .refresh-btn:hover { border-color: #D4A843; color: #D4A843; }
+  .refresh-btn:hover { border-color: #34D399; color: #34D399; border-radius: 20px; }
 
   .date-filters { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
   .date-filters label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #666; }
   .date-filters input[type="date"] {
-    background: #1a1a22; border: 1px solid rgba(255,255,255,0.1); color: #e0e0e0;
+    background: #1a1a1a; border: 1px solid rgba(255,255,255,0.1); color: #e0e0e0;
     padding: 6px 10px; border-radius: 6px; font-size: 12px; font-family: 'Manrope', sans-serif;
     outline: none; cursor: pointer;
   }
-  .date-filters input[type="date"]:focus { border-color: #D4A843; }
+  .date-filters input[type="date"]:focus { border-color: #34D399; }
   .date-filters .sep { color: #444; font-size: 12px; }
 
   /* Feature breakdown cards */
   .feature-card {
-    background: #1a1a22; border-radius: 12px; padding: 20px;
+    background: #1a1a1a; border-radius: 12px; padding: 20px;
     border: 1px solid rgba(255,255,255,0.06);
     margin-bottom: 20px;
   }
@@ -154,7 +155,7 @@
     margin-bottom: 14px; padding-bottom: 10px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
   }
-  .feature-card-title { font-size: 14px; font-weight: 700; color: #D4A843; letter-spacing: 0.5px; }
+  .feature-card-title { font-size: 14px; font-weight: 700; color: #34D399; letter-spacing: 0.5px; }
   .feature-card-summary { font-size: 11px; color: #666; }
   .breakdown-bar {
     display: flex; align-items: center; gap: 10px;
@@ -163,18 +164,18 @@
   .breakdown-bar:last-child { border-bottom: none; }
   .breakdown-label { font-size: 12px; color: #ccc; min-width: 140px; }
   .breakdown-track { flex: 1; height: 20px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
-  .breakdown-fill { height: 100%; background: #D4A843; border-radius: 4px; min-width: 2px; transition: width 0.3s; }
+  .breakdown-fill { height: 100%; background: #34D399; border-radius: 4px; min-width: 2px; transition: width 0.3s; }
   .breakdown-count { font-size: 11px; color: #888; min-width: 60px; text-align: right; }
   .breakdown-sessions { font-size: 10px; color: #555; min-width: 80px; text-align: right; }
 
   /* Pitch analytics pie charts */
   .pitch-analytics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px; margin-bottom: 16px; }
   .pie-card {
-    background: #1a1a22; border-radius: 12px; padding: 16px;
+    background: #1a1a1a; border-radius: 12px; padding: 16px;
     border: 1px solid rgba(255,255,255,0.06);
     display: flex; flex-direction: column; align-items: center;
   }
-  .pie-card h4 { font-size: 12px; font-weight: 700; color: #D4A843; margin: 0 0 12px 0; letter-spacing: 0.5px; }
+  .pie-card h4 { font-size: 12px; font-weight: 700; color: #34D399; margin: 0 0 12px 0; letter-spacing: 0.5px; }
   .pie-legend { margin-top: 10px; width: 100%; }
   .pie-legend-row { display: flex; align-items: center; gap: 6px; padding: 3px 0; font-size: 11px; color: #ccc; }
   .pie-legend-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
@@ -182,15 +183,15 @@
 
   /* Top combos table */
   .combos-card {
-    background: #1a1a22; border-radius: 12px; padding: 16px;
+    background: #1a1a1a; border-radius: 12px; padding: 16px;
     border: 1px solid rgba(255,255,255,0.06); margin-bottom: 20px;
   }
-  .combos-card h4 { font-size: 12px; font-weight: 700; color: #D4A843; margin: 0 0 12px 0; letter-spacing: 0.5px; }
+  .combos-card h4 { font-size: 12px; font-weight: 700; color: #34D399; margin: 0 0 12px 0; letter-spacing: 0.5px; }
   .combos-table { width: 100%; border-collapse: collapse; }
   .combos-table th { text-align: left; font-size: 10px; color: #666; text-transform: uppercase; letter-spacing: 0.5px; padding: 6px 8px; border-bottom: 1px solid rgba(255,255,255,0.08); }
   .combos-table td { font-size: 12px; color: #ccc; padding: 8px; border-bottom: 1px solid rgba(255,255,255,0.03); }
   .combos-table tr:last-child td { border-bottom: none; }
-  .combos-rank { color: #D4A843; font-weight: 700; width: 24px; }
+  .combos-rank { color: #34D399; font-weight: 700; width: 24px; }
 
 </style>
 </head>
@@ -223,7 +224,7 @@
     <input type="date" id="date-end" onchange="applyDateFilter()">
     <span class="sep" style="margin-left:12px"></span>
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
-      <input type="checkbox" id="exclude-me" checked onchange="applyDateFilter()" style="accent-color:#D4A843;cursor:pointer">
+      <input type="checkbox" id="exclude-me" checked onchange="applyDateFilter()" style="accent-color:#34D399;cursor:pointer">
       <span>Exclude me</span>
     </label>
   </div>
@@ -559,7 +560,7 @@ function renderFeatureCard(cfg, actions, html) {
   const uniqueSessions = new Set(items.map(a => a.sessionId).filter(Boolean)).size;
   const uniqueUsers = new Set(items.map(a => a.uid)).size;
 
-  html += `<div class="feature-card" style="${cfg._nested ? 'margin-left:16px;border-left:2px solid rgba(212,168,67,0.2);padding-left:12px;' : ''}">
+  html += `<div class="feature-card" style="${cfg._nested ? 'margin-left:16px;border-left:2px solid rgba(52,211,153,0.2);padding-left:12px;' : ''}">
     <div class="feature-card-header">
       <span class="feature-card-title">${cfg.label}</span>
       <span class="feature-card-summary">${uniqueSessions} sessions &middot; ${uniqueUsers} coaches &middot; ${totalEvents} events</span>
@@ -627,7 +628,7 @@ function renderPitchAnalytics(items, isSnapshot) {
     noGrid = t2 - gridBoth - gridH - gridV;
   }
 
-  const colors = { a: '#D4A843', b: '#4A90D9', c: '#5BBD72', d: '#E87461', muted: 'rgba(255,255,255,0.08)' };
+  const colors = { a: '#34D399', b: '#4A90D9', c: '#5BBD72', d: '#E87461', muted: 'rgba(255,255,255,0.08)' };
 
   const sourceLabel = isSnapshot ? 'Actual usage' : 'Click data (legacy)';
   let html = `<div style="font-size:10px;color:#555;margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Pitch Analytics &middot; ${total} sessions &middot; ${sourceLabel}</div>`;
@@ -730,9 +731,9 @@ function renderFeaturesTab(actions, activeUsers) {
       const groupSessions = new Set(allGroupItems.map(a => a.sessionId).filter(Boolean)).size;
       const groupUsers = new Set(allGroupItems.map(a => a.uid)).size;
 
-      html += `<div class="feature-card" style="border-color:rgba(212,168,67,0.3);">
+      html += `<div class="feature-card" style="border-color:rgba(52,211,153,0.3);">
         <div class="feature-card-header">
-          <span class="feature-card-title" style="color:#D4A843">${cfg.label}</span>
+          <span class="feature-card-title" style="color:#34D399">${cfg.label}</span>
           <span class="feature-card-summary">${groupSessions} sessions &middot; ${groupUsers} coaches &middot; ${groupTotal} events</span>
         </div>`;
 
