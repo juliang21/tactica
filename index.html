@@ -326,6 +326,15 @@
           <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v7M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
           Export Image
         </button>
+        <div class="save-menu-sep save-menu-anim" style="display:none"></div>
+        <button class="save-menu-item save-menu-anim" style="display:none" onclick="closeSaveMenu();exportAnimation()">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2" fill="none"/><polygon points="6,6 11,8 6,10" fill="currentColor" opacity="0.7"/></svg>
+          Export GIF
+        </button>
+        <button class="save-menu-item save-menu-anim" style="display:none" onclick="closeSaveMenu();exportVideo()">
+          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 4a1 1 0 011-1h8a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M11 6l4-2v8l-4-2" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none"/></svg>
+          Export Video
+        </button>
       </div>
     </div>
   </div>

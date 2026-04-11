@@ -2476,6 +2476,11 @@ function toggleSaveMenu() {
   const menu = document.getElementById('save-menu');
   const btn = document.querySelector('.save-btn');
   if (menu.style.display === 'none') {
+    // Show/hide animation export items based on whether steps exist
+    const hasAnim = typeof frames !== 'undefined' && frames.length >= 2;
+    menu.querySelectorAll('.save-menu-anim').forEach(el => {
+      el.style.display = hasAnim ? '' : 'none';
+    });
     // On mobile, move menu to body so it escapes toolbar overflow
     const isMobile = window.innerWidth <= 768;
     if (isMobile && menu.parentElement !== document.body) {
