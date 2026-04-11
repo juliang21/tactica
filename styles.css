@@ -109,8 +109,8 @@ body {
 .toolbar-toggle.collapsed svg { transform: rotate(180deg); }
 .tool-logo {
   position: fixed; top: 14px; left: 72px; z-index: 200;
-  font-family: 'Playfair Display', serif;
-  font-size: 14px; font-weight: 600; letter-spacing: 3px;
+  font-family: 'Outfit', sans-serif;
+  font-size: 16px; font-weight: 800; letter-spacing: 3px;
   color: var(--text); text-transform: uppercase;
   display: flex; align-items: center; gap: 8px;
 }
@@ -1605,8 +1605,8 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 
 /* Headline */
 .landing-headline {
-  font-family: 'Space Grotesk', sans-serif;
-  font-size: 72px; font-weight: 700;
+  font-family: 'Outfit', sans-serif;
+  font-size: 72px; font-weight: 900;
   color: var(--text); line-height: 1.05;
   letter-spacing: -2px;
   margin-bottom: 20px;
@@ -1767,7 +1767,8 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
 }
 .modal-close:hover { color: var(--text); background: rgba(255,255,255,0.06); }
 .auth-logo {
-  font-family: 'Playfair Display', serif; font-size: 24px;
+  font-family: 'Outfit', sans-serif; font-size: 26px; font-weight: 900;
+  letter-spacing: 3px; text-transform: uppercase;
   color: var(--accent); margin-bottom: 20px;
 }
 .auth-tabs { display: flex; gap: 0; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
