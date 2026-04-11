@@ -108,7 +108,7 @@ body {
 .toolbar-toggle.collapsed { left: 12px; }
 .toolbar-toggle.collapsed svg { transform: rotate(180deg); }
 .tool-logo {
-  position: fixed; top: 14px; left: 72px; z-index: 200;
+  position: fixed; top: 14px; left: 25px; z-index: 200;
   font-family: 'Outfit', sans-serif;
   font-size: 16px; font-weight: 800; letter-spacing: 3px;
   color: var(--text); text-transform: uppercase;

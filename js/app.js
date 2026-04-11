@@ -2817,16 +2817,8 @@ async function updateCurrentBar() {
       return;
     }
   }
-  // Show "New analysis" for fresh sessions when user is logged in
-  if (getCurrentUser()) {
-    if (input) {
-      input.value = 'New analysis';
-      input.style.width = Math.min(Math.max(input.value.length * 7 + 24, 80), 200) + 'px';
-    }
-    bar.classList.add('show');
-  } else {
-    bar.classList.remove('show');
-  }
+  // Only show name field for saved analyses — hide for fresh/unsaved sessions
+  bar.classList.remove('show');
 }
 
 // Initialize bar on load
@@ -2836,29 +2828,38 @@ updateCurrentBar();
 (() => {
   const input = document.getElementById('analysis-name-input');
   if (!input) return;
+  let originalValue = '';
 
   input.addEventListener('click', () => {
+    originalValue = input.value;
     input.removeAttribute('readonly');
     input.focus();
     input.select();
+    // Track click on analysis name
+    const u = getCurrentUser();
+    if (u) logAction(u.uid, u.email, 'feature_rename_analysis', { trigger: 'click' }).catch(() => {});
   });
 
   input.addEventListener('blur', async () => {
     input.setAttribute('readonly', '');
     const newName = input.value.trim();
-    if (!newName) { await updateCurrentBar(); return; }
+    // If empty or unchanged, revert to original value
+    if (!newName || newName === originalValue) {
+      input.value = originalValue;
+      input.style.width = Math.min(Math.max(input.value.length * 7 + 24, 80), 200) + 'px';
+      return;
+    }
     const currentId = getCurrentId();
     if (currentId) {
       await renameAnalysis(currentId, newName);
-    } else if (newName !== 'New analysis') {
-      // Show reminder hint for unsaved analyses
-      showSaveReminder();
+      const u = getCurrentUser();
+      if (u) logAction(u.uid, u.email, 'feature_rename_analysis', { trigger: 'rename', newName }).catch(() => {});
     }
   });
 
   input.addEventListener('keydown', e => {
     if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
-    if (e.key === 'Escape') { input.blur(); }
+    if (e.key === 'Escape') { input.value = originalValue; input.blur(); }
   });
 
   input.addEventListener('input', () => {
