@@ -1026,6 +1026,8 @@ function goToStep(idx) {
 
 function deleteStep(idx) {
   if (frames.length <= 1) return; // can't delete the only step
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'delete_step', step: idx + 1, totalSteps: frames.length }).catch(() => {});
   frames.splice(idx, 1);
   if (currentFrame >= frames.length) currentFrame = frames.length - 1;
   applyFrame(currentFrame);
@@ -1038,6 +1040,9 @@ function clearAllSteps() {
   // Show confirmation dialog
   const stepCount = frames.length;
   if (!confirm(`Clear all ${stepCount} step${stepCount > 1 ? 's' : ''}? This cannot be undone.`)) return;
+
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'clear_all', steps: stepCount }).catch(() => {});
 
   if (animationRunning) {
     cancelAnimationFrame(animationId);
@@ -1264,6 +1269,8 @@ function resetToBase() {
     animationRunning = false;
     getAllElements().forEach(el => { el.style.opacity = ''; });
   }
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'reset', steps: frames.length }).catch(() => {});
   currentFrame = 0;
   applyFrame(0);
   renderStepBar();
