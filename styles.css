@@ -816,6 +816,17 @@ body.tool-motion #pitch-svg { cursor: crosshair; }
   border-color: var(--accent);
   color: var(--accent);
 }
+.step-pill { position: relative; display: inline-flex; align-items: center; gap: 4px; }
+.step-label { pointer-events: none; }
+.step-remove {
+  display: none; align-items: center; justify-content: center;
+  width: 14px; height: 14px; border-radius: 50%;
+  font-size: 12px; line-height: 1; font-weight: 700;
+  color: rgba(239,68,68,0.7); background: rgba(239,68,68,0.12);
+  cursor: pointer; transition: all 0.15s;
+}
+.step-pill:hover .step-remove { display: inline-flex; }
+.step-remove:hover { background: rgba(239,68,68,0.25); color: rgba(239,68,68,1); }
 .step-pill.step-add {
   color: var(--text-dim); font-size: 14px; padding: 4px 10px;
 }

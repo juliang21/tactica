@@ -994,8 +994,15 @@ function saveCurrentToFrame() {
 }
 
 function addStep() {
+  // First step: just capture current state as Step 1
   if (frames.length === 0) {
     frames.push({ positions: snapshotPositions(), elementIds: snapshotElementIds() });
+    currentFrame = 0;
+    renderStepBar();
+    drawTrails();
+    const u = getCurrentUser();
+    if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'add_step', step: 1 }).catch(() => {});
+    return;
   }
   saveCurrentToFrame();
   frames.push({ positions: snapshotPositions(), elementIds: snapshotElementIds() });
@@ -1004,7 +1011,7 @@ function addStep() {
   drawTrails();
   // Track animation feature usage
   const u = getCurrentUser();
-  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'add_step', step: currentFrame }).catch(() => {});
+  if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'add_step', step: currentFrame + 1 }).catch(() => {});
 }
 
 function goToStep(idx) {
@@ -1018,8 +1025,7 @@ function goToStep(idx) {
 }
 
 function deleteStep(idx) {
-  if (frames.length <= 1) return;
-  if (idx === 0) return; // can't delete start
+  if (frames.length <= 1) return; // can't delete the only step
   frames.splice(idx, 1);
   if (currentFrame >= frames.length) currentFrame = frames.length - 1;
   applyFrame(currentFrame);
@@ -1028,15 +1034,20 @@ function deleteStep(idx) {
 }
 
 function clearAllSteps() {
+  if (frames.length === 0) return;
+  // Show confirmation dialog
+  const stepCount = frames.length;
+  if (!confirm(`Clear all ${stepCount} step${stepCount > 1 ? 's' : ''}? This cannot be undone.`)) return;
+
   if (animationRunning) {
     cancelAnimationFrame(animationId);
     animationRunning = false;
     getAllElements().forEach(el => { el.style.opacity = ''; });
   }
-  // Restore to Start frame before clearing
+  // Restore to first frame before clearing
   if (frames.length > 0) {
     applyFrame(0);
-    // Remove elements that didn't exist in Start
+    // Remove elements that didn't exist in Step 1
     const startIds = frames[0].elementIds;
     getAllElements().forEach(el => {
       el.style.display = startIds.has(el.id) ? '' : 'none';
@@ -1126,8 +1137,11 @@ function renderStepBar() {
   let html = '';
   frames.forEach((f, i) => {
     const active = i === currentFrame ? ' active' : '';
-    const label = i === 0 ? 'Start' : i;
-    html += `<button class="step-pill${active}" onclick="goToStep(${i})">${label}</button>`;
+    const label = i + 1; // Steps start at 1
+    const removeBtn = frames.length > 1
+      ? `<span class="step-remove" onclick="event.stopPropagation(); deleteStep(${i})" title="Remove step ${label}">&minus;</span>`
+      : '';
+    html += `<button class="step-pill${active}" onclick="goToStep(${i})"><span class="step-label">${label}</span>${removeBtn}</button>`;
   });
   html += `<button class="step-pill step-add" onclick="addStep()">+</button>`;
 
