@@ -131,8 +131,35 @@
     background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #888;
     padding: 6px 14px; border-radius: 6px; font-size: 11px; cursor: pointer;
     font-family: 'Manrope', sans-serif; font-weight: 500; transition: all 0.15s;
+    display: inline-flex; align-items: center; gap: 6px;
   }
   .refresh-btn:hover { border-color: #34D399; color: #34D399; border-radius: 20px; }
+  .refresh-btn.loading { pointer-events: none; opacity: 0.6; }
+  .refresh-spinner {
+    display: none; width: 12px; height: 12px;
+    border: 2px solid rgba(52,211,153,0.2); border-top-color: #34D399;
+    border-radius: 50%; animation: spin 0.7s linear infinite;
+  }
+  .refresh-btn.loading .refresh-spinner { display: inline-block; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Shimmer loading skeleton */
+  @keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+  }
+  .shimmer .stat-card .value,
+  .shimmer .stat-card .sub {
+    color: transparent !important;
+    background: linear-gradient(90deg, #1a1a1a 25%, #2a2a2a 50%, #1a1a1a 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s ease-in-out infinite;
+    border-radius: 4px;
+    min-width: 40px;
+    min-height: 1.2em;
+  }
+  .shimmer .milestone-bar-fill { animation: shimmer 1.5s ease-in-out infinite; background-size: 200% 100%; }
+  .shimmer table tbody { opacity: 0.3; }
 
   .date-filters { display: flex; align-items: center; gap: 10px; margin-bottom: 24px; }
   .date-filters label { font-size: 10px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #666; }
@@ -201,7 +228,7 @@
   <h1>TÁCTICA</h1>
   <span class="badge">ADMIN</span>
   <div style="flex:1"></div>
-  <button class="refresh-btn" onclick="loadDashboard()">Refresh</button>
+  <button class="refresh-btn" id="refresh-btn" onclick="loadDashboard()"><span class="refresh-spinner"></span>Refresh</button>
 </div>
 
 <div id="auth-gate" class="auth-gate" style="display:none">
@@ -332,6 +359,10 @@ document.getElementById('date-start').value = today;
 document.getElementById('date-end').value = today;
 
 window.loadDashboard = async function() {
+  const btn = document.getElementById('refresh-btn');
+  const dashboard = document.getElementById('tab-overview');
+  if (btn) btn.classList.add('loading');
+  if (dashboard) dashboard.classList.add('shimmer');
   try {
     const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
     _allUsers = (await getDocs(usersQ)).docs.map(d => ({ uid: d.id, ...d.data() }));
@@ -346,6 +377,10 @@ window.loadDashboard = async function() {
 
     applyDateFilter();
   } catch (e) { console.error('Dashboard error:', e); }
+  finally {
+    if (btn) btn.classList.remove('loading');
+    if (dashboard) dashboard.classList.remove('shimmer');
+  }
 };
 
 window.applyDateFilter = function() {
