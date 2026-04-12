@@ -416,7 +416,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
   const activeCoaches = activeUids.size;
   const returningCoaches = users.filter(u => u.sessionCount > 1).length;
   const analysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
-  const exportOrSaveCoaches = new Set((actions || []).filter(a => a.action === 'save' || a.action === 'export' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).map(a => a.uid)).size;
+  const exportOrSaveCoaches = new Set((actions || []).filter(a => a.action === 'save' || a.action === 'export' || a.action === 'share_created' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).map(a => a.uid)).size;
   const pct = (n) => activeCoaches > 0 ? Math.round(n / activeCoaches * 100) : 0;
 
   // Milestone bar
@@ -450,7 +450,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
     <div class="stat-card"><div class="label">Active Coaches in Period</div><div class="value">${activeCoaches}</div></div>
     <div class="stat-card"><div class="label">Returning Coaches</div><div class="value">${returningCoaches}</div><div class="sub">${pct(returningCoaches)}% of active</div></div>
     <div class="stat-card"><div class="label">Coaches w/ an Analysis</div><div class="value">${pct(analysisCoaches)}%</div><div class="sub">${analysisCoaches} of ${activeCoaches} active</div></div>
-    <div class="stat-card"><div class="label">Coaches w/ Export or Save</div><div class="value">${pct(exportOrSaveCoaches)}%</div><div class="sub">${exportOrSaveCoaches} of ${activeCoaches} active</div></div>
+    <div class="stat-card"><div class="label">Coaches w/ Export, Save or Share</div><div class="value">${pct(exportOrSaveCoaches)}%</div><div class="sub">${exportOrSaveCoaches} of ${activeCoaches} active</div></div>
   `;
 }
 
@@ -458,7 +458,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
 function renderSessionStats(sessions, actions) {
   const totalSessions = sessions.length;
   const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started').length;
-  const exportAndSave = (actions || []).filter(a => a.action === 'save' || a.action === 'export' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).length;
+  const exportAndSave = (actions || []).filter(a => a.action === 'save' || a.action === 'export' || a.action === 'share_created' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).length;
   const desktopSessions = sessions.filter(s => s.device === 'desktop').length;
   const mobileSessions = sessions.filter(s => s.device === 'mobile').length;
   const unknownSessions = sessions.filter(s => !s.device).length;
@@ -469,7 +469,7 @@ function renderSessionStats(sessions, actions) {
     <div class="stat-card"><div class="label">Desktop Sessions</div><div class="value">${desktopSessions}</div><div class="sub">${pct(desktopSessions)}% of sessions${unknownSessions ? ' &middot; ' + unknownSessions + ' unknown' : ''}</div></div>
     <div class="stat-card"><div class="label">Mobile Sessions</div><div class="value">${mobileSessions}</div><div class="sub">${pct(mobileSessions)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Sessions w/ an Analysis</div><div class="value">${analysisStarted}</div><div class="sub">${pct(analysisStarted)}% of sessions</div></div>
-    <div class="stat-card"><div class="label">Total Exports &amp; Saves</div><div class="value">${exportAndSave}</div><div class="sub">${pct(exportAndSave)}% of sessions</div></div>
+    <div class="stat-card"><div class="label">Total Exports, Saves &amp; Shares</div><div class="value">${exportAndSave}</div><div class="sub">${pct(exportAndSave)}% of sessions</div></div>
   `;
 }
 
@@ -511,11 +511,13 @@ function renderFeatureStats(actions, activeUsers) {
     { label: 'Save', ...featureData(actions, 'save') },
     { label: 'Export GIF Animation', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export')) },
     { label: 'Export Video', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && a.meta.trigger === 'export_video') },
+    { label: 'Share', ...featureData(actions, 'share_created') },
   ];
   const esTotalEvents = exportSaveItems.reduce((s, i) => s + i.totalEvents, 0);
   const esUniqueUsers = new Set([
     ...(actions || []).filter(a => a.action === 'export').map(a => a.uid),
     ...(actions || []).filter(a => a.action === 'save').map(a => a.uid),
+    ...(actions || []).filter(a => a.action === 'share_created').map(a => a.uid),
     ...(actions || []).filter(a => a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video')).map(a => a.uid),
   ]).size;
 
@@ -530,7 +532,7 @@ function renderFeatureStats(actions, activeUsers) {
   }).join('');
 
   html += `<div class="stat-card" style="grid-column: span 2;">
-    <div class="label">Export &amp; Save</div>
+    <div class="label">Export, Save &amp; Share</div>
     <div class="value">${esTotalEvents}</div>
     <div class="sub">${esUniqueUsers} coaches (${pct(esUniqueUsers)}%)</div>
     <div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:8px">
@@ -547,12 +549,13 @@ function renderFeatureStats(actions, activeUsers) {
 
 // ─── Features Tab (detailed breakdowns) ─────────────────────────────────────
 const FEATURE_CONFIGS = [
-  { label: 'Export & Save', isGroup: true, children: [
+  { label: 'Export, Save & Share', isGroup: true, children: [
     { label: 'Export PNG', action: 'export', metaKey: null, filterFn: a => !a.meta || !a.meta.format || a.meta.format === 'png' },
     { label: 'Export JPG', action: 'export', metaKey: null, filterFn: a => a.meta && a.meta.format === 'jpg' },
     { label: 'Save', action: 'save', metaKey: null },
     { label: 'Export GIF Animation', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export') },
     { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_video' },
+    { label: 'Share', action: 'share_created', metaKey: null },
   ]},
   { label: 'Pitch Type', action: 'feature_pitch_change', metaKey: 'type', filterFn: a => a.meta && a.meta.type },
   { label: 'Pitch Color', action: 'feature_pitch_color', metaKey: 'color', filterFn: a => a.meta && a.meta.color,
