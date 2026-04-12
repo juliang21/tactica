@@ -1474,10 +1474,16 @@
       <h2 class="analyses-title">My Analyses</h2>
       <span class="analyses-count" id="analyses-count"></span>
     </div>
-    <button class="analyses-new-btn" onclick="newAnalysisFromDashboard()">
-      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-      New Analysis
-    </button>
+    <div class="analyses-header-right">
+      <button class="analyses-folder-btn" onclick="createNewFolder()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2 3.5A1.5 1.5 0 013.5 2h2.382a1 1 0 01.894.553L7.382 4H10.5A1.5 1.5 0 0112 5.5v5A1.5 1.5 0 0110.5 12h-7A1.5 1.5 0 012 10.5v-7z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/><line x1="7" y1="6.5" x2="7" y2="9.5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/><line x1="5.5" y1="8" x2="8.5" y2="8" stroke="currentColor" stroke-width="1.2" stroke-linecap="round"/></svg>
+        New Folder
+      </button>
+      <button class="analyses-new-btn" onclick="newAnalysisFromDashboard()">
+        <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><line x1="2" y1="7" x2="12" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+        New Analysis
+      </button>
+    </div>
   </div>
   <div class="analyses-grid" id="analyses-grid">
     <!-- Cards rendered dynamically -->

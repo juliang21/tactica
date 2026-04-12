@@ -19,7 +19,7 @@ import { setPitch, setPitchColor, setPitchOpt, updatePitchFromToggles, setPitchL
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
-import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail } from './storage.js';
+import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
 import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis } from './firestore.js?v=4';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
@@ -2707,26 +2707,16 @@ function closeMyAnalyses() {
 }
 window.closeMyAnalyses = closeMyAnalyses;
 
-async function renderAnalysesGrid() {
-  const grid = document.getElementById('analyses-grid');
-  const emptyState = document.getElementById('analyses-empty');
-  const countBadge = document.getElementById('analyses-count');
-  const analyses = await listAnalyses();
+// Track which folders are expanded (persists within session)
+const _expandedFolders = new Set();
 
-  countBadge.textContent = analyses.length + (analyses.length === 1 ? ' analysis' : ' analyses');
+// Cache folders for card rendering (set during renderAnalysesGrid)
+let _cachedFolders = [];
 
-  if (analyses.length === 0) {
-    grid.style.display = 'none';
-    emptyState.style.display = 'flex';
-    return;
-  }
-
-  grid.style.display = 'grid';
-  emptyState.style.display = 'none';
-  const currentId = getCurrentId();
-
-  grid.innerHTML = analyses.map(a => `
-    <div class="analysis-card${a.id === currentId ? ' current' : ''}" data-id="${a.id}" onclick="loadAnalysisFromCard('${a.id}')">
+function renderAnalysisCard(a, currentId) {
+  const inFolder = !!a.folderId;
+  return `
+    <div class="analysis-card${a.id === currentId ? ' current' : ''}" data-id="${a.id}" draggable="true" onclick="loadAnalysisFromCard('${a.id}')">
       <div class="analysis-card-thumb">
         ${a.thumbnail ? `<img src="${a.thumbnail}" alt="${a.name}">` : '<span class="no-thumb">No preview</span>'}
       </div>
@@ -2735,6 +2725,9 @@ async function renderAnalysesGrid() {
         <div class="analysis-card-meta">
           <span class="analysis-card-date">${formatDate(a.updatedAt)}</span>
           <div class="analysis-card-actions">
+            <button class="analysis-card-action" onclick="event.stopPropagation();toggleMoveMenu('${a.id}')" title="Move to folder">
+              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 3.5A1.5 1.5 0 013 2h2.382a1 1 0 01.894.553L6.882 4H11A1.5 1.5 0 0112.5 5.5v5A1.5 1.5 0 0111 12H3A1.5 1.5 0 011.5 10.5v-7z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>${inFolder ? '<path d="M7 6v4M5 8h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" transform="rotate(45 7 8)"/>' : '<path d="M7 6v4M5 8h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>'}</svg>
+            </button>
             <button class="analysis-card-action" onclick="event.stopPropagation();duplicateFromCard('${a.id}')" title="Duplicate">
               <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M10 4V3a1 1 0 00-1-1H3a1 1 0 00-1 1v6a1 1 0 001 1h1" stroke="currentColor" stroke-width="1.2"/></svg>
             </button>
@@ -2744,8 +2737,250 @@ async function renderAnalysesGrid() {
           </div>
         </div>
       </div>
-    </div>
-  `).join('');
+    </div>`;
+}
+
+function toggleMoveMenu(analysisId) {
+  // Close any existing menu
+  const existing = document.querySelector('.move-menu');
+  if (existing) { existing.remove(); return; }
+
+  const card = document.querySelector(`.analysis-card[data-id="${analysisId}"]`);
+  if (!card) return;
+  const btn = card.querySelector('.analysis-card-action');
+  const rect = btn.getBoundingClientRect();
+
+  // Find current folderId for this analysis
+  const analyses = JSON.parse(localStorage.getItem('tactica_analyses') || '[]');
+  const analysis = analyses.find(a => a.id === analysisId);
+  const currentFolderId = analysis?.folderId || null;
+
+  let menuHtml = '<div class="move-menu-title">Move to</div>';
+  // Unfiled option
+  menuHtml += `<button class="move-menu-item${!currentFolderId ? ' active' : ''}" onclick="event.stopPropagation();doMoveAnalysis('${analysisId}', null)">
+    <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><rect x="1" y="1" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1" stroke-dasharray="2 2"/></svg>
+    Unfiled
+  </button>`;
+  // Folder options
+  for (const f of _cachedFolders) {
+    menuHtml += `<button class="move-menu-item${currentFolderId === f.id ? ' active' : ''}" onclick="event.stopPropagation();doMoveAnalysis('${analysisId}', '${f.id}')">
+      <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M1.5 3A1 1 0 012.5 2h1.764a.75.75 0 01.67.415L5.382 3.5H9.5a1 1 0 011 1v4a1 1 0 01-1 1h-7a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1"/></svg>
+      ${f.name}
+    </button>`;
+  }
+
+  const menu = document.createElement('div');
+  menu.className = 'move-menu';
+  menu.innerHTML = menuHtml;
+  document.body.appendChild(menu);
+
+  // Position near button
+  const mw = 180;
+  let left = rect.left - mw + rect.width;
+  let top = rect.bottom + 4;
+  if (left < 8) left = 8;
+  if (top + 200 > window.innerHeight) top = rect.top - 200;
+  menu.style.left = left + 'px';
+  menu.style.top = top + 'px';
+
+  // Close on click outside
+  setTimeout(() => {
+    const close = (e) => { if (!menu.contains(e.target)) { menu.remove(); document.removeEventListener('click', close); } };
+    document.addEventListener('click', close);
+  }, 10);
+}
+window.toggleMoveMenu = toggleMoveMenu;
+
+async function doMoveAnalysis(analysisId, folderId) {
+  document.querySelector('.move-menu')?.remove();
+  await moveAnalysisToFolder(analysisId, folderId);
+  if (folderId) _expandedFolders.add(folderId);
+  await renderAnalysesGrid();
+}
+window.doMoveAnalysis = doMoveAnalysis;
+
+async function renderAnalysesGrid() {
+  const grid = document.getElementById('analyses-grid');
+  const emptyState = document.getElementById('analyses-empty');
+  const countBadge = document.getElementById('analyses-count');
+  const [analyses, folders] = await Promise.all([listAnalyses(), listFolders()]);
+  _cachedFolders = folders;
+
+  countBadge.textContent = analyses.length + (analyses.length === 1 ? ' analysis' : ' analyses');
+
+  if (analyses.length === 0 && folders.length === 0) {
+    grid.style.display = 'none';
+    emptyState.style.display = 'flex';
+    return;
+  }
+
+  grid.style.display = 'block';
+  emptyState.style.display = 'none';
+  const currentId = getCurrentId();
+
+  // Group analyses by folder
+  const foldered = {};
+  const unfiled = [];
+  for (const a of analyses) {
+    if (a.folderId && folders.some(f => f.id === a.folderId)) {
+      (foldered[a.folderId] = foldered[a.folderId] || []).push(a);
+    } else {
+      unfiled.push(a);
+    }
+  }
+
+  let html = '';
+
+  // Render folders
+  for (const folder of folders) {
+    const items = foldered[folder.id] || [];
+    const isOpen = _expandedFolders.has(folder.id);
+    html += `
+      <div class="folder-section" data-folder-id="${folder.id}">
+        <div class="folder-header" onclick="toggleFolder('${folder.id}')" data-folder-drop="${folder.id}">
+          <div class="folder-header-left">
+            <svg class="folder-chevron${isOpen ? ' open' : ''}" width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M4 2.5l4 3.5-4 3.5" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="folder-icon" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2.5 4A1.5 1.5 0 014 2.5h2.382a1 1 0 01.894.553L7.882 4.5H12A1.5 1.5 0 0113.5 6v5.5A1.5 1.5 0 0112 13H4A1.5 1.5 0 012.5 11.5V4z" stroke="currentColor" stroke-width="1.1" fill="${isOpen ? 'rgba(30,215,96,0.15)' : 'none'}"/></svg>
+            <span class="folder-name" id="folder-name-${folder.id}">${folder.name}</span>
+            <span class="folder-count">${items.length}</span>
+          </div>
+          <div class="folder-actions">
+            <button class="folder-action-btn" onclick="event.stopPropagation();startRenameFolder('${folder.id}')" title="Rename">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M8.5 1.5l2 2M1 11l.5-2L8.793 1.707a1 1 0 011.414 0l.586.586a1 1 0 010 1.414L3.5 10.5 1 11z" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+            <button class="folder-action-btn delete" onclick="event.stopPropagation();askDeleteFolder('${folder.id}','${folder.name.replace(/'/g, "\\'")}')" title="Delete folder">
+              <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 3.5h8M4.5 3.5V2h3v1.5M3 3.5v6a1 1 0 001 1h4a1 1 0 001-1v-6" stroke="currentColor" stroke-width="1" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            </button>
+          </div>
+        </div>
+        ${isOpen ? `<div class="folder-body" data-folder-drop="${folder.id}"><div class="folder-grid">${items.length > 0 ? items.map(a => renderAnalysisCard(a, currentId)).join('') : '<div class="folder-empty">Drag analyses here or use the folder icon on a card</div>'}</div></div>` : ''}
+      </div>`;
+  }
+
+  // Render unfiled analyses
+  if (unfiled.length > 0) {
+    if (folders.length > 0) {
+      html += '<div class="unfiled-divider" data-folder-drop="unfiled"><span>Unfiled</span></div>';
+    }
+    html += `<div class="analyses-card-grid" data-folder-drop="unfiled">${unfiled.map(a => renderAnalysisCard(a, currentId)).join('')}</div>`;
+  }
+
+  grid.innerHTML = html;
+
+  // Attach drag-and-drop listeners
+  initDragAndDrop();
+}
+
+function toggleFolder(folderId) {
+  if (_expandedFolders.has(folderId)) _expandedFolders.delete(folderId);
+  else _expandedFolders.add(folderId);
+  renderAnalysesGrid();
+}
+window.toggleFolder = toggleFolder;
+
+// ─── Folder CRUD from UI ─────────────────────────────────────────────────────
+async function createNewFolder() {
+  const name = 'New Folder';
+  const folder = await createFolder(name);
+  _expandedFolders.add(folder.id);
+  await renderAnalysesGrid();
+  // Auto-start rename
+  startRenameFolder(folder.id);
+}
+window.createNewFolder = createNewFolder;
+
+function startRenameFolder(folderId) {
+  const nameEl = document.getElementById('folder-name-' + folderId);
+  if (!nameEl) return;
+  const current = nameEl.textContent;
+  nameEl.innerHTML = `<input type="text" class="folder-rename-input" value="${current}" maxlength="40" />`;
+  const input = nameEl.querySelector('input');
+  input.focus();
+  input.select();
+
+  const finish = async () => {
+    const newName = input.value.trim();
+    if (newName && newName !== current) {
+      await renameFolder(folderId, newName);
+    }
+    await renderAnalysesGrid();
+  };
+
+  input.addEventListener('blur', finish);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter') { e.preventDefault(); input.blur(); }
+    if (e.key === 'Escape') { input.value = current; input.blur(); }
+  });
+  // Prevent folder toggle when clicking input
+  input.addEventListener('click', e => e.stopPropagation());
+}
+window.startRenameFolder = startRenameFolder;
+
+async function askDeleteFolder(folderId, name) {
+  const result = await showConfirmModal({
+    icon: 'trash',
+    title: 'Delete Folder?',
+    desc: `Delete "${name}"? Analyses inside will be moved to unfiled.`,
+    confirmLabel: 'Delete',
+    confirmClass: 'danger',
+  });
+  if (result && result.confirmed) {
+    await deleteFolder(folderId);
+    _expandedFolders.delete(folderId);
+    await renderAnalysesGrid();
+    showNotification('Folder deleted', 'info', 3000);
+  }
+}
+window.askDeleteFolder = askDeleteFolder;
+
+// ─── Drag and Drop ──────────────────────────────────────────────────────────
+function initDragAndDrop() {
+  const grid = document.getElementById('analyses-grid');
+
+  // Make cards draggable
+  grid.querySelectorAll('.analysis-card[draggable]').forEach(card => {
+    card.addEventListener('dragstart', e => {
+      e.dataTransfer.setData('text/plain', card.dataset.id);
+      e.dataTransfer.effectAllowed = 'move';
+      card.classList.add('dragging');
+      // Show all drop targets
+      grid.classList.add('drag-active');
+    });
+    card.addEventListener('dragend', () => {
+      card.classList.remove('dragging');
+      grid.classList.remove('drag-active');
+      grid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+    });
+  });
+
+  // All elements with data-folder-drop are drop targets (folder headers, folder bodies, unfiled area)
+  grid.querySelectorAll('[data-folder-drop]').forEach(target => {
+    target.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      // Highlight the closest visual target (header or unfiled divider)
+      const header = target.closest('.folder-section')?.querySelector('.folder-header') || target;
+      header.classList.add('drag-over');
+    });
+    target.addEventListener('dragleave', e => {
+      if (!target.contains(e.relatedTarget)) {
+        const header = target.closest('.folder-section')?.querySelector('.folder-header') || target;
+        header.classList.remove('drag-over');
+      }
+    });
+    target.addEventListener('drop', async e => {
+      e.preventDefault();
+      e.stopPropagation();
+      grid.querySelectorAll('.drag-over').forEach(el => el.classList.remove('drag-over'));
+      grid.classList.remove('drag-active');
+      const analysisId = e.dataTransfer.getData('text/plain');
+      const folderId = target.dataset.folderDrop;
+      if (!analysisId) return;
+      await moveAnalysisToFolder(analysisId, folderId === 'unfiled' ? null : folderId);
+      if (folderId !== 'unfiled') _expandedFolders.add(folderId);
+      await renderAnalysesGrid();
+    });
+  });
 }
 
 async function loadAnalysisFromCard(id) {

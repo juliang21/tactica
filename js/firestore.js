@@ -17,6 +17,8 @@ export async function saveAnalysisToCloud(uid, analysisObj) {
     thumbnail: analysisObj.thumbnail || '',
     data: sanitizeData(analysisObj.data),
   };
+  if (analysisObj.folderId) payload.folderId = analysisObj.folderId;
+  else payload.folderId = null;
   await setDoc(ref, payload, { merge: true });
   return payload;
 }
@@ -82,6 +84,29 @@ export async function migrateLocalToCloud(uid) {
   }
 
   localStorage.setItem(migrationKey, '1');
+}
+
+// ─── Folders ───────────────────────────────────────────────────────────────
+export async function saveFolderToCloud(uid, folder) {
+  const ref = doc(db, 'users', uid, 'folders', folder.id);
+  await setDoc(ref, {
+    name: folder.name,
+    createdAt: folder.createdAt,
+    updatedAt: folder.updatedAt || Date.now(),
+  }, { merge: true });
+}
+
+export async function listFoldersFromCloud(uid) {
+  const q = query(
+    collection(db, 'users', uid, 'folders'),
+    orderBy('updatedAt', 'desc')
+  );
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+export async function deleteFolderFromCloud(uid, folderId) {
+  await deleteDoc(doc(db, 'users', uid, 'folders', folderId));
 }
 
 // ─── Shared Analyses ───────────────────────────────────────────────────────

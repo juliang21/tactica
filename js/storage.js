@@ -5,10 +5,12 @@ import { deselectVisual } from './interaction.js';
 import {
   saveAnalysisToCloud, loadAnalysisFromCloud, listAnalysesFromCloud,
   deleteAnalysisFromCloud, duplicateAnalysisInCloud, migrateLocalToCloud,
+  saveFolderToCloud, listFoldersFromCloud, deleteFolderFromCloud,
 } from './firestore.js';
 
 const STORAGE_KEY = 'tactica_analyses';
 const CURRENT_KEY = 'tactica_current_id';
+const FOLDERS_KEY = 'tactica_folders';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 function generateId() {
@@ -369,6 +371,99 @@ export async function quickSave() {
     catch (e) { console.warn('Cloud quick-save failed:', e); }
   }
   return true;
+}
+
+// ─── Folders ───────────────────────────────────────────────────────────────
+function getLocalFolders() {
+  try { return JSON.parse(localStorage.getItem(FOLDERS_KEY) || '[]'); }
+  catch { return []; }
+}
+
+function saveLocalFolders(list) {
+  localStorage.setItem(FOLDERS_KEY, JSON.stringify(list));
+}
+
+export async function listFolders() {
+  if (isSignedIn()) {
+    try {
+      const cloudList = await listFoldersFromCloud(getUid());
+      saveLocalFolders(cloudList);
+      return cloudList;
+    } catch (e) { console.warn('Cloud folders list failed, using local:', e); }
+  }
+  return getLocalFolders();
+}
+
+export async function createFolder(name) {
+  const folder = {
+    id: generateId(),
+    name,
+    createdAt: Date.now(),
+    updatedAt: Date.now(),
+  };
+  const folders = getLocalFolders();
+  folders.unshift(folder);
+  saveLocalFolders(folders);
+
+  if (isSignedIn()) {
+    try { await saveFolderToCloud(getUid(), folder); }
+    catch (e) { console.warn('Cloud folder create failed:', e); }
+  }
+  return folder;
+}
+
+export async function renameFolder(id, newName) {
+  const folders = getLocalFolders();
+  const folder = folders.find(f => f.id === id);
+  if (!folder) return;
+  folder.name = newName;
+  folder.updatedAt = Date.now();
+  saveLocalFolders(folders);
+
+  if (isSignedIn()) {
+    try { await saveFolderToCloud(getUid(), folder); }
+    catch (e) { console.warn('Cloud folder rename failed:', e); }
+  }
+}
+
+export async function deleteFolder(id) {
+  // Move all analyses in this folder back to unfiled
+  const analyses = getLocalAnalyses();
+  analyses.forEach(a => { if (a.folderId === id) delete a.folderId; });
+  saveLocalAnalyses(analyses);
+
+  let folders = getLocalFolders();
+  folders = folders.filter(f => f.id !== id);
+  saveLocalFolders(folders);
+
+  if (isSignedIn()) {
+    try {
+      await deleteFolderFromCloud(getUid(), id);
+      // Update analyses that were in this folder
+      for (const a of analyses.filter(a => !a.folderId)) {
+        await saveAnalysisToCloud(getUid(), a);
+      }
+    } catch (e) { console.warn('Cloud folder delete failed:', e); }
+  }
+}
+
+export async function moveAnalysisToFolder(analysisId, folderId) {
+  const analyses = getLocalAnalyses();
+  const analysis = analyses.find(a => a.id === analysisId);
+  if (!analysis) return;
+
+  if (folderId) {
+    analysis.folderId = folderId;
+  } else {
+    delete analysis.folderId;
+  }
+  analysis.updatedAt = Date.now();
+  saveLocalAnalyses(analyses);
+
+  if (isSignedIn()) {
+    try { await saveAnalysisToCloud(getUid(), analysis); }
+    catch (e) { console.warn('Cloud move failed:', e); }
+  }
 }
 
 // ─── Utilities ──────────────────────────────────────────────────────────────
