@@ -1383,6 +1383,279 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   height: 1px; background: var(--border); margin: 0;
 }
 
+/* ── Shared View ── */
+body.shared-view #toolbar,
+body.shared-view #side-panel,
+body.shared-view .toolbar-toggle,
+body.shared-view .tool-logo,
+body.shared-view #mode-tabs-bar,
+body.shared-view .rondos-brand,
+body.shared-view #motion-controls,
+body.shared-view .fb-bubble,
+body.shared-view .save-wrap,
+body.shared-view #analysis-name-input,
+body.shared-view #app-menu-btn,
+body.shared-view #mode-dropdown,
+body.shared-view #mode-bar { display: none !important; }
+body.shared-view #canvas-wrap {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 56px);
+  margin-top: 56px;
+}
+body.shared-view #pitch {
+  pointer-events: none;
+}
+.shared-play-btn {
+  position: absolute;
+  bottom: 16px;
+  left: 16px;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  background: rgba(0,0,0,0.6);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  backdrop-filter: blur(8px);
+  transition: all 0.15s;
+}
+.shared-play-btn:hover {
+  background: rgba(52,211,153,0.25);
+  border-color: var(--accent);
+  color: var(--accent);
+}
+body.shared-view #canvas-wrap {
+  position: relative;
+}
+.shared-watermark {
+  display: none;
+  position: absolute;
+  bottom: 10px;
+  right: 12px;
+  z-index: 50;
+  font-family: 'Manrope', sans-serif;
+  font-size: 12px;
+  font-weight: 600;
+  color: rgba(255,255,255,0.7);
+  letter-spacing: 0.3px;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+  background: rgba(0,0,0,0.45);
+  padding: 4px 10px;
+  border-radius: 4px;
+}
+body.shared-view .shared-watermark {
+  display: block;
+}
+
+#share-banner {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 500;
+  background: var(--panel); border-bottom: 1px solid var(--border);
+  padding: 12px 24px;
+}
+.share-banner-inner {
+  display: flex; align-items: center; justify-content: space-between;
+  max-width: 1200px; margin: 0 auto;
+}
+.share-banner-info {
+  display: flex; align-items: center; gap: 10px;
+  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500;
+  color: var(--text-muted);
+}
+.share-banner-actions { display: flex; gap: 8px; }
+.share-banner-btn {
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+  padding: 8px 18px; border-radius: 20px; border: none; cursor: pointer;
+  transition: all 0.15s; display: flex; align-items: center; gap: 6px;
+}
+.share-banner-signup {
+  background: var(--accent); color: #000;
+  box-shadow: 0 2px 12px rgba(52,211,153,0.3);
+}
+.share-banner-signup:hover { background: var(--accent-hover); }
+.share-banner-signin {
+  background: transparent; color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.share-banner-signin:hover { border-color: var(--text-dim); color: var(--text); }
+.share-banner-copy {
+  background: #fff; color: #000;
+  box-shadow: 0 2px 12px rgba(255,255,255,0.15);
+}
+.share-banner-copy:hover { background: #e0e0e0; }
+
+/* ── Share Modals ── */
+.share-confirm-modal {
+  z-index: 800;
+  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.65);
+}
+.share-modal-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 32px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+  box-shadow: 0 16px 48px rgba(0,0,0,0.5);
+}
+.share-modal-icon {
+  width: 52px; height: 52px;
+  margin: 0 auto 16px;
+  display: flex; align-items: center; justify-content: center;
+  border-radius: 14px;
+  background: rgba(52,211,153,0.1);
+  border: 1px solid rgba(52,211,153,0.15);
+}
+.share-modal-title {
+  font-family: 'Manrope', sans-serif;
+  font-size: 16px; font-weight: 700;
+  color: var(--text);
+  margin-bottom: 8px;
+}
+.share-modal-desc {
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px; line-height: 1.5;
+  color: var(--text-muted);
+  margin-bottom: 24px;
+}
+.share-modal-actions {
+  display: flex; gap: 10px; justify-content: center;
+}
+.share-modal-btn {
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px; font-weight: 600;
+  padding: 10px 22px; border-radius: 10px;
+  border: none; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 6px;
+  transition: all 0.15s;
+}
+.share-modal-btn.cancel {
+  background: rgba(255,255,255,0.06);
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+}
+.share-modal-btn.cancel:hover {
+  background: rgba(255,255,255,0.1);
+  color: var(--text);
+}
+.share-modal-btn.confirm {
+  background: var(--accent); color: #000;
+  box-shadow: 0 2px 12px rgba(52,211,153,0.3);
+}
+.share-modal-btn.confirm:hover {
+  background: var(--accent-hover);
+}
+.share-modal-btn.confirm.danger {
+  background: #EF4444;
+  box-shadow: 0 2px 12px rgba(239,68,68,0.3);
+}
+.share-modal-btn.confirm.danger:hover {
+  background: #DC2626;
+}
+.share-modal-icon.danger {
+  background: rgba(239,68,68,0.1);
+  border-color: rgba(239,68,68,0.15);
+}
+.share-link-wrap {
+  display: flex; gap: 8px; align-items: center;
+  margin-bottom: 8px;
+}
+.share-link-input {
+  flex: 1;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-family: 'Manrope', sans-serif;
+  outline: none;
+}
+.share-link-input:focus { border-color: var(--accent); }
+.share-modal-btn.copy {
+  white-space: nowrap;
+  border-radius: 10px;
+  padding: 10px 16px;
+}
+.share-modal-close {
+  margin-top: 12px;
+  background: none; border: none;
+  color: var(--text-muted);
+  font-size: 12px; font-weight: 500;
+  cursor: pointer;
+  font-family: 'Manrope', sans-serif;
+  transition: color 0.15s;
+}
+.share-modal-close:hover { color: var(--text); }
+.confirm-modal-checkbox {
+  display: flex; align-items: center; gap: 8px;
+  justify-content: center;
+  margin-bottom: 20px;
+  font-family: 'Manrope', sans-serif;
+  font-size: 12px; color: var(--text-muted);
+  cursor: pointer;
+  user-select: none;
+}
+.confirm-modal-checkbox input[type="checkbox"] {
+  width: 16px; height: 16px;
+  accent-color: var(--accent);
+  cursor: pointer;
+  border-radius: 4px;
+}
+.confirm-modal-extra-wrap {
+  margin-bottom: 20px;
+}
+.confirm-modal-name-input {
+  width: 100%;
+  margin-top: 10px;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
+  font-family: 'Manrope', sans-serif;
+  outline: none;
+  transition: border-color 0.15s;
+}
+.confirm-modal-name-input:focus {
+  border-color: var(--accent);
+}
+.confirm-modal-name-input::placeholder {
+  color: var(--text-dim);
+}
+
+@media (max-width: 600px) {
+  #share-banner { padding: 10px 14px; }
+  .share-banner-inner {
+    flex-direction: column; gap: 8px; align-items: stretch;
+  }
+  .share-banner-info { justify-content: center; font-size: 12px; }
+  .share-banner-actions { justify-content: center; }
+  .share-banner-btn { font-size: 11px; padding: 7px 14px; }
+  body.shared-view #canvas-wrap {
+    margin-top: 80px;
+    min-height: auto;
+    align-items: flex-start;
+    padding-top: 8px !important;
+  }
+  body.shared-view #pitch-wrap {
+    overflow: visible;
+  }
+}
+
 /* ── Analyses Dashboard ── */
 #analyses-dashboard {
   position: fixed; inset: 0; z-index: 600;

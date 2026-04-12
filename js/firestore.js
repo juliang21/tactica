@@ -84,6 +84,27 @@ export async function migrateLocalToCloud(uid) {
   localStorage.setItem(migrationKey, '1');
 }
 
+// ─── Shared Analyses ───────────────────────────────────────────────────────
+export async function saveSharedAnalysis(shareId, payload) {
+  const ref = doc(db, 'shared_analyses', shareId);
+  await setDoc(ref, {
+    creatorUid: payload.creatorUid,
+    creatorName: payload.creatorName || '',
+    sourceAnalysisId: payload.sourceAnalysisId || '',
+    name: payload.name,
+    thumbnail: payload.thumbnail || '',
+    data: sanitizeData(payload.data),
+    createdAt: Date.now(),
+  });
+}
+
+export async function loadSharedAnalysis(shareId) {
+  const ref = doc(db, 'shared_analyses', shareId);
+  const snap = await getDoc(ref);
+  if (!snap.exists()) return null;
+  return { id: snap.id, ...snap.data() };
+}
+
 // ─── Session Tracking ───────────────────────────────────────────────────────
 export async function logSession(uid, email, displayName) {
   const now = Date.now();

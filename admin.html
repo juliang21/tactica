@@ -500,6 +500,7 @@ function renderFeatureStats(actions, activeUsers) {
     ['Image Upload', 'feature_image_upload'], ['Formation', 'feature_formation'],
     ['Club Team', 'feature_club_team'], ['National Team', 'feature_national_team'],
     ['Custom Color', 'feature_custom_color'], ['Animation', 'feature_animation'],
+    ['Share Created', 'share_created'], ['Share Viewed', 'share_viewed'],
   ];
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
 
@@ -587,6 +588,12 @@ const FEATURE_CONFIGS = [
     { label: 'Clear All', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'clear_all' },
     { label: 'Export GIF', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export') },
     { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_video' },
+  ]},
+  { label: 'Sharing', isGroup: true, children: [
+    { label: 'Share Created', action: 'share_created', metaKey: null },
+    { label: 'Share Viewed', action: 'share_viewed', metaKey: null },
+    { label: 'Share Forked (Copy)', action: 'share_forked', metaKey: null },
+    { label: 'Share → Sign Up', action: 'share_signup', metaKey: null },
   ]},
   { label: 'Toolbar Toggle', action: 'feature_toolbar_toggle', metaKey: 'type' },
 ];

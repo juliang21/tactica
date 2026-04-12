@@ -19,9 +19,9 @@ import { setPitch, setPitchColor, setPitchOpt, updatePitchFromToggles, setPitchL
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
-import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud } from './storage.js';
+import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
-import { logSession, logAction, setSessionId } from './firestore.js?v=3';
+import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis } from './firestore.js?v=4';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
@@ -903,6 +903,13 @@ let animationRunning = false;
 let animationId = null;
 let trailsGroup = null;
 
+// Expose frame data for captureState serialization
+window._getFramesForSave = () => frames.map(f => ({
+  positions: f.positions,
+  elementIds: Array.from(f.elementIds),
+}));
+window._getCurrentFrame = () => currentFrame;
+
 // Gather all annotatable elements (players + objects)
 function getAllElements() {
   const els = [];
@@ -1035,11 +1042,17 @@ function deleteStep(idx) {
   drawTrails();
 }
 
-function clearAllSteps() {
+async function clearAllSteps() {
   if (frames.length === 0) return;
-  // Show confirmation dialog
   const stepCount = frames.length;
-  if (!confirm(`Clear all ${stepCount} step${stepCount > 1 ? 's' : ''}? This cannot be undone.`)) return;
+  const confirmed = await showConfirmModal({
+    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    title: `Clear all ${stepCount} step${stepCount > 1 ? 's' : ''}?`,
+    desc: 'This will remove all animation steps and restore the pitch to its original state. This cannot be undone.',
+    confirmLabel: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Clear All',
+    confirmClass: 'danger',
+  });
+  if (!confirmed) return;
 
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'clear_all', steps: stepCount }).catch(() => {});
@@ -1072,6 +1085,8 @@ function clearAllSteps() {
 function drawTrails() {
   if (trailsGroup) trailsGroup.remove();
   if (frames.length < 2) { trailsGroup = null; return; }
+  // Never draw trails in shared view
+  if (document.body.classList.contains('shared-view')) { trailsGroup = null; return; }
 
   const ns = 'http://www.w3.org/2000/svg';
   trailsGroup = document.createElementNS(ns, 'g');
@@ -3031,9 +3046,9 @@ document.addEventListener('click', (e) => {
   }
 });
 
-function openAuthModal() {
+function openAuthModal(tab) {
   document.getElementById('auth-modal').style.display = 'flex';
-  switchAuthTab('signin');
+  switchAuthTab(tab === 'signup' ? 'signup' : 'signin');
   clearAuthMessage();
 }
 window.openAuthModal = openAuthModal;
@@ -3129,12 +3144,346 @@ window.doSignOut = doSignOut;
 
 // (toggleUserMenu removed — replaced by toggleAppMenu)
 
+// ─── Sharing ────────────────────────────────────────────────────────────────
+let _pendingShareId = null;
+let _sharedData = null;
+
+function getShareIdFromHash() {
+  const match = window.location.hash.match(/^#\/s\/(.+)$/);
+  return match ? match[1] : null;
+}
+
+// Check for share link on page load
+_pendingShareId = getShareIdFromHash();
+if (_pendingShareId) {
+  sessionStorage.setItem('tactica_share_ref', _pendingShareId);
+}
+
+async function enterSharedView(shareId) {
+  const banner = document.getElementById('share-banner');
+  const gate = document.getElementById('landing-gate');
+  try {
+    _sharedData = await loadSharedAnalysis(shareId);
+    if (!_sharedData) {
+      if (gate) gate.style.display = 'flex';
+      showNotification('This shared analysis no longer exists.', 'error', 5000);
+      history.replaceState(null, '', window.location.pathname);
+      _pendingShareId = null;
+      return;
+    }
+    // Hide landing gate, show share banner
+    if (gate) gate.style.display = 'none';
+    document.body.classList.add('shared-view');
+    // Render the pitch from shared data
+    renderSharedPitch(_sharedData.data);
+    // Show banner
+    if (banner) {
+      const textEl = document.getElementById('share-banner-text');
+      const creatorName = _sharedData.creatorName;
+      if (textEl) textEl.textContent = creatorName
+        ? `Shared by ${creatorName}`
+        : 'Shared analysis';
+      banner.style.display = 'block';
+    }
+    // Track view
+    try {
+      const u = getCurrentUser();
+      logAction(u ? u.uid : 'anon', u ? u.email : '', 'share_viewed', {
+        shareId, creatorUid: _sharedData.creatorUid, authenticated: !!u
+      }).catch(() => {});
+    } catch (e) { /* anon tracking may fail without auth, that's ok */ }
+  } catch (e) {
+    console.warn('Failed to load shared analysis:', e);
+    history.replaceState(null, '', window.location.pathname);
+    _pendingShareId = null;
+    if (gate) gate.style.display = 'flex';
+    showNotification('Could not load shared analysis. Please try again.', 'error', 5000);
+  }
+}
+
+function renderSharedPitch(data) {
+  if (!data) return;
+  // Use the same restore logic as loadAnalysis in storage.js
+  import('./pitch.js').then(({ setPitch }) => {
+    setPitch(data.pitchLayout || 'full-h');
+    if (data.pitchColors) {
+      S.pitchColors.s1 = data.pitchColors.s1;
+      S.pitchColors.s2 = data.pitchColors.s2;
+      S.pitchColors.line = data.pitchColors.line;
+    }
+    import('./pitch.js').then(({ rebuildPitch }) => rebuildPitch());
+  });
+  if (data.teamColors) {
+    S.teamColors.a = data.teamColors.a;
+    S.teamColors.b = data.teamColors.b;
+    S.teamColors.joker = data.teamColors.joker;
+  }
+  if (data.gkColors) {
+    S.gkColors.a = data.gkColors.a;
+    S.gkColors.b = data.gkColors.b;
+    S.gkColors.joker = data.gkColors.joker;
+  }
+  // Fix url() references
+  const fixUrls = html => (html || '').replace(/url\(["']?[^)]*?(#[\w-]+)["']?\)/g, 'url($1)');
+  // Strip baked-in trail lines and fix url() references
+  const stripTrails = html => html.replace(/<g id="step-trails"[\s\S]*?<\/g>/g, '');
+  S.objectsLayer.innerHTML = stripTrails(fixUrls(data.objectsHTML || ''));
+  S.playersLayer.innerHTML = fixUrls(data.playersHTML || '');
+  if (data.playerCounts) {
+    S.playerCounts.a = data.playerCounts.a || 0;
+    S.playerCounts.b = data.playerCounts.b || 0;
+    S.playerCounts.joker = data.playerCounts.joker || 0;
+  }
+  // Do NOT call makeDraggable — keep it read-only
+
+  // Restore animation frames if present
+  if (data.frames && data.frames.length >= 2) {
+    frames = data.frames.map(f => ({
+      positions: f.positions,
+      elementIds: new Set(f.elementIds),
+    }));
+    currentFrame = data.currentFrame || 0;
+    applyFrame(0);
+    // Hide trail lines in shared view — viewers just see the play animation
+    if (trailsGroup) { trailsGroup.remove(); trailsGroup = null; }
+    // Show play button overlay on the pitch
+    const container = document.getElementById('pitch-container');
+    if (container) {
+      const playOverlay = document.createElement('button');
+      playOverlay.id = 'shared-play-btn';
+      playOverlay.className = 'shared-play-btn';
+      playOverlay.innerHTML = '<svg width="18" height="18" viewBox="0 0 12 12" fill="none"><polygon points="2,1 11,6 2,11" fill="currentColor"/></svg> Play';
+      playOverlay.onclick = () => {
+        playOverlay.style.display = 'none';
+        // Temporarily allow pointer events for animation
+        const pitch = document.getElementById('pitch');
+        if (pitch) pitch.style.pointerEvents = 'auto';
+        playAllSteps();
+        // Re-show button and disable pointer events after animation
+        const checkDone = setInterval(() => {
+          if (!animationRunning) {
+            clearInterval(checkDone);
+            playOverlay.style.display = '';
+            if (pitch) pitch.style.pointerEvents = 'none';
+            // Remove trails after animation ends in shared view
+            if (trailsGroup) { trailsGroup.remove(); trailsGroup = null; }
+            applyFrame(0);
+          }
+        }, 200);
+      };
+      container.appendChild(playOverlay);
+    }
+  }
+}
+
+function updateShareBannerAuth(isLoggedIn) {
+  const signupBtn = document.getElementById('share-banner-signup-btn');
+  const signinBtn = document.getElementById('share-banner-signin-btn');
+  const copyBtn = document.getElementById('share-banner-copy-btn');
+  if (isLoggedIn) {
+    if (signupBtn) signupBtn.style.display = 'none';
+    if (signinBtn) signinBtn.style.display = 'none';
+    if (copyBtn) copyBtn.style.display = 'flex';
+  } else {
+    if (signupBtn) signupBtn.style.display = '';
+    if (signinBtn) signinBtn.style.display = '';
+    if (copyBtn) copyBtn.style.display = 'none';
+  }
+}
+
+async function forkSharedAnalysis() {
+  if (!_sharedData) return;
+  const u = getCurrentUser();
+  if (!u) { openAuthModal('signup'); return; }
+  const newId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const newName = (_sharedData.name || 'Shared Analysis') + ' (copy)';
+  // Pitch is already rendered with shared data, so captureState() will capture it
+  await saveAnalysis(newName);
+  // Track fork
+  logAction(u.uid, u.email, 'share_forked', {
+    shareId: _pendingShareId, newAnalysisId: getCurrentId()
+  }).catch(() => {});
+  // Exit shared view
+  document.body.classList.remove('shared-view');
+  document.getElementById('share-banner').style.display = 'none';
+  history.replaceState(null, '', window.location.pathname);
+  _pendingShareId = null;
+  _sharedData = null;
+  // Reload into normal editor
+  location.reload();
+}
+window.forkSharedAnalysis = forkSharedAnalysis;
+
+function showConfirmModal({ icon, title, desc, confirmLabel, confirmClass, checkbox }) {
+  return new Promise(resolve => {
+    const modal = document.getElementById('tactica-confirm-modal');
+    const iconEl = document.getElementById('confirm-modal-icon');
+    iconEl.innerHTML = icon || '';
+    iconEl.className = 'share-modal-icon' + (confirmClass === 'danger' ? ' danger' : '');
+    document.getElementById('confirm-modal-title').textContent = title || 'Confirm';
+    document.getElementById('confirm-modal-desc').textContent = desc || '';
+    const okBtn = document.getElementById('confirm-modal-ok');
+    okBtn.innerHTML = confirmLabel || 'OK';
+    okBtn.className = 'share-modal-btn confirm' + (confirmClass === 'danger' ? ' danger' : '');
+    // Optional checkbox with name input
+    const extraEl = document.getElementById('confirm-modal-extra');
+    if (extraEl) extraEl.remove();
+    let checkboxEl = null;
+    let nameInput = null;
+    if (checkbox) {
+      const wrap = document.createElement('div');
+      wrap.id = 'confirm-modal-extra';
+      wrap.className = 'confirm-modal-extra-wrap';
+      // Checkbox row
+      const labelRow = document.createElement('label');
+      labelRow.className = 'confirm-modal-checkbox';
+      checkboxEl = document.createElement('input');
+      checkboxEl.type = 'checkbox';
+      checkboxEl.checked = checkbox.checked !== false;
+      const span = document.createElement('span');
+      span.textContent = checkbox.label;
+      labelRow.appendChild(checkboxEl);
+      labelRow.appendChild(span);
+      wrap.appendChild(labelRow);
+      // Name input (shown when checkbox is checked)
+      if (checkbox.nameField) {
+        nameInput = document.createElement('input');
+        nameInput.type = 'text';
+        nameInput.className = 'confirm-modal-name-input';
+        nameInput.placeholder = 'Analysis name';
+        nameInput.value = checkbox.nameField.value || '';
+        nameInput.maxLength = 60;
+        nameInput.style.display = checkboxEl.checked ? '' : 'none';
+        wrap.appendChild(nameInput);
+        checkboxEl.addEventListener('change', () => {
+          nameInput.style.display = checkboxEl.checked ? '' : 'none';
+          if (checkboxEl.checked) nameInput.focus();
+        });
+      }
+      // Insert before actions
+      const actions = modal.querySelector('.share-modal-actions');
+      actions.parentElement.insertBefore(wrap, actions);
+    }
+    modal.style.display = 'flex';
+    if (nameInput && checkboxEl?.checked) nameInput.focus();
+    const cancel = document.getElementById('confirm-modal-cancel');
+    function cleanup(result) {
+      modal.style.display = 'none';
+      okBtn.removeEventListener('click', onOk);
+      cancel.removeEventListener('click', onCancel);
+      modal.removeEventListener('click', onBackdrop);
+      if (result && checkboxEl) {
+        resolve({
+          confirmed: true,
+          checkboxChecked: checkboxEl.checked,
+          name: nameInput ? nameInput.value.trim() : '',
+        });
+      } else {
+        resolve(result ? { confirmed: true } : false);
+      }
+    }
+    function onOk() { cleanup(true); }
+    function onCancel() { cleanup(false); }
+    function onBackdrop(e) { if (e.target === modal) cleanup(false); }
+    okBtn.addEventListener('click', onOk);
+    cancel.addEventListener('click', onCancel);
+    modal.addEventListener('click', onBackdrop);
+  });
+}
+
+async function shareAnalysis() {
+  const u = getCurrentUser();
+  if (!u) { showNotification('Sign in to share.', 'error', 3000); return; }
+  const alreadySaved = !!getCurrentId();
+  const result = await showConfirmModal({
+    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="3" stroke="#34D399" stroke-width="1.5"/><circle cx="6" cy="12" r="3" stroke="#34D399" stroke-width="1.5"/><circle cx="18" cy="19" r="3" stroke="#34D399" stroke-width="1.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" stroke="#34D399" stroke-width="1.5"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5" stroke="#34D399" stroke-width="1.5"/></svg>',
+    title: 'Share Analysis',
+    desc: "This will create a public link. Anyone with the link can view this analysis — they'll need to sign up to make their own copy.",
+    confirmLabel: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="1.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" stroke="currentColor" stroke-width="1.5"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5" stroke="currentColor" stroke-width="1.5"/></svg> Share',
+    checkbox: {
+      label: 'Also save analysis to my account',
+      checked: false,
+      nameField: { value: document.getElementById('analysis-name-input')?.value || '' },
+    },
+  });
+  if (!result) return;
+  const shareId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
+  const currentId = getCurrentId();
+  const state = captureState();
+  const thumb = generateThumbnail();
+  const currentName = (result.checkboxChecked && result.name) ? result.name
+    : document.getElementById('analysis-name-input')?.value || 'Untitled';
+  // Update the name input if user typed a new name
+  if (result.checkboxChecked && result.name) {
+    const nameInput = document.getElementById('analysis-name-input');
+    if (nameInput) nameInput.value = result.name;
+  }
+  try {
+    await saveSharedAnalysis(shareId, {
+      creatorUid: u.uid,
+      creatorName: u.displayName || '',
+      sourceAnalysisId: currentId || '',
+      name: currentName,
+      thumbnail: thumb,
+      data: state,
+    });
+    // Auto-save if checkbox was checked
+    if (result.checkboxChecked) {
+      try { await saveAnalysis(currentName); } catch (e) { console.warn('Auto-save failed:', e); }
+    }
+    // Track
+    logAction(u.uid, u.email, 'share_created', { analysisId: getCurrentId() || currentId, shareId, autoSaved: !!result.checkboxChecked }).catch(() => {});
+    // Show modal with link
+    const url = window.location.origin + window.location.pathname + '#/s/' + shareId;
+    const input = document.getElementById('share-link-input');
+    if (input) input.value = url;
+    document.getElementById('share-modal').style.display = 'flex';
+  } catch (e) {
+    console.error('Share failed:', e);
+    showNotification('Failed to create share link. Please try again.', 'error', 4000);
+  }
+}
+window.shareAnalysis = shareAnalysis;
+
+function copyShareLink() {
+  const input = document.getElementById('share-link-input');
+  if (!input) return;
+  navigator.clipboard.writeText(input.value).then(() => {
+    const btn = document.getElementById('share-copy-btn');
+    if (btn) { btn.textContent = 'Copied!'; setTimeout(() => { btn.textContent = 'Copy Link'; }, 2000); }
+  });
+}
+window.copyShareLink = copyShareLink;
+
 // ─── Auth State Listener ────────────────────────────────────────────────────
 let _authInitialized = false;
 onAuthChange(async (user) => {
   updateAuthUI(user);
   closeAuthModal();
   const gate = document.getElementById('landing-gate');
+
+  // ─── Shared View Branch ────────────────────────────────────────────────────
+  if (_pendingShareId) {
+    // Always enter shared view (works with or without auth)
+    await enterSharedView(_pendingShareId);
+    updateShareBannerAuth(!!user);
+    // If user just signed in while on shared view, track session
+    if (user) {
+      setSessionId(user.uid + '_' + Date.now());
+      try { await logSession(user.uid, user.email, user.displayName); } catch (e) {}
+      // Check if this sign-up was driven by a share link
+      const shareRef = sessionStorage.getItem('tactica_share_ref');
+      if (shareRef && _authInitialized) {
+        logAction(user.uid, user.email, 'share_signup', {
+          shareId: shareRef,
+          method: user.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email'
+        }).catch(() => {});
+      }
+    }
+    _authInitialized = true;
+    return;
+  }
+
   if (user) {
     // Hide landing gate
     if (gate) gate.style.display = 'none';

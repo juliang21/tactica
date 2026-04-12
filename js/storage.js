@@ -45,11 +45,13 @@ export function captureState() {
     pitchColors: { ...S.pitchColors },
     teamColors: { ...S.teamColors },
     gkColors: { ...S.gkColors },
-    objectsHTML: cleanHTML(S.objectsLayer.innerHTML),
+    objectsHTML: cleanHTML(S.objectsLayer.innerHTML).replace(/<g id="step-trails"[\s\S]*?<\/g>/g, ''),
     playersHTML: cleanHTML(S.playersLayer.innerHTML),
     playerCounts: { ...S.playerCounts },
     objectCounter: S.objectCounter,
     imageData: S.imageData || null,
+    frames: typeof window._getFramesForSave === 'function' ? window._getFramesForSave() : [],
+    currentFrame: typeof window._getCurrentFrame === 'function' ? window._getCurrentFrame() : 0,
   };
 }
 
