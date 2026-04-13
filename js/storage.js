@@ -64,92 +64,68 @@ export function generateThumbnail() {
     const svgEl = S.svg;
     const W = svgEl.viewBox.baseVal.width || 700;
     const H = svgEl.viewBox.baseVal.height || 480;
-    const SCALE = 0.6;
-    const canvas = document.createElement('canvas');
-    canvas.width = W * SCALE;
-    canvas.height = H * SCALE;
-    const ctx = canvas.getContext('2d');
-    ctx.scale(SCALE, SCALE);
+    const SCALE = 1.5;
 
-    const s1 = S.pitchColors.s1, s2 = S.pitchColors.s2;
-    const isV = (/full-v|half-v/).test(S.currentPitchLayout);
-    if (isV) {
-      for (let y = 0; y < H; y += 40) {
-        ctx.fillStyle = s1; ctx.fillRect(0, y, W, 20);
-        ctx.fillStyle = s2; ctx.fillRect(0, y + 20, W, 20);
-      }
-    } else {
-      for (let x = 0; x < W; x += 40) {
-        ctx.fillStyle = s1; ctx.fillRect(x, 0, 20, H);
-        ctx.fillStyle = s2; ctx.fillRect(x + 20, 0, 20, H);
-      }
-    }
+    // Clone the SVG so we don't mutate the live DOM
+    const clone = svgEl.cloneNode(true);
 
-    ctx.strokeStyle = S.pitchColors.line;
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(30, 20, W - 60, H - 40);
+    // Remove any selection rings / hit-areas that shouldn't be in the thumbnail
+    clone.querySelectorAll('.selection-ring, .hit-area, .resize-handle, .rotate-handle').forEach(el => el.remove());
 
-    S.playersLayer.querySelectorAll('[data-type="player"]').forEach(g => {
-      const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
-      const circ = g.querySelector('circle:not(.hit-area):not(.player-arm)');
-      const color = circ ? circ.getAttribute('fill') : '#8B5CF6';
-      if (g.dataset.arms === '1') {
-        const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
-        const r = 12;
-        const cosR = Math.cos(rot), sinR = Math.sin(rot);
-        function rp(x, y) { return [x*cosR - y*sinR, x*sinR + y*cosR]; }
-        ctx.save(); ctx.translate(cx, cy);
-        // Arms behind
-        ctx.strokeStyle = '#1a1a1a'; ctx.lineWidth = 1.8; ctx.lineCap = 'round';
-        for (const side of [-1, 1]) {
-          const [sx,sy] = rp(side * r * 0.55, r * 0.45);
-          const [ex,ey] = rp(side * (r * 0.55 + r * 0.85), r * 0.45 + r * 0.7);
-          const [cpx,cpy] = rp(side * (r * 0.55 + r * 0.425), r * 0.45 + r * 0.105);
-          ctx.beginPath(); ctx.moveTo(sx, sy); ctx.quadraticCurveTo(cpx, cpy, ex, ey); ctx.stroke();
+    // Inline all computed styles needed for rendering
+    clone.setAttribute('width', W);
+    clone.setAttribute('height', H);
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+
+    // Inline essential styles so the serialised SVG renders correctly in <img>
+    const styleEl = document.createElementNS('http://www.w3.org/2000/svg', 'style');
+    styleEl.textContent = `
+      text { font-family: 'Manrope', Arial, sans-serif; }
+      .freeform-shape { vector-effect: non-scaling-stroke; }
+    `;
+    clone.insertBefore(styleEl, clone.firstChild);
+
+    // Copy computed fill/stroke/opacity from live elements to clone for inline rendering
+    const liveEls = svgEl.querySelectorAll('rect, circle, ellipse, line, path, text, g');
+    const cloneEls = clone.querySelectorAll('rect, circle, ellipse, line, path, text, g');
+    liveEls.forEach((liveEl, i) => {
+      if (!cloneEls[i]) return;
+      const cs = getComputedStyle(liveEl);
+      const cloneEl = cloneEls[i];
+      // Copy key presentation attributes if set via CSS
+      ['fill', 'stroke', 'opacity', 'stroke-width', 'stroke-dasharray', 'font-size', 'font-weight', 'font-family'].forEach(prop => {
+        const val = cs.getPropertyValue(prop);
+        if (val && val !== 'none' && val !== '' && !cloneEl.getAttribute(prop)) {
+          cloneEl.setAttribute(prop, val);
         }
-        // Body on top
-        ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI * 2); ctx.fillStyle = color; ctx.fill();
-        ctx.restore();
-      } else {
-        ctx.beginPath();
-        ctx.arc(cx, cy, 12, 0, Math.PI * 2);
-        ctx.fillStyle = color;
-        ctx.fill();
-      }
-    });
-
-    S.objectsLayer.querySelectorAll('[data-type="arrow"]').forEach(g => {
-      const line = g.querySelector('.arrow-line');
-      if (!line) return;
-      const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
-      const dx1 = parseFloat(g.dataset.dx1), dy1 = parseFloat(g.dataset.dy1);
-      const dx2 = parseFloat(g.dataset.dx2), dy2 = parseFloat(g.dataset.dy2);
-      const sc = parseFloat(g.dataset.scale || '1');
-      const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
-      const k = parseFloat(g.dataset.curve || '0');
-      const tfm = (dx, dy) => ({
-        x: cx + (dx*sc)*Math.cos(rot) - (dy*sc)*Math.sin(rot),
-        y: cy + (dx*sc)*Math.sin(rot) + (dy*sc)*Math.cos(rot)
       });
-      const p1 = tfm(dx1, dy1), p2 = tfm(dx2, dy2);
-      const midX = (p1.x+p2.x)/2, midY = (p1.y+p2.y)/2;
-      let perpX = -(p2.y-p1.y), perpY = p2.x-p1.x;
-      const pLen = Math.sqrt(perpX*perpX+perpY*perpY);
-      if (pLen > 1) { perpX /= pLen; perpY /= pLen; }
-      const cpX = midX + k*perpX, cpY = midY + k*perpY;
-      ctx.beginPath();
-      ctx.moveTo(p1.x, p1.y);
-      if (Math.abs(k) < 1) { ctx.lineTo(p2.x, p2.y); }
-      else { ctx.quadraticCurveTo(cpX, cpY, p2.x, p2.y); }
-      ctx.strokeStyle = line.getAttribute('stroke') || '#F59E0B';
-      ctx.lineWidth = 2;
-      ctx.stroke();
     });
 
-    return canvas.toDataURL('image/jpeg', 0.5);
+    // Serialize SVG to data URI
+    const serializer = new XMLSerializer();
+    const svgString = serializer.serializeToString(clone);
+    const svgDataUri = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgString);
+
+    // Draw SVG onto canvas
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        canvas.width = W * SCALE;
+        canvas.height = H * SCALE;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, W * SCALE, H * SCALE);
+        resolve(canvas.toDataURL('image/jpeg', 0.85));
+      };
+      img.onerror = () => {
+        console.error('Thumbnail SVG image load failed');
+        resolve('');
+      };
+      img.src = svgDataUri;
+    });
   } catch (e) {
     console.error('Thumbnail generation failed:', e);
-    return '';
+    return Promise.resolve('');
   }
 }
 
@@ -164,7 +140,7 @@ export async function saveAnalysis(name) {
     existing.name = name;
     existing.updatedAt = Date.now();
     existing.data = captureState();
-    existing.thumbnail = generateThumbnail();
+    existing.thumbnail = await generateThumbnail();
     analysisObj = existing;
   } else {
     analysisObj = {
@@ -172,7 +148,7 @@ export async function saveAnalysis(name) {
       name,
       createdAt: Date.now(),
       updatedAt: Date.now(),
-      thumbnail: generateThumbnail(),
+      thumbnail: await generateThumbnail(),
       data: captureState(),
     };
     analyses.unshift(analysisObj);
@@ -367,7 +343,7 @@ export async function quickSave() {
 
   existing.updatedAt = Date.now();
   existing.data = captureState();
-  existing.thumbnail = generateThumbnail();
+  existing.thumbnail = await generateThumbnail();
   saveLocalAnalyses(analyses);
 
   if (isSignedIn()) {

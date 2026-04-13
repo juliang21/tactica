@@ -2762,26 +2762,27 @@ let _cachedFolders = [];
 
 function renderAnalysisCard(a, currentId) {
   const inFolder = !!a.folderId;
+  const safeName = a.name.replace(/'/g, "\\'");
   return `
     <div class="analysis-card${a.id === currentId ? ' current' : ''}" data-id="${a.id}" draggable="true" onclick="loadAnalysisFromCard('${a.id}')">
       <div class="analysis-card-thumb">
         ${a.thumbnail ? `<img src="${a.thumbnail}" alt="${a.name}">` : '<span class="no-thumb">No preview</span>'}
+        <div class="analysis-card-actions">
+          <button class="analysis-card-action" onclick="event.stopPropagation();toggleMoveMenu('${a.id}')" title="Move to folder">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 3.5A1.5 1.5 0 013 2h2.382a1 1 0 01.894.553L6.882 4H11A1.5 1.5 0 0112.5 5.5v5A1.5 1.5 0 0111 12H3A1.5 1.5 0 011.5 10.5v-7z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>${inFolder ? '<path d="M7 6v4M5 8h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" transform="rotate(45 7 8)"/>' : '<path d="M7 6v4M5 8h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>'}</svg>
+          </button>
+          <button class="analysis-card-action" onclick="event.stopPropagation();duplicateFromCard('${a.id}')" title="Duplicate">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M10 4V3a1 1 0 00-1-1H3a1 1 0 00-1 1v6a1 1 0 001 1h1" stroke="currentColor" stroke-width="1.2"/></svg>
+          </button>
+          <button class="analysis-card-action delete" onclick="event.stopPropagation();askDeleteAnalysis('${a.id}','${safeName}')" title="Delete">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 4h9M5 4V2.5h4V4M3.5 4v7.5a1 1 0 001 1h5a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+        </div>
       </div>
       <div class="analysis-card-info">
         <div class="analysis-card-name" title="${a.name}">${a.name}</div>
         <div class="analysis-card-meta">
           <span class="analysis-card-date">${formatDate(a.updatedAt)}</span>
-          <div class="analysis-card-actions">
-            <button class="analysis-card-action" onclick="event.stopPropagation();toggleMoveMenu('${a.id}')" title="Move to folder">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M1.5 3.5A1.5 1.5 0 013 2h2.382a1 1 0 01.894.553L6.882 4H11A1.5 1.5 0 0112.5 5.5v5A1.5 1.5 0 0111 12H3A1.5 1.5 0 011.5 10.5v-7z" stroke="currentColor" stroke-width="1.1" stroke-linejoin="round"/>${inFolder ? '<path d="M7 6v4M5 8h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" transform="rotate(45 7 8)"/>' : '<path d="M7 6v4M5 8h4" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/>'}</svg>
-            </button>
-            <button class="analysis-card-action" onclick="event.stopPropagation();duplicateFromCard('${a.id}')" title="Duplicate">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="4" y="4" width="8" height="8" rx="1" stroke="currentColor" stroke-width="1.2"/><path d="M10 4V3a1 1 0 00-1-1H3a1 1 0 00-1 1v6a1 1 0 001 1h1" stroke="currentColor" stroke-width="1.2"/></svg>
-            </button>
-            <button class="analysis-card-action delete" onclick="event.stopPropagation();askDeleteAnalysis('${a.id}','${a.name.replace(/'/g, "\\'")}')" title="Delete">
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 4h9M5 4V2.5h4V4M3.5 4v7.5a1 1 0 001 1h5a1 1 0 001-1V4" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            </button>
-          </div>
         </div>
       </div>
     </div>`;
@@ -3787,7 +3788,7 @@ async function shareAnalysis() {
   const shareId = Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
   const currentId = getCurrentId();
   const state = captureState();
-  const thumb = generateThumbnail();
+  const thumb = await generateThumbnail();
   const currentName = (result.checkboxChecked && result.name) ? result.name
     : document.getElementById('analysis-name-input')?.value || 'Untitled';
   // Update the name input if user typed a new name

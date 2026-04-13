@@ -1803,7 +1803,7 @@ body.shared-view .shared-watermark {
 
 .analyses-grid {
   flex: 1; overflow-y: auto;
-  padding: 28px 32px;
+  padding: 28px 40px;
 }
 
 .analyses-empty {
@@ -1822,60 +1822,77 @@ body.shared-view .shared-watermark {
 
 /* ── Analysis Card ── */
 .analysis-card {
-  background: var(--panel); border: 1px solid var(--border);
-  border-radius: 10px; overflow: hidden; cursor: pointer;
+  background: transparent; border: none;
+  border-radius: 12px; overflow: visible; cursor: pointer;
   transition: all 0.2s;
   display: flex; flex-direction: column;
+  position: relative;
 }
-.analysis-card:hover {
-  border-color: rgba(30,215,96,0.4);
-  box-shadow: 0 4px 20px rgba(0,0,0,0.3);
-  transform: translateY(-2px);
+.analysis-card:hover .analysis-card-thumb {
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+  transform: scale(1.02);
+}
+.analysis-card.current .analysis-card-thumb {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
 }
 .analysis-card-thumb {
-  width: 100%; aspect-ratio: 700/480;
+  width: 100%; aspect-ratio: 1/1;
   background: var(--panel2);
+  border-radius: 12px;
   display: flex; align-items: center; justify-content: center;
   overflow: hidden;
+  transition: all 0.25s ease;
+  position: relative;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.4), 0 0 0 1px rgba(255,255,255,0.04);
 }
 .analysis-card-thumb img {
-  width: 100%; height: 100%; object-fit: cover;
+  width: 130%; height: 130%; object-fit: cover;
+  object-position: center center;
+  border-radius: 12px;
 }
 .analysis-card-thumb .no-thumb {
   color: var(--text-dim); font-size: 11px;
   font-family: 'Manrope', sans-serif;
 }
+/* Hover actions overlay on thumbnail */
+.analysis-card-actions {
+  position: absolute; top: 8px; right: 8px;
+  display: flex; gap: 4px;
+  opacity: 0; transition: opacity 0.15s;
+  z-index: 2;
+}
+.analysis-card:hover .analysis-card-actions { opacity: 1; }
+.analysis-card-action {
+  width: 30px; height: 30px; border-radius: 8px;
+  border: none; background: rgba(20,20,20,0.8); color: #ddd;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+  backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px);
+}
+.analysis-card-action:hover { background: rgba(30,30,30,0.95); color: #fff; }
+.analysis-card-action.delete:hover { background: rgba(180,40,40,0.85); color: #fff; }
+
 .analysis-card-info {
-  padding: 12px 14px;
-  display: flex; flex-direction: column; gap: 4px;
+  padding: 10px 4px 4px;
+  display: flex; flex-direction: column; gap: 2px;
 }
 .analysis-card-name {
-  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600;
+  font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 600;
   color: var(--text);
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .analysis-card-meta {
-  display: flex; align-items: center; justify-content: space-between;
+  display: flex; align-items: center; justify-content: flex-start;
 }
 .analysis-card-date {
-  font-family: 'Manrope', sans-serif; font-size: 10px; font-weight: 500;
-  color: var(--text-dim); letter-spacing: 0.3px;
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 400;
+  color: var(--text-muted);
 }
-.analysis-card-actions {
-  display: flex; gap: 2px;
-}
-.analysis-card-action {
-  width: 28px; height: 28px; border-radius: 6px;
-  border: none; background: transparent; color: var(--text-dim);
-  cursor: pointer; display: flex; align-items: center; justify-content: center;
-  transition: all 0.12s;
-}
-.analysis-card-action:hover { background: var(--panel2); color: var(--text); }
-.analysis-card-action.delete:hover { background: #3A1520; color: #F87171; }
 
 /* ── Drag and Drop ── */
 .analysis-card[draggable] { cursor: grab; }
-.analysis-card.dragging { opacity: 0.4; transform: scale(0.96); }
+.analysis-card.dragging { opacity: 0.35; transform: scale(0.95); }
 .drag-active .folder-header {
   border: 1.5px dashed rgba(30,215,96,0.35);
   border-radius: 8px;
@@ -1938,8 +1955,8 @@ body.shared-view .shared-watermark {
 .folder-body { padding: 8px 0 4px 0; }
 .folder-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 14px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 220px));
+  gap: 20px;
   padding: 0 8px;
 }
 
@@ -1966,8 +1983,8 @@ body.shared-view .shared-watermark {
 
 .analyses-card-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 220px));
+  gap: 20px;
 }
 
 /* ── New Folder Button ── */
