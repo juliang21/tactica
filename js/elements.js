@@ -563,7 +563,158 @@ export function addHeadline(x, y, title, body) {
     e.stopPropagation();
     select(g);
   });
+  g.addEventListener('dblclick', e => {
+    e.stopPropagation();
+    openHeadlineEdit(g, e);
+  });
   return g;
+}
+
+// ─── Inline Headline Editing ─────────────────────────────────────────────────
+export function openHeadlineEdit(g, evt) {
+  select(g);
+
+  const svgEl = document.getElementById('pitch-svg');
+  const ctm = svgEl.getScreenCTM();
+  const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+  const hw = parseFloat(g.dataset.hw || '130'), hh = parseFloat(g.dataset.hh || '40');
+  const rot = parseFloat(g.dataset.rotation || '0');
+  const titleSize = parseFloat(g.dataset.hlTitleSize || '16');
+  const bodySize = parseFloat(g.dataset.hlBodySize || '12');
+  const textColor = g.dataset.hlTextColor || 'rgba(255,255,255,0.9)';
+  const barW = 4, padL = 14;
+
+  // Convert SVG bounding box to screen coords (text area, excluding bar)
+  const pt1 = svgEl.createSVGPoint();
+  pt1.x = cx - hw + barW + padL; pt1.y = cy - hh;
+  const pt2 = svgEl.createSVGPoint();
+  pt2.x = cx + hw; pt2.y = cy + hh;
+  const s1 = pt1.matrixTransform(ctm);
+  const s2 = pt2.matrixTransform(ctm);
+
+  const scale = ctm.a; // zoom factor
+  const overlayW = s2.x - s1.x;
+  const overlayH = s2.y - s1.y;
+
+  // Determine if click was on title or body (use midpoint heuristic)
+  let focusBody = false;
+  if (evt) {
+    const titleEl = g.querySelector('.headline-title');
+    const bodyEl = g.querySelector('.headline-body');
+    if (titleEl && bodyEl) {
+      const titleBBox = titleEl.getBBox();
+      const bodyBBox = bodyEl.getBBox();
+      const midY = (titleBBox.y + titleBBox.height + bodyBBox.y) / 2;
+      // Convert click to SVG coords
+      const clickPt = svgEl.createSVGPoint();
+      clickPt.x = evt.clientX; clickPt.y = evt.clientY;
+      const svgClick = clickPt.matrixTransform(ctm.inverse());
+      if (svgClick.y > midY) focusBody = true;
+    }
+  }
+
+  // Create overlay container
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed; left: ${s1.x}px; top: ${s1.y}px;
+    width: ${overlayW}px; height: ${overlayH}px;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 6px 8px; gap: 2px;
+    border: 2px solid #4FC3F7; border-radius: 4px;
+    background: rgba(0,0,0,0.3); backdrop-filter: blur(4px);
+    z-index: 9999; box-sizing: border-box;
+    ${rot ? `transform: rotate(${rot}deg); transform-origin: center;` : ''}
+  `;
+
+  // Title input
+  const titleInput = document.createElement('input');
+  titleInput.type = 'text';
+  titleInput.value = g.dataset.hlTitle || '';
+  titleInput.placeholder = 'Headline';
+  titleInput.style.cssText = `
+    background: transparent; border: none; outline: none;
+    color: ${textColor}; font-family: Poppins, sans-serif;
+    font-size: ${titleSize * scale}px; font-weight: 700;
+    width: 100%; padding: 0; margin: 0; line-height: 1.3;
+  `;
+
+  // Body input
+  const bodyInput = document.createElement('textarea');
+  bodyInput.value = g.dataset.hlBody || '';
+  bodyInput.placeholder = 'Description';
+  bodyInput.style.cssText = `
+    background: transparent; border: none; outline: none;
+    color: ${textColor}; opacity: 0.7; font-family: Poppins, sans-serif;
+    font-size: ${bodySize * scale}px; font-weight: 400;
+    width: 100%; padding: 0; margin: 0; line-height: 1.4;
+    resize: none; overflow: hidden; flex: 1;
+  `;
+
+  overlay.appendChild(titleInput);
+  overlay.appendChild(bodyInput);
+
+  // Hide SVG text while editing
+  const titleEl = g.querySelector('.headline-title');
+  const bodyEl = g.querySelector('.headline-body');
+  if (titleEl) titleEl.style.visibility = 'hidden';
+  if (bodyEl) bodyEl.style.visibility = 'hidden';
+
+  document.body.appendChild(overlay);
+
+  // Focus the right field
+  if (focusBody) { bodyInput.focus(); bodyInput.select(); }
+  else { titleInput.focus(); titleInput.select(); }
+
+  // Sync sidebar inputs
+  const sideTitleInput = document.getElementById('headline-title-input');
+  const sideBodyInput = document.getElementById('headline-body-input');
+
+  let finished = false;
+  function finishEdit() {
+    if (finished) return;
+    finished = true;
+    g.dataset.hlTitle = titleInput.value;
+    g.dataset.hlBody = bodyInput.value;
+    if (sideTitleInput) sideTitleInput.value = titleInput.value;
+    if (sideBodyInput) sideBodyInput.value = bodyInput.value;
+    if (titleEl) titleEl.style.visibility = '';
+    if (bodyEl) bodyEl.style.visibility = '';
+    overlay.remove();
+    rewrapHeadline(g);
+  }
+
+  // Close on click outside
+  function onDocClick(e) {
+    if (!overlay.contains(e.target)) {
+      document.removeEventListener('mousedown', onDocClick, true);
+      finishEdit();
+    }
+  }
+  setTimeout(() => document.addEventListener('mousedown', onDocClick, true), 0);
+
+  // Escape to close
+  overlay.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); finishEdit(); }
+  });
+
+  // Live update as user types
+  titleInput.addEventListener('input', () => {
+    g.dataset.hlTitle = titleInput.value;
+    if (sideTitleInput) sideTitleInput.value = titleInput.value;
+  });
+  bodyInput.addEventListener('input', () => {
+    g.dataset.hlBody = bodyInput.value;
+    if (sideBodyInput) sideBodyInput.value = bodyInput.value;
+  });
+
+  // Tab between fields
+  titleInput.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); bodyInput.focus(); }
+    if (e.key === 'Enter') { e.preventDefault(); bodyInput.focus(); }
+  });
+  bodyInput.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); titleInput.focus(); }
+  });
 }
 
 export function rewrapHeadline(g) {

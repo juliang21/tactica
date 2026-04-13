@@ -1,6 +1,6 @@
 :root {
   /* Surfaces — Spotify-inspired elevation */
-  --bg: #121212;           /* Spotify's exact background */
+  --bg: #111111;           /* matches canvas gradient edge */
   --panel: #1a1a1a;        /* elevated surface */
   --panel2: #242424;       /* higher elevation — cards, inputs */
   --border: #2e2e2e;       /* visible borders */
@@ -455,14 +455,10 @@ body {
 #canvas-wrap {
   flex: 1; display: flex; align-items: center; justify-content: center;
   padding: 64px 20px 20px; position: relative; overflow: hidden;
-  background: radial-gradient(ellipse at center, #1e1e1e 0%, #111111 70%);
+  background: var(--bg);
 }
 #canvas-wrap::after {
-  content: '';
-  position: absolute; inset: 0;
-  pointer-events: none;
-  background: radial-gradient(ellipse at center, transparent 40%, rgba(0,0,0,0.45) 100%);
-  z-index: 0;
+  display: none;
 }
 #pitch-wrap {
   display: flex; flex-direction: column; align-items: center;
