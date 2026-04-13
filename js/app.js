@@ -3937,6 +3937,8 @@ onAuthChange(async (user) => {
       if (notesBtn) {
         setTimeout(() => {
           notesBtn.classList.add('announce-highlight');
+          // Auto-remove highlight after 6s regardless
+          setTimeout(() => notesBtn.classList.remove('announce-highlight'), 6000);
           showFeatureAnnounce({
             id: 'notes-tooltip-v1',
             anchorEl: notesBtn,
