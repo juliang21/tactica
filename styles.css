@@ -536,6 +536,10 @@ body {
   font-size: 7px; font-weight: 700; text-align: center;
   color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
 }
+.kit-boc-preview {
+  background: linear-gradient(to bottom, #003da5 33%, #fde100 33%, #fde100 67%, #003da5 67%);
+}
+.kit-boc-preview .kit-label { color: #0a0a0a; }
 
 /* Arrow style buttons */
 .style-btn-row { display: flex; gap: 6px; }

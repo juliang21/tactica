@@ -102,16 +102,17 @@ function setPlayerColor(g, color) {
   delete g.dataset.borderColor;
   const txt = g.querySelectorAll('text')[0];
   if (txt) {
-    txt.setAttribute('fill', (!isPattern && S.isDarkColor(color)) ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
-    // Add a readable halo behind number text on patterned fills
+    const isDark = !isPattern && S.isDarkColor(color);
+    txt.setAttribute('font-size', '12');
+    txt.setAttribute('paint-order', 'stroke');
     if (isPattern) {
-      txt.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+      txt.setAttribute('fill', '#fff');
+      txt.setAttribute('stroke', 'rgba(0,0,0,0.5)');
       txt.setAttribute('stroke-width', '3');
-      txt.setAttribute('paint-order', 'stroke');
     } else {
-      txt.removeAttribute('stroke');
-      txt.removeAttribute('stroke-width');
-      txt.removeAttribute('paint-order');
+      txt.setAttribute('fill', isDark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)');
+      txt.setAttribute('stroke', isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)');
+      txt.setAttribute('stroke-width', '2');
     }
   }
   // Sync arms to match new color
@@ -127,7 +128,7 @@ function updateTeamPlayerColors(team, color, gkColor, borderColor) {
       const circ = g.querySelector('circle:not(.hit-area)');
       if (circ) {
         circ.setAttribute('stroke', borderColor);
-        circ.setAttribute('stroke-width', '2');
+        circ.setAttribute('stroke-width', borderColor === 'none' ? '0' : '2');
       }
       g.dataset.borderColor = borderColor;
     }

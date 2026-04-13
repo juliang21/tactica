@@ -29,12 +29,16 @@ export function addPlayer(x, y, team, num, isGK) {
   const numText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   numText.setAttribute('text-anchor','middle'); numText.setAttribute('dominant-baseline','central');
   numText.setAttribute('font-family','Poppins,sans-serif');
-  numText.setAttribute('font-size','10'); numText.setAttribute('font-weight','700');
+  numText.setAttribute('font-size','12'); numText.setAttribute('font-weight','700');
   numText.setAttribute('fill', textColor); numText.setAttribute('pointer-events','none');
+  // Add subtle stroke for readability on all players
+  numText.setAttribute('stroke', isDark ? 'rgba(0,0,0,0.3)' : 'rgba(255,255,255,0.3)');
+  numText.setAttribute('stroke-width', '2');
+  numText.setAttribute('paint-order', 'stroke');
   if (isPattern) {
-    numText.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+    numText.setAttribute('fill', '#fff');
+    numText.setAttribute('stroke', 'rgba(0,0,0,0.5)');
     numText.setAttribute('stroke-width', '3');
-    numText.setAttribute('paint-order', 'stroke');
   }
   numText.textContent = num;
 
