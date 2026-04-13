@@ -261,6 +261,7 @@ export function addArrow(x1, y1, x2, y2, type) {
   if (st.dash) line.setAttribute('stroke-dasharray', st.dash);
   if (st.marker !== 'none') line.setAttribute('marker-end', st.marker);
   line.setAttribute('opacity','0.95');
+  g.dataset.arrowOpacity = '0.95';
 
   const hit = document.createElementNS('http://www.w3.org/2000/svg', 'path');
   hit.classList.add('arrow-hit');

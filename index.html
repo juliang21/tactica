@@ -938,6 +938,13 @@
           <span id="arrow-curve-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">0</span>
         </div>
       </div>
+      <div class="field-group">
+        <div class="field-label">Opacity</div>
+        <div class="field-row">
+          <input type="range" id="arrow-opacity-slider" min="0.05" max="1" value="0.95" step="0.05" oninput="applyArrowOpacity(this.value)" style="flex:1">
+          <span id="arrow-opacity-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">95%</span>
+        </div>
+      </div>
     </div>
 
     <!-- Text box properties -->
@@ -1089,6 +1096,13 @@
         <div class="style-btn-row">
           <button class="style-btn" data-zstyle="solid" onclick="applyZoneBorderStyle('solid')">Solid</button>
           <button class="style-btn active" data-zstyle="dashed" onclick="applyZoneBorderStyle('dashed')">Dashed</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Opacity</div>
+        <div class="field-row">
+          <input type="range" id="zone-opacity-slider" min="0.05" max="1" value="1" step="0.05" oninput="applyZoneOpacity(this.value)" style="flex:1">
+          <span id="zone-opacity-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">100%</span>
         </div>
       </div>
     </div>

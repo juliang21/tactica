@@ -642,6 +642,15 @@ export function applyArrowCurve(val) {
   showArrowHandles(S.selectedEl);
 }
 
+export function applyArrowOpacity(val) {
+  const pct = Math.round(parseFloat(val) * 100);
+  document.getElementById('arrow-opacity-val').textContent = pct + '%';
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
+  trackElementEdited('arrow', 'opacity');
+  S.selectedEl.dataset.arrowOpacity = val;
+  S.selectedEl.querySelector('.arrow-line')?.setAttribute('opacity', val);
+}
+
 // ─── Text Box Editing ────────────────────────────────────────────────────────
 export function liveUpdateTextBox(val) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'textbox') return;
@@ -903,12 +912,12 @@ export function applySpotNameBg(swatchEl) {
 }
 
 // ─── Zone Properties ─────────────────────────────────────────────────────────
-function _isZoneType(t) { return t?.startsWith('shadow') || t === 'pair'; }
+function _isZoneType(t) { return t?.startsWith('shadow') || t === 'pair' || t === 'freeform'; }
 
 export function applyZoneFill(swatchEl) {
   if (!S.selectedEl || !_isZoneType(S.selectedEl.dataset.type)) return;
   trackElementEdited(S.selectedEl.dataset.type, 'fill_color');
-  const shape = S.selectedEl.querySelector('rect,ellipse');
+  const shape = S.selectedEl.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
   if (shape) {
     shape.setAttribute('fill', swatchEl.dataset.color);
     if (S.selectedEl.dataset.type === 'pair') S.selectedEl.dataset.pairColor = swatchEl.dataset.color;
@@ -918,7 +927,7 @@ export function applyZoneFill(swatchEl) {
 export function applyZoneBorder(swatchEl) {
   if (!S.selectedEl || !_isZoneType(S.selectedEl.dataset.type)) return;
   trackElementEdited(S.selectedEl.dataset.type, 'border_color');
-  const shape = S.selectedEl.querySelector('rect,ellipse');
+  const shape = S.selectedEl.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
   if (shape) {
     shape.setAttribute('stroke', swatchEl.dataset.color);
     // Update savedStroke so deselect restores the new color
@@ -930,13 +939,23 @@ export function applyZoneBorderStyle(style) {
   document.querySelectorAll('[data-zstyle]').forEach(b => b.classList.toggle('active', b.dataset.zstyle === style));
   if (!S.selectedEl || !_isZoneType(S.selectedEl.dataset.type)) return;
   trackElementEdited(S.selectedEl.dataset.type, 'border_style');
-  const shape = S.selectedEl.querySelector('rect,ellipse');
+  const shape = S.selectedEl.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
   if (!shape) return;
   if (style === 'solid') {
     shape.removeAttribute('stroke-dasharray');
   } else {
     shape.setAttribute('stroke-dasharray', '4,3');
   }
+}
+
+export function applyZoneOpacity(val) {
+  const pct = Math.round(parseFloat(val) * 100);
+  document.getElementById('zone-opacity-val').textContent = pct + '%';
+  if (!S.selectedEl || !_isZoneType(S.selectedEl.dataset.type)) return;
+  trackElementEdited(S.selectedEl.dataset.type, 'opacity');
+  S.selectedEl.dataset.zoneOpacity = val;
+  const shape = S.selectedEl.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
+  if (shape) shape.setAttribute('opacity', val);
 }
 
 // ─── Tag Properties ──────────────────────────────────────────────────────────

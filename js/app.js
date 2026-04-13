@@ -7,10 +7,10 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyPlayerFill, applyPlayerBorder, togglePlayerArms,
          liveUpdateRefName, confirmRefName, applyRefFill, applyRefBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
-         applyArrowColor, applyArrowStyle, applyArrowWidth, applyArrowCurve,
+         applyArrowColor, applyArrowStyle, applyArrowWidth, applyArrowCurve, applyArrowOpacity,
          applySpotlightColor, setSpotlightColor, applyVisionColor, applyVisionBorder, applyVisionOpacity,
          liveUpdateSpotName, confirmSpotName, applySpotNameSize, applySpotNameColor, applySpotNameBg,
-         applyZoneFill, applyZoneBorder, applyZoneBorderStyle,
+         applyZoneFill, applyZoneBorder, applyZoneBorderStyle, applyZoneOpacity,
          liveUpdateTextBox, confirmTextBox, applyTextBoxSize, applyTextBoxColor, applyTextBoxBg, applyTextBoxAlign,
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
@@ -374,6 +374,7 @@ window.applyArrowColor = applyArrowColor;
 window.applyArrowStyle = applyArrowStyle;
 window.applyArrowWidth = applyArrowWidth;
 window.applyArrowCurve = applyArrowCurve;
+window.applyArrowOpacity = applyArrowOpacity;
 window.applySpotlightColor = applySpotlightColor;
 window.applyVisionColor = applyVisionColor;
 window.applyVisionBorder = applyVisionBorder;
@@ -386,6 +387,7 @@ window.applySpotNameBg = applySpotNameBg;
 window.applyZoneFill = applyZoneFill;
 window.applyZoneBorder = applyZoneBorder;
 window.applyZoneBorderStyle = applyZoneBorderStyle;
+window.applyZoneOpacity = applyZoneOpacity;
 window.liveUpdateTextBox = liveUpdateTextBox;
 window.confirmTextBox = confirmTextBox;
 window.applyTextBoxSize = applyTextBoxSize;

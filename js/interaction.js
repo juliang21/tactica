@@ -394,7 +394,7 @@ export function select(el, opts = {}) {
   layerSec.style.display = '';
 
   const isArrow = type === 'arrow';
-  const isZone = type?.startsWith('shadow') || type === 'pair';
+  const isZone = type?.startsWith('shadow') || type === 'pair' || type === 'freeform';
   const isText = type === 'textbox';
   const isHeadline = type === 'headline';
   const isTag = type === 'tag';
@@ -452,6 +452,9 @@ export function select(el, opts = {}) {
     if (dash === '2,5') style = 'dotted';
     else if (dash && dash !== 'none') style = 'dashed';
     document.querySelectorAll('.style-btn').forEach(b => b.classList.toggle('active', b.dataset.style === style));
+    const arrowOp = el.dataset.arrowOpacity || el.querySelector('.arrow-line')?.getAttribute('opacity') || '0.95';
+    document.getElementById('arrow-opacity-slider').value = arrowOp;
+    document.getElementById('arrow-opacity-val').textContent = Math.round(parseFloat(arrowOp) * 100) + '%';
   } else if (type === 'textbox') {
     textboxSec.style.display = '';
     document.getElementById('textbox-input').value = el.dataset.textContent || '';
@@ -508,10 +511,13 @@ export function select(el, opts = {}) {
   } else if (isZone) {
     zoneSec.style.display = '';
     // Set active border style button based on current shape
-    const shape = el.querySelector('rect,ellipse');
+    const shape = el.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
     const dashArr = shape?.getAttribute('stroke-dasharray') || '';
     const zStyle = (dashArr && dashArr !== 'none') ? 'dashed' : 'solid';
     document.querySelectorAll('[data-zstyle]').forEach(b => b.classList.toggle('active', b.dataset.zstyle === zStyle));
+    const zoneOp = el.dataset.zoneOpacity || shape?.getAttribute('opacity') || '1';
+    document.getElementById('zone-opacity-slider').value = zoneOp;
+    document.getElementById('zone-opacity-val').textContent = Math.round(parseFloat(zoneOp) * 100) + '%';
   }
 
   const s = parseFloat(el.dataset.scale || '1') * 100;
