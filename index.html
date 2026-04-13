@@ -418,6 +418,11 @@
           <rect width="6" height="30" fill="#cb3524"/>
           <rect x="6" width="6" height="30" fill="#ffffff"/>
         </pattern>
+        <!-- River Plate: white with diagonal red sash -->
+        <pattern id="kit-riv" patternUnits="objectBoundingBox" patternContentUnits="objectBoundingBox" width="1" height="1">
+          <rect width="1" height="1" fill="#ffffff"/>
+          <polygon points="0.58,0 0.95,0 0.42,1 0.05,1" fill="#cd1e2b"/>
+        </pattern>
         <!-- Boca Juniors: blue with horizontal yellow sash -->
         <pattern id="kit-boc" patternUnits="objectBoundingBox" patternContentUnits="objectBoundingBox" width="1" height="1">
           <rect width="1" height="1" fill="#003da5"/>
@@ -619,7 +624,7 @@
         <div class="kit-btn" style="background:#ffffff;border:2px solid #d9021b" data-color="#ffffff" data-border="#d9021b" data-gk="#a8f0d0" onclick="applyKit(this)" data-track-name="Sevilla" title="Sevilla"><div class="kit-label" style="color:#000">SEV</div></div>
         <div class="kit-btn" style="background:repeating-linear-gradient(90deg,#cb3524 0 5px,#fff 5px 10px);border:2px solid #1e4d8c" data-pattern="kit-atm" data-color="#cb3524" data-border="#1e4d8c" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Atlético Madrid" title="Atlético Madrid"><div class="kit-label" style="color:#1e4d8c;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff">ATM</div></div>
         <div class="kit-btn kit-boc-preview" data-color="#003da5" data-border="rgba(253,225,0,0.35)" data-pattern="kit-boc" data-gk="#fde100" onclick="applyKit(this)" data-track-name="Boca Juniors" title="Boca Juniors"><div class="kit-label">BOC</div></div>
-        <div class="kit-btn" style="background:#ffffff;border:2px solid #cd1e2b" data-color="#ffffff" data-border="#cd1e2b" data-gk="#00a651" onclick="applyKit(this)" data-track-name="River Plate" title="River Plate"><div class="kit-label" style="color:#000">RIV</div></div>
+        <div class="kit-btn kit-riv-preview" data-color="#ffffff" data-border="rgba(0,0,0,0.4)" data-pattern="kit-riv" data-gk="#00a651" onclick="applyKit(this)" data-track-name="River Plate" title="River Plate"><div class="kit-label" style="color:#000">RIV</div></div>
       </div>
       <div class="kit-grid" id="kit-grid-national" style="display:none">
         <div class="kit-group-label">Group A</div>

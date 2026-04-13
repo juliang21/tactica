@@ -536,6 +536,12 @@ body {
   font-size: 7px; font-weight: 700; text-align: center;
   color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
 }
+.kit-riv-preview {
+  background: linear-gradient(135deg, #fff 35%, #cd1e2b 35%, #cd1e2b 65%, #fff 65%);
+}
+.kit-riv-preview .kit-label {
+  color: #fff !important;
+}
 .kit-boc-preview {
   background: linear-gradient(to bottom, #003da5 33%, #fde100 33%, #fde100 67%, #003da5 67%);
 }
