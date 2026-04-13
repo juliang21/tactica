@@ -501,6 +501,7 @@ function renderFeatureStats(actions, activeUsers) {
     ['Club Team', 'feature_club_team'], ['National Team', 'feature_national_team'],
     ['Custom Color', 'feature_custom_color'], ['Animation', 'feature_animation'],
     ['Share Created', 'share_created'], ['Share Viewed', 'share_viewed'],
+    ['Notes Opened', 'feature_notes_open'], ['Notes Saved', 'feature_notes_save'],
   ];
   const pct = (n) => activeUsers > 0 ? Math.round(n / activeUsers * 100) : 0;
 
@@ -597,6 +598,10 @@ const FEATURE_CONFIGS = [
     { label: 'Share Viewed', action: 'share_viewed', metaKey: null },
     { label: 'Share Forked (Copy)', action: 'share_forked', metaKey: null },
     { label: 'Share → Sign Up', action: 'share_signup', metaKey: null },
+  ]},
+  { label: 'Notes', isGroup: true, children: [
+    { label: 'Notes Opened', action: 'feature_notes_open', metaKey: null },
+    { label: 'Notes Saved', action: 'feature_notes_save', metaKey: null },
   ]},
   { label: 'Toolbar Toggle', action: 'feature_toolbar_toggle', metaKey: 'type' },
 ];
