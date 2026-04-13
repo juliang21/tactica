@@ -54,6 +54,7 @@ export function captureState() {
     imageData: S.imageData || null,
     frames: typeof window._getFramesForSave === 'function' ? window._getFramesForSave() : [],
     currentFrame: typeof window._getCurrentFrame === 'function' ? window._getCurrentFrame() : 0,
+    notes: typeof window._getNotesText === 'function' ? window._getNotesText() : '',
   };
 }
 
@@ -268,6 +269,9 @@ export async function loadAnalysis(id, onReady) {
   S.playerCounts.joker = d.playerCounts?.joker || 0;
   S.setObjectCounter(d.objectCounter || 0);
   S.undoStack.length = 0;
+
+  // Restore notes
+  if (typeof window._setNotesText === 'function') window._setNotesText(d.notes || '');
 
   localStorage.setItem(CURRENT_KEY, id);
   if (onReady) onReady();

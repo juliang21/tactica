@@ -43,6 +43,15 @@ export function selectTeamContext(team) {
   S.setTeamContext(team);
   document.getElementById('team-a-pill').classList.toggle('active', team === 'a');
   document.getElementById('team-b-pill').classList.toggle('active', team === 'b');
+  // Update bulk size slider to reflect current team's average player size
+  const players = S.playersLayer.querySelectorAll(`[data-type="player"][data-team="${team}"]`);
+  if (players.length > 0) {
+    const avg = Array.from(players).reduce((s, p) => s + parseFloat(p.dataset.scale || '0.9'), 0) / players.length;
+    const slider = document.getElementById('bulk-size-slider');
+    const label = document.getElementById('bulk-size-val');
+    if (slider) slider.value = Math.round(avg * 100);
+    if (label) label.textContent = avg.toFixed(2) + 'x';
+  }
 }
 
 // ─── Kit Colours ──────────────────────────────────────────────────────────────

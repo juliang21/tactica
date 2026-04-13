@@ -270,6 +270,15 @@ body {
   border-bottom: 1px solid rgba(255,255,255,0.1);
   transform: rotate(-45deg);
 }
+/* Arrow pointer on top (position below) */
+.feature-announce--below::before {
+  left: 50%; top: -7px; bottom: auto;
+  margin-left: -7px;
+  border-left: 1px solid var(--border); border-bottom: none;
+  border-right: none;
+  border-top: 1px solid var(--border);
+  transform: rotate(45deg);
+}
 
 /* Tool bundles (flyout sub-options) */
 .tool-bundle { position: relative; }
@@ -350,6 +359,97 @@ body {
 }
 .mode-tab svg { opacity: 0.5; }
 .mode-tab.active svg { opacity: 1; color: #0F0F0F; }
+
+/* ── Zoom Controls ── */
+.zoom-controls {
+  position: absolute; bottom: 20px; right: 20px;
+  display: flex; align-items: center; gap: 2px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 3px;
+  z-index: 50;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.zoom-btn {
+  width: 30px; height: 30px; border-radius: 6px;
+  border: none; background: transparent; color: var(--text-muted);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s;
+}
+.zoom-btn:hover { background: var(--panel2); color: var(--text); }
+.zoom-level {
+  font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 600;
+  color: var(--text-dim); min-width: 38px; text-align: center;
+  user-select: none;
+}
+@media (max-width: 768px) {
+  .zoom-controls { display: none !important; }
+}
+
+/* ── Notes Panel ── */
+.notes-panel {
+  position: fixed; right: calc(var(--panel-w) + 16px); top: 64px;
+  width: 220px; height: 260px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  z-index: 50;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  animation: dashFadeIn 0.15s ease;
+}
+.notes-header {
+  display: flex; align-items: center; gap: 8px;
+  padding: 12px 14px;
+  border-bottom: 1px solid var(--border);
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 700;
+  color: var(--text); letter-spacing: 0.3px;
+  flex-shrink: 0;
+}
+.notes-header svg { color: var(--text-muted); }
+.notes-save-status {
+  margin-left: auto;
+  font-family: 'Manrope', sans-serif; font-size: 10px; font-weight: 500;
+  color: var(--accent); opacity: 0; transition: opacity 0.3s;
+}
+.notes-save-status.visible { opacity: 1; }
+.notes-minimize-btn {
+  width: 24px; height: 24px; border-radius: 6px;
+  border: none; background: transparent; color: var(--text-dim);
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+  transition: all 0.12s; flex-shrink: 0;
+}
+.notes-minimize-btn:hover { background: var(--panel2); color: var(--text); }
+.notes-textarea {
+  flex: 1; resize: none;
+  padding: 12px 14px;
+  background: transparent; border: none; outline: none;
+  font-family: 'Manrope', sans-serif; font-size: 12px; line-height: 1.7;
+  color: var(--text-muted);
+}
+.notes-textarea::placeholder { color: var(--text-dim); }
+.notes-toggle-btn {
+  position: fixed; right: calc(var(--panel-w) + 16px); top: 64px;
+  width: 36px; height: 36px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--panel);
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  z-index: 50; transition: all 0.15s;
+}
+.notes-toggle-btn:hover { border-color: #444; color: var(--text); background: var(--panel2); }
+.notes-toggle-btn.has-notes { color: var(--accent); border-color: rgba(30,215,96,0.3); }
+.notes-toggle-btn.announce-highlight {
+  color: var(--accent); border-color: var(--accent);
+  box-shadow: 0 0 0 0 rgba(30,215,96,0.45);
+  animation: notes-pulse 1.8s ease-in-out infinite;
+}
+@keyframes notes-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(30,215,96,0.45); }
+  50%  { box-shadow: 0 0 0 8px rgba(30,215,96,0); }
+  100% { box-shadow: 0 0 0 0 rgba(30,215,96,0); }
+}
+@media (max-width: 768px) {
+  .notes-panel { display: none !important; }
+  .notes-toggle-btn { display: none !important; }
+}
 
 /* ── Canvas ── */
 #canvas-wrap {

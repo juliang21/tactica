@@ -491,6 +491,39 @@
     </button>
   </div>
   </div><!-- /pitch-wrap -->
+
+  <!-- Annotation Notes Panel -->
+  <div id="notes-panel" class="notes-panel" style="display:none">
+    <div class="notes-header">
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+      <span>Notes</span>
+      <span id="notes-save-status" class="notes-save-status"></span>
+      <button class="notes-minimize-btn" onclick="toggleNotes()" title="Minimize notes">
+        <svg width="12" height="12" viewBox="0 0 12 12" fill="none"><path d="M2 4.5l4 3 4-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+    <textarea id="notes-textarea" class="notes-textarea" placeholder="Add coaching notes, key observations, instructions..."></textarea>
+  </div>
+
+  <!-- Zoom controls -->
+  <div id="zoom-controls" class="zoom-controls">
+    <button class="zoom-btn" onclick="zoomIn()" title="Zoom in">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="7" y1="3" x2="7" y2="11" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/><line x1="3" y1="7" x2="11" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </button>
+    <span id="zoom-level" class="zoom-level">100%</span>
+    <button class="zoom-btn" onclick="zoomOut()" title="Zoom out">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><line x1="3" y1="7" x2="11" y2="7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+    </button>
+    <button class="zoom-btn" onclick="zoomReset()" title="Reset zoom" style="margin-left:2px;font-size:10px;font-family:'Manrope',sans-serif;font-weight:600;color:var(--text-dim)">
+      <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><path d="M2.5 5A4.5 4.5 0 117 11.5 4.5 4.5 0 012.5 5z" stroke="currentColor" stroke-width="1.2"/><path d="M2.5 2v3h3" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>
+  </div>
+
+  <!-- Notes toggle button (floating) -->
+  <button id="notes-toggle-btn" class="notes-toggle-btn" onclick="toggleNotes()" title="Toggle notes">
+    <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M2 3a1 1 0 011-1h10a1 1 0 011 1v10a1 1 0 01-1 1H3a1 1 0 01-1-1V3z" stroke="currentColor" stroke-width="1.2"/><path d="M5 5h6M5 8h6M5 11h3" stroke="currentColor" stroke-width="1.1" stroke-linecap="round"/></svg>
+  </button>
+
   <!-- Rondos branding -->
   <a class="rondos-brand" href="https://rondos.futbol" target="_blank" rel="noopener" style="text-decoration:none">
     <img class="rondos-logo" src="images/rondos-logo.png" width="22" height="22" alt="Rondos">
@@ -657,6 +690,30 @@
         <div class="custom-swatch" style="background:#f87171" data-color="#f87171" onclick="applyColor(this)"></div>
         <div class="custom-swatch" style="background:#1a1a2e;border:2px solid rgba(255,255,255,0.2)" data-color="#1a1a2e" onclick="applyColor(this)"></div>
         <button class="color-picker-btn" onclick="openColorPicker('kit-custom')">＋</button>
+      </div>
+    </div>
+
+    <!-- PLAYER APPEARANCE (bulk) -->
+    <div class="panel-section">
+      <h3>Player appearance</h3>
+      <div class="field-group">
+        <div class="field-label">Size (all players)</div>
+        <div class="field-row">
+          <input type="range" id="bulk-size-slider" min="50" max="180" value="90" step="5" oninput="applyBulkPlayerSize(this.value)" style="flex:1">
+          <span id="bulk-size-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">0.9x</span>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border colour (all players)</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="#ffffff" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="#000000" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#f9a84f" data-color="#f9a84f" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-color="#f94f4f" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#4f9cf9" data-color="#4f9cf9" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini checkerboard" data-color="none" onclick="applyBulkPlayerBorder(this)" title="No border"></div>
+        </div>
       </div>
     </div>
 

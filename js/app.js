@@ -197,6 +197,38 @@ window.applyColor = function(swatchEl) {
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_custom_color', { color: swatchEl.dataset.color }).catch(() => {});
 };
+// ─── Bulk Player Appearance ──────────────────────────────────────────────────
+window.applyBulkPlayerSize = function(val) {
+  const scale = (val / 100).toFixed(2);
+  document.getElementById('bulk-size-val').textContent = scale + 'x';
+  const team = S.teamContext;
+  S.playersLayer.querySelectorAll('[data-type="player"]').forEach(g => {
+    if (g.dataset.team === team) {
+      g.dataset.scale = scale;
+      applyTransform(g);
+    }
+  });
+};
+
+window.applyBulkPlayerBorder = function(swatchEl) {
+  const color = swatchEl.dataset.color;
+  const team = S.teamContext;
+  S.playersLayer.querySelectorAll('[data-type="player"]').forEach(g => {
+    if (g.dataset.team === team) {
+      const circ = g.querySelector('circle:not(.hit-area):not(.player-arm)');
+      if (!circ) return;
+      if (color === 'none') {
+        circ.setAttribute('stroke', 'transparent');
+        circ.setAttribute('stroke-width', '0');
+      } else {
+        circ.setAttribute('stroke', color);
+        circ.setAttribute('stroke-width', '2');
+      }
+      g.dataset.borderColor = color;
+    }
+  });
+};
+
 window.switchKitTab = function(tab, btn) {
   document.getElementById('kit-grid-clubs').style.display = tab === 'clubs' ? '' : 'none';
   document.getElementById('kit-grid-national').style.display = tab === 'national' ? '' : 'none';
@@ -2618,9 +2650,12 @@ window.hideNotification = hideNotification;
 //   position: 'right' (default) or 'above' — where tooltip appears relative to anchor
 //   skipCheck: if true, skip the localStorage "already seen" check (for chained tooltips)
 let _activeAnnounce = null;
-function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', onCta, position = 'right', skipCheck = false }) {
+function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', onCta, position = 'right', skipCheck = false, maxShows = 1 }) {
   const key = 'tactica_announce_' + id;
-  if (!skipCheck && localStorage.getItem(key)) return; // already seen
+  if (!skipCheck) {
+    const seen = parseInt(localStorage.getItem(key) || '0', 10);
+    if (seen >= maxShows) return; // already seen enough times
+  }
 
   // Close any existing announcement
   if (_activeAnnounce) { _activeAnnounce.remove(); _activeAnnounce = null; }
@@ -2660,6 +2695,14 @@ function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', o
       if (left + tooltipW > window.innerWidth - 12) left = window.innerWidth - tooltipW - 12;
       el.style.left = left + 'px';
       el.style.top = (rect.top - tooltipH - 14) + 'px';
+    } else if (position === 'below') {
+      // Position below the anchor, arrow points up
+      el.classList.add('feature-announce--below');
+      let left = rect.left + rect.width / 2 - tooltipW / 2;
+      if (left < 12) left = 12;
+      if (left + tooltipW > window.innerWidth - 12) left = window.innerWidth - tooltipW - 12;
+      el.style.left = left + 'px';
+      el.style.top = (rect.bottom + 14) + 'px';
     } else {
       // Position to the right, arrow points left
       let top = rect.top + rect.height / 2 - 28;
@@ -2677,7 +2720,9 @@ function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', o
   if (au) logAction(au.uid, au.email, 'feature_announce_shown', { feature: id }).catch(() => {});
 
   function dismiss(action) {
-    localStorage.setItem(key, '1');
+    const prev = parseInt(localStorage.getItem(key) || '0', 10);
+    localStorage.setItem(key, String(prev + 1));
+    if (anchorEl) anchorEl.classList.remove('announce-highlight');
     if (typeof window.gtag === 'function') window.gtag('event', 'feature_announce_' + action, { feature_id: id });
     const du = getCurrentUser();
     if (du) logAction(du.uid, du.email, 'feature_announce_' + action, { feature: id }).catch(() => {});
@@ -3145,6 +3190,101 @@ function showSaveReminder() {
   setTimeout(() => { hint.style.opacity = '0'; }, 3000);
   setTimeout(() => { hint.remove(); }, 3500);
 }
+
+// ─── Pitch Zoom ─────────────────────────────────────────────────────────────
+let _zoomLevel = 1;
+const ZOOM_MIN = 0.5;
+const ZOOM_MAX = 2.5;
+const ZOOM_STEP = 0.1;
+
+function applyZoom() {
+  const container = document.getElementById('pitch-container');
+  if (!container) return;
+  container.style.transform = `scale(${_zoomLevel})`;
+  container.style.transformOrigin = 'center center';
+  document.getElementById('zoom-level').textContent = Math.round(_zoomLevel * 100) + '%';
+}
+
+function zoomIn() {
+  _zoomLevel = Math.min(ZOOM_MAX, _zoomLevel + ZOOM_STEP);
+  applyZoom();
+}
+window.zoomIn = zoomIn;
+
+function zoomOut() {
+  _zoomLevel = Math.max(ZOOM_MIN, _zoomLevel - ZOOM_STEP);
+  applyZoom();
+}
+window.zoomOut = zoomOut;
+
+function zoomReset() {
+  _zoomLevel = 1;
+  applyZoom();
+}
+window.zoomReset = zoomReset;
+
+// Scroll wheel zoom (Ctrl/Cmd + scroll)
+document.getElementById('canvas-wrap')?.addEventListener('wheel', (e) => {
+  if (!e.ctrlKey && !e.metaKey) return;
+  e.preventDefault();
+  if (e.deltaY < 0) zoomIn();
+  else zoomOut();
+}, { passive: false });
+
+// ─── Notes Panel ────────────────────────────────────────────────────────────
+let _notesOpenTracked = false;
+
+function toggleNotes() {
+  const panel = document.getElementById('notes-panel');
+  const btn = document.getElementById('notes-toggle-btn');
+  const isOpen = panel.style.display !== 'none';
+  panel.style.display = isOpen ? 'none' : 'flex';
+  btn.style.display = isOpen ? 'flex' : 'none';
+  // Track opening
+  if (!isOpen && !_notesOpenTracked) {
+    _notesOpenTracked = true;
+    const u = getCurrentUser();
+    if (u) logAction(u.uid, u.email, 'feature_notes_open', {}).catch(() => {});
+  }
+}
+window.toggleNotes = toggleNotes;
+
+// Auto-save notes on blur (when user clicks away) with "Saved" indicator + tracking
+let _notesSaveTimer = null;
+const notesTextarea = document.getElementById('notes-textarea');
+
+notesTextarea?.addEventListener('input', function() {
+  const btn = document.getElementById('notes-toggle-btn');
+  if (btn) btn.classList.toggle('has-notes', this.value.trim().length > 0);
+  // Debounced auto-save indicator
+  clearTimeout(_notesSaveTimer);
+  _notesSaveTimer = setTimeout(() => showNotesSaved(), 1500);
+});
+
+notesTextarea?.addEventListener('blur', function() {
+  clearTimeout(_notesSaveTimer);
+  if (this.value.trim().length > 0) showNotesSaved();
+});
+
+function showNotesSaved() {
+  const status = document.getElementById('notes-save-status');
+  if (!status) return;
+  status.textContent = 'Saved';
+  status.classList.add('visible');
+  // Track save
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_notes_save', { length: notesTextarea?.value.length || 0 }).catch(() => {});
+  setTimeout(() => status.classList.remove('visible'), 2000);
+}
+
+// Expose notes for captureState
+window._getNotesText = () => document.getElementById('notes-textarea')?.value || '';
+window._setNotesText = (text) => {
+  const ta = document.getElementById('notes-textarea');
+  if (ta) ta.value = text || '';
+  const btn = document.getElementById('notes-toggle-btn');
+  if (btn) btn.classList.toggle('has-notes', (text || '').trim().length > 0);
+};
 
 // ─── Auto-save on Cmd+S ──────────────────────────────────────────────────────
 document.addEventListener('keydown', async e => {
@@ -3790,6 +3930,23 @@ onAuthChange(async (user) => {
           });
           pairBtn.removeEventListener('click', _pairAnnounce);
         });
+      }
+      // Notes feature announcement — show once, on load, pointing at the notes toggle button
+      const notesBtn = document.getElementById('notes-toggle-btn');
+      if (notesBtn) {
+        setTimeout(() => {
+          notesBtn.classList.add('announce-highlight');
+          showFeatureAnnounce({
+            id: 'notes-tooltip-v1',
+            anchorEl: notesBtn,
+            title: 'Notes',
+            text: 'Add coaching notes to any analysis for future reference. Your notes are saved automatically.',
+            cta: 'Got it',
+            position: 'below',
+            maxShows: 2,
+            onCta: () => notesBtn.classList.remove('announce-highlight'),
+          });
+        }, 1200);
       }
     }
 
