@@ -428,9 +428,9 @@
           <rect width="1" height="1" fill="#003da5"/>
           <rect y="0.33" width="1" height="0.34" fill="#fde100"/>
         </pattern>
-        <!-- Player drop shadow: black 43%, angle 90°, distance 5, blur 6 -->
-        <filter id="player-shadow" x="-30%" y="-30%" width="160%" height="180%">
-          <feDropShadow dx="0" dy="5" stdDeviation="3" flood-color="rgba(0,0,0,0.43)"/>
+        <!-- Player drop shadow: offset further down so blur doesn't overlap border -->
+        <filter id="player-shadow" x="-30%" y="-20%" width="160%" height="200%">
+          <feDropShadow dx="0" dy="7" stdDeviation="3.5" flood-color="rgba(0,0,0,0.38)"/>
         </filter>
         <!-- Spotlight filters -->
         <filter id="spotlight-cone-blur" x="-30%" y="-10%" width="160%" height="120%">
@@ -577,7 +577,6 @@
 
     <!-- TEAM -->
     <div class="panel-section">
-      <h3>Team</h3>
       <div class="team-row">
         <button class="team-pill active" id="team-a-pill" onclick="selectTeamContext('a')">
           <span class="team-dot" id="dot-a" style="background:#8B5CF6"></span> Team A
@@ -590,23 +589,25 @@
 
     <!-- ADD -->
     <div class="panel-section">
-      <h3>Add</h3>
-      <button class="single-player-btn active" id="single-btn" onclick="setTool(teamContext==='a'?'player-a':'player-b')">＋ Single Player (click pitch)</button>
-      <div class="sub-label">Full team · formation</div>
-      <div class="formation-grid">
-        <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>
-        <button class="formation-btn" onclick="placeFormation('4-4-2')">4-4-2</button>
-        <button class="formation-btn" onclick="placeFormation('4-3-1-2')">4-3-1-2</button>
-        <button class="formation-btn" onclick="placeFormation('4-2-1-3')">4-2-1-3</button>
-        <button class="formation-btn" onclick="placeFormation('3-5-2')">3-5-2</button>
-        <button class="formation-btn" onclick="placeFormation('5-3-2')">5-3-2</button>
+      <h3 class="collapsible" data-collapse="add">Add players</h3>
+      <div class="collapsible-body" data-collapse-body="add">
+        <button class="single-player-btn active" id="single-btn" onclick="setTool(teamContext==='a'?'player-a':'player-b')">＋ Single Player (click pitch)</button>
+        <div class="sub-label">Full team · formation</div>
+        <div class="formation-grid">
+          <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>
+          <button class="formation-btn" onclick="placeFormation('4-4-2')">4-4-2</button>
+          <button class="formation-btn" onclick="placeFormation('4-3-1-2')">4-3-1-2</button>
+          <button class="formation-btn" onclick="placeFormation('4-2-1-3')">4-2-1-3</button>
+          <button class="formation-btn" onclick="placeFormation('3-5-2')">3-5-2</button>
+          <button class="formation-btn" onclick="placeFormation('5-3-2')">5-3-2</button>
+        </div>
       </div>
-      <div style="font-size:9px;color:var(--text-muted);margin-top:8px;line-height:1.6">GK shown in lighter shade · replaces existing team</div>
     </div>
 
     <!-- KIT COLOUR -->
     <div class="panel-section">
-      <h3>Kit colour</h3>
+      <h3 class="collapsible" data-collapse="kit">Kit colour</h3>
+      <div class="collapsible-body" data-collapse-body="kit">
       <div class="kit-tabs">
         <button class="kit-tab active" onclick="switchKitTab('clubs',this)">Clubs</button>
         <button class="kit-tab" onclick="switchKitTab('national',this)">National</button>
@@ -624,7 +625,7 @@
         <div class="kit-btn" style="background:#ffffff;border:2px solid #d9021b" data-color="#ffffff" data-border="#d9021b" data-gk="#a8f0d0" onclick="applyKit(this)" data-track-name="Sevilla" title="Sevilla"><div class="kit-label" style="color:#000">SEV</div></div>
         <div class="kit-btn" style="background:repeating-linear-gradient(90deg,#cb3524 0 5px,#fff 5px 10px);border:2px solid #1e4d8c" data-pattern="kit-atm" data-color="#cb3524" data-border="#1e4d8c" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Atlético Madrid" title="Atlético Madrid"><div class="kit-label" style="color:#1e4d8c;font-weight:700;text-shadow:0 0 3px #fff,0 0 3px #fff">ATM</div></div>
         <div class="kit-btn kit-boc-preview" data-color="#003da5" data-border="rgba(253,225,0,0.35)" data-pattern="kit-boc" data-gk="#fde100" onclick="applyKit(this)" data-track-name="Boca Juniors" title="Boca Juniors"><div class="kit-label">BOC</div></div>
-        <div class="kit-btn kit-riv-preview" data-color="#ffffff" data-border="rgba(0,0,0,0.4)" data-pattern="kit-riv" data-gk="#00a651" onclick="applyKit(this)" data-track-name="River Plate" title="River Plate"><div class="kit-label" style="color:#000">RIV</div></div>
+        <div class="kit-btn kit-riv-preview" data-color="#ffffff" data-border="none" data-pattern="kit-riv" data-gk="#00a651" onclick="applyKit(this)" data-track-name="River Plate" title="River Plate"><div class="kit-label" style="color:#000">RIV</div></div>
       </div>
       <div class="kit-grid" id="kit-grid-national" style="display:none">
         <div class="kit-group-label">Group A</div>
@@ -701,11 +702,13 @@
         <div class="custom-swatch" style="background:#1a1a2e;border:2px solid rgba(255,255,255,0.2)" data-color="#1a1a2e" onclick="applyColor(this)"></div>
         <button class="color-picker-btn" onclick="openColorPicker('kit-custom')">＋</button>
       </div>
+      </div><!-- /collapsible-body kit -->
     </div>
 
     <!-- PLAYER APPEARANCE (bulk) -->
     <div class="panel-section">
-      <h3>Player appearance</h3>
+      <h3 class="collapsible" data-collapse="appearance">Player appearance</h3>
+      <div class="collapsible-body" data-collapse-body="appearance">
       <div class="field-group">
         <div class="field-label">Size (all players)</div>
         <div class="field-row">
@@ -725,6 +728,7 @@
           <div class="color-swatch mini checkerboard" data-color="none" onclick="applyBulkPlayerBorder(this)" title="No border"></div>
         </div>
       </div>
+      </div><!-- /collapsible-body appearance -->
     </div>
 
   </div><!-- /pane-players -->

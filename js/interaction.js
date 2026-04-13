@@ -246,8 +246,8 @@ export function select(el, opts = {}) {
 
   // Visual highlight
   if (type === 'player' || type === 'referee' || type === 'ball' || type === 'cone') {
-    el.querySelector('circle:not(.hit-area),polygon')?.setAttribute('stroke-width', '3');
-    if (type === 'player' || type === 'referee') el.querySelector('circle:not(.hit-area)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+    el.querySelector('circle:not(.hit-area):not(.player-shadow),polygon')?.setAttribute('stroke-width', '3');
+    if (type === 'player' || type === 'referee') el.querySelector('circle:not(.hit-area):not(.player-shadow)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
   }
   if (type === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
@@ -541,7 +541,7 @@ export function deselectVisual(el) {
   removeHandles();
   const t = el.dataset.type;
   if (t === 'player') {
-    const circ = el.querySelector('circle:not(.hit-area)');
+    const circ = el.querySelector('circle:not(.hit-area):not(.player-shadow)');
     if (circ) {
       const customBorder = el.dataset.borderColor;
       if (customBorder === 'none') {
@@ -558,7 +558,7 @@ export function deselectVisual(el) {
     }
   }
   if (t === 'referee') {
-    const circ = el.querySelector('circle:not(.hit-area)');
+    const circ = el.querySelector('circle:not(.hit-area):not(.player-shadow)');
     if (circ) {
       const border = el.dataset.borderColor || '#FBBF24';
       if (border === 'none') {
@@ -570,7 +570,7 @@ export function deselectVisual(el) {
       }
     }
   }
-  if (t === 'ball' || t === 'cone') el.querySelector('circle:not(.hit-area),polygon')?.setAttribute('stroke-width', '1.5');
+  if (t === 'ball' || t === 'cone') el.querySelector('circle:not(.hit-area):not(.player-shadow),polygon')?.setAttribute('stroke-width', '1.5');
   if (t === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
     if (bg) { bg.removeAttribute('stroke'); bg.removeAttribute('stroke-width'); }
@@ -1660,8 +1660,8 @@ export function endMarquee(e) {
 function _applySelectHighlight(el) {
   const type = el.dataset.type;
   if (type === 'player' || type === 'referee' || type === 'ball' || type === 'cone') {
-    el.querySelector('circle:not(.hit-area),polygon')?.setAttribute('stroke-width', '3');
-    if (type === 'player' || type === 'referee') el.querySelector('circle:not(.hit-area)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+    el.querySelector('circle:not(.hit-area):not(.player-shadow),polygon')?.setAttribute('stroke-width', '3');
+    if (type === 'player' || type === 'referee') el.querySelector('circle:not(.hit-area):not(.player-shadow)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
   }
   if (type === 'arrow') {
     const w = parseFloat(el.dataset.arrowWidth || '2.5');

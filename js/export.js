@@ -707,7 +707,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
     ctx.save(); ctx.translate(cx,cy); ctx.scale(sc,sc);
 
     const hasArms = g.dataset.arms === '1';
-    const circleEl = g.querySelector('circle:not(.hit-area):not(.player-arm)');
+    const circleEl = g.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
     const color = circleEl ? circleEl.getAttribute('fill') : '#e8f0ff';
     const dark = S.isDarkColor(color);
     const borderColor = g.dataset.borderColor;
@@ -791,7 +791,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
 
     const fillColor = g.dataset.fillColor || '#1a1a1a';
     const borderColor = g.dataset.borderColor || '#facc15';
-    const circleEl = g.querySelector('circle:not(.hit-area)');
+    const circleEl = g.querySelector('circle:not(.hit-area):not(.player-shadow)');
     const dark = S.isDarkColor(fillColor);
 
     ctx.save();

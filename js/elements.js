@@ -19,12 +19,21 @@ export function addPlayer(x, y, team, num, isGK) {
   g.dataset.label = String(num); g.dataset.isGK = isGK ? '1' : '0';
   g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.9';
 
+  // Shadow circle: fill only, no stroke — shadow applies to body only
+  const shadowCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+  shadowCircle.classList.add('player-shadow');
+  shadowCircle.setAttribute('cx','0'); shadowCircle.setAttribute('cy','2'); shadowCircle.setAttribute('r','12');
+  shadowCircle.setAttribute('fill', fillColor);
+  shadowCircle.setAttribute('stroke', 'none');
+  shadowCircle.setAttribute('pointer-events', 'none');
+  shadowCircle.setAttribute('filter', 'url(#player-shadow)');
+
+  // Main circle: fill + stroke, no filter — border renders crisp without shadow
   const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
   circle.setAttribute('cx','0'); circle.setAttribute('cy','0'); circle.setAttribute('r','16');
   circle.setAttribute('fill', fillColor);
   circle.setAttribute('stroke', isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.25)');
   circle.setAttribute('stroke-width','2.5');
-  circle.setAttribute('filter', 'url(#player-shadow)');
 
   const numText = document.createElementNS('http://www.w3.org/2000/svg', 'text');
   numText.setAttribute('text-anchor','middle'); numText.setAttribute('dominant-baseline','central');
@@ -57,7 +66,7 @@ export function addPlayer(x, y, team, num, isGK) {
   hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','28');
   hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
 
-  g.appendChild(hitArea); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
+  g.appendChild(hitArea); g.appendChild(shadowCircle); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
   g.setAttribute('transform', `translate(${x},${y}) scale(0.9)`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
@@ -77,7 +86,7 @@ export function updatePlayerArms(g) {
 
   if (!hasArms) return;
 
-  const bodyCircle = g.querySelector('circle:not(.hit-area):not(.player-arm)');
+  const bodyCircle = g.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
   if (!bodyCircle) return;
   const r = parseFloat(bodyCircle.getAttribute('r'));   // body radius (16)
   const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;

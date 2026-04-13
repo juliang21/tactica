@@ -215,7 +215,7 @@ window.applyBulkPlayerBorder = function(swatchEl) {
   const team = S.teamContext;
   S.playersLayer.querySelectorAll('[data-type="player"]').forEach(g => {
     if (g.dataset.team === team) {
-      const circ = g.querySelector('circle:not(.hit-area):not(.player-arm)');
+      const circ = g.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
       if (!circ) return;
       if (color === 'none') {
         circ.setAttribute('stroke', 'transparent');
@@ -1144,7 +1144,7 @@ function drawTrails() {
     if (Math.hypot(dx, dy) < 3) return;
 
     // Determine color
-    const circ = el.querySelector('circle:not(.hit-area)');
+    const circ = el.querySelector('circle:not(.hit-area):not(.player-shadow)');
     const color = circ ? circ.getAttribute('fill') : 'rgba(255,255,255,0.5)';
 
     const prevX = parseFloat(pPrev.cx), prevY = parseFloat(pPrev.cy);
@@ -1954,7 +1954,7 @@ function _copyElementData(el) {
   const t = el.dataset.type;
   const data = { type: t, cx: parseFloat(el.dataset.cx), cy: parseFloat(el.dataset.cy) };
   if (t === 'player') {
-    const circ = el.querySelector('circle:not(.hit-area):not(.player-arm)');
+    const circ = el.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
     data.team = el.dataset.team; data.label = el.dataset.label;
     data.isGK = el.dataset.isGK === '1';
     data.fill = circ?.getAttribute('fill'); data.stroke = circ?.getAttribute('stroke');
@@ -2043,7 +2043,7 @@ function copySelected() {
   const data = { type: t };
 
   if (t === 'player') {
-    const circ = el.querySelector('circle:not(.hit-area):not(.player-arm)');
+    const circ = el.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
     data.team = el.dataset.team;
     data.label = el.dataset.label;
     data.isGK = el.dataset.isGK === '1';
@@ -2057,7 +2057,7 @@ function copySelected() {
     data.arms = el.dataset.arms || '0';
     data.rotation = el.dataset.rotation || '0';
   } else if (t === 'referee') {
-    const circ = el.querySelector('circle:not(.hit-area)');
+    const circ = el.querySelector('circle:not(.hit-area):not(.player-shadow)');
     data.label = el.dataset.label;
     data.fillColor = el.dataset.fillColor || '#1a1a1a';
     data.borderColor = el.dataset.borderColor || '#FBBF24';
@@ -2156,10 +2156,10 @@ function pasteClipboard() {
         S.addSelectedEl(placed);
         S.setSelectedEl(placed);
         // Apply highlight
-        const circ = placed.querySelector('circle:not(.hit-area),polygon');
+        const circ = placed.querySelector('circle:not(.hit-area):not(.player-shadow),polygon');
         if (circ) circ.setAttribute('stroke-width', '3');
         if (placed.dataset.type === 'player' || placed.dataset.type === 'referee') {
-          placed.querySelector('circle:not(.hit-area)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+          placed.querySelector('circle:not(.hit-area):not(.player-shadow)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
         }
       }
     }
@@ -2197,8 +2197,12 @@ function _pasteOne(d, x, y) {
   if (d.type === 'player') {
     placed = addPlayer(x, y, d.team, d.label, d.isGK);
     if (placed) {
-      const circ = placed.querySelector('circle:not(.hit-area):not(.player-arm)');
-      if (circ && d.fill) { circ.setAttribute('fill', d.fill); circ.setAttribute('stroke', d.stroke || ''); }
+      const circ = placed.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
+      if (circ && d.fill) {
+        circ.setAttribute('fill', d.fill); circ.setAttribute('stroke', d.stroke || '');
+        const shadow = placed.querySelector('.player-shadow');
+        if (shadow) shadow.setAttribute('fill', d.fill);
+      }
       if (d.borderColor) placed.dataset.borderColor = d.borderColor;
       if (d.playerName) {
         placed.dataset.playerName = d.playerName;
@@ -3970,3 +3974,34 @@ onAuthChange(async (user) => {
   _authInitialized = true;
   await updateCurrentBar();
 });
+
+// ─── Collapsible panel sections ─────────────────────────────────────────────
+(function initCollapsibleSections() {
+  const STORAGE_KEY = 'tactica_collapsed';
+  let saved = {};
+  try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch {}
+
+  document.querySelectorAll('h3.collapsible[data-collapse]').forEach(h3 => {
+    const key = h3.dataset.collapse;
+    const body = document.querySelector(`[data-collapse-body="${key}"]`);
+    if (!body) return;
+
+    // Restore saved state (default: expanded)
+    if (saved[key]) {
+      h3.classList.add('collapsed');
+      body.classList.add('collapsed');
+    }
+
+    h3.addEventListener('click', () => {
+      const isCollapsed = h3.classList.toggle('collapsed');
+      body.classList.toggle('collapsed', isCollapsed);
+
+      // Persist
+      try {
+        const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
+        if (isCollapsed) state[key] = true; else delete state[key];
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+      } catch {}
+    });
+  });
+})();

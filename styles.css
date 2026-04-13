@@ -499,6 +499,41 @@ body {
   font-size: 10px; font-weight: 700; letter-spacing: 2px;
   text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
 }
+
+/* ─── Collapsible sections ─── */
+.panel-section h3.collapsible {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  margin-bottom: 0;
+  padding: 2px 0;
+  transition: color 0.15s;
+}
+.panel-section h3.collapsible:hover { color: var(--text-secondary); }
+.panel-section h3.collapsible::after {
+  content: '';
+  width: 12px; height: 12px;
+  background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%23888' stroke-width='1.5' stroke-linecap='round'%3E%3Cpath d='M3 4.5 6 7.5 9 4.5'/%3E%3C/svg%3E") center/contain no-repeat;
+  flex-shrink: 0;
+  transition: transform 0.2s ease;
+}
+.panel-section h3.collapsible.collapsed::after {
+  transform: rotate(-90deg);
+}
+.panel-section .collapsible-body {
+  overflow: hidden;
+  transition: max-height 0.25s ease, opacity 0.2s ease, margin 0.25s ease;
+  max-height: 800px;
+  opacity: 1;
+  margin-top: 10px;
+}
+.panel-section .collapsible-body.collapsed {
+  max-height: 0;
+  opacity: 0;
+  margin-top: 0;
+}
 .panel-section.inactive { opacity: 0.35; pointer-events: none; }
 .panel-section.inactive h3::after { content: ' · select a player first'; font-weight:400; text-transform:none; letter-spacing:0; font-size:9px; }
 #formation-section.inactive h3::after { content: ' · pick Team A or B tool'; }

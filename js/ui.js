@@ -92,13 +92,15 @@ export function applyColor(swatchEl) {
 }
 
 function setPlayerColor(g, color) {
-  const circ = g.querySelector('circle:not(.hit-area):not(.player-arm)');
+  const circ = g.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
+  const shadow = g.querySelector('.player-shadow');
   const isPattern = color.startsWith('url(');
   if (circ) {
     circ.setAttribute('fill', color);
     circ.setAttribute('stroke', (!isPattern && S.isDarkColor(color)) ? 'rgba(255,255,255,0.25)' : 'rgba(0,0,0,0.15)');
     circ.setAttribute('stroke-width', '2');
   }
+  if (shadow) shadow.setAttribute('fill', color);
   delete g.dataset.borderColor;
   const txt = g.querySelectorAll('text')[0];
   if (txt) {
@@ -125,7 +127,7 @@ function updateTeamPlayerColors(team, color, gkColor, borderColor) {
     const c = isGK ? gkColor : color;
     setPlayerColor(g, c);
     if (borderColor) {
-      const circ = g.querySelector('circle:not(.hit-area)');
+      const circ = g.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
       if (circ) {
         circ.setAttribute('stroke', borderColor);
         circ.setAttribute('stroke-width', borderColor === 'none' ? '0' : '2');
@@ -184,10 +186,10 @@ export function placeFormation(name) {
   const selectedKit = document.querySelector('.kit-btn.selected');
   if (selectedKit && selectedKit.dataset.border) {
     S.playersLayer.querySelectorAll(`g[data-team="${team}"]`).forEach(g => {
-      const circ = g.querySelector('circle:not(.hit-area)');
+      const circ = g.querySelector('circle:not(.hit-area):not(.player-shadow)');
       if (circ) {
         circ.setAttribute('stroke', selectedKit.dataset.border);
-        circ.setAttribute('stroke-width', '2');
+        circ.setAttribute('stroke-width', selectedKit.dataset.border === 'none' ? '0' : '2');
       }
       g.dataset.borderColor = selectedKit.dataset.border;
     });
@@ -320,7 +322,7 @@ export function applyPlayerBorder(swatchEl) {
 }
 
 function _applyBorderToPlayer(el, color) {
-  const circ = el.querySelector('circle:not(.hit-area):not(.player-arm)');
+  const circ = el.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
   if (!circ) return;
   if (color === 'none') {
     circ.setAttribute('stroke', 'transparent');
@@ -572,7 +574,7 @@ export function confirmColorPicker() {
     if (colorPickerTarget === 'fill') {
       setPlayerColor(S.selectedEl, hex);
     } else {
-      const circ = S.selectedEl.querySelector('circle:not(.hit-area)');
+      const circ = S.selectedEl.querySelector('circle:not(.hit-area):not(.player-shadow)');
       if (circ) {
         circ.setAttribute('stroke', hex);
         circ.setAttribute('stroke-width', '2');
