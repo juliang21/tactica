@@ -348,11 +348,11 @@ export function select(el, opts = {}) {
     : type === 'freeform' ? 'Freeform Zone'
     : type === 'motion' ? 'Motion Path'
     : type === 'headline' ? 'Headline'
-    : type === 'tag' ? 'Tag'
+    : type === 'tag' ? 'Callout'
     : type === 'link' ? 'Player Link'
     : type === 'pair' ? 'Pair'
     : 'Zone';
-  const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : type === 'textbox' ? ' · double-click to edit' : '';
+  const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : (type === 'textbox' || type === 'headline' || type === 'tag') ? ' · double-click to edit' : '';
   S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
 
   // Mobile context bar
