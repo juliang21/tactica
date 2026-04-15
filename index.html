@@ -308,6 +308,7 @@
   </div>
 
   <input type="file" id="image-file-input" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
+  <input type="file" id="video-file-input" accept="video/mp4,video/webm,video/quicktime" style="display:none" onchange="handleVideoUploadFromInput(this)">
 
   <!-- Save (full width) -->
   <div class="tool-group tool-group-save">
@@ -385,7 +386,14 @@
           <path d="M4 14l3-3 2 2L12 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M8 6V2M6 4l2-2 2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Upload Image
+        Image Analysis
+      </button>
+      <button class="mode-tab" id="mode-video-btn" onclick="switchMode('video')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <rect x="1" y="3" width="10" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2"/>
+          <path d="M11 6l4-2v8l-4-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Video Analysis
       </button>
     </div>
   </div>
@@ -397,7 +405,8 @@
     </button>
     <div id="mode-dropdown-menu" style="display:none">
       <button class="mode-dropdown-option active" data-mode="pitch" onclick="selectModeDropdown('pitch')">Tactical Board</button>
-      <button class="mode-dropdown-option" data-mode="image" onclick="selectModeDropdown('image')">Upload Image</button>
+      <button class="mode-dropdown-option" data-mode="image" onclick="selectModeDropdown('image')">Image Analysis</button>
+      <button class="mode-dropdown-option" data-mode="video" onclick="selectModeDropdown('video')">Video Analysis</button>
     </div>
   </div>
   <div id="pitch-wrap">
@@ -474,6 +483,23 @@
       <g id="objects-layer"></g>
       <g id="players-layer"></g>
     </svg>
+  </div>
+  <!-- Video timeline controls -->
+  <div id="video-timeline" style="display:none">
+    <button id="vt-play-btn" class="vt-btn" title="Play/Pause">▶</button>
+    <div id="vt-scrubber">
+      <div id="vt-progress"></div>
+      <div id="vt-playhead"></div>
+      <div id="vt-annotation-track"></div>
+    </div>
+    <span id="vt-time">0:00 / 0:00</span>
+    <select id="vt-speed" class="vt-speed">
+      <option value="0.25">0.25x</option>
+      <option value="0.5">0.5x</option>
+      <option value="1" selected>1x</option>
+      <option value="1.5">1.5x</option>
+      <option value="2">2x</option>
+    </select>
   </div>
   <!-- Step-based animation controls (below pitch) -->
   <div id="motion-controls">
@@ -827,6 +853,48 @@
       <button class="action-btn" onclick="triggerImageUpload()" style="margin-bottom:8px">
         <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7.5" r="1.8" fill="currentColor"/><path d="M2 13l4-4 2.5 2.5L12 8l4 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Change Image
+      </button>
+    </div>
+  </div>
+
+  <!-- ══ VIDEO UPLOAD PANE ══ -->
+  <div id="video-upload-pane" class="tab-pane" style="display:none">
+    <div class="panel-section" style="text-align:center;padding:24px 16px">
+      <div style="margin-bottom:16px">
+        <svg width="48" height="48" viewBox="0 0 48 48" fill="none">
+          <rect x="6" y="10" width="28" height="22" rx="4" stroke="var(--text-muted)" stroke-width="2" fill="none"/>
+          <path d="M34 17l8-5v24l-8-5" stroke="var(--text-muted)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M20 8v8M16 12h8" stroke="var(--accent)" stroke-width="2" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h3 style="margin-bottom:6px;font-size:15px">Video Analysis</h3>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:20px">
+        Upload a match video to annotate key moments with arrows, zones, spotlights, and text.
+      </div>
+      <button class="action-btn" onclick="triggerVideoUpload()" style="width:100%;justify-content:center;padding:10px 16px;font-size:13px">
+        <svg width="16" height="16" viewBox="0 0 18 18" fill="none">
+          <path d="M9 2v10M5 6l4-4 4 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          <path d="M2 12v3a1 1 0 001 1h12a1 1 0 001-1v-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+        </svg>
+        Choose Video
+      </button>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:12px">Supports MP4 and WebM formats</div>
+    </div>
+  </div>
+
+  <!-- ══ VIDEO MODE INFO (after video loaded) ══ -->
+  <div id="video-mode-info" class="tab-pane" style="display:none">
+    <div class="panel-section">
+      <h3>Video Analysis</h3>
+      <div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:12px">
+        Pause the video and add annotations. They'll appear and disappear at the right moment during playback.
+      </div>
+      <button class="action-btn" onclick="triggerVideoUpload()" style="margin-bottom:8px">
+        <svg width="14" height="14" viewBox="0 0 18 18" fill="none">
+          <rect x="2" y="4" width="10" height="10" rx="2" stroke="currentColor" stroke-width="1.4" fill="none"/>
+          <path d="M12 7l4-2v8l-4-2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+        Change Video
       </button>
     </div>
   </div>

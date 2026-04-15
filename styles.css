@@ -1091,6 +1091,84 @@ body.image-mode #mode-image-btn { background: #D4A843; color: #0A0A0A; font-weig
 body.image-mode #mode-image-btn svg { opacity: 1; color: #0A0A0A; }
 body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777; font-weight: 500; }
 
+/* ── Video Mode ── */
+body.video-mode #pane-pitch { display: none !important; }
+body.video-mode #video-mode-info { display: flex !important; }
+body.video-mode #motion-controls { display: none !important; }
+
+body.video-mode #mode-pitch-btn { background: transparent; color: #777777; font-weight: 500; }
+body.video-mode #mode-pitch-btn svg { opacity: 0.7; color: #777777; }
+body.video-mode #mode-image-btn { background: transparent; color: #777777; font-weight: 500; }
+body.video-mode #mode-image-btn svg { opacity: 0.7; color: #777777; }
+body.video-mode #mode-video-btn { background: #D4A843; color: #0A0A0A; font-weight: 600; }
+body.video-mode #mode-video-btn svg { opacity: 1; color: #0A0A0A; }
+
+/* Video element */
+#video-bg {
+  position: absolute; top: 0; left: 0;
+  z-index: 0; border-radius: 6px;
+  object-fit: contain; background: #000;
+}
+
+/* Video timeline */
+#video-timeline {
+  display: flex; align-items: center; gap: 10px;
+  padding: 10px 12px;
+  background: rgba(30,30,30,0.85);
+  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-top: 10px;
+  width: 100%;
+  box-sizing: border-box;
+}
+.vt-btn {
+  background: none; border: none; color: var(--text);
+  font-size: 16px; cursor: pointer; padding: 4px 8px;
+  border-radius: 6px; transition: background 0.15s;
+  min-width: 32px; text-align: center;
+}
+.vt-btn:hover { background: var(--surface-hover); }
+
+#vt-scrubber {
+  flex: 1; height: 32px; position: relative; cursor: pointer;
+  border-radius: 4px; background: rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+#vt-progress {
+  position: absolute; top: 0; left: 0; bottom: 0;
+  background: rgba(30,215,96,0.2);
+  pointer-events: none; border-radius: 4px;
+  transition: width 0.05s linear;
+}
+#vt-playhead {
+  position: absolute; top: 0; bottom: 0; width: 3px;
+  background: var(--accent); border-radius: 2px;
+  pointer-events: none; z-index: 2;
+  transition: left 0.05s linear;
+}
+#vt-annotation-track {
+  position: absolute; bottom: 2px; left: 0; right: 0; height: 6px;
+  pointer-events: none; z-index: 1;
+}
+.vt-annotation-bar {
+  position: absolute; height: 100%; border-radius: 2px;
+  opacity: 0.7; pointer-events: auto; cursor: pointer;
+  transition: opacity 0.15s;
+}
+.vt-annotation-bar:hover { opacity: 1; }
+
+#vt-time {
+  font-size: 11px; color: var(--text-muted); min-width: 70px;
+  text-align: center; font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.vt-speed {
+  background: var(--panel2); border: 1px solid var(--border);
+  color: var(--text); border-radius: 4px; padding: 3px 4px;
+  font-size: 10px; cursor: pointer; outline: none;
+}
+
 /* ── Mobile Mode Dropdown ── */
 #mode-dropdown {
   display: none; /* hidden on desktop, shown on mobile */

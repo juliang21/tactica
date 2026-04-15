@@ -52,6 +52,8 @@ export function captureState() {
     playerCounts: { ...S.playerCounts },
     objectCounter: S.objectCounter,
     imageData: S.imageData || null,
+    videoFileName: S.videoFileName || null,
+    videoDuration: S.videoDimensions?.duration || null,
     frames: typeof window._getFramesForSave === 'function' ? window._getFramesForSave() : [],
     currentFrame: typeof window._getCurrentFrame === 'function' ? window._getCurrentFrame() : 0,
     notes: typeof window._getNotesText === 'function' ? window._getNotesText() : '',

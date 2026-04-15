@@ -24,12 +24,20 @@ export let pitchColors = { s1: '#3a7a38', s2: '#367035', line: 'rgba(255,255,255
 export let exportFmt = 'png';
 
 // ─── Image Analysis Mode ─────────────────────────────────────────────────────
-export let appMode = 'pitch';           // 'pitch' | 'image'
+export let appMode = 'pitch';           // 'pitch' | 'image' | 'video'
 export let imageData = null;            // base64 data URL of uploaded image
 export let imageDimensions = null;      // { width, height }
 export function setAppMode(v) { appMode = v; }
 export function setImageData(v) { imageData = v; }
 export function setImageDimensions(v) { imageDimensions = v; }
+
+// ─── Video Analysis Mode ─────────────────────────────────────────────────────
+export let videoData = null;            // Object URL of uploaded video
+export let videoDimensions = null;      // { width, height, duration }
+export let videoFileName = null;        // original filename for re-association
+export function setVideoData(v) { videoData = v; }
+export function setVideoDimensions(v) { videoDimensions = v; }
+export function setVideoFileName(v) { videoFileName = v; }
 
 // ─── Undo Stack ──────────────────────────────────────────────────────────────
 export const undoStack = [];

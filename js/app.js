@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -18,6 +18,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
 import { setPitch, setPitchColor, setPitchOpt, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
+import { triggerVideoUpload, handleVideoUpload, enterVideoMode, exitVideoMode, tagVideoTimestamp, toggleVideoPlayback, seekVideo, autoPauseIfPlaying, _renderAnnotationBars } from './videomode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
@@ -91,6 +92,12 @@ function undo() {
       g.addEventListener('dblclick', e => {
         e.stopPropagation();
         openHeadlineEdit(g, e);
+      });
+    }
+    if (g.dataset.type === 'tag') {
+      g.addEventListener('dblclick', e => {
+        e.stopPropagation();
+        openTagEdit(g, e);
       });
     }
   });
@@ -185,6 +192,8 @@ window.setTool = function(t) {
     clearLinkHighlight();
   }
   _baseSetTool(t);
+  // Auto-pause video when switching to a drawing tool
+  if (S.appMode === 'video' && t !== 'select') autoPauseIfPlaying();
 };
 window.setArrowType = setArrowType;
 window.setVisionType = S.setVisionType;
@@ -478,6 +487,12 @@ window.handleImageUpload = function(input) {
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_image_upload').catch(() => {});
 };
+window.triggerVideoUpload = triggerVideoUpload;
+window.handleVideoUploadFromInput = function(input) {
+  handleVideoUpload(input);
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_video_upload').catch(() => {});
+};
 window.enterImageMode = enterImageMode;
 window.exitImageMode = exitImageMode;
 
@@ -503,47 +518,84 @@ function hideImageUploadPane() {
   if (uploadPane) uploadPane.style.display = 'none';
 }
 
+function showVideoUploadPane() {
+  switchTab('pitch');
+  const pitchPane = document.getElementById('pane-pitch');
+  const uploadPane = document.getElementById('video-upload-pane');
+  const videoInfo = document.getElementById('video-mode-info');
+  if (pitchPane) pitchPane.style.display = 'none';
+  if (uploadPane) uploadPane.style.display = 'flex';
+  if (videoInfo) videoInfo.style.display = 'none';
+}
+window.showVideoUploadPane = showVideoUploadPane;
+
+function hideVideoUploadPane() {
+  const uploadPane = document.getElementById('video-upload-pane');
+  if (uploadPane) uploadPane.style.display = 'none';
+}
+
 function switchMode(mode) {
   const pitchBtn = document.getElementById('mode-pitch-btn');
   const imageBtn = document.getElementById('mode-image-btn');
+  const videoBtn = document.getElementById('mode-video-btn');
 
-  if (mode === 'image') {
-    if (S.appMode === 'image') return;
-    // If there's work on the tactical board, confirm before switching
-    if (hasCanvasWork()) {
-      showModeSwitchModal('Switching to Upload Image will erase all elements on your tactical board. Are you sure?', () => {
-        pitchBtn.classList.remove('active');
-        imageBtn.classList.add('active');
-        showImageUploadPane();
-      });
-      return;
-    }
-    pitchBtn.classList.remove('active');
-    imageBtn.classList.add('active');
-    showImageUploadPane();
-  } else {
-    // Hide upload pane if it's showing (user clicked back to pitch before uploading)
-    hideImageUploadPane();
-    const pitchPane = document.getElementById('pane-pitch');
-    if (pitchPane) pitchPane.style.display = '';
-    if (S.appMode !== 'image') {
-      pitchBtn.classList.add('active');
-      imageBtn.classList.remove('active');
-      return;
-    }
-    // If there's work on the image, confirm before switching
-    if (hasCanvasWork()) {
-      showModeSwitchModal('Switching to Tactical Board will erase all elements on your image. Are you sure?', () => {
-        exitImageMode();
-        pitchBtn.classList.add('active');
-        imageBtn.classList.remove('active');
-      });
-      return;
-    }
-    exitImageMode();
-    pitchBtn.classList.add('active');
-    imageBtn.classList.remove('active');
+  function setActiveTab(m) {
+    if (pitchBtn) pitchBtn.classList.toggle('active', m === 'pitch');
+    if (imageBtn) imageBtn.classList.toggle('active', m === 'image');
+    if (videoBtn) videoBtn.classList.toggle('active', m === 'video');
   }
+
+  const currentMode = S.appMode;
+
+  // ── Switching TO image ──
+  if (mode === 'image') {
+    if (currentMode === 'image') return;
+    const go = () => {
+      if (currentMode === 'video') exitVideoMode();
+      setActiveTab('image');
+      showImageUploadPane();
+    };
+    if (hasCanvasWork()) {
+      showModeSwitchModal('Switching to Image Analysis will erase all elements. Are you sure?', go);
+    } else { go(); }
+    return;
+  }
+
+  // ── Switching TO video ──
+  if (mode === 'video') {
+    if (currentMode === 'video') return;
+    const go = () => {
+      if (currentMode === 'image') exitImageMode();
+      setActiveTab('video');
+      showVideoUploadPane();
+    };
+    if (hasCanvasWork()) {
+      showModeSwitchModal('Switching to Video Analysis will erase all elements. Are you sure?', go);
+    } else { go(); }
+    return;
+  }
+
+  // ── Switching TO pitch ──
+  hideImageUploadPane();
+  hideVideoUploadPane();
+  const pitchPane = document.getElementById('pane-pitch');
+  if (pitchPane) pitchPane.style.display = '';
+
+  if (currentMode === 'pitch') {
+    setActiveTab('pitch');
+    return;
+  }
+
+  const go = () => {
+    if (currentMode === 'image') exitImageMode();
+    if (currentMode === 'video') exitVideoMode();
+    setActiveTab('pitch');
+  };
+
+  if (hasCanvasWork()) {
+    const label = currentMode === 'image' ? 'image' : 'video';
+    showModeSwitchModal(`Switching to Tactical Board will erase all elements on your ${label}. Are you sure?`, go);
+  } else { go(); }
 }
 window.switchMode = switchMode;
 
@@ -579,7 +631,7 @@ function selectModeDropdown(mode) {
   const label = document.getElementById('mode-dropdown-label');
   const options = document.querySelectorAll('.mode-dropdown-option');
   options.forEach(o => o.classList.toggle('active', o.dataset.mode === mode));
-  label.textContent = mode === 'pitch' ? 'Tactical Board' : 'Upload Image';
+  label.textContent = mode === 'pitch' ? 'Tactical Board' : mode === 'video' ? 'Video Analysis' : 'Image Analysis';
   // Also sync with the desktop tab bar buttons
   switchMode(mode);
 }
@@ -731,6 +783,8 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'headline') placed = addHeadline(pt.x, pt.y);
   else if (S.tool === 'tag') placed = addTag(pt.x, pt.y);
   if (placed) {
+    // Tag with video timestamp if in video mode
+    if (S.appMode === 'video') tagVideoTimestamp(placed);
     const elType = placed.dataset.type;
     trackElementInserted(elType);
     maybeSendPitchSnapshot();
@@ -843,7 +897,10 @@ function arrowEnd(e) {
   if (Math.sqrt(dx*dx + dy*dy) > 10) {
     S.pushUndo();
     const arrow = addArrow(S.arrowStart.x, S.arrowStart.y, pt.x, pt.y, S.arrowType);
-    if (arrow) { setTool('select'); select(arrow); }
+    if (arrow) {
+      if (S.appMode === 'video') tagVideoTimestamp(arrow);
+      setTool('select'); select(arrow);
+    }
   }
 }
 S.svg.addEventListener('mouseup', arrowEnd);
@@ -857,7 +914,10 @@ function closeFreeform() {
   if (freeformPts.length >= 3) {
     S.pushUndo();
     const zone = addFreeformZone([...freeformPts]);
-    if (zone) { setTool('select'); select(zone); }
+    if (zone) {
+      if (S.appMode === 'video') tagVideoTimestamp(zone);
+      setTool('select'); select(zone);
+    }
   }
   // Clean up
   freeformPts = [];
@@ -2381,6 +2441,14 @@ document.addEventListener('keydown', e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 'v' && !typing) { e.preventDefault(); pasteClipboard(); return; }
 
   if (typing) return;
+
+  // Video mode: Space = play/pause, arrows = seek
+  if (S.appMode === 'video') {
+    if (e.key === ' ') { e.preventDefault(); toggleVideoPlayback(); return; }
+    if (e.key === 'ArrowLeft') { e.preventDefault(); seekVideo(e.shiftKey ? -5 : -1); return; }
+    if (e.key === 'ArrowRight') { e.preventDefault(); seekVideo(e.shiftKey ? 5 : 1); return; }
+  }
+
   if (e.key === 'v') setTool('select');
   if (e.key === 'a') setTool('player-a');
   if (e.key === 'b') setTool('player-b');

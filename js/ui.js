@@ -24,7 +24,10 @@ export function setTool(t) {
     const arrowBtn = document.getElementById('arrow-' + S.arrowType + '-btn');
     if (arrowBtn) arrowBtn.classList.add('active');
   }
+  // Preserve mode classes (image-mode, video-mode) while swapping tool class
+  const modeClasses = ['image-mode', 'video-mode', 'shared-view'].filter(c => document.body.classList.contains(c));
   document.body.className = 'tool-' + (t.startsWith('player') ? 'player' : t.startsWith('shadow') ? 'shadow' : t === 'textbox' ? 'textbox' : t === 'vision' ? 'vision' : t);
+  modeClasses.forEach(c => document.body.classList.add(c));
   if (!t.startsWith('player')) deselect();
 }
 
