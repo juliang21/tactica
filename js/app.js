@@ -267,6 +267,7 @@ window.toggleToolbar = function() {
   tb.classList.toggle('collapsed');
   btn.classList.toggle('collapsed');
   const isCollapsed = tb.classList.contains('collapsed');
+  document.body.classList.toggle('toolbar-collapsed', isCollapsed);
   // Persist preference
   try { localStorage.setItem('tactica_toolbar_collapsed', isCollapsed ? '1' : '0'); } catch(e) {}
   // Track
