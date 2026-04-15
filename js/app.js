@@ -1941,6 +1941,53 @@ function closeBundlesOnOutsideClick(e) {
 document.addEventListener('mousedown', closeBundlesOnOutsideClick, true);
 document.addEventListener('click', closeBundlesOnOutsideClick, true);
 
+// ─── Kit tooltip (name-of-team on hover) ────────────────────────────────────
+(function setupKitTooltip() {
+  let tip = null;
+  function ensureTip() {
+    if (tip) return tip;
+    tip = document.createElement('div');
+    tip.className = 'kit-tooltip';
+    tip.setAttribute('role', 'tooltip');
+    document.body.appendChild(tip);
+    return tip;
+  }
+  document.addEventListener('mouseover', e => {
+    const btn = e.target.closest('.kit-btn');
+    if (!btn) return;
+    const name = btn.dataset.trackName || btn.getAttribute('title') || '';
+    if (!name) return;
+    // Suppress native tooltip while our custom one is visible
+    if (btn.hasAttribute('title')) {
+      btn.dataset._savedTitle = btn.getAttribute('title');
+      btn.removeAttribute('title');
+    }
+    const t = ensureTip();
+    t.textContent = name;
+    const r = btn.getBoundingClientRect();
+    t.style.visibility = 'hidden';
+    t.style.display = 'block';
+    const tw = t.offsetWidth;
+    let left = r.left + r.width / 2 - tw / 2;
+    // Keep within viewport
+    left = Math.max(6, Math.min(left, window.innerWidth - tw - 6));
+    const top = r.top - t.offsetHeight - 6;
+    t.style.left = left + 'px';
+    t.style.top = top + 'px';
+    t.style.visibility = 'visible';
+    t.classList.add('show');
+  });
+  document.addEventListener('mouseout', e => {
+    const btn = e.target.closest('.kit-btn');
+    if (!btn) return;
+    if (btn.dataset._savedTitle != null) {
+      btn.setAttribute('title', btn.dataset._savedTitle);
+      delete btn.dataset._savedTitle;
+    }
+    if (tip) tip.classList.remove('show');
+  });
+})();
+
 const arrowIcons = {
   'run': `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>`,
   'pass': `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/><polygon points="13,9 9,6.5 9,11.5" fill="#F59E0B"/></svg>`,
