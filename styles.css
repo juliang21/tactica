@@ -151,7 +151,7 @@ body {
 .sidebar-terms-link:hover { color: rgba(255,255,255,0.45); }
 .rondos-brand {
   display: flex; flex-direction: row; align-items: center;
-  gap: 6px; position: absolute; bottom: 8px; right: 12px;
+  gap: 6px; position: absolute; bottom: 8px; left: 12px;
   opacity: 0.4;
 }
 .rondos-brand:hover { opacity: 0.7; }
