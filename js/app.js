@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -91,6 +91,12 @@ function undo() {
       g.addEventListener('dblclick', e => {
         e.stopPropagation();
         openHeadlineEdit(g, e);
+      });
+    }
+    if (g.dataset.type === 'tag') {
+      g.addEventListener('dblclick', e => {
+        e.stopPropagation();
+        openTagEdit(g, e);
       });
     }
   });
@@ -511,7 +517,7 @@ function switchMode(mode) {
     if (S.appMode === 'image') return;
     // If there's work on the tactical board, confirm before switching
     if (hasCanvasWork()) {
-      showModeSwitchModal('Switching to Upload Image will erase all elements on your tactical board. Are you sure?', () => {
+      showModeSwitchModal('Switching to Image Analysis will erase all elements on your tactical board. Are you sure?', () => {
         pitchBtn.classList.remove('active');
         imageBtn.classList.add('active');
         showImageUploadPane();
@@ -579,7 +585,7 @@ function selectModeDropdown(mode) {
   const label = document.getElementById('mode-dropdown-label');
   const options = document.querySelectorAll('.mode-dropdown-option');
   options.forEach(o => o.classList.toggle('active', o.dataset.mode === mode));
-  label.textContent = mode === 'pitch' ? 'Tactical Board' : 'Upload Image';
+  label.textContent = mode === 'pitch' ? 'Tactical Board' : 'Image Analysis';
   // Also sync with the desktop tab bar buttons
   switchMode(mode);
 }

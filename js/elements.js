@@ -1351,8 +1351,187 @@ export function addTag(x, y, label, value) {
     e.stopPropagation();
     select(g);
   });
+  g.addEventListener('dblclick', e => {
+    e.stopPropagation();
+    openTagEdit(g, e);
+  });
   _tagCount++;
   return g;
+}
+
+// ─── Inline Tag Editing ──────────────────────────────────────────────────────
+export function openTagEdit(g, evt) {
+  select(g);
+
+  const svgEl = document.getElementById('pitch-svg');
+  const ctm = svgEl.getScreenCTM();
+  if (!ctm) return;
+
+  const labelEl = g.querySelector('.tag-label');
+  const valueEl = g.querySelector('.tag-value');
+  if (!labelEl || !valueEl) return;
+
+  const anchor = g.dataset.tagTextAnchor || 'bottom';
+  const fontSize = 12;
+  const scale = ctm.a; // zoom factor
+
+  // Measure the text bounding boxes in SVG coords
+  const labelBBox = labelEl.getBBox();
+  const valueBBox = valueEl.getBBox();
+  const pad = 4;
+
+  const minX = Math.min(labelBBox.x, valueBBox.x) - pad;
+  const minY = Math.min(labelBBox.y, valueBBox.y) - pad;
+  const maxX = Math.max(labelBBox.x + labelBBox.width, valueBBox.x + valueBBox.width) + pad;
+  const maxY = Math.max(labelBBox.y + labelBBox.height, valueBBox.y + valueBBox.height) + pad;
+
+  // Translate bbox corners to screen coords via the group CTM (picks up transforms)
+  const groupCTM = g.getScreenCTM();
+  if (!groupCTM) return;
+
+  function svgPtToScreen(x, y) {
+    const p = svgEl.createSVGPoint();
+    p.x = x; p.y = y;
+    return p.matrixTransform(groupCTM);
+  }
+  const s1 = svgPtToScreen(minX, minY);
+  const s2 = svgPtToScreen(maxX, maxY);
+
+  const left = Math.min(s1.x, s2.x);
+  const top = Math.min(s1.y, s2.y);
+  const overlayW = Math.abs(s2.x - s1.x);
+  const overlayH = Math.abs(s2.y - s1.y);
+
+  // Minimum width so short values still give room to type
+  const finalW = Math.max(overlayW, 120);
+
+  // Text alignment: center for top/bottom, left-aligned for 'left', right-aligned for 'right'
+  let textAlign = 'center';
+  if (anchor === 'left') textAlign = 'left';
+  else if (anchor === 'right') textAlign = 'right';
+
+  // Determine which field the user clicked (based on Y midpoint between label and value)
+  let focusValue = false;
+  if (evt) {
+    const midY = (labelBBox.y + labelBBox.height + valueBBox.y) / 2;
+    const clickPt = svgEl.createSVGPoint();
+    clickPt.x = evt.clientX; clickPt.y = evt.clientY;
+    const svgClick = clickPt.matrixTransform(groupCTM.inverse());
+    if (svgClick.y > midY) focusValue = true;
+  }
+
+  // Create overlay container
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `
+    position: fixed; left: ${left}px; top: ${top}px;
+    width: ${finalW}px;
+    display: flex; flex-direction: column;
+    padding: 4px 6px; gap: 2px;
+    border: 2px solid #4FC3F7; border-radius: 4px;
+    background: rgba(0,0,0,0.5); backdrop-filter: blur(4px);
+    z-index: 9999; box-sizing: border-box;
+  `;
+  // If the text anchor is right, nudge overlay so text stays right-aligned against the line end
+  if (anchor === 'right') overlay.style.left = (left - (finalW - overlayW)) + 'px';
+
+  const labelColor = g.dataset.tagLabelColor || 'rgba(255,255,255,0.9)';
+  const valueColor = g.dataset.tagValueColor || '#39FF14';
+
+  // Label input (upper)
+  const labelInput = document.createElement('input');
+  labelInput.type = 'text';
+  labelInput.value = g.dataset.tagLabel || '';
+  labelInput.placeholder = 'LABEL';
+  labelInput.maxLength = 30;
+  labelInput.style.cssText = `
+    background: transparent; border: none; outline: none;
+    color: ${labelColor}; font-family: Poppins, sans-serif;
+    font-size: ${fontSize * scale}px; font-weight: 600;
+    letter-spacing: 0.5px;
+    width: 100%; padding: 0; margin: 0; line-height: 1.4;
+    text-align: ${textAlign};
+  `;
+
+  // Value input (lower)
+  const valueInput = document.createElement('input');
+  valueInput.type = 'text';
+  valueInput.value = g.dataset.tagValue || '';
+  valueInput.placeholder = 'value';
+  valueInput.maxLength = 20;
+  valueInput.style.cssText = `
+    background: transparent; border: none; outline: none;
+    color: ${valueColor}; font-family: Poppins, sans-serif;
+    font-size: ${fontSize * scale}px; font-weight: 700;
+    width: 100%; padding: 0; margin: 0; line-height: 1.4;
+    text-align: ${textAlign};
+  `;
+
+  overlay.appendChild(labelInput);
+  overlay.appendChild(valueInput);
+
+  // Hide SVG text while editing
+  labelEl.style.visibility = 'hidden';
+  valueEl.style.visibility = 'hidden';
+
+  document.body.appendChild(overlay);
+
+  // Focus the right field based on click position
+  if (focusValue) { valueInput.focus(); valueInput.select(); }
+  else { labelInput.focus(); labelInput.select(); }
+
+  // Sync with sidebar inputs if the panel is open
+  const sideLabelInput = document.getElementById('tag-label-input');
+  const sideValueInput = document.getElementById('tag-value-input');
+
+  let finished = false;
+  function finishEdit() {
+    if (finished) return;
+    finished = true;
+    g.dataset.tagLabel = labelInput.value;
+    g.dataset.tagValue = valueInput.value;
+    if (sideLabelInput) sideLabelInput.value = labelInput.value;
+    if (sideValueInput) sideValueInput.value = valueInput.value;
+    labelEl.style.visibility = '';
+    valueEl.style.visibility = '';
+    overlay.remove();
+    repositionTag(g);
+  }
+
+  // Close on click outside
+  function onDocClick(e) {
+    if (!overlay.contains(e.target)) {
+      document.removeEventListener('mousedown', onDocClick, true);
+      finishEdit();
+    }
+  }
+  setTimeout(() => document.addEventListener('mousedown', onDocClick, true), 0);
+
+  // Keyboard handling
+  overlay.addEventListener('keydown', e => {
+    if (e.key === 'Escape') { e.preventDefault(); finishEdit(); }
+  });
+
+  // Live update as user types
+  labelInput.addEventListener('input', () => {
+    g.dataset.tagLabel = labelInput.value;
+    if (sideLabelInput) sideLabelInput.value = labelInput.value;
+    repositionTag(g);
+  });
+  valueInput.addEventListener('input', () => {
+    g.dataset.tagValue = valueInput.value;
+    if (sideValueInput) sideValueInput.value = valueInput.value;
+    repositionTag(g);
+  });
+
+  // Tab/Enter jumps between fields, Enter on value input finishes
+  labelInput.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && !e.shiftKey) { e.preventDefault(); valueInput.focus(); valueInput.select(); }
+    else if (e.key === 'Enter') { e.preventDefault(); valueInput.focus(); valueInput.select(); }
+  });
+  valueInput.addEventListener('keydown', e => {
+    if (e.key === 'Tab' && e.shiftKey) { e.preventDefault(); labelInput.focus(); labelInput.select(); }
+    else if (e.key === 'Enter') { e.preventDefault(); finishEdit(); }
+  });
 }
 
 export function repositionTag(g) {
