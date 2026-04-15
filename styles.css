@@ -151,8 +151,8 @@ body {
 .sidebar-terms-link:hover { color: rgba(255,255,255,0.45); }
 .rondos-brand {
   display: flex; flex-direction: row; align-items: center;
-  gap: 6px; position: absolute; bottom: 8px; left: 12px;
-  opacity: 0.4;
+  gap: 6px; position: fixed; bottom: 20px; left: 20px;
+  opacity: 0.4; z-index: 50;
 }
 .rondos-brand:hover { opacity: 0.7; }
 .rondos-logo {
@@ -352,7 +352,11 @@ body {
   cursor: pointer; transition: all 0.15s;
   white-space: nowrap;
 }
-.mode-tab:hover { color: var(--text-muted); border-color: var(--accent); }
+.mode-tab:hover {
+  color: var(--text-muted);
+  border-color: rgba(255,255,255,0.15);
+  background: rgba(255,255,255,0.04);
+}
 .mode-tab.active {
   background: var(--accent); color: #0F0F0F;
   font-weight: 700;
