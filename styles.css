@@ -588,6 +588,15 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   background: linear-gradient(to bottom, #003da5 33%, #fde100 33%, #fde100 67%, #003da5 67%);
 }
 .kit-boc-preview .kit-label { color: #0a0a0a; }
+.kit-ars-preview {
+  background: linear-gradient(to right, #fff 0 16%, #EF0107 16% 84%, #fff 84% 100%);
+}
+.kit-ars-preview .kit-label { color: #fff; text-shadow: 0 0 3px #EF0107, 0 0 3px #EF0107; }
+.kit-psg-preview {
+  background: linear-gradient(to right,
+    #004170 0 40%, #fff 40% 44%, #DA291C 44% 56%, #fff 56% 60%, #004170 60% 100%);
+}
+.kit-psg-preview .kit-label { color: #fff; text-shadow: 0 0 3px #004170, 0 0 3px #004170; }
 
 /* Arrow style buttons */
 .style-btn-row { display: flex; gap: 6px; }

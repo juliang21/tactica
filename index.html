@@ -428,6 +428,19 @@
           <rect width="1" height="1" fill="#003da5"/>
           <rect y="0.33" width="1" height="0.34" fill="#fde100"/>
         </pattern>
+        <!-- Arsenal: red body with white sleeves -->
+        <pattern id="kit-ars" patternUnits="objectBoundingBox" patternContentUnits="objectBoundingBox" width="1" height="1">
+          <rect width="1" height="1" fill="#EF0107"/>
+          <rect x="0" y="0" width="0.16" height="1" fill="#ffffff"/>
+          <rect x="0.84" y="0" width="0.16" height="1" fill="#ffffff"/>
+        </pattern>
+        <!-- PSG: navy with central red stripe bordered by white (Hechter stripe) -->
+        <pattern id="kit-psg" patternUnits="objectBoundingBox" patternContentUnits="objectBoundingBox" width="1" height="1">
+          <rect width="1" height="1" fill="#004170"/>
+          <rect x="0.40" y="0" width="0.04" height="1" fill="#ffffff"/>
+          <rect x="0.44" y="0" width="0.12" height="1" fill="#DA291C"/>
+          <rect x="0.56" y="0" width="0.04" height="1" fill="#ffffff"/>
+        </pattern>
         <!-- Player drop shadow: offset further down so blur doesn't overlap border -->
         <filter id="player-shadow" x="-30%" y="-20%" width="160%" height="200%">
           <feDropShadow dx="0" dy="7" stdDeviation="3.5" flood-color="rgba(0,0,0,0.38)"/>
@@ -620,6 +633,8 @@
         <div class="kit-btn" style="background:#6cabdd" data-color="#6cabdd" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Man City" title="Man City"><div class="kit-label" style="color:#000">MCI</div></div>
         <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffa500" onclick="applyKit(this)" data-track-name="Liverpool" title="Liverpool"><div class="kit-label">LIV</div></div>
         <div class="kit-btn" style="background:#034694" data-color="#034694" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Chelsea" title="Chelsea"><div class="kit-label">CHE</div></div>
+        <div class="kit-btn kit-ars-preview" data-color="#EF0107" data-pattern="kit-ars" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Arsenal" title="Arsenal"><div class="kit-label">ARS</div></div>
+        <div class="kit-btn kit-psg-preview" data-color="#004170" data-pattern="kit-psg" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Paris Saint-Germain" title="Paris Saint-Germain"><div class="kit-label">PSG</div></div>
         <div class="kit-btn" style="background:#e62333" data-color="#e62333" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Roma" title="Roma"><div class="kit-label">ROM</div></div>
         <div class="kit-btn" style="background:#000000" data-color="#1a1a1a" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Juventus" title="Juventus"><div class="kit-label">JUV</div></div>
         <div class="kit-btn" style="background:#ffffff;border:2px solid #d9021b" data-color="#ffffff" data-border="#d9021b" data-gk="#a8f0d0" onclick="applyKit(this)" data-track-name="Sevilla" title="Sevilla"><div class="kit-label" style="color:#000">SEV</div></div>
