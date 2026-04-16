@@ -341,30 +341,34 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   display: flex; align-items: center; justify-content: center;
 }
 .mode-tab-group {
-  display: flex; gap: 4px;
-  background: transparent;
-  height: 42px;
+  display: inline-flex; gap: 0;
+  background: rgba(255,255,255,0.03);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 3px;
+  height: 34px;
   align-items: center;
 }
 .mode-tab {
   display: flex; align-items: center; gap: 7px;
-  padding: 0 22px; height: 34px;
-  border-radius: 20px;
-  border: 1px solid var(--border);
+  padding: 0 18px; height: 28px;
+  border-radius: 16px;
+  border: none;
   font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500;
   color: var(--text-dim); background: transparent;
-  cursor: pointer; transition: all 0.15s;
+  cursor: pointer; transition: color 0.15s, background 0.15s;
   white-space: nowrap;
 }
 .mode-tab:hover {
   color: var(--text-muted);
-  border-color: rgba(255,255,255,0.15);
   background: rgba(255,255,255,0.04);
 }
 .mode-tab.active {
   background: var(--accent); color: #0F0F0F;
   font-weight: 700;
-  border-color: var(--accent);
+}
+.mode-tab.active:hover {
+  background: var(--accent); color: #0F0F0F;
 }
 .mode-tab svg { opacity: 0.5; }
 .mode-tab.active svg { opacity: 1; color: #0F0F0F; }
@@ -1567,6 +1571,16 @@ body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777
   color: #1a1a1a;
   line-height: 1.4;
 }
+.new-badge-inline {
+  margin-left: auto;
+  font-size: 8px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  padding: 1.5px 5px; border-radius: 4px;
+  background: linear-gradient(135deg, #f43f5e, #e11d48);
+  color: #fff;
+  line-height: 1.4;
+  box-shadow: 0 1px 4px rgba(228,30,72,0.4);
+  animation: badge-pulse 2.5s ease-in-out infinite;
+}
 .save-menu-sep {
   height: 1px; background: var(--border); margin: 0;
 }
@@ -2151,21 +2165,21 @@ body.shared-view .shared-watermark {
   font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 500;
   color: var(--text-muted); letter-spacing: 0.2px;
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-  min-width: 120px; max-width: 180px;
+  min-width: 200px; max-width: 280px; width: 240px;
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.08);
+  border: 1px solid rgba(255,255,255,0.22);
   border-radius: 5px;
-  padding: 4px 10px;
+  padding: 4px 12px;
   outline: none;
   cursor: pointer;
   transition: border-color 0.15s, background 0.15s;
 }
 .analysis-name-input:hover {
-  border-color: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.35);
   background: rgba(255,255,255,0.06);
 }
 .analysis-name-input:focus {
-  border-color: rgba(30,215,96,0.5);
+  border-color: rgba(30,215,96,0.6);
   background: rgba(255,255,255,0.08);
   color: var(--text);
   cursor: text;
