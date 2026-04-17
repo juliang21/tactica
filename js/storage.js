@@ -44,6 +44,7 @@ export function captureState() {
   return {
     appMode: S.appMode,
     pitchLayout: S.currentPitchLayout,
+    pitchFlipped: S.pitchFlipped || false,
     pitchColors: { ...S.pitchColors },
     teamColors: { ...S.teamColors },
     gkColors: { ...S.gkColors },
@@ -182,7 +183,7 @@ export async function loadAnalysis(id, onReady) {
   const d = analysis.data;
   if (d.pitchLayout) {
     import('./pitch.js').then(({ setPitch }) => {
-      setPitch(d.pitchLayout);
+      setPitch(d.pitchLayout, d.pitchFlipped);
       if (d.pitchColors) {
         S.pitchColors.s1 = d.pitchColors.s1;
         S.pitchColors.s2 = d.pitchColors.s2;

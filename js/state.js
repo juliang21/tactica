@@ -20,6 +20,7 @@ export let arrowDrawing = false;
 export let arrowStart = null;
 export let arrowPreview = null;
 export let currentPitchLayout = 'full-h';
+export let pitchFlipped = false;
 export let pitchColors = { s1: '#3a7a38', s2: '#367035', line: 'rgba(255,255,255,0.55)' };
 export let exportFmt = 'png';
 
@@ -65,6 +66,7 @@ export function setArrowDrawing(v) { arrowDrawing = v; }
 export function setArrowStart(v) { arrowStart = v; }
 export function setArrowPreview(v) { arrowPreview = v; }
 export function setCurrentPitchLayout(v) { currentPitchLayout = v; }
+export function setPitchFlipped(v) { pitchFlipped = v; }
 export function setExportFmt(v) { exportFmt = v; }
 
 // ─── Constants ────────────────────────────────────────────────────────────────

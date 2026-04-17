@@ -15,7 +15,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
          applySize, applyRotation, clearAll } from './ui.js';
-import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
+import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
@@ -372,6 +372,12 @@ window.setPitchVisual = function(el) {
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_pitch_change', parsePitchLayout(S.currentPitchLayout)).catch(() => {});
   if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_type', { pitch_type: S.currentPitchLayout, tool_name: 'tactica' });
+};
+window.togglePitchFlip = function() {
+  togglePitchFlip();
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_pitch_change', { ...parsePitchLayout(S.currentPitchLayout), flipped: S.pitchFlipped }).catch(() => {});
+  if (typeof window.gtag === 'function') window.gtag('event', 'feature_pitch_flip', { pitch_type: S.currentPitchLayout, flipped: S.pitchFlipped, tool_name: 'tactica' });
 };
 window.updatePitchFromToggles = function() {
   updatePitchFromToggles();

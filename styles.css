@@ -921,6 +921,18 @@ input[type=range]::-webkit-slider-thumb {
   max-height: 48px;
 }
 
+/* ── Pitch Flip Button ── */
+.pitch-flip-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 8px; padding: 6px 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-dim);
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+.pitch-flip-btn:hover { border-color: var(--text-dim); color: var(--text-muted); background: var(--surface-hover); }
+.pitch-flip-btn.active { background: var(--surface-hover); border-color: var(--text); color: var(--text); }
+
 /* ── Pitch Switch Rows (checkbox toggles) ── */
 .pitch-switch-row {
   display: flex; align-items: center; gap: 10px;

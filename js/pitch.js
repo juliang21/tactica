@@ -49,6 +49,14 @@ export function setPitchVisual(el) {
   updatePitchFromToggles();
 }
 
+// ─── Flip pitch direction ───────────────────────────────────────────────────
+export function togglePitchFlip() {
+  S.setPitchFlipped(!S.pitchFlipped);
+  const btn = document.getElementById('pitch-flip-btn');
+  if (btn) btn.classList.toggle('active', S.pitchFlipped);
+  rebuildPitch();
+}
+
 // ─── Rebuild from current toggle states ─────────────────────────────────────
 export function updatePitchFromToggles() {
   const layout = getToggledLayout();
@@ -57,12 +65,13 @@ export function updatePitchFromToggles() {
 }
 
 // ─── Legacy setPitch (used by storage.js for loading saved analyses) ────────
-export function setPitch(layout) {
+export function setPitch(layout, flipped) {
   // Migrate old half-h layouts → half-v (old half-h was vertical half, goal at bottom)
   if (layout.startsWith('half-h')) {
     layout = layout.replace('half-h', 'half-v');
   }
   S.setCurrentPitchLayout(layout);
+  S.setPitchFlipped(!!flipped);
 
   // Sync toggles to match the loaded layout
   const isVertical = (/full-v|half-v|middle-v|3q-v/).test(layout);
@@ -88,6 +97,9 @@ export function setPitch(layout) {
   document.querySelectorAll('.pitch-visual-btn').forEach(b => {
     b.classList.toggle('active', b.dataset.pvOrient === orientVal && b.dataset.pvSize === sizeVal);
   });
+  // Sync flip button
+  const flipBtn = document.getElementById('pitch-flip-btn');
+  if (flipBtn) flipBtn.classList.toggle('active', S.pitchFlipped);
   // Toggles
   const gridHEl = document.getElementById('pitch-toggle-gridh');
   const gridVEl = document.getElementById('pitch-toggle-gridv');
@@ -223,11 +235,23 @@ export function rebuildPitch() {
   bg.setAttribute('width', W); bg.setAttribute('height', H); bg.setAttribute('fill', 'url(#stripes)');
   svgEl.insertBefore(bg, document.getElementById('objects-layer'));
 
+  // Markings group — flip transform applied here when pitch direction is flipped
+  const markingsG = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  markingsG.id = 'pitch-markings';
+  if (S.pitchFlipped && (isHalf || is3Q)) {
+    if (isVertical) {
+      markingsG.setAttribute('transform', `translate(0,${H}) scale(1,-1)`);
+    } else {
+      markingsG.setAttribute('transform', `translate(${W},0) scale(-1,1)`);
+    }
+  }
+  svgEl.insertBefore(markingsG, document.getElementById('objects-layer'));
+
   const LC = S.pitchColors.line;
   function mk(tag, attrs) {
     const el = document.createElementNS('http://www.w3.org/2000/svg', tag);
     Object.entries(attrs).forEach(([k,v]) => el.setAttribute(k, v));
-    svgEl.insertBefore(el, document.getElementById('objects-layer'));
+    markingsG.appendChild(el);
     return el;
   }
 
