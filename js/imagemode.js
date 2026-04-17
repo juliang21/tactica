@@ -41,10 +41,19 @@ export function enterImageMode(dataUrl, natW, natH) {
   // Clear undo stack (cross-mode undo is confusing)
   S.undoStack.length = 0;
 
-  // Compute SVG display dimensions — fit within max 900w x 680h preserving aspect ratio
-  // ViewBox uses natural image dimensions so the full image is always visible;
-  // width/height control the on-screen display size only.
-  const maxW = 900, maxH = 680;
+  // Add CSS class FIRST so overflow:visible kicks in before we resize the SVG
+  document.body.classList.add('image-mode');
+
+  // Compute SVG display dimensions — fit within the available container space
+  // preserving aspect ratio.  ViewBox uses natural image dimensions so the
+  // full image is always visible; width/height control the on-screen display
+  // size only.
+  // Measure canvas-wrap (stable flex container between toolbar & side-panel)
+  // minus its horizontal padding (20px each side).
+  const canvasWrap = document.getElementById('canvas-wrap');
+  const availableW = canvasWrap ? (canvasWrap.clientWidth - 40) : 900;
+  const maxW = Math.min(availableW, 900);
+  const maxH = 680;
   const ratio = natW / natH;
   let W, H;
   if (ratio > maxW / maxH) {
@@ -61,6 +70,7 @@ export function enterImageMode(dataUrl, natW, natH) {
   svgEl.setAttribute('width', W);
   svgEl.setAttribute('height', H);
   svgEl.setAttribute('viewBox', `0 0 ${natW} ${natH}`);
+  svgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
 
   // Remove all pitch elements (keep defs, objects-layer, players-layer)
   Array.from(svgEl.children).forEach(child => {
@@ -92,15 +102,12 @@ export function enterImageMode(dataUrl, natW, natH) {
   if (overlay) overlay.classList.remove('visible');
   if (pitchContainer) pitchContainer.style.display = '';
 
-  // Add CSS class for image mode UI
-  document.body.classList.add('image-mode');
-
   // Enable grab-to-pan on the pitch wrap
   _initPanScroll();
 
-  // Update UI and switch to players tab
+  // Update UI and switch to pitch tab (mini-pitch settings)
   updateImageModeUI(true);
-  switchTab('players');
+  switchTab('pitch');
 }
 
 // ─── Exit Image Mode ──────────────────────────────────────────────────────────

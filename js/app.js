@@ -17,7 +17,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applySize, applyRotation, clearAll } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=3';
-import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=2';
+import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=6';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
