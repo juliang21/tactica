@@ -129,9 +129,18 @@ export function doExport() {
 
     if (includeMP && mpSvgEl) {
       // ── Export with mini-pitch side-by-side ──
-      const mpW = parseFloat(mpSvgEl.getAttribute('width'));
-      const mpH = parseFloat(mpSvgEl.getAttribute('height'));
-      const gap = 12;
+      // The mini-pitch SVG dimensions are in screen pixels (e.g. 240×340).
+      // The main image uses viewBox (natural) dimensions which are much larger
+      // (e.g. 1920×1080).  Scale the mini-pitch up so it keeps the same
+      // visual proportion to the main image as it has on screen.
+      const mpRawW = parseFloat(mpSvgEl.getAttribute('width'));
+      const mpRawH = parseFloat(mpSvgEl.getAttribute('height'));
+      // Use actual rendered width (accounts for CSS flex-shrink) not the attribute
+      const displayW = svgExport.getBoundingClientRect().width || parseFloat(svgExport.getAttribute('width'));
+      const mpScale = displayW > 0 ? (W / displayW) : 1;
+      const mpW = Math.round(mpRawW * mpScale);
+      const mpH = Math.round(mpRawH * mpScale);
+      const gap = Math.round(12 * mpScale);
       const totalW = W + gap + mpW;
       const totalH = Math.max(H, mpH);
 
