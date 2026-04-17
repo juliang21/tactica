@@ -144,8 +144,12 @@ export function placeFormation(name) {
   Array.from(S.playersLayer.querySelectorAll(`g[data-team="${team}"]`)).forEach(el => el.remove());
   S.playerCounts[team] = 0;
 
-  const isV = (/full-v|half-v/).test(S.currentPitchLayout);
-  const isHalf = S.currentPitchLayout.startsWith('half');
+  const lay = S.currentPitchLayout;
+  const isV = (/full-v|half-v|middle-v|3q-v/).test(lay);
+  const isHalf = lay.startsWith('half');
+  const isMiddle = lay.startsWith('middle');
+  const is3Q = lay.startsWith('3q');
+  const flipped = S.pitchFlipped && (isHalf || is3Q);
   const W = parseFloat(S.svg.getAttribute('width'));
   const H = parseFloat(S.svg.getAttribute('height'));
 
@@ -155,27 +159,42 @@ export function placeFormation(name) {
     // xf = depth (0=own goal, 1=opponent goal), yf = lateral spread (0=top, 1=bottom)
     // Map depth so forwards reach ~60% (just past midfield), not into opponent's half
     const depth = 0.05 + xf * 0.88;  // GK ~0.10, forwards ~0.61
+    const pad = 20;
 
-    if (isHalf && !isV) {
-      // Horizontal half pitch: depth → X axis (goal on right), lateral → Y axis
-      const pad=20, py=20, pw=W-pad*2, ph=H-py*2;
-      const d = (0.05 + xf * 1.30) * pw;
+    if ((isHalf || is3Q) && !isV) {
+      // Horizontal half/¾ pitch: depth → X axis, lateral → Y axis
+      const py=20, pw=W-pad*2, ph=H-py*2;
+      const stretch = isHalf ? 1.30 : 1.05;
+      const d = (0.05 + xf * stretch) * pw;
       y = py + yf * ph;
-      x = team === 'a' ? pad + pw - d : pad + d;
-    } else if (isHalf && isV) {
-      // Vertical half pitch: depth → Y axis (goal at bottom), lateral → X axis
-      const pad=20, py=20, pw=W-pad*2, ph=H-py*2;
-      const d = (0.05 + xf * 1.30) * ph;
+      const goalOnRight = team === 'a' ? !flipped : flipped;
+      x = goalOnRight ? pad + pw - d : pad + d;
+    } else if ((isHalf || is3Q) && isV) {
+      // Vertical half/¾ pitch: depth → Y axis, lateral → X axis
+      const py=20, pw=W-pad*2, ph=H-py*2;
+      const stretch = isHalf ? 1.30 : 1.05;
+      const d = (0.05 + xf * stretch) * ph;
       x = pad + yf * pw;
-      y = team === 'a' ? py + ph - d : py + d;
-    } else if (!isV) {
-      // Full horizontal: depth → X axis, lateral → Y axis
-      const pad=30, py=20, pw=W-pad*2, ph=H-py*2;
+      const goalOnBottom = team === 'a' ? !flipped : flipped;
+      y = goalOnBottom ? py + ph - d : py + d;
+    } else if (isMiddle && !isV) {
+      // Horizontal middle third: depth → X axis, lateral → Y axis
+      const py=20, pw=W-pad*2, ph=H-py*2;
       y = py + yf * ph;
       x = team === 'a' ? pad + depth * pw : pad + pw - depth * pw;
+    } else if (isMiddle && isV) {
+      // Vertical middle third: depth → Y axis, lateral → X axis
+      const py=20, pw=W-pad*2, ph=H-py*2;
+      x = pad + yf * pw;
+      y = team === 'a' ? py + depth * ph : py + ph - depth * ph;
+    } else if (!isV) {
+      // Full horizontal: depth → X axis, lateral → Y axis
+      const py=20, pw=W-pad*2-20, ph=H-py*2;
+      y = py + yf * ph;
+      x = team === 'a' ? 30 + depth * pw : 30 + pw - depth * pw;
     } else {
       // Full vertical: depth → Y axis, lateral → X axis
-      const pad=20, px=20, pw=W-pad*2, ph=H-px*2;
+      const px=20, pw=W-pad*2, ph=H-px*2;
       x = pad + yf * pw;
       y = team === 'a' ? px + depth * ph : px + ph - depth * ph;
     }
