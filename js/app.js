@@ -17,7 +17,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applySize, applyRotation, clearAll } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=2';
-import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode } from './imagemode.js';
+import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType } from './imagemode.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
@@ -501,6 +501,8 @@ window.handleImageUpload = function(input) {
 };
 window.enterImageMode = enterImageMode;
 window.exitImageMode = exitImageMode;
+window.toggleMiniPitch = toggleMiniPitch;
+window.setMiniPitchType = setMiniPitchType;
 
 // ─── Mode Switching (Tactical Board vs Image Upload) ────────────────────────
 function hasCanvasWork() {
@@ -508,20 +510,55 @@ function hasCanvasWork() {
 }
 
 function showImageUploadPane() {
-  // Switch to pitch tab first, then replace pitch pane with upload pane
+  // Show the upload overlay on the canvas area, hide the pitch
+  const overlay = document.getElementById('image-upload-overlay');
+  const pitchContainer = document.getElementById('pitch-container');
+  if (overlay) overlay.classList.add('visible');
+  if (pitchContainer) pitchContainer.style.display = 'none';
+  // Also hide sidebar pitch pane and show nothing (upload is on canvas)
   switchTab('pitch');
   const pitchPane = document.getElementById('pane-pitch');
   const uploadPane = document.getElementById('image-upload-pane');
-  const imageInfo = document.getElementById('image-mode-info');
   if (pitchPane) pitchPane.style.display = 'none';
-  if (uploadPane) uploadPane.style.display = 'flex';
-  if (imageInfo) imageInfo.style.display = 'none';
+  if (uploadPane) uploadPane.style.display = 'none';
 }
 window.showImageUploadPane = showImageUploadPane;
 
 function hideImageUploadPane() {
+  const overlay = document.getElementById('image-upload-overlay');
+  const pitchContainer = document.getElementById('pitch-container');
+  if (overlay) overlay.classList.remove('visible');
+  if (pitchContainer) pitchContainer.style.display = '';
   const uploadPane = document.getElementById('image-upload-pane');
   if (uploadPane) uploadPane.style.display = 'none';
+}
+
+// ─── Drag-and-drop on canvas upload overlay ─────────────────────────────────
+{
+  const dz = document.getElementById('upload-dropzone');
+  if (dz) {
+    dz.addEventListener('click', (e) => {
+      if (e.target.closest('.upload-dropzone-btn')) return; // btn already has onclick
+      triggerImageUpload();
+    });
+    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+    dz.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dz.classList.remove('dragover');
+      const file = e.dataTransfer.files[0];
+      if (file && file.type.startsWith('image/')) {
+        const reader = new FileReader();
+        reader.onload = () => {
+          const dataUrl = reader.result;
+          const img = new Image();
+          img.onload = () => enterImageMode(dataUrl, img.naturalWidth, img.naturalHeight);
+          img.src = dataUrl;
+        };
+        reader.readAsDataURL(file);
+      }
+    });
+  }
 }
 
 function switchMode(mode) {

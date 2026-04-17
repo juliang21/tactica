@@ -1177,6 +1177,58 @@ body.tool-motion #pitch-svg { cursor: crosshair; }
 #fb-status.success { color: #4ADE80; }
 #fb-status.error { color: #F87171; }
 
+/* ── Image Upload Overlay (on canvas area) ── */
+#image-upload-overlay {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 100%; min-height: 480px;
+  padding: 40px;
+}
+#image-upload-overlay.visible { display: flex !important; }
+.upload-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 12px; padding: 48px 40px;
+  border: 2px dashed var(--border); border-radius: 16px;
+  background: rgba(255,255,255,0.02);
+  max-width: 420px; width: 100%;
+  transition: border-color 0.2s, background 0.2s;
+  cursor: pointer;
+}
+.upload-dropzone.dragover {
+  border-color: var(--accent); background: rgba(76,175,80,0.06);
+}
+.upload-dropzone-title {
+  font-size: 18px; font-weight: 700; color: var(--text);
+  margin: 4px 0 0;
+}
+.upload-dropzone-sub {
+  font-size: 13px; color: var(--text-muted); text-align: center;
+  line-height: 1.5; margin: 0;
+}
+.upload-dropzone-btn {
+  display: flex; align-items: center; gap: 8px;
+  margin-top: 8px; padding: 10px 24px;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: var(--accent); color: #0A0A0A;
+  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+}
+.upload-dropzone-btn:hover { opacity: 0.9; }
+.upload-dropzone-btn svg { stroke: #0A0A0A; }
+
+/* ── Mini Pitch Grid (image mode sidebar) ── */
+.mini-pitch-grid {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+.mini-pitch-grid .pitch-visual-btn {
+  padding: 6px 3px;
+}
+#mini-pitch-wrap {
+  flex-shrink: 0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
 /* ── Image Mode ── */
 body.image-mode #pane-pitch { display: none !important; }
 body.image-mode #image-mode-info { display: flex !important; }
