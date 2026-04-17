@@ -34,6 +34,21 @@ export function setPitchOpt(el) {
   updatePitchFromToggles();
 }
 
+// ─── Visual pitch thumbnail click (sets both orientation + size) ────────────
+export function setPitchVisual(el) {
+  const orient = el.dataset.pvOrient;
+  const size = el.dataset.pvSize;
+  // Update hidden pitch-opt buttons for getToggledLayout()
+  document.querySelectorAll('.pitch-opt[data-opt="orientation"]').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.pitch-opt[data-opt="orientation"][data-val="${orient}"]`)?.classList.add('active');
+  document.querySelectorAll('.pitch-opt[data-opt="size"]').forEach(b => b.classList.remove('active'));
+  document.querySelector(`.pitch-opt[data-opt="size"][data-val="${size}"]`)?.classList.add('active');
+  // Update visual grid active state
+  document.querySelectorAll('.pitch-visual-btn').forEach(b => b.classList.remove('active'));
+  el.classList.add('active');
+  updatePitchFromToggles();
+}
+
 // ─── Rebuild from current toggle states ─────────────────────────────────────
 export function updatePitchFromToggles() {
   const layout = getToggledLayout();
@@ -67,6 +82,11 @@ export function setPitch(layout) {
   const sizeVal = isMiddle ? 'middle' : is3Q ? '3q' : isHalf ? 'half' : 'full';
   document.querySelectorAll('.pitch-opt[data-opt="size"]').forEach(b => {
     b.classList.toggle('active', b.dataset.val === sizeVal);
+  });
+  // Sync visual grid
+  const orientVal = isVertical ? 'vertical' : 'horizontal';
+  document.querySelectorAll('.pitch-visual-btn').forEach(b => {
+    b.classList.toggle('active', b.dataset.pvOrient === orientVal && b.dataset.pvSize === sizeVal);
   });
   // Toggles
   const gridHEl = document.getElementById('pitch-toggle-gridh');
