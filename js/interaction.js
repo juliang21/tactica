@@ -711,9 +711,17 @@ export function deleteSelected() {
 
 // ─── Tab Switcher ─────────────────────────────────────────────────────────────
 export function switchTab(name) {
+  const isImageMode = document.body.classList.contains('image-mode');
   ['players','pitch','element'].forEach(t => {
     document.getElementById('tab-' + t).classList.toggle('active', t === name);
-    document.getElementById('pane-' + t).style.display = t === name ? 'flex' : 'none';
+    if (t === 'pitch' && isImageMode) {
+      // In image mode: always hide pane-pitch, show image-mode-info instead
+      document.getElementById('pane-pitch').style.display = 'none';
+      const imgInfo = document.getElementById('image-mode-info');
+      if (imgInfo) imgInfo.style.display = name === 'pitch' ? 'flex' : 'none';
+    } else {
+      document.getElementById('pane-' + t).style.display = t === name ? 'flex' : 'none';
+    }
   });
 }
 
@@ -1414,8 +1422,11 @@ function startDrag(e) {
   // Don't start whole-element drag if clicking a handle
   if (e.target.dataset?.handle) return;
   e.stopPropagation(); e.preventDefault();
-  const pt = S.getSVGPoint(e);
   const target = e.currentTarget;
+  // Detect which SVG this element belongs to (main pitch or mini-pitch)
+  const ownerSvg = target.ownerSVGElement || S.svg;
+  S.setDragSvg(ownerSvg);
+  const pt = S.getSVGPoint(e);
   const additive = e.ctrlKey || e.metaKey;
 
   // If target is already in multi-selection, start multi-drag without re-selecting
@@ -1488,6 +1499,7 @@ function stopDrag() {
   }
   S.setIsDragging(false);
   S.setEndpointDragging(null);
+  S.setDragSvg(null);
   if (S.dragMoved) setTimeout(() => { S.setDragMoved(false); }, 0);
 }
 
@@ -1735,9 +1747,8 @@ export function forEachSelected(type, fn) {
   }
 }
 
-// ─── Bind drag events ────────────────────────────────────────────────────────
-S.svg.addEventListener('mousemove', onDrag);
-S.svg.addEventListener('touchmove', onDrag, { passive: false });
-S.svg.addEventListener('mouseup', stopDrag);
-S.svg.addEventListener('touchend', stopDrag);
+// ─── Bind drag events (document-level so dragging works on both main + mini SVGs) ──
+document.addEventListener('mousemove', onDrag);
+document.addEventListener('touchmove', onDrag, { passive: false });
 document.addEventListener('mouseup', stopDrag);
+document.addEventListener('touchend', stopDrag);

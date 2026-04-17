@@ -960,13 +960,13 @@ input[type=range]::-webkit-slider-thumb {
 
 /* ── Pitch Color Dots ── */
 .pitch-color-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
-.pitch-color-dot, .pitch-line-dot {
+.pitch-color-dot, .pitch-line-dot, .mp-color-dot, .mp-line-dot {
   width: 26px; height: 26px; border-radius: 50%; cursor: pointer;
   border: 2px solid transparent; transition: transform 0.1s, border-color 0.1s;
   flex-shrink: 0;
 }
-.pitch-color-dot:hover, .pitch-line-dot:hover { transform: scale(1.1); }
-.pitch-color-dot.selected, .pitch-line-dot.selected { border-color: var(--accent); }
+.pitch-color-dot:hover, .pitch-line-dot:hover, .mp-color-dot:hover, .mp-line-dot:hover { transform: scale(1.1); }
+.pitch-color-dot.selected, .pitch-line-dot.selected, .mp-color-dot.selected, .mp-line-dot.selected { border-color: var(--accent); }
 
 /* ── Upgrade overlay ── */
 .upgrade-overlay {
@@ -1226,18 +1226,28 @@ body.tool-motion #pitch-svg { cursor: crosshair; }
 #mini-pitch-wrap {
   flex-shrink: 0;
   border-radius: 6px;
-  overflow: hidden;
+  overflow: visible;
 }
+#mini-pitch-wrap svg { cursor: crosshair; }
+#mini-pitch-wrap svg [data-type] { cursor: move; }
 
 /* ── Image Mode ── */
 body.image-mode #pane-pitch { display: none !important; }
 body.image-mode #image-mode-info { display: flex !important; }
+body.image-mode #pitch-container { overflow: visible; box-shadow: none; }
+body.image-mode #pitch-container #pitch-svg { flex-shrink: 1; }
+body.image-mode #pitch-wrap { overflow-x: auto; overflow-y: hidden; cursor: grab; }
+body.image-mode #pitch-wrap:active { cursor: grabbing; }
+body.image-mode #pitch-wrap::-webkit-scrollbar { height: 6px; }
+body.image-mode #pitch-wrap::-webkit-scrollbar-track { background: transparent; }
+body.image-mode #pitch-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
 
 /* Image mode — swap active tab */
 body.image-mode #mode-pitch-btn { background: transparent; color: #777777; font-weight: 500; border-color: var(--border); }
 body.image-mode #mode-pitch-btn svg { opacity: 0.7; color: #777777; }
-body.image-mode #mode-image-btn { background: #D4A843; color: #0A0A0A; font-weight: 600; border-color: #D4A843; }
-body.image-mode #mode-image-btn svg { opacity: 1; color: #0A0A0A; }
+body.image-mode #mode-image-btn { background: var(--accent); color: #000; font-weight: 600; border-color: var(--accent); }
+body.image-mode #mode-image-btn svg { opacity: 1; color: #000; }
 body.image-mode #mode-pitch-btn.active { background: transparent; color: #777777; font-weight: 500; border-color: var(--border); }
 
 /* ── Mobile Mode Dropdown ── */

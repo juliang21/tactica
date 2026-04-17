@@ -68,6 +68,8 @@ export function setArrowPreview(v) { arrowPreview = v; }
 export function setCurrentPitchLayout(v) { currentPitchLayout = v; }
 export function setPitchFlipped(v) { pitchFlipped = v; }
 export function setExportFmt(v) { exportFmt = v; }
+export let dragSvg = null;
+export function setDragSvg(v) { dragSvg = v; }
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 export const FORMATIONS = {
@@ -92,12 +94,13 @@ export const objectsLayer = document.getElementById('objects-layer');
 export const selInfo = document.getElementById('selection-info');
 
 // ─── SVG Coordinates ──────────────────────────────────────────────────────────
-export function getSVGPoint(e) {
+export function getSVGPoint(e, svgEl) {
   const clientX = e.touches ? e.touches[0].clientX : e.clientX;
   const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-  const pt = svg.createSVGPoint();
+  const target = svgEl || dragSvg || svg;
+  const pt = target.createSVGPoint();
   pt.x = clientX; pt.y = clientY;
-  return pt.matrixTransform(svg.getScreenCTM().inverse());
+  return pt.matrixTransform(target.getScreenCTM().inverse());
 }
 
 export function isDarkColor(hex) {

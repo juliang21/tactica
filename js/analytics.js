@@ -57,6 +57,9 @@ export function bumpInteraction() {
   }
 }
 
+// Re-export current mode for external callers that need it at fire-time
+export function getAnalysisStartedFired() { return _analysisStartedFired; }
+
 // ─── 0. Element Dragged ─────────────────────────────────────────────────────
 // Called from app.js registerDragEnd callback — counts as an interaction.
 export function trackElementDragged() {

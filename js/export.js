@@ -72,6 +72,12 @@ function drawWatermark(ctx, W, H, logoImg) {
 
 export function exportImage() {
   trackExportClicked();
+  // Show/hide mini-pitch toggle depending on whether it's visible in image mode
+  const mpOpt = document.getElementById('export-minipitch-opt');
+  if (mpOpt) {
+    const mpSvg = document.getElementById('mini-pitch-wrap')?.querySelector('svg');
+    mpOpt.style.display = (S.appMode === 'image' && mpSvg) ? 'flex' : 'none';
+  }
   document.getElementById('export-modal').style.display = 'flex';
 }
 
@@ -116,12 +122,74 @@ export function doExport() {
 
   // Image mode: draw uploaded image as background, then render overlays
   if (S.appMode === 'image' && S.imageData) {
-    const bgImg = new Image();
-    bgImg.onload = () => {
-      ctx.drawImage(bgImg, 0, 0, W, H);
-      renderOverlays(ctx, W, H, SCALE, canvas, prevSelected);
-    };
-    bgImg.src = S.imageData;
+    const includeMP = document.getElementById('export-minipitch-cb')?.checked;
+    const mpSvgEl = document.getElementById('mini-pitch-wrap')?.querySelector('svg');
+
+    if (includeMP && mpSvgEl) {
+      // ── Export with mini-pitch side-by-side ──
+      const mpW = parseFloat(mpSvgEl.getAttribute('width'));
+      const mpH = parseFloat(mpSvgEl.getAttribute('height'));
+      const gap = 12;
+      const totalW = W + gap + mpW;
+      const totalH = Math.max(H, mpH);
+
+      // Resize canvas to fit both
+      canvas.width = totalW * SCALE;
+      canvas.height = totalH * SCALE;
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.scale(SCALE, SCALE);
+
+      // Dark background for the gap and any height mismatch
+      ctx.fillStyle = '#1a1f2e';
+      ctx.fillRect(0, 0, totalW, totalH);
+
+      const bgImg = new Image();
+      bgImg.onload = () => {
+        // Draw main image centered vertically
+        const mainY = (totalH - H) / 2;
+        ctx.drawImage(bgImg, 0, mainY, W, H);
+
+        // Render main canvas element overlays (players, arrows, etc.)
+        // We shift ctx so renderOverlays draws at the correct Y offset
+        ctx.save();
+        ctx.translate(0, mainY);
+        // Use renderOverlays with onDone callback — it renders all #objects-layer
+        // and #players-layer elements, then calls our callback before finalizing.
+        // Pass totalW/totalH so finalizeExport creates the right-sized JPG canvas.
+        renderOverlays(ctx, totalW, totalH, SCALE, canvas, prevSelected, (finalize) => {
+          ctx.restore();
+
+          // Serialize mini-pitch SVG (pitch lines + elements) as an image
+          const mpClone = mpSvgEl.cloneNode(true);
+          // Remove selection outlines from clone
+          mpClone.querySelectorAll('.selection-outline, .sel-handle, .resize-handle').forEach(el => el.remove());
+          // Ensure xmlns is set for standalone SVG serialization
+          mpClone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+          mpClone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+          const svgData = new XMLSerializer().serializeToString(mpClone);
+          const mpImg = new Image();
+          mpImg.onload = () => {
+            const mpY = (totalH - mpH) / 2;
+            ctx.drawImage(mpImg, W + gap, mpY, mpW, mpH);
+            finalize();
+          };
+          mpImg.onerror = () => {
+            // Fallback: finalize without mini-pitch image if serialization fails
+            finalize();
+          };
+          mpImg.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svgData);
+        });
+      };
+      bgImg.src = S.imageData;
+    } else {
+      // ── Export image only (no mini-pitch) ──
+      const bgImg = new Image();
+      bgImg.onload = () => {
+        ctx.drawImage(bgImg, 0, 0, W, H);
+        renderOverlays(ctx, W, H, SCALE, canvas, prevSelected);
+      };
+      bgImg.src = S.imageData;
+    }
     return;
   }
 
@@ -264,7 +332,7 @@ export function doExport() {
   renderOverlays(ctx, W, H, SCALE, canvas, prevSelected);
 }
 
-function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
+function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
 
   // ── Per-element render functions ──────────────────────────────────────────
 
@@ -910,6 +978,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected) {
   }
 
   setTimeout(() => {
-    finalizeExport();
+    if (onDone) onDone(finalizeExport);
+    else finalizeExport();
   }, 50);
 }

@@ -1000,6 +1000,34 @@
             <svg viewBox="0 0 40 36" class="pitch-thumb"><rect x="1" y="1" width="38" height="34" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/><line x1="1" y1="18" x2="39" y2="18" stroke="currentColor" stroke-width="0.8"/><circle cx="20" cy="18" r="5" fill="none" stroke="currentColor" stroke-width="0.8"/></svg>
           </button>
         </div>
+
+        <div style="margin-top:10px">
+          <label class="pitch-switch-row"><input type="checkbox" id="mp-toggle-goals" checked onchange="updateMiniPitch()"><span class="pitch-switch-label">Goals</span></label>
+          <label class="pitch-switch-row"><input type="checkbox" id="mp-toggle-stripes" checked onchange="updateMiniPitch()"><span class="pitch-switch-label">Stripes</span></label>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="sub-label" style="margin-bottom:6px">Pitch colour</div>
+          <div class="pitch-color-row">
+            <div class="mp-color-dot selected" style="background:#3a7a38" data-s1="#3a7a38" data-s2s="#367035" onclick="setMiniPitchColor(this)"></div>
+            <div class="mp-color-dot" style="background:#f5f5f5;border:1.5px solid #ccc" data-s1="#f5f5f5" data-s2s="#ebebeb" onclick="setMiniPitchColor(this)"></div>
+            <div class="mp-color-dot" style="background:#0d1a0f;border:1.5px solid #1a3a1e" data-s1="rgba(0,230,118,0.05)" data-s2s="rgba(0,230,118,0.10)" onclick="setMiniPitchColor(this)"></div>
+            <div class="mp-color-dot" style="background:#1B2A4A;border:1.5px solid #2a3d5e" data-s1="#1B2A4A" data-s2s="#1F3058" onclick="setMiniPitchColor(this)"></div>
+            <div class="mp-color-dot" style="background:#111111;border:1.5px solid #333" data-s1="#111111" data-s2s="#191919" onclick="setMiniPitchColor(this)"></div>
+            <div class="mp-color-dot" style="background:#e3fbea;border:1.5px solid #b0e8c0" data-s1="#e3fbea" data-s2s="#d4f5de" onclick="setMiniPitchColor(this)"></div>
+          </div>
+        </div>
+
+        <div style="margin-top:10px">
+          <div class="sub-label" style="margin-bottom:6px">Line colour</div>
+          <div class="pitch-color-row">
+            <div class="mp-line-dot selected" style="background:rgba(255,255,255,0.55)" data-line="rgba(255,255,255,0.55)" onclick="setMiniPitchLine(this)"></div>
+            <div class="mp-line-dot" style="background:rgba(0,0,0,0.6);border:1.5px solid #555" data-line="rgba(0,0,0,0.6)" onclick="setMiniPitchLine(this)"></div>
+            <div class="mp-line-dot" style="background:rgba(0,230,118,0.25);border:1.5px solid #1a3a1e" data-line="rgba(0,230,118,0.25)" onclick="setMiniPitchLine(this)"></div>
+            <div class="mp-line-dot" style="background:rgba(255,255,255,0.7)" data-line="rgba(255,255,255,0.7)" onclick="setMiniPitchLine(this)"></div>
+            <div class="mp-line-dot" style="background:rgba(234,179,8,0.7);border:1.5px solid #b8960a" data-line="rgba(234,179,8,0.7)" onclick="setMiniPitchLine(this)"></div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
@@ -1656,6 +1684,9 @@
     <div class="modal-title">Export Pitch</div>
     <button class="export-format-btn active" id="fmt-png" onclick="selectFmt('png')">PNG <span style="font-size:10px;opacity:0.5">lossless, transparent-friendly</span></button>
     <button class="export-format-btn" id="fmt-jpg" onclick="selectFmt('jpg')">JPG <span style="font-size:10px;opacity:0.5">smaller file size</span></button>
+    <label id="export-minipitch-opt" style="display:none;align-items:center;gap:8px;padding:8px 0;font-size:13px;color:rgba(255,255,255,0.75);cursor:pointer;user-select:none">
+      <input type="checkbox" id="export-minipitch-cb" checked style="accent-color:var(--accent);cursor:pointer"> Include side pitch
+    </label>
     <div class="modal-row">
       <button class="modal-btn cancel" onclick="closeExport()">Cancel</button>
       <button class="modal-btn confirm" onclick="doExport()">Download</button>

@@ -416,6 +416,8 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
   const activeCoaches = activeUids.size;
   const returningCoaches = users.filter(u => u.sessionCount > 1).length;
   const analysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
+  const boardAnalysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started' && (!a.meta || !a.meta.mode || a.meta.mode === 'pitch')).map(a => a.uid)).size;
+  const imageAnalysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image').map(a => a.uid)).size;
   const exportOrSaveCoaches = new Set((actions || []).filter(a => a.action === 'save' || a.action === 'export' || a.action === 'share_created' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).map(a => a.uid)).size;
   const pct = (n) => activeCoaches > 0 ? Math.round(n / activeCoaches * 100) : 0;
 
@@ -450,6 +452,8 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
     <div class="stat-card"><div class="label">Active Coaches in Period</div><div class="value">${activeCoaches}</div></div>
     <div class="stat-card"><div class="label">Returning Coaches</div><div class="value">${returningCoaches}</div><div class="sub">${pct(returningCoaches)}% of active</div></div>
     <div class="stat-card"><div class="label">Coaches w/ an Analysis</div><div class="value">${pct(analysisCoaches)}%</div><div class="sub">${analysisCoaches} of ${activeCoaches} active</div></div>
+    <div class="stat-card"><div class="label">Board Analysis</div><div class="value">${boardAnalysisCoaches}</div><div class="sub">${pct(boardAnalysisCoaches)}% of active coaches</div></div>
+    <div class="stat-card"><div class="label">Image Analysis</div><div class="value">${imageAnalysisCoaches}</div><div class="sub">${pct(imageAnalysisCoaches)}% of active coaches</div></div>
     <div class="stat-card"><div class="label">Coaches w/ Export, Save or Share</div><div class="value">${pct(exportOrSaveCoaches)}%</div><div class="sub">${exportOrSaveCoaches} of ${activeCoaches} active</div></div>
   `;
 }
@@ -458,17 +462,22 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
 function renderSessionStats(sessions, actions) {
   const totalSessions = sessions.length;
   const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started').length;
+  const boardAnalysis = (actions || []).filter(a => a.action === 'analysis_started' && (!a.meta || !a.meta.mode || a.meta.mode === 'pitch')).length;
+  const imageAnalysis = (actions || []).filter(a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image').length;
   const exportAndSave = (actions || []).filter(a => a.action === 'save' || a.action === 'export' || a.action === 'share_created' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).length;
   const desktopSessions = sessions.filter(s => s.device === 'desktop').length;
   const mobileSessions = sessions.filter(s => s.device === 'mobile').length;
   const unknownSessions = sessions.filter(s => !s.device).length;
   const pct = (n) => totalSessions > 0 ? Math.round(n / totalSessions * 100) : 0;
+  const aPct = (n) => analysisStarted > 0 ? Math.round(n / analysisStarted * 100) : 0;
 
   document.getElementById('session-stats').innerHTML = `
     <div class="stat-card"><div class="label">Total Sessions</div><div class="value">${totalSessions}</div></div>
     <div class="stat-card"><div class="label">Desktop Sessions</div><div class="value">${desktopSessions}</div><div class="sub">${pct(desktopSessions)}% of sessions${unknownSessions ? ' &middot; ' + unknownSessions + ' unknown' : ''}</div></div>
     <div class="stat-card"><div class="label">Mobile Sessions</div><div class="value">${mobileSessions}</div><div class="sub">${pct(mobileSessions)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Sessions w/ an Analysis</div><div class="value">${analysisStarted}</div><div class="sub">${pct(analysisStarted)}% of sessions</div></div>
+    <div class="stat-card"><div class="label">Board Analysis</div><div class="value">${boardAnalysis}</div><div class="sub">${aPct(boardAnalysis)}% of analyses &middot; ${pct(boardAnalysis)}% of sessions</div></div>
+    <div class="stat-card"><div class="label">Image Analysis</div><div class="value">${imageAnalysis}</div><div class="sub">${aPct(imageAnalysis)}% of analyses &middot; ${pct(imageAnalysis)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Total Exports, Saves &amp; Shares</div><div class="value">${exportAndSave}</div><div class="sub">${pct(exportAndSave)}% of sessions</div></div>
   `;
 }
