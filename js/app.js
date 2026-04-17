@@ -334,11 +334,12 @@ function maybeSendPitchSnapshot() {
 
 // Parse layout string into granular fields for tracking
 function parsePitchLayout(lay) {
-  const isV = (/full-v|half-v/).test(lay);
+  const isV = (/full-v|half-v|middle-v|3q-v/).test(lay);
+  const size = lay.startsWith('middle') ? 'middle' : lay.startsWith('3q') ? 'three-quarter' : lay.startsWith('half') ? 'half' : 'full';
   return {
     type: lay,
     orientation: isV ? 'vertical' : 'horizontal',
-    size: lay.startsWith('half') ? 'half' : 'full',
+    size,
     goals: !lay.includes('-ng'),
     gridH: lay.includes('-grid') && !lay.includes('-gridv') || lay.includes('-gridh'),
     gridV: lay.includes('-grid') && !lay.includes('-gridh') || lay.includes('-gridv'),

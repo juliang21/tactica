@@ -12,6 +12,10 @@ function getToggledLayout() {
   let layout;
   if (size === 'half') {
     layout = orient === 'vertical' ? 'half-v' : 'half-h';
+  } else if (size === 'middle') {
+    layout = orient === 'vertical' ? 'middle-v' : 'middle-h';
+  } else if (size === '3q') {
+    layout = orient === 'vertical' ? '3q-v' : '3q-h';
   } else {
     layout = orient === 'vertical' ? 'full-v' : 'full-h';
   }
@@ -46,8 +50,10 @@ export function setPitch(layout) {
   S.setCurrentPitchLayout(layout);
 
   // Sync toggles to match the loaded layout
-  const isVertical = (/full-v|half-v/).test(layout);  // full-v or half-v
+  const isVertical = (/full-v|half-v|middle-v|3q-v/).test(layout);
   const isHalf = layout.startsWith('half');
+  const isMiddle = layout.startsWith('middle');
+  const is3Q = layout.startsWith('3q');
   const hasGridBoth = layout.includes('-grid') && !layout.includes('-gridh') && !layout.includes('-gridv');
   const hasGridH = hasGridBoth || layout.includes('-gridh');
   const hasGridV = hasGridBoth || layout.includes('-gridv');
@@ -58,8 +64,9 @@ export function setPitch(layout) {
     b.classList.toggle('active', b.dataset.val === (isVertical ? 'vertical' : 'horizontal'));
   });
   // Size
+  const sizeVal = isMiddle ? 'middle' : is3Q ? '3q' : isHalf ? 'half' : 'full';
   document.querySelectorAll('.pitch-opt[data-opt="size"]').forEach(b => {
-    b.classList.toggle('active', b.dataset.val === (isHalf ? 'half' : 'full'));
+    b.classList.toggle('active', b.dataset.val === sizeVal);
   });
   // Toggles
   const gridHEl = document.getElementById('pitch-toggle-gridh');
@@ -127,8 +134,10 @@ export function rebuildPitch() {
 
   const svgEl = S.svg;
   const lay = S.currentPitchLayout;
-  const isVertical = (/full-v|half-v/).test(lay);  // full-v or half-v
+  const isVertical = (/full-v|half-v|middle-v|3q-v/).test(lay);
   const isHalf = lay.startsWith('half');
+  const isMiddle = lay.startsWith('middle');
+  const is3Q = lay.startsWith('3q');
   const hasGoals = !lay.includes('-ng');
   const hasGridBoth = lay.includes('-grid') && !lay.includes('-gridh') && !lay.includes('-gridv');
   const hasGridH = hasGridBoth || lay.includes('-gridh');
@@ -138,7 +147,15 @@ export function rebuildPitch() {
   const gaHW = 60;   // goal area half-width
 
   let W, H;
-  if (isHalf && !isVertical) {
+  if (isMiddle && !isVertical) {
+    W = 350; H = 480;
+  } else if (isMiddle && isVertical) {
+    W = 480; H = 350;
+  } else if (is3Q && !isVertical) {
+    W = 550; H = 480;
+  } else if (is3Q && isVertical) {
+    W = 480; H = 550;
+  } else if (isHalf && !isVertical) {
     W = 400; H = 480;  // horizontal half pitch (goal on right)
   } else if (isHalf && isVertical) {
     W = 480; H = 400;  // vertical half pitch (goal at bottom)
@@ -194,7 +211,83 @@ export function rebuildPitch() {
     return el;
   }
 
-  if (isHalf && !isVertical) {
+  if (isMiddle && !isVertical) {
+    // ── Horizontal middle third (center zone only) ──
+    // No left/right boundary (arbitrary cutoff) — only touchlines (top/bottom)
+    const pad = 20, py = 20, pw = W - pad*2, ph = H - py*2;
+    const cx = W/2, cy = H/2;
+    mk('line',{x1:pad,y1:py,x2:pad+pw,y2:py,stroke:LC,'stroke-width':'1.5'});          // top touchline
+    mk('line',{x1:pad,y1:py+ph,x2:pad+pw,y2:py+ph,stroke:LC,'stroke-width':'1.5'});    // bottom touchline
+    // Center line (vertical)
+    mk('line',{x1:cx,y1:py,x2:cx,y2:py+ph,stroke:LC,'stroke-width':'1.5'});
+    // Center circle + spot
+    mk('circle',{cx:cx,cy:cy,r:'55',fill:'none',stroke:LC,'stroke-width':'1.5'});
+    mk('circle',{cx:cx,cy:cy,r:'2.5',fill:LC});
+  } else if (isMiddle && isVertical) {
+    // ── Vertical middle third ──
+    // No top/bottom boundary (arbitrary cutoff) — only touchlines (left/right)
+    const pad = 20, py = 20, pw = W - pad*2, ph = H - py*2;
+    const cx = W/2, cy = H/2;
+    mk('line',{x1:pad,y1:py,x2:pad,y2:py+ph,stroke:LC,'stroke-width':'1.5'});          // left touchline
+    mk('line',{x1:pad+pw,y1:py,x2:pad+pw,y2:py+ph,stroke:LC,'stroke-width':'1.5'});    // right touchline
+    // Center line (horizontal)
+    mk('line',{x1:pad,y1:cy,x2:pad+pw,y2:cy,stroke:LC,'stroke-width':'1.5'});
+    // Center circle + spot
+    mk('circle',{cx:cx,cy:cy,r:'55',fill:'none',stroke:LC,'stroke-width':'1.5'});
+    mk('circle',{cx:cx,cy:cy,r:'2.5',fill:LC});
+  } else if (is3Q && !isVertical) {
+    // ── Horizontal three-quarter pitch (goal on right) ──
+    // No left boundary (arbitrary cutoff) — top, right, bottom are real lines
+    const pad = 20, py = 20, pw = W - pad*2, ph = H - py*2;
+    const cy = H/2;
+    const R = pad + pw;    // right edge = goal line
+    const halfX = pad + Math.round(pw * 0.33); // halfway line ~1/3 from left
+    mk('line',{x1:pad,y1:py,x2:R,y2:py,stroke:LC,'stroke-width':'1.5'});               // top touchline
+    mk('line',{x1:R,y1:py,x2:R,y2:py+ph,stroke:LC,'stroke-width':'1.5'});              // right goal line
+    mk('line',{x1:pad,y1:py+ph,x2:R,y2:py+ph,stroke:LC,'stroke-width':'1.5'});         // bottom touchline
+    // Halfway line
+    mk('line',{x1:halfX,y1:py,x2:halfX,y2:py+ph,stroke:LC,'stroke-width':'1.5'});
+    // Center circle + spot at halfway line
+    mk('circle',{cx:halfX,cy:cy,r:'55',fill:'none',stroke:LC,'stroke-width':'1.5'});
+    mk('circle',{cx:halfX,cy:cy,r:'2.5',fill:LC});
+    // Right penalty box
+    mk('path',{d:`M${R},${cy-pbHW} L${R-105},${cy-pbHW} L${R-105},${cy+pbHW} L${R},${cy+pbHW}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    mk('path',{d:`M${R},${cy-gaHW} L${R-40},${cy-gaHW} L${R-40},${cy+gaHW} L${R},${cy+gaHW}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    mk('circle',{cx:R-67,cy:cy,r:'2.5',fill:LC});
+    const arcA3q = Math.acos(38/55);
+    mk('path',{d:`M${R-105},${cy-55*Math.sin(arcA3q)} A55,55 0 0,0 ${R-105},${cy+55*Math.sin(arcA3q)}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    // Corner arcs on right
+    mk('path',{d:`M${R-8},${py} A8,8 0 0,1 ${R},${py+8}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
+    mk('path',{d:`M${R},${py+ph-8} A8,8 0 0,1 ${R-8},${py+ph}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
+    // Goal
+    if (hasGoals) mk('path',{d:`M${R},${cy-35} L${R+14},${cy-35} L${R+14},${cy+35} L${R},${cy+35}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+  } else if (is3Q && isVertical) {
+    // ── Vertical three-quarter pitch (goal at bottom) ──
+    // No top boundary (arbitrary cutoff) — left, bottom, right are real lines
+    const pad = 20, py = 20, pw = W - pad*2, ph = H - py*2;
+    const cx = W/2;
+    const B = py + ph;    // bottom edge = goal line
+    const halfY = py + Math.round(ph * 0.33); // halfway line ~1/3 from top
+    mk('line',{x1:pad,y1:py,x2:pad,y2:B,stroke:LC,'stroke-width':'1.5'});              // left touchline
+    mk('line',{x1:pad,y1:B,x2:pad+pw,y2:B,stroke:LC,'stroke-width':'1.5'});            // bottom goal line
+    mk('line',{x1:pad+pw,y1:py,x2:pad+pw,y2:B,stroke:LC,'stroke-width':'1.5'});        // right touchline
+    // Halfway line
+    mk('line',{x1:pad,y1:halfY,x2:pad+pw,y2:halfY,stroke:LC,'stroke-width':'1.5'});
+    // Center circle + spot at halfway line
+    mk('circle',{cx:cx,cy:halfY,r:'55',fill:'none',stroke:LC,'stroke-width':'1.5'});
+    mk('circle',{cx:cx,cy:halfY,r:'2.5',fill:LC});
+    // Bottom penalty box
+    mk('path',{d:`M${cx-pbHW},${B} L${cx-pbHW},${B-105} L${cx+pbHW},${B-105} L${cx+pbHW},${B}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    mk('path',{d:`M${cx-gaHW},${B} L${cx-gaHW},${B-40} L${cx+gaHW},${B-40} L${cx+gaHW},${B}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    mk('circle',{cx:cx,cy:B-67,r:'2.5',fill:LC});
+    const arcA3qv = Math.acos(38/55);
+    mk('path',{d:`M${cx-55*Math.sin(arcA3qv)},${B-105} A55,55 0 0,1 ${cx+55*Math.sin(arcA3qv)},${B-105}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+    // Corner arcs at bottom
+    mk('path',{d:`M${pad},${B-8} A8,8 0 0,0 ${pad+8},${B}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
+    mk('path',{d:`M${pad+pw},${B-8} A8,8 0 0,1 ${pad+pw-8},${B}`,fill:'none',stroke:LC,'stroke-width':'1.2'});
+    // Goal
+    if (hasGoals) mk('path',{d:`M${cx-35},${B} L${cx-35},${B+14} L${cx+35},${B+14} L${cx+35},${B}`,fill:'none',stroke:LC,'stroke-width':'1.5'});
+  } else if (isHalf && !isVertical) {
     // ── Horizontal half pitch (goal on right, halfway line on left) ──
     const pad = 20, py = 20, pw = W - pad*2, ph = H - py*2;
     const cy = H/2;
@@ -298,7 +391,47 @@ export function rebuildPitch() {
     const gH = isVertical ? hasGridH : hasGridV;  // horizontal screen lines
     const gV = isVertical ? hasGridV : hasGridH;  // vertical screen lines
 
-    if (isHalf && !isVertical) {
+    if (isMiddle && !isVertical) {
+      // Horizontal middle third — even thirds
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2;
+      if (gH) {
+        for (let i=1; i<=2; i++) mk('line',{x1:pad,y1:py+ph*i/3,x2:pad+pw,y2:py+ph*i/3,...ga});
+      }
+      if (gV) {
+        for (let i=1; i<=2; i++) mk('line',{x1:pad+pw*i/3,y1:py,x2:pad+pw*i/3,y2:py+ph,...ga});
+      }
+    } else if (isMiddle && isVertical) {
+      // Vertical middle third
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2;
+      if (gH) {
+        for (let i=1; i<=2; i++) mk('line',{x1:pad,y1:py+ph*i/3,x2:pad+pw,y2:py+ph*i/3,...ga});
+      }
+      if (gV) {
+        for (let i=1; i<=2; i++) mk('line',{x1:pad+pw*i/3,y1:py,x2:pad+pw*i/3,y2:py+ph,...ga});
+      }
+    } else if (is3Q && !isVertical) {
+      // Horizontal three-quarter
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
+      if (gH) {
+        [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => {
+          mk('line',{x1:pad,y1:y,x2:pad+pw,y2:y,...ga});
+        });
+      }
+      if (gV) {
+        for (let i=1; i<=2; i++) mk('line',{x1:pad+pw*i/3,y1:py,x2:pad+pw*i/3,y2:py+ph,...ga});
+      }
+    } else if (is3Q && isVertical) {
+      // Vertical three-quarter
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
+      if (gH) {
+        for (let i=1; i<=2; i++) mk('line',{x1:pad,y1:py+ph*i/3,x2:pad+pw,y2:py+ph*i/3,...ga});
+      }
+      if (gV) {
+        [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => {
+          mk('line',{x1:x,y1:py,x2:x,y2:py+ph,...ga});
+        });
+      }
+    } else if (isHalf && !isVertical) {
       // Horizontal half pitch
       const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
       if (gH) {
