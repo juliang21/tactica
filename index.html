@@ -616,7 +616,7 @@
     <div class="panel-section">
       <h3 class="collapsible" data-collapse="add">Add players</h3>
       <div class="collapsible-body" data-collapse-body="add">
-        <button class="single-player-btn active" id="single-btn" onclick="setTool(teamContext==='a'?'player-a':'player-b')">＋ Single Player (click pitch)</button>
+        <button class="single-player-btn active" id="single-btn" onclick="trackToolActivated('single_player','button'); setTool(teamContext==='a'?'player-a':'player-b')">＋ Single Player (click pitch)</button>
         <div class="sub-label">Full team · formation</div>
         <div class="formation-grid">
           <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>

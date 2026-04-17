@@ -144,3 +144,13 @@ export function trackSignOut() {
     event_category: 'auth',
   });
 }
+
+// ─── 10. Tool Activated ─────────────────────────────────────────────────────
+// Fired when the user clicks a tool button (e.g. "Single Player" btn).
+export function trackToolActivated(toolName, source) {
+  send('tool_activated', {
+    tool_name: toolName,             // e.g. 'single_player'
+    activation_source: source,       // 'button', 'keyboard', etc.
+    event_category: 'interaction',
+  });
+}
