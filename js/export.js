@@ -112,7 +112,9 @@ export function doExport() {
   const pbHW = 130;  // penalty box half-width (~59% of pitch width, realistic proportions)
   const gaHW = 60;   // goal area half-width
 
-  const SCALE = 3; // 3x resolution for crisp exports
+  // Image mode uses natural dimensions in viewBox — 1x is already full-res.
+  // Pitch mode uses smaller viewBox so 3x gives crisp exports.
+  const SCALE = (S.appMode === 'image') ? 1 : 3;
   const canvas = document.createElement('canvas');
   canvas.width = W * SCALE; canvas.height = H * SCALE;
   canvas.style.cssText = 'position:fixed;left:-9999px;top:-9999px;opacity:0;pointer-events:none;';

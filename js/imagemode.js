@@ -41,7 +41,9 @@ export function enterImageMode(dataUrl, natW, natH) {
   // Clear undo stack (cross-mode undo is confusing)
   S.undoStack.length = 0;
 
-  // Compute SVG dimensions — fit within max 900w x 680h preserving aspect ratio
+  // Compute SVG display dimensions — fit within max 900w x 680h preserving aspect ratio
+  // ViewBox uses natural image dimensions so the full image is always visible;
+  // width/height control the on-screen display size only.
   const maxW = 900, maxH = 680;
   const ratio = natW / natH;
   let W, H;
@@ -58,7 +60,7 @@ export function enterImageMode(dataUrl, natW, natH) {
   const svgEl = S.svg;
   svgEl.setAttribute('width', W);
   svgEl.setAttribute('height', H);
-  svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  svgEl.setAttribute('viewBox', `0 0 ${natW} ${natH}`);
 
   // Remove all pitch elements (keep defs, objects-layer, players-layer)
   Array.from(svgEl.children).forEach(child => {
@@ -73,14 +75,14 @@ export function enterImageMode(dataUrl, natW, natH) {
   S.playerCounts.b = 0;
   S.playerCounts.joker = 0;
 
-  // Insert image as background
+  // Insert image as background — sized to fill the viewBox (natural dimensions)
   const imgEl = document.createElementNS('http://www.w3.org/2000/svg', 'image');
   imgEl.setAttribute('id', 'image-bg');
   imgEl.setAttribute('href', dataUrl);
   imgEl.setAttribute('x', '0');
   imgEl.setAttribute('y', '0');
-  imgEl.setAttribute('width', W);
-  imgEl.setAttribute('height', H);
+  imgEl.setAttribute('width', natW);
+  imgEl.setAttribute('height', natH);
   imgEl.setAttribute('preserveAspectRatio', 'xMidYMid meet');
   svgEl.insertBefore(imgEl, S.objectsLayer);
 
