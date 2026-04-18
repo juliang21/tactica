@@ -201,24 +201,28 @@ export function rebuildPitch() {
   svgEl.setAttribute('height', H);
   svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
 
-  // Update stripe pattern — 9 stripes per half (18 total) like a real pitch
+  // Update stripe pattern — 9 stripes per half (18 total on a full pitch).
+  // Stripe width is based on the FULL pitch playing-field interior so it stays
+  // consistent across all layouts (half, ¾, middle-third).
   const pat = document.getElementById('stripes');
   if (pat) {
     const vStripes = isVertical;  // vertical orientations get horizontal stripes
-    const pitchLen = vStripes ? H : W;        // dimension along the pitch length
-    const stripeW = Math.round(pitchLen / 18); // each visible stripe
-    const pairW = stripeW * 2;                 // one light + one dark
-    pat.setAttribute('width', vStripes ? pitchLen : String(pairW));
-    pat.setAttribute('height', vStripes ? String(pairW) : pitchLen);
+    // Full pitch interior: horizontal = 700−60 = 640, vertical = 680−40 = 640
+    const fullFieldLen = isVertical ? (680 - 40) : (700 - 60);  // = 640 in both
+    const stripeW = Math.round(fullFieldLen / 18);               // ~36px
+    const pairW = stripeW * 2;
+    const dim = vStripes ? H : W;  // current SVG dimension for tiling
+    pat.setAttribute('width', vStripes ? dim : String(pairW));
+    pat.setAttribute('height', vStripes ? String(pairW) : dim);
     pat.innerHTML = '';
     const r1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     const r2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
     if (vStripes) {
-      r1.setAttribute('width', pitchLen); r1.setAttribute('height', stripeW); r1.setAttribute('fill', S.pitchColors.s1);
-      r2.setAttribute('y', stripeW); r2.setAttribute('width', pitchLen); r2.setAttribute('height', stripeW); r2.setAttribute('fill', S.pitchColors.s2);
+      r1.setAttribute('width', dim); r1.setAttribute('height', stripeW); r1.setAttribute('fill', S.pitchColors.s1);
+      r2.setAttribute('y', stripeW); r2.setAttribute('width', dim); r2.setAttribute('height', stripeW); r2.setAttribute('fill', S.pitchColors.s2);
     } else {
-      r1.setAttribute('width', stripeW); r1.setAttribute('height', pitchLen); r1.setAttribute('fill', S.pitchColors.s1);
-      r2.setAttribute('x', stripeW); r2.setAttribute('width', stripeW); r2.setAttribute('height', pitchLen); r2.setAttribute('fill', S.pitchColors.s2);
+      r1.setAttribute('width', stripeW); r1.setAttribute('height', dim); r1.setAttribute('fill', S.pitchColors.s1);
+      r2.setAttribute('x', stripeW); r2.setAttribute('width', stripeW); r2.setAttribute('height', dim); r2.setAttribute('fill', S.pitchColors.s2);
     }
     pat.appendChild(r1); pat.appendChild(r2);
   }

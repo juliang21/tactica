@@ -204,8 +204,10 @@ export function doExport() {
     return;
   }
 
-  // Pitch stripes — 9 per half (18 total) like a real pitch
-  const stripeW = Math.round((isV ? H : W) / 18);
+  // Pitch stripes — 9 per half within the boundary lines (18 on a full pitch).
+  // Width based on full-pitch interior (640px) so it's consistent across layouts.
+  const fullFieldLen = isV ? (680 - 40) : (700 - 60);  // = 640
+  const stripeW = Math.round(fullFieldLen / 18);         // ~36px
   if (isV) {
     for (let y = 0; y < H; y += stripeW * 2) {
       ctx.fillStyle = S1; ctx.fillRect(0, y, W, stripeW);
