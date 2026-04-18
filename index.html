@@ -1689,6 +1689,31 @@
   </div>
 </div>
 
+<!-- Review Modal -->
+<div id="review-modal" class="modal-backdrop" style="display:none;z-index:800">
+  <div class="review-card">
+    <button class="review-close" onclick="dismissReview()">&times;</button>
+    <div class="review-emoji">⚽</div>
+    <h3 class="review-title">How's Táctica working for you?</h3>
+    <p class="review-subtitle">Your feedback shapes what we build next</p>
+    <div class="review-stars" id="review-stars">
+      <span class="review-star" data-star="1" onclick="selectReviewStar(1)" onmouseenter="hoverReviewStar(1)" onmouseleave="resetReviewStars()">★</span>
+      <span class="review-star" data-star="2" onclick="selectReviewStar(2)" onmouseenter="hoverReviewStar(2)" onmouseleave="resetReviewStars()">★</span>
+      <span class="review-star" data-star="3" onclick="selectReviewStar(3)" onmouseenter="hoverReviewStar(3)" onmouseleave="resetReviewStars()">★</span>
+      <span class="review-star" data-star="4" onclick="selectReviewStar(4)" onmouseenter="hoverReviewStar(4)" onmouseleave="resetReviewStars()">★</span>
+      <span class="review-star" data-star="5" onclick="selectReviewStar(5)" onmouseenter="hoverReviewStar(5)" onmouseleave="resetReviewStars()">★</span>
+    </div>
+    <div id="review-comment-section" style="display:none">
+      <p id="review-prompt" class="review-prompt"></p>
+      <textarea id="review-text" rows="3" placeholder=""></textarea>
+      <p class="review-consent">Your review may be featured on our website</p>
+      <button id="review-submit-btn" class="review-submit" onclick="submitReview()">Submit Review</button>
+    </div>
+    <button class="review-skip" onclick="skipReview()">Maybe later</button>
+    <div id="review-status" style="display:none"></div>
+  </div>
+</div>
+
 <!-- Feedback Widget -->
 <button id="feedback-bubble" onclick="toggleFeedback()" title="Send feedback">
   <svg width="14" height="14" viewBox="0 0 20 20" fill="none"><path d="M4 14l-2 4 4-2h8a2 2 0 0 0 2-2V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8z" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/></svg>

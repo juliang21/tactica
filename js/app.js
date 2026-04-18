@@ -361,6 +361,149 @@ window.searchKits = function(query) {
 
 // Load teams DB on startup
 loadTeamsDB();
+
+// ─── Review Modal ────────────────────────────────────────────────────────────
+(function initReviewPrompt() {
+  const SESSIONS_BEFORE_PROMPT = 5;
+  const SESSIONS_AFTER_SKIP = 5;
+  const KEY_SESSIONS = 'tactica_sessions';
+  const KEY_REVIEWED = 'tactica_reviewed';
+  const KEY_SKIPPED_AT = 'tactica_review_skipped_at';
+
+  // Count this session
+  const sessions = parseInt(localStorage.getItem(KEY_SESSIONS) || '0') + 1;
+  localStorage.setItem(KEY_SESSIONS, String(sessions));
+
+  // Already submitted a review? Never show again.
+  if (localStorage.getItem(KEY_REVIEWED)) return;
+
+  // Skipped before? Wait 5 more sessions before asking again.
+  const skippedAt = parseInt(localStorage.getItem(KEY_SKIPPED_AT) || '0');
+  if (skippedAt > 0 && sessions < skippedAt + SESSIONS_AFTER_SKIP) return;
+
+  // Not enough sessions yet
+  if (sessions < SESSIONS_BEFORE_PROMPT) return;
+
+  // Show review modal after a short delay
+  setTimeout(() => {
+    const modal = document.getElementById('review-modal');
+    if (modal) {
+      modal.style.display = 'flex';
+      if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_shown', { tool_name: 'tactica', sessions: sessions });
+    }
+  }, 4000);
+})();
+
+let _reviewRating = 0;
+
+window.hoverReviewStar = function(n) {
+  document.querySelectorAll('.review-star').forEach(s => {
+    const v = parseInt(s.dataset.star);
+    s.classList.toggle('hovered', v <= n);
+  });
+};
+
+window.resetReviewStars = function() {
+  document.querySelectorAll('.review-star').forEach(s => {
+    s.classList.remove('hovered');
+  });
+};
+
+window.selectReviewStar = function(n) {
+  _reviewRating = n;
+  document.querySelectorAll('.review-star').forEach(s => {
+    const v = parseInt(s.dataset.star);
+    s.classList.toggle('lit', v <= n);
+  });
+  // Tailor prompt based on rating
+  const prompt = document.getElementById('review-prompt');
+  const textarea = document.getElementById('review-text');
+  if (n >= 4) {
+    prompt.textContent = 'Glad you like it! What stands out most to you?';
+    textarea.placeholder = 'e.g. "I use Táctica to prepare every match day — it saves me hours compared to drawing on paper..."';
+  } else if (n === 3) {
+    prompt.textContent = "We're getting there! What would make it a 5?";
+    textarea.placeholder = 'What features or improvements would make the biggest difference for you?';
+  } else {
+    prompt.textContent = "We want to do better. What's not working?";
+    textarea.placeholder = "Tell us what's frustrating — we read every review.";
+  }
+  // Show comment section
+  document.getElementById('review-comment-section').style.display = 'block';
+  document.querySelector('.review-skip').style.display = 'none';
+  textarea.focus();
+};
+
+window.submitReview = async function() {
+  if (!_reviewRating) return;
+  const btn = document.getElementById('review-submit-btn');
+  const status = document.getElementById('review-status');
+  const text = document.getElementById('review-text').value.trim();
+
+  btn.disabled = true;
+  btn.textContent = 'Sending…';
+  status.style.display = 'none';
+
+  const user = typeof getCurrentUser === 'function' ? getCurrentUser() : null;
+  const userEmail = user ? user.email : 'anonymous';
+  const userName = user ? (user.displayName || user.email) : 'anonymous';
+
+  try {
+    const formData = new FormData();
+    formData.append('access_key', '315e7f89-890f-4b05-8b81-605325f4f8e4');
+    formData.append('subject', `Táctica Review: ${'★'.repeat(_reviewRating)}${'☆'.repeat(5 - _reviewRating)} (${_reviewRating}/5)`);
+    formData.append('from_name', 'Táctica Reviews');
+    formData.append('email', userEmail);
+    formData.append('message', [
+      `Rating: ${'★'.repeat(_reviewRating)}${'☆'.repeat(5 - _reviewRating)} (${_reviewRating}/5)`,
+      `User: ${userName} (${userEmail})`,
+      `Sessions: ${localStorage.getItem('tactica_sessions') || '?'}`,
+      '',
+      text ? `Review:\n${text}` : '(No written review)',
+    ].join('\n'));
+
+    const res = await fetch('https://api.web3forms.com/submit', {
+      method: 'POST',
+      headers: { 'Accept': 'application/json' },
+      body: formData,
+    });
+
+    const data = await res.json().catch(() => ({}));
+    if (res.ok && data.success) {
+      localStorage.setItem('tactica_reviewed', '1');
+      if (typeof window.gtag === 'function') window.gtag('event', 'review_submitted', { tool_name: 'tactica', rating: _reviewRating, has_text: !!text });
+      status.textContent = 'Thanks for your review! 🙌';
+      status.className = 'success';
+      status.style.display = 'block';
+      btn.textContent = 'Sent ✓';
+      setTimeout(() => {
+        document.getElementById('review-modal').style.display = 'none';
+      }, 2000);
+    } else {
+      throw new Error(data.message || 'Failed to send');
+    }
+  } catch(e) {
+    console.error('Review error:', e);
+    status.textContent = 'Failed to send. Try again.';
+    status.className = 'error';
+    status.style.display = 'block';
+    btn.textContent = 'Submit Review';
+    btn.disabled = false;
+  }
+};
+
+window.skipReview = function() {
+  localStorage.setItem('tactica_review_skipped_at', localStorage.getItem('tactica_sessions') || '0');
+  if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_closed', { tool_name: 'tactica', method: 'skip' });
+  document.getElementById('review-modal').style.display = 'none';
+};
+
+window.dismissReview = function() {
+  localStorage.setItem('tactica_review_skipped_at', localStorage.getItem('tactica_sessions') || '0');
+  if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_closed', { tool_name: 'tactica', method: 'close' });
+  document.getElementById('review-modal').style.display = 'none';
+};
+
 window.placeFormation = function(name) {
   placeFormation(name);
   maybeSendPitchSnapshot();
