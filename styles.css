@@ -1233,7 +1233,6 @@ body.tool-motion #pitch-svg { cursor: crosshair; }
 
 /* ── Image Mode ── */
 body.image-mode #pane-pitch { display: none !important; }
-body.image-mode #image-mode-info { display: flex !important; }
 body.image-mode #pitch-container { overflow: visible; box-shadow: none; }
 body.image-mode #pitch-container #pitch-svg { flex-shrink: 1; }
 body.image-mode #pitch-wrap { overflow-x: auto; overflow-y: hidden; cursor: grab; }
