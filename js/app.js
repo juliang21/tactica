@@ -245,9 +245,122 @@ window.applyBulkPlayerBorder = function(swatchEl) {
 window.switchKitTab = function(tab, btn) {
   document.getElementById('kit-grid-clubs').style.display = tab === 'clubs' ? '' : 'none';
   document.getElementById('kit-grid-national').style.display = tab === 'national' ? '' : 'none';
+  const search = document.getElementById('kit-search');
+  if (search) search.style.display = tab === 'clubs' ? '' : 'none';
   document.querySelectorAll('.kit-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
 };
+
+// ─── Searchable Teams Database ──────────────────────────────────────────────
+let _teamsDB = null;
+let _popularNames = null;
+let _popularOrder = null;
+
+async function loadTeamsDB() {
+  try {
+    const resp = await fetch('data/teams.json');
+    const data = await resp.json();
+    _teamsDB = data.clubs;
+    _popularNames = new Set(data.popular);
+    _popularOrder = data.popular; // preserve display order
+    const byName = Object.fromEntries(_teamsDB.map(t => [t.name, t]));
+    renderKitGrid(_popularOrder.map(n => byName[n]).filter(Boolean));
+    // Show search input now that data is loaded
+    const search = document.getElementById('kit-search');
+    if (search) search.style.display = '';
+  } catch (e) {
+    console.warn('[teams] Failed to load teams.json:', e);
+  }
+}
+
+function renderKitGrid(teams) {
+  const grid = document.getElementById('kit-grid-clubs');
+  if (!grid) return;
+  grid.innerHTML = '';
+  teams.forEach(t => {
+    const btn = document.createElement('div');
+    btn.className = 'kit-btn';
+    btn.dataset.color = t.color;
+    btn.dataset.gk = t.gk || '#ffd700';
+    if (t.border) btn.dataset.border = t.border;
+    if (t.svgPattern) btn.dataset.pattern = t.svgPattern;
+    btn.dataset.trackName = t.name;
+    btn.title = t.name;
+    btn.onclick = function() { applyKit(this); };
+
+    // Label (created early so previewClass path can style it)
+    const label = document.createElement('div');
+    label.className = 'kit-label';
+    label.textContent = t.code;
+
+    // Teams with special CSS preview classes (Arsenal, PSG, Boca, River)
+    if (t.previewClass) {
+      btn.classList.add(t.previewClass);
+      // CSS handles background + label styling for these
+      btn.appendChild(label);
+      grid.appendChild(btn);
+      return;
+    }
+
+    // Build background style
+    let bg;
+    if ((t.pattern === 'stripes' || t.pattern === 'stripes-rw') && t.stripe) {
+      bg = `repeating-linear-gradient(90deg,${t.color} 0 5px,${t.stripe} 5px 10px)`;
+    } else if (t.pattern === 'stripes-h' && t.stripe) {
+      bg = `repeating-linear-gradient(0deg,${t.color} 0 5px,${t.stripe} 5px 10px)`;
+    } else if (t.pattern === 'half' && t.stripe) {
+      bg = `linear-gradient(90deg,${t.color} 50%,${t.stripe} 50%)`;
+    } else if (t.pattern === 'sash' && t.stripe) {
+      bg = `linear-gradient(135deg, ${t.color} 35%, ${t.stripe} 35%, ${t.stripe} 65%, ${t.color} 65%)`;
+    } else {
+      bg = t.color;
+    }
+    btn.style.background = bg;
+    if (t.border && t.border !== 'none') btn.style.border = `2px solid ${t.border}`;
+
+    // Label styling
+    if (t.labelDark) label.style.color = '#000';
+    // For striped kits with white stripes, add bg to label for readability
+    if ((t.pattern === 'stripes' || t.pattern === 'stripes-rw') && t.stripe === '#ffffff') {
+      label.style.color = t.labelColor || t.color;
+      label.style.fontWeight = '700';
+      label.style.background = 'rgba(255,255,255,0.85)';
+      label.style.borderRadius = '2px';
+      label.style.padding = '0 3px';
+    }
+    if ((t.pattern === 'stripes' || t.pattern === 'stripes-rw') && t.stripe === '#000000') {
+      label.style.fontWeight = '700';
+      label.style.textShadow = '0 0 3px rgba(0,0,0,0.7)';
+    }
+    if (t.pattern === 'half' || t.pattern === 'sash') {
+      label.style.fontWeight = '700';
+      label.style.textShadow = '0 1px 2px rgba(0,0,0,0.6)';
+    }
+    btn.appendChild(label);
+    grid.appendChild(btn);
+  });
+}
+
+window.searchKits = function(query) {
+  if (!_teamsDB) return;
+  const q = query.trim().toLowerCase();
+  if (!q) {
+    // Show popular teams in curated order when search is empty
+    const byName = Object.fromEntries(_teamsDB.map(t => [t.name, t]));
+    renderKitGrid(_popularOrder.map(n => byName[n]).filter(Boolean));
+    return;
+  }
+  // Search by name, code, or league
+  const results = _teamsDB.filter(t =>
+    t.name.toLowerCase().includes(q) ||
+    t.code.toLowerCase().includes(q) ||
+    t.league.toLowerCase().includes(q)
+  );
+  renderKitGrid(results.slice(0, 30)); // Cap at 30 results
+};
+
+// Load teams DB on startup
+loadTeamsDB();
 window.placeFormation = function(name) {
   placeFormation(name);
   maybeSendPitchSnapshot();

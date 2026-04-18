@@ -567,7 +567,13 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 .kit-tab { flex: 1; padding: 5px 0; font-size: 10px; font-weight: 600; letter-spacing: 0.5px; text-transform: uppercase; border: none; cursor: pointer; background: var(--panel2); color: var(--text-muted); transition: all 0.15s; font-family: 'Manrope', sans-serif; }
 .kit-tab.active { background: var(--text); color: var(--bg); font-weight: 700; }
 .kit-tab:hover:not(.active) { color: var(--text); }
-.kit-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
+#kit-search { width: 100%; background: var(--panel2); border: 1px solid var(--border); color: var(--text); border-radius: 6px; outline: none; font-family: 'Manrope', sans-serif; }
+#kit-search:focus { border-color: var(--accent); }
+#kit-search::placeholder { color: var(--text-muted); }
+.kit-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
+.kit-grid::-webkit-scrollbar { width: 4px; }
+.kit-grid::-webkit-scrollbar-track { background: transparent; }
+.kit-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
 .kit-group-label { grid-column: 1 / -1; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-top: 6px; font-family: 'Manrope', sans-serif; }
 .kit-group-label:first-child { margin-top: 0; }
 .kit-btn {
