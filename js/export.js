@@ -204,16 +204,17 @@ export function doExport() {
     return;
   }
 
-  // Pitch stripes (vertical orientations get horizontal stripes)
+  // Pitch stripes — 9 per half (18 total) like a real pitch
+  const stripeW = Math.round((isV ? H : W) / 18);
   if (isV) {
-    for (let y = 0; y < H; y += 40) {
-      ctx.fillStyle = S1; ctx.fillRect(0, y, W, 20);
-      ctx.fillStyle = S2; ctx.fillRect(0, y+20, W, 20);
+    for (let y = 0; y < H; y += stripeW * 2) {
+      ctx.fillStyle = S1; ctx.fillRect(0, y, W, stripeW);
+      ctx.fillStyle = S2; ctx.fillRect(0, y+stripeW, W, stripeW);
     }
   } else {
-    for (let x = 0; x < W; x += 40) {
-      ctx.fillStyle = S1; ctx.fillRect(x, 0, 20, H);
-      ctx.fillStyle = S2; ctx.fillRect(x+20, 0, 20, H);
+    for (let x = 0; x < W; x += stripeW * 2) {
+      ctx.fillStyle = S1; ctx.fillRect(x, 0, stripeW, H);
+      ctx.fillStyle = S2; ctx.fillRect(x+stripeW, 0, stripeW, H);
     }
   }
 
