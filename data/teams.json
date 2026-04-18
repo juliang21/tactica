@@ -183,5 +183,5 @@
     {"name":"Mamelodi Sundowns","code":"SUN","league":"Other","color":"#fde100","border":"#006847","gk":"#000000","labelDark":true},
     {"name":"Kaizer Chiefs","code":"KAI","league":"Other","color":"#fde100","border":"#000000","gk":"#000000","labelDark":true}
   ],
-  "popular": ["Real Madrid","Barcelona","Borussia Dortmund","Bayern Munich","Manchester City","Liverpool","Chelsea","Arsenal","Paris Saint-Germain","Roma","Juventus","Sevilla","Atlético Madrid","Real Sociedad","Boca Juniors","River Plate","Galatasaray"]
+  "popular": ["Real Madrid","Barcelona","Borussia Dortmund","Bayern Munich","Manchester City","Liverpool","Chelsea","Arsenal","Paris Saint-Germain","Juventus","Atlético Madrid","Real Sociedad","Boca Juniors","River Plate","Galatasaray"]
 }
