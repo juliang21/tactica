@@ -390,6 +390,8 @@ loadTeamsDB();
     if (modal) {
       modal.style.display = 'flex';
       if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_shown', { tool_name: 'tactica', sessions: sessions });
+      const u = getCurrentUser();
+      if (u) logAction(u.uid, u.email, 'review_modal_shown', { sessions }).catch(() => {});
     }
   }, 4000);
 })();
@@ -472,6 +474,7 @@ window.submitReview = async function() {
     if (res.ok && data.success) {
       localStorage.setItem('tactica_reviewed', '1');
       if (typeof window.gtag === 'function') window.gtag('event', 'review_submitted', { tool_name: 'tactica', rating: _reviewRating, has_text: !!text });
+      if (user) logAction(user.uid, user.email, 'review_submitted', { rating: _reviewRating, has_text: !!text, text: text || '' }).catch(() => {});
       status.textContent = 'Thanks for your review! 🙌';
       status.className = 'success';
       status.style.display = 'block';
@@ -495,12 +498,16 @@ window.submitReview = async function() {
 window.skipReview = function() {
   localStorage.setItem('tactica_review_skipped_at', localStorage.getItem('tactica_sessions') || '0');
   if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_closed', { tool_name: 'tactica', method: 'skip' });
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'review_modal_closed', { method: 'skip' }).catch(() => {});
   document.getElementById('review-modal').style.display = 'none';
 };
 
 window.dismissReview = function() {
   localStorage.setItem('tactica_review_skipped_at', localStorage.getItem('tactica_sessions') || '0');
   if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_closed', { tool_name: 'tactica', method: 'close' });
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'review_modal_closed', { method: 'close' }).catch(() => {});
   document.getElementById('review-modal').style.display = 'none';
 };
 

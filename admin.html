@@ -220,6 +220,42 @@
   .combos-table tr:last-child td { border-bottom: none; }
   .combos-rank { color: #34D399; font-weight: 700; width: 24px; }
 
+  /* Reviews tab */
+  .funnel-visual { display: flex; align-items: stretch; gap: 0; margin-top: 16px; }
+  .funnel-step {
+    flex: 1; text-align: center; padding: 20px 12px; position: relative;
+    border-right: 1px solid rgba(255,255,255,0.06);
+  }
+  .funnel-step:last-child { border-right: none; }
+  .funnel-step .f-value { font-size: 28px; font-weight: 700; color: #e0e0e0; }
+  .funnel-step .f-label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-top: 4px; }
+  .funnel-step .f-rate { font-size: 12px; color: #34D399; font-weight: 600; margin-top: 6px; }
+  .funnel-arrow { color: #333; font-size: 18px; display: flex; align-items: center; padding: 0 4px; }
+  .funnel-bar-track { height: 6px; background: rgba(255,255,255,0.04); border-radius: 3px; margin-top: 10px; }
+  .funnel-bar-fill { height: 100%; border-radius: 3px; transition: width 0.4s; }
+
+  .rating-bar-row { display: flex; align-items: center; gap: 10px; padding: 6px 0; }
+  .rating-label { font-size: 13px; color: #ccc; min-width: 36px; text-align: right; }
+  .rating-track { flex: 1; height: 22px; background: rgba(255,255,255,0.04); border-radius: 4px; overflow: hidden; }
+  .rating-fill { height: 100%; border-radius: 4px; min-width: 2px; transition: width 0.3s; display: flex; align-items: center; padding-left: 8px; }
+  .rating-fill span { font-size: 11px; font-weight: 600; color: #000; }
+  .rating-count { font-size: 12px; color: #888; min-width: 50px; }
+
+  .review-item {
+    background: #1a1a1a; border-radius: 12px; padding: 16px 20px;
+    border: 1px solid rgba(255,255,255,0.06); margin-bottom: 10px;
+  }
+  .review-item-header { display: flex; align-items: center; gap: 12px; margin-bottom: 8px; }
+  .review-item-stars { color: #FBBF24; font-size: 16px; letter-spacing: 2px; }
+  .review-item-user { font-size: 12px; color: #34D399; }
+  .review-item-date { font-size: 11px; color: #555; margin-left: auto; }
+  .review-item-text { font-size: 13px; color: #ccc; line-height: 1.5; font-style: italic; }
+  .review-item-text:empty { display: none; }
+  .avg-rating-display { display: flex; align-items: center; gap: 8px; }
+  .avg-rating-number { font-size: 36px; font-weight: 700; color: #FBBF24; }
+  .avg-rating-stars { color: #FBBF24; font-size: 20px; letter-spacing: 2px; }
+  .avg-rating-of { font-size: 12px; color: #666; margin-left: 4px; }
+
 </style>
 </head>
 <body>
@@ -241,6 +277,7 @@
   <div class="admin-tabs">
     <button class="admin-tab active" onclick="switchAdminTab('overview')">Overview</button>
     <button class="admin-tab" onclick="switchAdminTab('features')">Features</button>
+    <button class="admin-tab" onclick="switchAdminTab('reviews')">Reviews</button>
   </div>
 
   <div class="date-filters">
@@ -294,6 +331,22 @@
   <!-- ═══ FEATURES TAB ═══ -->
   <div class="tab-content" id="tab-features">
     <div id="features-breakdown"></div>
+  </div>
+
+  <!-- ═══ REVIEWS TAB ═══ -->
+  <div class="tab-content" id="tab-reviews">
+    <div class="section">
+      <div class="section-header"><span class="icon">⭐</span> Review Funnel</div>
+      <div class="stats-grid" id="review-funnel-stats"></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="icon">📊</span> Rating Distribution</div>
+      <div id="review-distribution"></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="icon">💬</span> Reviews</div>
+      <div id="review-list"></div>
+    </div>
   </div>
 
 </div>
@@ -408,6 +461,7 @@ window.applyDateFilter = function() {
   renderChart(filteredSessions, startStr, endStr);
   renderUsersTable(filteredUsers);
   renderFeaturesTab(filteredActions, activeUids.size);
+  renderReviewsTab(filteredActions);
 };
 
 // ─── User-Level Stats ───────────────────────────────────────────────────────
@@ -912,6 +966,126 @@ function renderFeaturesTab(actions, activeUsers) {
   });
 
   document.getElementById('features-breakdown').innerHTML = html;
+}
+
+// ─── Reviews Tab ────────────────────────────────────────────────────────────
+function renderReviewsTab(actions) {
+  const shown = (actions || []).filter(a => a.action === 'review_modal_shown');
+  const submitted = (actions || []).filter(a => a.action === 'review_submitted');
+  const closed = (actions || []).filter(a => a.action === 'review_modal_closed');
+
+  const shownCount = shown.length;
+  const submittedCount = submitted.length;
+  const closedCount = closed.length;
+  const skippedCount = closed.filter(a => a.meta && a.meta.method === 'skip').length;
+  const dismissedCount = closed.filter(a => a.meta && a.meta.method === 'close').length;
+
+  // Average rating
+  const ratings = submitted.filter(a => a.meta && a.meta.rating).map(a => a.meta.rating);
+  const avgRating = ratings.length > 0 ? (ratings.reduce((s, r) => s + r, 0) / ratings.length) : 0;
+  const fullStars = Math.floor(avgRating);
+  const halfStar = (avgRating - fullStars) >= 0.5;
+  const starsHTML = '★'.repeat(fullStars) + (halfStar ? '½' : '') + '<span style="color:#555">' + '★'.repeat(5 - fullStars - (halfStar ? 1 : 0)) + '</span>';
+
+  const convRate = shownCount > 0 ? Math.round((submittedCount / shownCount) * 100) : 0;
+  const dropRate = shownCount > 0 ? Math.round((closedCount / shownCount) * 100) : 0;
+
+  // Funnel stats
+  let funnelHTML = `
+    <div class="stat-card">
+      <div class="label">Average Rating</div>
+      <div class="avg-rating-display">
+        <span class="avg-rating-number">${avgRating > 0 ? avgRating.toFixed(1) : '—'}</span>
+        <span class="avg-rating-stars">${avgRating > 0 ? starsHTML : ''}</span>
+        <span class="avg-rating-of">/5</span>
+      </div>
+      <div class="sub">${ratings.length} review${ratings.length !== 1 ? 's' : ''} with rating</div>
+    </div>
+    <div class="stat-card"><div class="label">Reviews Submitted</div><div class="value">${submittedCount}</div><div class="sub">${ratings.filter(r => r >= 4).length} positive (4-5★)</div></div>
+    <div class="stat-card"><div class="label">With Written Review</div><div class="value">${submitted.filter(a => a.meta && a.meta.has_text).length}</div><div class="sub">${submittedCount > 0 ? Math.round(submitted.filter(a => a.meta && a.meta.has_text).length / submittedCount * 100) : 0}% of submitted</div></div>
+  `;
+
+  // Funnel visual
+  funnelHTML += `<div class="stat-card" style="grid-column: 1 / -1;">
+    <div class="label">Review Funnel</div>
+    <div class="funnel-visual">
+      <div class="funnel-step">
+        <div class="f-value">${shownCount}</div>
+        <div class="f-label">Modal Shown</div>
+        <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:100%;background:#34D399"></div></div>
+      </div>
+      <div class="funnel-arrow">→</div>
+      <div class="funnel-step">
+        <div class="f-value">${submittedCount}</div>
+        <div class="f-label">Submitted</div>
+        <div class="f-rate">${convRate}% conversion</div>
+        <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${shownCount > 0 ? Math.round(submittedCount / shownCount * 100) : 0}%;background:#34D399"></div></div>
+      </div>
+      <div class="funnel-arrow">|</div>
+      <div class="funnel-step">
+        <div class="f-value">${skippedCount}</div>
+        <div class="f-label">Skipped</div>
+        <div class="f-rate">${shownCount > 0 ? Math.round(skippedCount / shownCount * 100) : 0}%</div>
+        <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${shownCount > 0 ? Math.round(skippedCount / shownCount * 100) : 0}%;background:#666"></div></div>
+      </div>
+      <div class="funnel-arrow">|</div>
+      <div class="funnel-step">
+        <div class="f-value">${dismissedCount}</div>
+        <div class="f-label">Dismissed (✕)</div>
+        <div class="f-rate">${shownCount > 0 ? Math.round(dismissedCount / shownCount * 100) : 0}%</div>
+        <div class="funnel-bar-track"><div class="funnel-bar-fill" style="width:${shownCount > 0 ? Math.round(dismissedCount / shownCount * 100) : 0}%;background:#555"></div></div>
+      </div>
+    </div>
+  </div>`;
+
+  document.getElementById('review-funnel-stats').innerHTML = funnelHTML;
+
+  // Rating distribution (5 → 1)
+  const ratingCounts = [0, 0, 0, 0, 0]; // index 0 = 1★, index 4 = 5★
+  ratings.forEach(r => { if (r >= 1 && r <= 5) ratingCounts[r - 1]++; });
+  const maxRatingCount = Math.max(1, ...ratingCounts);
+  const ratingColors = ['#F87171', '#FB923C', '#FBBF24', '#A3E635', '#34D399'];
+
+  let distHTML = '<div class="feature-card">';
+  for (let i = 4; i >= 0; i--) {
+    const pctBar = Math.round((ratingCounts[i] / maxRatingCount) * 100);
+    const pctTotal = ratings.length > 0 ? Math.round((ratingCounts[i] / ratings.length) * 100) : 0;
+    distHTML += `<div class="rating-bar-row">
+      <span class="rating-label">${i + 1} ★</span>
+      <div class="rating-track"><div class="rating-fill" style="width:${pctBar}%;background:${ratingColors[i]}"><span>${ratingCounts[i] > 0 ? ratingCounts[i] : ''}</span></div></div>
+      <span class="rating-count">${pctTotal}%</span>
+    </div>`;
+  }
+  distHTML += '</div>';
+  document.getElementById('review-distribution').innerHTML = distHTML;
+
+  // Individual reviews (newest first)
+  const reviewItems = submitted
+    .filter(a => a.meta)
+    .sort((a, b) => (b.timestamp || 0) - (a.timestamp || 0));
+
+  if (reviewItems.length === 0) {
+    document.getElementById('review-list').innerHTML = '<div style="color:#555;font-size:13px;padding:16px 0">No reviews yet in this period</div>';
+    return;
+  }
+
+  let listHTML = '';
+  reviewItems.forEach(a => {
+    const rating = a.meta.rating || 0;
+    const stars = '★'.repeat(rating) + '<span style="color:#555">' + '★'.repeat(5 - rating) + '</span>';
+    const date = a.timestamp ? new Date(a.timestamp).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : '';
+    const text = a.meta.text || '';
+    listHTML += `<div class="review-item">
+      <div class="review-item-header">
+        <span class="review-item-stars">${stars}</span>
+        <span class="review-item-user">${a.email || 'anonymous'}</span>
+        <span class="review-item-date">${date}</span>
+      </div>
+      ${text ? `<div class="review-item-text">"${text}"</div>` : '<div style="font-size:11px;color:#555;font-style:italic">No written review</div>'}
+    </div>`;
+  });
+
+  document.getElementById('review-list').innerHTML = listHTML;
 }
 
 // ─── Chart ──────────────────────────────────────────────────────────────────
