@@ -570,7 +570,7 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 #kit-search { width: 100%; padding: 7px 10px; font-size: 12px; background: var(--bg); border: 1.5px solid rgba(255,255,255,0.15); color: var(--text); border-radius: 8px; outline: none; font-family: 'Manrope', sans-serif; }
 #kit-search:focus { border-color: var(--accent); background: var(--panel2); }
 #kit-search::placeholder { color: var(--text-dim); }
-.kit-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; max-height: 200px; overflow-y: auto; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
+.kit-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 2px; max-height: 200px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
 .kit-grid::-webkit-scrollbar { width: 4px; }
 .kit-grid::-webkit-scrollbar-track { background: transparent; }
 .kit-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
