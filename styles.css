@@ -700,7 +700,8 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 .color-swatch.selected { border-color: var(--accent); }
 
 /* Compact add players section */
-.compact-add { display: flex; flex-direction: column; gap: 10px; }
+.compact-add { display: flex; flex-direction: column; gap: 0; }
+.compact-add .collapsible-body { display: flex; flex-direction: column; gap: 10px; }
 .add-row { display: flex; align-items: center; gap: 10px; }
 .add-row-label {
   font-size: 12px; font-weight: 500; color: var(--text-muted);

@@ -631,8 +631,8 @@
   <!-- ══ TAB: PLAYERS ══ -->
   <div id="pane-players" class="tab-pane">
 
-    <!-- TEAM + ADD (compact) -->
-    <div class="panel-section compact-add">
+    <!-- TEAM -->
+    <div class="panel-section">
       <div class="team-row">
         <button class="team-pill active" id="team-a-pill" onclick="selectTeamContext('a')">
           <span class="team-dot" id="dot-a" style="background:#8B5CF6"></span> Home
@@ -641,19 +641,26 @@
           <span class="team-dot" id="dot-b" style="background:#FBBF24"></span> Away
         </button>
       </div>
-      <div class="add-row">
-        <span class="add-row-label">Add players</span>
-        <button class="single-player-btn active" id="single-btn" onclick="trackToolActivated('single_player','button'); setTool(teamContext==='a'?'player-a':'player-b')">+ Single (click pitch)</button>
-      </div>
-      <div class="add-row">
-        <span class="add-row-label">Formation</span>
-        <div class="formation-grid">
-          <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>
-          <button class="formation-btn" onclick="placeFormation('4-4-2')">4-4-2</button>
-          <button class="formation-btn" onclick="placeFormation('4-3-1-2')">4-3-1-2</button>
-          <button class="formation-btn" onclick="placeFormation('4-2-1-3')">4-2-1-3</button>
-          <button class="formation-btn" onclick="placeFormation('3-5-2')">3-5-2</button>
-          <button class="formation-btn" onclick="placeFormation('5-3-2')">5-3-2</button>
+    </div>
+
+    <!-- ADD PLAYERS -->
+    <div class="panel-section compact-add">
+      <h3 class="collapsible" data-collapse="add">Place on pitch</h3>
+      <div class="collapsible-body" data-collapse-body="add">
+        <div class="add-row">
+          <span class="add-row-label">Add players</span>
+          <button class="single-player-btn active" id="single-btn" onclick="trackToolActivated('single_player','button'); setTool(teamContext==='a'?'player-a':'player-b')">+ Single (click pitch)</button>
+        </div>
+        <div class="add-row">
+          <span class="add-row-label">Formation</span>
+          <div class="formation-grid">
+            <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>
+            <button class="formation-btn" onclick="placeFormation('4-4-2')">4-4-2</button>
+            <button class="formation-btn" onclick="placeFormation('4-3-1-2')">4-3-1-2</button>
+            <button class="formation-btn" onclick="placeFormation('4-2-1-3')">4-2-1-3</button>
+            <button class="formation-btn" onclick="placeFormation('3-5-2')">3-5-2</button>
+            <button class="formation-btn" onclick="placeFormation('5-3-2')">5-3-2</button>
+          </div>
         </div>
       </div>
     </div>
