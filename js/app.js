@@ -368,19 +368,22 @@ let _currentSessionCount = 0;
 function maybeShowReview(sessionCount) {
   _currentSessionCount = sessionCount;
   const SESSIONS_BEFORE_PROMPT = 5;
-  const SESSIONS_AFTER_SKIP = 5;
+  const SESSIONS_BETWEEN_PROMPTS = 10;
   const KEY_REVIEWED = 'tactica_reviewed';
-  const KEY_SKIPPED_AT = 'tactica_review_skipped_at';
+  const KEY_SHOWN_AT = 'tactica_review_shown_at';
 
   // Already submitted a review? Never show again.
   if (localStorage.getItem(KEY_REVIEWED)) return;
 
-  // Skipped before? Wait 5 more sessions before asking again.
-  const skippedAt = parseInt(localStorage.getItem(KEY_SKIPPED_AT) || '0');
-  if (skippedAt > 0 && sessionCount < skippedAt + SESSIONS_AFTER_SKIP) return;
+  // Shown before (skip, dismiss, or just closed the tab)? Wait 10 more sessions.
+  const shownAt = parseInt(localStorage.getItem(KEY_SHOWN_AT) || '0');
+  if (shownAt > 0 && sessionCount < shownAt + SESSIONS_BETWEEN_PROMPTS) return;
 
   // Not enough sessions yet
   if (sessionCount < SESSIONS_BEFORE_PROMPT) return;
+
+  // Mark as shown NOW — even if user closes the tab, we wait 10 sessions
+  localStorage.setItem(KEY_SHOWN_AT, String(sessionCount));
 
   // Show review modal after a short delay
   setTimeout(() => {
@@ -494,7 +497,6 @@ window.submitReview = async function() {
 };
 
 window.skipReview = function() {
-  localStorage.setItem('tactica_review_skipped_at', String(_currentSessionCount));
   if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_closed', { tool_name: 'tactica', method: 'skip' });
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'review_modal_closed', { method: 'skip' }).catch(() => {});
@@ -502,7 +504,6 @@ window.skipReview = function() {
 };
 
 window.dismissReview = function() {
-  localStorage.setItem('tactica_review_skipped_at', String(_currentSessionCount));
   if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_closed', { tool_name: 'tactica', method: 'close' });
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'review_modal_closed', { method: 'close' }).catch(() => {});
