@@ -363,38 +363,36 @@ window.searchKits = function(query) {
 loadTeamsDB();
 
 // ─── Review Modal ────────────────────────────────────────────────────────────
-(function initReviewPrompt() {
+// Called from onAuthChange after logSession resolves with real Firestore count.
+let _currentSessionCount = 0;
+function maybeShowReview(sessionCount) {
+  _currentSessionCount = sessionCount;
   const SESSIONS_BEFORE_PROMPT = 5;
   const SESSIONS_AFTER_SKIP = 5;
-  const KEY_SESSIONS = 'tactica_sessions';
   const KEY_REVIEWED = 'tactica_reviewed';
   const KEY_SKIPPED_AT = 'tactica_review_skipped_at';
-
-  // Count this session
-  const sessions = parseInt(localStorage.getItem(KEY_SESSIONS) || '0') + 1;
-  localStorage.setItem(KEY_SESSIONS, String(sessions));
 
   // Already submitted a review? Never show again.
   if (localStorage.getItem(KEY_REVIEWED)) return;
 
   // Skipped before? Wait 5 more sessions before asking again.
   const skippedAt = parseInt(localStorage.getItem(KEY_SKIPPED_AT) || '0');
-  if (skippedAt > 0 && sessions < skippedAt + SESSIONS_AFTER_SKIP) return;
+  if (skippedAt > 0 && sessionCount < skippedAt + SESSIONS_AFTER_SKIP) return;
 
   // Not enough sessions yet
-  if (sessions < SESSIONS_BEFORE_PROMPT) return;
+  if (sessionCount < SESSIONS_BEFORE_PROMPT) return;
 
   // Show review modal after a short delay
   setTimeout(() => {
     const modal = document.getElementById('review-modal');
     if (modal) {
       modal.style.display = 'flex';
-      if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_shown', { tool_name: 'tactica', sessions: sessions });
+      if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_shown', { tool_name: 'tactica', sessions: sessionCount });
       const u = getCurrentUser();
-      if (u) logAction(u.uid, u.email, 'review_modal_shown', { sessions }).catch(() => {});
+      if (u) logAction(u.uid, u.email, 'review_modal_shown', { sessions: sessionCount }).catch(() => {});
     }
   }, 4000);
-})();
+}
 
 let _reviewRating = 0;
 
@@ -459,7 +457,7 @@ window.submitReview = async function() {
     formData.append('message', [
       `Rating: ${'★'.repeat(_reviewRating)}${'☆'.repeat(5 - _reviewRating)} (${_reviewRating}/5)`,
       `User: ${userName} (${userEmail})`,
-      `Sessions: ${localStorage.getItem('tactica_sessions') || '?'}`,
+      `Sessions: ${_currentSessionCount || '?'}`,
       '',
       text ? `Review:\n${text}` : '(No written review)',
     ].join('\n'));
@@ -496,7 +494,7 @@ window.submitReview = async function() {
 };
 
 window.skipReview = function() {
-  localStorage.setItem('tactica_review_skipped_at', localStorage.getItem('tactica_sessions') || '0');
+  localStorage.setItem('tactica_review_skipped_at', String(_currentSessionCount));
   if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_closed', { tool_name: 'tactica', method: 'skip' });
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'review_modal_closed', { method: 'skip' }).catch(() => {});
@@ -504,7 +502,7 @@ window.skipReview = function() {
 };
 
 window.dismissReview = function() {
-  localStorage.setItem('tactica_review_skipped_at', localStorage.getItem('tactica_sessions') || '0');
+  localStorage.setItem('tactica_review_skipped_at', String(_currentSessionCount));
   if (typeof window.gtag === 'function') window.gtag('event', 'review_modal_closed', { tool_name: 'tactica', method: 'close' });
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'review_modal_closed', { method: 'close' }).catch(() => {});
@@ -4255,7 +4253,10 @@ onAuthChange(async (user) => {
     }
     // Generate session ID and log session to Firestore
     setSessionId(user.uid + '_' + Date.now());
-    try { await logSession(user.uid, user.email, user.displayName); } catch (e) { console.warn('Session log error:', e); }
+    let _sc = 0;
+    try { _sc = await logSession(user.uid, user.email, user.displayName); } catch (e) { console.warn('Session log error:', e); }
+    // Show review modal based on real Firestore session count
+    maybeShowReview(_sc);
     // Always start a fresh board on new session
     clearCurrentId();
     const nameInput = document.getElementById('analysis-name-input');

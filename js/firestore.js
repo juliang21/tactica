@@ -161,6 +161,8 @@ export async function logSession(uid, email, displayName) {
     date: today,
     device,
   });
+
+  return sessionCount;
 }
 
 // ─── Session ID (one per page load) ────────────────────────────────────────
