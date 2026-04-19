@@ -631,8 +631,8 @@
   <!-- ══ TAB: PLAYERS ══ -->
   <div id="pane-players" class="tab-pane">
 
-    <!-- TEAM -->
-    <div class="panel-section">
+    <!-- TEAM + ADD (compact) -->
+    <div class="panel-section compact-add">
       <div class="team-row">
         <button class="team-pill active" id="team-a-pill" onclick="selectTeamContext('a')">
           <span class="team-dot" id="dot-a" style="background:#8B5CF6"></span> Home
@@ -641,14 +641,12 @@
           <span class="team-dot" id="dot-b" style="background:#FBBF24"></span> Away
         </button>
       </div>
-    </div>
-
-    <!-- ADD -->
-    <div class="panel-section">
-      <h3 class="collapsible" data-collapse="add">Add players</h3>
-      <div class="collapsible-body" data-collapse-body="add">
-        <button class="single-player-btn active" id="single-btn" onclick="trackToolActivated('single_player','button'); setTool(teamContext==='a'?'player-a':'player-b')">＋ Single Player (click pitch)</button>
-        <div class="sub-label">Full team · formation</div>
+      <div class="add-row">
+        <span class="add-row-label">Add players</span>
+        <button class="single-player-btn active" id="single-btn" onclick="trackToolActivated('single_player','button'); setTool(teamContext==='a'?'player-a':'player-b')">+ Single (click pitch)</button>
+      </div>
+      <div class="add-row">
+        <span class="add-row-label">Full team</span>
         <div class="formation-grid">
           <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>
           <button class="formation-btn" onclick="placeFormation('4-4-2')">4-4-2</button>
