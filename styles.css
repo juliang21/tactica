@@ -685,12 +685,11 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 }
 .purpose-btn:hover { border-color: var(--text-dim); color: var(--text); }
 .purpose-btn.active {
-  color: #0d0d0d; font-weight: 700;
+  background: #D8FF3C;
+  border-color: #D8FF3C;
+  color: #0a0b0c;
+  font-weight: 700;
 }
-.purpose-btn.active[data-purpose="press"]  { background: #D8FF3C; border-color: #D8FF3C; }
-.purpose-btn.active[data-purpose="possession"]  { background: #ffffff; border-color: #ffffff; color: #111; }
-.purpose-btn.active[data-purpose="space"]  { background: #4ade80; border-color: #4ade80; }
-.purpose-btn.active[data-purpose="danger"] { background: #f87171; border-color: #f87171; }
 
 /* Shape card selector */
 .shape-card-row { display: flex; gap: 6px; }
