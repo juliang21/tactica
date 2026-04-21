@@ -280,6 +280,12 @@ window.setTool = function(t) {
     'headline':     { panel: 'headline-edit-section',   label: 'Headline',      hint: 'Click on the pitch to place' },
     'tag':          { panel: 'tag-edit-section',        label: 'Callout',       hint: 'Click on the pitch to place' },
     'marker':       { panel: 'marker-edit-section',     label: 'Marker',        hint: 'Click on the pitch to place' },
+    'referee':      { panel: 'referee-edit-section',    label: 'Referee',       hint: 'Click on the pitch to place' },
+    // Hint-only entries: switch to Selection tab + show hint, but no dedicated panel
+    // (these elements have no settable defaults pre-placement)
+    'player-joker': { panel: null, label: 'Joker', hint: 'Click on the pitch to place' },
+    'ball':         { panel: null, label: 'Ball',  hint: 'Click on the pitch to place' },
+    'cone':         { panel: null, label: 'Cone',  hint: 'Click on the pitch to place' },
     'net-zone':     null, // handled separately below
     'link':         null,
     'pair':         null,
@@ -294,9 +300,11 @@ window.setTool = function(t) {
     document.getElementById('layer-section').style.display = 'none';
     document.getElementById('size-section').style.display = 'none';
     document.getElementById('rotation-section').style.display = 'none';
-    // Show the relevant panel
-    const sec = document.getElementById(toolPanel.panel);
-    if (sec) sec.style.display = '';
+    // Show the relevant panel (if one is defined)
+    if (toolPanel.panel) {
+      const sec = document.getElementById(toolPanel.panel);
+      if (sec) sec.style.display = '';
+    }
     S.selInfo.innerHTML = `<strong>${toolPanel.label}</strong><br><span style="font-size:10px;color:var(--text-muted)">${toolPanel.hint}</span>`;
     // Reflect the current default variant as the active card
     if (t === 'vision') {
