@@ -264,7 +264,7 @@
   <h1>TÁCTICA</h1>
   <span class="badge">ADMIN</span>
   <div style="flex:1"></div>
-  <button class="refresh-btn" id="refresh-btn" onclick="_usersLoaded=false;loadDashboard()"><span class="refresh-spinner"></span>Refresh</button>
+  <button class="refresh-btn" id="refresh-btn" onclick="loadDashboard()"><span class="refresh-spinner"></span>Refresh</button>
 </div>
 
 <div id="auth-gate" class="auth-gate" style="display:none">
@@ -282,10 +282,10 @@
 
   <div class="date-filters">
     <label>From</label>
-    <input type="date" id="date-start">
+    <input type="date" id="date-start" onchange="applyDateFilter()">
     <span class="sep">&rarr;</span>
     <label>To</label>
-    <input type="date" id="date-end">
+    <input type="date" id="date-end" onchange="applyDateFilter()">
     <span class="sep" style="margin-left:12px"></span>
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
       <input type="checkbox" id="exclude-me" checked onchange="applyDateFilter()" style="accent-color:#34D399;cursor:pointer">
@@ -403,10 +403,9 @@ window.switchAdminTab = function(tab) {
 };
 
 // ─── Data cache ────────────────────────────────────────────────────────────
-let _allUsers = [];      // always all-time (small collection, needed for milestones)
-let _allSessions = [];   // scoped to selected dates
-let _allActions = [];    // scoped to selected dates
-let _usersLoaded = false;
+let _allUsers = [];
+let _allSessions = [];
+let _allActions = [];
 
 const today = new Date().toISOString().slice(0, 10);
 document.getElementById('date-start').value = today;
@@ -417,24 +416,17 @@ window.loadDashboard = async function() {
   const dashboard = document.getElementById('tab-overview');
   if (btn) btn.classList.add('loading');
   if (dashboard) dashboard.classList.add('shimmer');
-
-  const startStr = document.getElementById('date-start').value;
-  const endStr = document.getElementById('date-end').value;
-  if (!startStr || !endStr) return;
-  const startMs = new Date(startStr + 'T00:00:00').getTime();
-  const endMs = new Date(endStr + 'T23:59:59.999').getTime();
-
   try {
-    // Fetch all three collections in parallel (no where — avoids index issues, fast enough)
-    const [usersSnap, sessionsSnap, actionsSnap] = await Promise.all([
-      _usersLoaded ? null : getDocs(query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'))),
-      getDocs(query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'))),
-      getDocs(query(collection(db, 'tactica_actions'), orderBy('timestamp', 'desc'))).catch(e => { console.warn('Actions fetch failed:', e); return null; }),
-    ]);
+    const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
+    _allUsers = (await getDocs(usersQ)).docs.map(d => ({ uid: d.id, ...d.data() }));
 
-    if (usersSnap) { _allUsers = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() })); _usersLoaded = true; }
-    _allSessions = sessionsSnap.docs.map(d => d.data());
-    _allActions = actionsSnap ? actionsSnap.docs.map(d => d.data()) : [];
+    const sessionsQ = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
+    _allSessions = (await getDocs(sessionsQ)).docs.map(d => d.data());
+
+    try {
+      const actionsQ = query(collection(db, 'tactica_actions'), orderBy('timestamp', 'desc'));
+      _allActions = (await getDocs(actionsQ)).docs.map(d => d.data());
+    } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
 
     applyDateFilter();
   } catch (e) { console.error('Dashboard error:', e); }
@@ -443,10 +435,6 @@ window.loadDashboard = async function() {
     if (dashboard) dashboard.classList.remove('shimmer');
   }
 };
-
-// Date changes filter in-memory (instant) — re-fetch only on Refresh
-document.getElementById('date-start').addEventListener('change', () => applyDateFilter());
-document.getElementById('date-end').addEventListener('change', () => applyDateFilter());
 
 window.applyDateFilter = function() {
   const startStr = document.getElementById('date-start').value;
