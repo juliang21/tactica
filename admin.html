@@ -425,33 +425,38 @@ window.loadDashboard = async function() {
   const endMs = new Date(endStr + 'T23:59:59.999').getTime();
 
   try {
+    // Build all queries in parallel
+    const promises = [];
+
     // Users: fetch all only once (small collection, needed for milestones/total count)
     if (!_usersLoaded) {
-      const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
-      _allUsers = (await getDocs(usersQ)).docs.map(d => ({ uid: d.id, ...d.data() }));
-      _usersLoaded = true;
+      promises.push(
+        getDocs(query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc')))
+          .then(snap => { _allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() })); _usersLoaded = true; })
+      );
     }
 
-    // Sessions: query only selected date range
-    const sessionsQ = query(
-      collection(db, 'tactica_sessions'),
-      where('timestamp', '>=', startMs),
-      where('timestamp', '<=', endMs),
-      orderBy('timestamp', 'desc')
+    // Sessions + Actions: query selected date range in parallel
+    promises.push(
+      getDocs(query(
+        collection(db, 'tactica_sessions'),
+        where('timestamp', '>=', startMs),
+        where('timestamp', '<=', endMs),
+        orderBy('timestamp', 'desc')
+      )).then(snap => { _allSessions = snap.docs.map(d => d.data()); })
     );
-    _allSessions = (await getDocs(sessionsQ)).docs.map(d => d.data());
 
-    // Actions: query only selected date range
-    try {
-      const actionsQ = query(
+    promises.push(
+      getDocs(query(
         collection(db, 'tactica_actions'),
         where('timestamp', '>=', startMs),
         where('timestamp', '<=', endMs),
         orderBy('timestamp', 'desc')
-      );
-      _allActions = (await getDocs(actionsQ)).docs.map(d => d.data());
-    } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
+      )).then(snap => { _allActions = snap.docs.map(d => d.data()); })
+        .catch(e => { console.warn('Actions fetch failed:', e); _allActions = []; })
+    );
 
+    await Promise.all(promises);
     applyDateFilter();
   } catch (e) { console.error('Dashboard error:', e); }
   finally {
