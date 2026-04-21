@@ -651,12 +651,12 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 .style-btn:hover { border-color: var(--text-dim); color: var(--text); }
 .style-btn.active { border-color: rgba(255,255,255,0.3); color: var(--text); background: var(--surface-active); }
 
-/* Zone panel fill-style buttons use the same yellow highlight as Purpose */
+/* Zone panel fill-style buttons use the same lime-outline highlight as Purpose */
 #zone-edit-section .style-btn.active {
-  background: #D8FF3C;
+  background: rgba(216,255,60,0.08);
   border-color: #D8FF3C;
-  color: #0a0b0c;
-  font-weight: 700;
+  color: #D8FF3C;
+  font-weight: 600;
 }
 
 /* ── Unified Zone Panel ───────────────────────────────────────────────────── */
@@ -693,10 +693,10 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 }
 .purpose-btn:hover { border-color: var(--text-dim); color: var(--text); }
 .purpose-btn.active {
-  background: #D8FF3C;
+  background: rgba(216,255,60,0.08);
   border-color: #D8FF3C;
-  color: #0a0b0c;
-  font-weight: 700;
+  color: #D8FF3C;
+  font-weight: 600;
 }
 
 /* Shape card selector */
