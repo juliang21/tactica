@@ -245,8 +245,39 @@ window.setTool = function(t) {
     cancelNetZone();
   }
   _baseSetTool(t);
-  // Show hints for multi-click tools
-  if (t === 'net-zone') {
+
+  // ── Show element properties panel when a tool is selected ──────────────
+  // Maps tool names to their panel section + hint text so the user can
+  // pre-configure settings before placing the element on the pitch.
+  const _toolPanelMap = {
+    'shadow-rect':  { panel: 'zone-edit-section',      label: 'Zone',          hint: 'Click on the pitch to place' },
+    'shadow-circle':{ panel: 'zone-edit-section',      label: 'Zone',          hint: 'Click on the pitch to place' },
+    'spotlight':    { panel: 'spotlight-edit-section',  label: 'Highlight',     hint: 'Click on the pitch to place' },
+    'vision':       { panel: 'vision-edit-section',     label: 'Vision',        hint: 'Click on the pitch to place' },
+    'arrow':        { panel: 'arrow-edit-section',      label: 'Arrow',         hint: 'Click and drag to draw' },
+    'textbox':      { panel: 'textbox-edit-section',    label: 'Text',          hint: 'Click on the pitch to place' },
+    'headline':     { panel: 'headline-edit-section',   label: 'Headline',      hint: 'Click on the pitch to place' },
+    'tag':          { panel: 'tag-edit-section',        label: 'Callout',       hint: 'Click on the pitch to place' },
+    'marker':       { panel: 'marker-edit-section',     label: 'Marker',        hint: 'Click on the pitch to place' },
+    'net-zone':     null, // handled separately below
+    'link':         null,
+    'pair':         null,
+  };
+
+  const toolPanel = _toolPanelMap[t];
+  if (toolPanel) {
+    switchTab('element');
+    // Hide all edit sections first
+    document.querySelectorAll('.panel-section[id$="-edit-section"]').forEach(s => s.style.display = 'none');
+    document.getElementById('del-section').style.display = 'none';
+    document.getElementById('layer-section').style.display = 'none';
+    document.getElementById('size-section').style.display = 'none';
+    document.getElementById('rotation-section').style.display = 'none';
+    // Show the relevant panel
+    const sec = document.getElementById(toolPanel.panel);
+    if (sec) sec.style.display = '';
+    S.selInfo.innerHTML = `<strong>${toolPanel.label}</strong><br><span style="font-size:10px;color:var(--text-muted)">${toolPanel.hint}</span>`;
+  } else if (t === 'net-zone') {
     switchTab('element');
     _showNetZoneHint();
   } else if (t === 'link') {
