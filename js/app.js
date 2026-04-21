@@ -1176,10 +1176,13 @@ function _convertZoneToFreeform(el) {
   const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
   const cosR = Math.cos(rot), sinR = Math.sin(rot);
 
-  // Get visual properties from old shape
+  // Get visual properties from old shape.
+  // Note: when an element is selected, its stroke is temporarily overridden with
+  // a blue selection highlight — the real stroke is preserved in dataset.savedStroke.
+  // Read that instead so the converted shape keeps its actual colour.
   const oldShape = el.querySelector('rect,ellipse');
   const fill = oldShape?.getAttribute('fill') || 'rgba(79,156,249,0.18)';
-  const stroke = oldShape?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
+  const stroke = el.dataset.savedStroke || oldShape?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
   const strokeWidth = oldShape?.getAttribute('stroke-width') || '1.5';
   const dashArray = oldShape?.getAttribute('stroke-dasharray') || '';
   const label = el.dataset.zoneLabel || '';
@@ -1257,10 +1260,12 @@ function _convertFreeformToShape(el, shapeType) {
   const hw = Math.max(20, (maxX - minX) / 2);
   const hh = Math.max(15, (maxY - minY) / 2);
 
-  // Get visual properties
+  // Get visual properties — see note in _convertZoneToFreeform: a selected
+  // element's stroke is overridden with the blue selection highlight, so we
+  // read from savedStroke first.
   const oldShape = el.querySelector('.freeform-shape');
   const fill = oldShape?.getAttribute('fill') || 'rgba(79,156,249,0.18)';
-  const stroke = oldShape?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
+  const stroke = el.dataset.savedStroke || oldShape?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
   const strokeWidth = oldShape?.getAttribute('stroke-width') || '1.5';
   const dashArray = oldShape?.getAttribute('stroke-dasharray') || '';
   const label = el.dataset.zoneLabel || '';
