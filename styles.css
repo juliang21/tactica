@@ -711,8 +711,7 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 }
 .shape-card.sm { padding: 8px 4px; }
 
-/* Round colour swatches */
-.color-swatch.mini.round { border-radius: 50%; width: 28px; height: 28px; }
+/* Round colour swatches (legacy class — now all mini swatches are round) */
 .color-swatch.mini.round.active {
   box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px currentColor;
 }
@@ -768,7 +767,7 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 /* Swatches */
 .name-color-row { display: flex; gap: 6px; flex-wrap: wrap; }
 .picker-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
-.color-swatch.mini { width: 24px; height: 24px; border-radius: 0; flex-shrink: 0; }
+.color-swatch.mini { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
 .no-bg-swatch {
   background: transparent !important;
   border: 1.5px solid var(--text-muted) !important;
@@ -788,9 +787,10 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 .color-swatch.checkerboard {
   background: conic-gradient(#808080 0.25turn, #c0c0c0 0.25turn, #c0c0c0 0.5turn, #808080 0.5turn, #808080 0.75turn, #c0c0c0 0.75turn) top left / 8px 8px repeat;
   border: 1.5px solid var(--border);
+  border-radius: 50%;
 }
 .color-picker-btn {
-  width: 24px; height: 24px; flex-shrink: 0;
+  width: 28px; height: 28px; flex-shrink: 0; border-radius: 50%;
   border: 1.5px solid var(--border); background: transparent;
   color: var(--text-dim); font-size: 14px; cursor: pointer;
   display: flex; align-items: center; justify-content: center;
