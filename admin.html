@@ -980,6 +980,20 @@ function renderMaintenanceAnalytics(actions) {
   const total = shows.length;
   const uniqueUsers = new Set(shows.map(a => a.uid || a.email || 'anon').filter(Boolean)).size;
 
+  const blockedCompetitorEmail = 'cefu3607@icloud.com';
+  const matchesCompetitor = a =>
+    (a.email || '').toLowerCase() === blockedCompetitorEmail ||
+    (a?.meta?.blocked_email || '').toLowerCase() === blockedCompetitorEmail;
+
+  // Competitor vs everyone else
+  const competitorShows = shows.filter(matchesCompetitor).length;
+  const othersShows = total - competitorShows;
+  const othersUsers = new Set(
+    shows.filter(a => !matchesCompetitor(a))
+         .map(a => a.uid || a.email || 'anon')
+         .filter(Boolean)
+  ).size;
+
   // Breakdown by reason
   const byReason = {};
   shows.forEach(a => {
@@ -987,14 +1001,7 @@ function renderMaintenanceAnalytics(actions) {
     byReason[reason] = (byReason[reason] || 0) + 1;
   });
 
-  // Breakdown by blocked email (filter for known competitor)
-  const blockedCompetitorEmail = 'cefu3607@icloud.com';
-  const competitorShows = shows.filter(a =>
-    (a.email || '').toLowerCase() === blockedCompetitorEmail ||
-    (a?.meta?.blocked_email || '').toLowerCase() === blockedCompetitorEmail
-  ).length;
-
-  // Other top blocked emails
+  // By-email breakdown (non-empty emails only)
   const byEmail = {};
   shows.forEach(a => {
     const email = (a.email || a?.meta?.blocked_email || '').toLowerCase().trim();
@@ -1008,14 +1015,24 @@ function renderMaintenanceAnalytics(actions) {
       <span class="feature-card-summary">${total} shows &middot; ${uniqueUsers} distinct users</span>
     </div>`;
 
-  // Competitor highlight
-  html += `<div style="margin-top:12px;padding:10px 12px;background:rgba(244,114,114,0.08);border:1px solid rgba(244,114,114,0.25);border-radius:8px;">
-    <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f47272;margin-bottom:4px;">Blocked Competitor</div>
-    <div style="display:flex;align-items:center;justify-content:space-between;">
-      <span style="font-size:13px;font-family:monospace;color:#ddd;">${blockedCompetitorEmail}</span>
-      <span style="font-size:18px;font-weight:700;color:#f47272;">${competitorShows}</span>
+  // Two-up stat cards: competitor vs everyone else
+  html += `<div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px;">
+    <div style="padding:12px 14px;background:rgba(244,114,114,0.08);border:1px solid rgba(244,114,114,0.25);border-radius:8px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f47272;margin-bottom:6px;">Blocked Competitor</div>
+      <div style="font-size:12px;font-family:monospace;color:#ddd;margin-bottom:8px;word-break:break-all;">${blockedCompetitorEmail}</div>
+      <div style="display:flex;align-items:baseline;gap:6px;">
+        <span style="font-size:26px;font-weight:700;color:#f47272;line-height:1;">${competitorShows}</span>
+        <span style="font-size:11px;color:#888;">shows</span>
+      </div>
     </div>
-    <div style="font-size:10px;color:#888;margin-top:2px;">shows</div>
+    <div style="padding:12px 14px;background:rgba(255,255,255,0.03);border:1px solid rgba(255,255,255,0.08);border-radius:8px;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;margin-bottom:6px;">Everyone Else</div>
+      <div style="font-size:12px;color:#888;margin-bottom:8px;">other users &amp; regions</div>
+      <div style="display:flex;align-items:baseline;gap:6px;">
+        <span style="font-size:26px;font-weight:700;color:#ddd;line-height:1;">${othersShows}</span>
+        <span style="font-size:11px;color:#888;">shows &middot; ${othersUsers} users</span>
+      </div>
+    </div>
   </div>`;
 
   // Reason breakdown
@@ -1042,8 +1059,9 @@ function renderMaintenanceAnalytics(actions) {
     html += `<div style="margin-top:16px;margin-bottom:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;">By Email</div>`;
     emailEntries.forEach(([email, count]) => {
       const pct = Math.round(count / total * 100);
+      const isCompetitor = email === blockedCompetitorEmail;
       html += `<div class="breakdown-bar">
-        <span class="breakdown-label" style="font-family:monospace;font-size:11px;">${email}</span>
+        <span class="breakdown-label" style="font-family:monospace;font-size:11px;${isCompetitor ? 'color:#f47272;font-weight:600' : ''}">${email}</span>
         <div class="breakdown-track"><div class="breakdown-fill" style="width:${pct}%;background:#f47272"></div></div>
         <span class="breakdown-count">${count}</span>
         <span class="breakdown-sessions">${pct}%</span>
