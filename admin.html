@@ -264,7 +264,7 @@
   <h1>TÁCTICA</h1>
   <span class="badge">ADMIN</span>
   <div style="flex:1"></div>
-  <button class="refresh-btn" id="refresh-btn" onclick="loadDashboard()"><span class="refresh-spinner"></span>Refresh</button>
+  <button class="refresh-btn" id="refresh-btn" onclick="_usersLoaded=false;loadDashboard()"><span class="refresh-spinner"></span>Refresh</button>
 </div>
 
 <div id="auth-gate" class="auth-gate" style="display:none">
@@ -282,10 +282,10 @@
 
   <div class="date-filters">
     <label>From</label>
-    <input type="date" id="date-start" onchange="applyDateFilter()">
+    <input type="date" id="date-start">
     <span class="sep">&rarr;</span>
     <label>To</label>
-    <input type="date" id="date-end" onchange="applyDateFilter()">
+    <input type="date" id="date-end">
     <span class="sep" style="margin-left:12px"></span>
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
       <input type="checkbox" id="exclude-me" checked onchange="applyDateFilter()" style="accent-color:#34D399;cursor:pointer">
@@ -356,7 +356,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth, setPersistence, browserLocalPersistence, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getFirestore, collection, query, orderBy, where, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBda3avj-hYXV72mgbc5ueLw7QAQnqTI34",
@@ -403,9 +403,10 @@ window.switchAdminTab = function(tab) {
 };
 
 // ─── Data cache ────────────────────────────────────────────────────────────
-let _allUsers = [];
-let _allSessions = [];
-let _allActions = [];
+let _allUsers = [];      // always all-time (small collection, needed for milestones)
+let _allSessions = [];   // scoped to selected dates
+let _allActions = [];    // scoped to selected dates
+let _usersLoaded = false;
 
 const today = new Date().toISOString().slice(0, 10);
 document.getElementById('date-start').value = today;
@@ -416,15 +417,38 @@ window.loadDashboard = async function() {
   const dashboard = document.getElementById('tab-overview');
   if (btn) btn.classList.add('loading');
   if (dashboard) dashboard.classList.add('shimmer');
-  try {
-    const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
-    _allUsers = (await getDocs(usersQ)).docs.map(d => ({ uid: d.id, ...d.data() }));
 
-    const sessionsQ = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
+  const startStr = document.getElementById('date-start').value;
+  const endStr = document.getElementById('date-end').value;
+  if (!startStr || !endStr) return;
+  const startMs = new Date(startStr + 'T00:00:00').getTime();
+  const endMs = new Date(endStr + 'T23:59:59.999').getTime();
+
+  try {
+    // Users: fetch all only once (small collection, needed for milestones/total count)
+    if (!_usersLoaded) {
+      const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
+      _allUsers = (await getDocs(usersQ)).docs.map(d => ({ uid: d.id, ...d.data() }));
+      _usersLoaded = true;
+    }
+
+    // Sessions: query only selected date range
+    const sessionsQ = query(
+      collection(db, 'tactica_sessions'),
+      where('timestamp', '>=', startMs),
+      where('timestamp', '<=', endMs),
+      orderBy('timestamp', 'desc')
+    );
     _allSessions = (await getDocs(sessionsQ)).docs.map(d => d.data());
 
+    // Actions: query only selected date range
     try {
-      const actionsQ = query(collection(db, 'tactica_actions'), orderBy('timestamp', 'desc'));
+      const actionsQ = query(
+        collection(db, 'tactica_actions'),
+        where('timestamp', '>=', startMs),
+        where('timestamp', '<=', endMs),
+        orderBy('timestamp', 'desc')
+      );
       _allActions = (await getDocs(actionsQ)).docs.map(d => d.data());
     } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
 
@@ -435,6 +459,10 @@ window.loadDashboard = async function() {
     if (dashboard) dashboard.classList.remove('shimmer');
   }
 };
+
+// Re-fetch when dates change
+document.getElementById('date-start').addEventListener('change', () => loadDashboard());
+document.getElementById('date-end').addEventListener('change', () => loadDashboard());
 
 window.applyDateFilter = function() {
   const startStr = document.getElementById('date-start').value;
@@ -447,8 +475,9 @@ window.applyDateFilter = function() {
   const excludeMe = document.getElementById('exclude-me').checked;
   const excludeUids = excludeMe ? new Set(_allUsers.filter(u => ADMIN_EMAILS.includes(u.email)).map(u => u.uid)) : new Set();
 
-  const filteredSessions = _allSessions.filter(s => s.timestamp >= startMs && s.timestamp <= endMs && !excludeUids.has(s.uid));
-  const filteredActions = _allActions.filter(a => a.timestamp >= startMs && a.timestamp <= endMs && !excludeUids.has(a.uid));
+  // Data is already date-scoped from Firestore — just apply excludeMe filter
+  const filteredSessions = excludeUids.size > 0 ? _allSessions.filter(s => !excludeUids.has(s.uid)) : _allSessions;
+  const filteredActions = excludeUids.size > 0 ? _allActions.filter(a => !excludeUids.has(a.uid)) : _allActions;
   const activeUids = new Set(filteredSessions.map(s => s.uid));
   const filteredUsers = _allUsers.filter(u => activeUids.has(u.uid) && !excludeUids.has(u.uid));
 
