@@ -965,7 +965,134 @@ function renderFeaturesTab(actions, activeUsers) {
     html += `</div>`;
   });
 
+  // Zone Analytics section
+  html += renderZoneAnalytics(actions);
+
   document.getElementById('features-breakdown').innerHTML = html;
+}
+
+// ─── Zone Analytics ─────────────────────────────────────────────────────────
+function renderZoneAnalytics(actions) {
+  let html = '';
+
+  // 1. General usage — zone elements inserted (shadow-rect + shadow-circle)
+  const zoneInserts = (actions || []).filter(a =>
+    a.action === 'element_inserted' && a.meta &&
+    (a.meta.element === 'shadow-rect' || a.meta.element === 'shadow-circle')
+  );
+  const totalInserts = zoneInserts.length;
+  const insertSessions = new Set(zoneInserts.map(a => a.sessionId).filter(Boolean)).size;
+  const insertUsers = new Set(zoneInserts.map(a => a.uid)).size;
+
+  html += `<div class="feature-card" style="border-color:rgba(216,255,60,0.3);margin-top:24px;">
+    <div class="feature-card-header">
+      <span class="feature-card-title" style="color:#D8FF3C">🟡 Zone Analytics</span>
+      <span class="feature-card-summary">${insertSessions} sessions &middot; ${insertUsers} coaches &middot; ${totalInserts} zones inserted</span>
+    </div>`;
+
+  // 2. Shape breakdown (rect vs circle vs freeform)
+  html += `<div style="margin-top:12px;margin-bottom:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;">Shape Breakdown</div>`;
+  const shapeCounts = {};
+  const shapeSessionSets = {};
+  const shapeUserSets = {};
+  zoneInserts.forEach(a => {
+    const shape = a.meta.element === 'shadow-rect' ? 'Rectangle' : 'Ellipse';
+    shapeCounts[shape] = (shapeCounts[shape] || 0) + 1;
+    if (!shapeSessionSets[shape]) shapeSessionSets[shape] = new Set();
+    if (!shapeUserSets[shape]) shapeUserSets[shape] = new Set();
+    if (a.sessionId) shapeSessionSets[shape].add(a.sessionId);
+    shapeUserSets[shape].add(a.uid);
+  });
+  // Also count shape changes (zone_shape events)
+  const shapeChanges = (actions || []).filter(a => a.action === 'zone_shape' && a.meta);
+  shapeChanges.forEach(a => {
+    const name = a.meta.shape === 'shadow-rect' ? 'Changed → Rectangle'
+      : a.meta.shape === 'shadow-circle' ? 'Changed → Ellipse'
+      : a.meta.shape === 'freeform' ? 'Changed → Freeform' : a.meta.shape;
+    shapeCounts[name] = (shapeCounts[name] || 0) + 1;
+    if (!shapeSessionSets[name]) shapeSessionSets[name] = new Set();
+    if (!shapeUserSets[name]) shapeUserSets[name] = new Set();
+    if (a.sessionId) shapeSessionSets[name].add(a.sessionId);
+    shapeUserSets[name].add(a.uid);
+  });
+
+  const shapeSorted = Object.entries(shapeCounts).sort((a, b) => b[1] - a[1]);
+  const shapeMax = shapeSorted.length > 0 ? shapeSorted[0][1] : 1;
+  if (shapeSorted.length === 0) {
+    html += `<div style="color:#555;font-size:12px;padding:8px 0">No data yet</div>`;
+  } else {
+    shapeSorted.forEach(([name, count]) => {
+      const pct = Math.round((count / shapeMax) * 100);
+      const sessions = shapeSessionSets[name] ? shapeSessionSets[name].size : 0;
+      const users = shapeUserSets[name] ? shapeUserSets[name].size : 0;
+      html += `<div class="breakdown-bar">
+        <span class="breakdown-label">${name}</span>
+        <div class="breakdown-track"><div class="breakdown-fill" style="width:${pct}%;background:#D8FF3C"></div></div>
+        <span class="breakdown-count">${count}</span>
+        <span class="breakdown-sessions">${sessions} sessions</span>
+        <span class="breakdown-sessions">${users} coaches</span>
+      </div>`;
+    });
+  }
+
+  // 3. Purpose breakdown
+  html += `<div style="margin-top:16px;margin-bottom:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;">Purpose Breakdown</div>`;
+  const purposeEvents = (actions || []).filter(a => a.action === 'zone_purpose' && a.meta && a.meta.purpose);
+  const purposeCounts = {};
+  const purposeSessionSets = {};
+  const purposeUserSets = {};
+  purposeEvents.forEach(a => {
+    const p = a.meta.purpose;
+    const label = p.charAt(0).toUpperCase() + p.slice(1);
+    purposeCounts[label] = (purposeCounts[label] || 0) + 1;
+    if (!purposeSessionSets[label]) purposeSessionSets[label] = new Set();
+    if (!purposeUserSets[label]) purposeUserSets[label] = new Set();
+    if (a.sessionId) purposeSessionSets[label].add(a.sessionId);
+    purposeUserSets[label].add(a.uid);
+  });
+
+  const purposeSorted = Object.entries(purposeCounts).sort((a, b) => b[1] - a[1]);
+  const purposeMax = purposeSorted.length > 0 ? purposeSorted[0][1] : 1;
+  if (purposeSorted.length === 0) {
+    html += `<div style="color:#555;font-size:12px;padding:8px 0">No data yet — tracking starts now</div>`;
+  } else {
+    purposeSorted.forEach(([name, count]) => {
+      const pct = Math.round((count / purposeMax) * 100);
+      const sessions = purposeSessionSets[name] ? purposeSessionSets[name].size : 0;
+      const users = purposeUserSets[name] ? purposeUserSets[name].size : 0;
+      html += `<div class="breakdown-bar">
+        <span class="breakdown-label">${name}</span>
+        <div class="breakdown-track"><div class="breakdown-fill" style="width:${pct}%;background:#D8FF3C"></div></div>
+        <span class="breakdown-count">${count}</span>
+        <span class="breakdown-sessions">${sessions} sessions</span>
+        <span class="breakdown-sessions">${users} coaches</span>
+      </div>`;
+    });
+  }
+
+  // 4. Label usage — with text vs empty
+  html += `<div style="margin-top:16px;margin-bottom:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;">Label Usage</div>`;
+  const labelEvents = (actions || []).filter(a => a.action === 'zone_label' && a.meta);
+  const withText = labelEvents.filter(a => a.meta.has_text === true).length;
+  const noText = labelEvents.filter(a => a.meta.has_text === false).length;
+  const labelTotal = withText + noText;
+  if (labelTotal === 0) {
+    html += `<div style="color:#555;font-size:12px;padding:8px 0">No data yet — tracking starts now</div>`;
+  } else {
+    const labelMax = Math.max(withText, noText, 1);
+    [['With label text', withText], ['Empty (no text)', noText]].forEach(([name, count]) => {
+      const pct = Math.round((count / labelMax) * 100);
+      html += `<div class="breakdown-bar">
+        <span class="breakdown-label">${name}</span>
+        <div class="breakdown-track"><div class="breakdown-fill" style="width:${pct}%;background:#D8FF3C"></div></div>
+        <span class="breakdown-count">${count}</span>
+        <span class="breakdown-sessions">${Math.round(count / labelTotal * 100)}%</span>
+      </div>`;
+    });
+  }
+
+  html += `</div>`;
+  return html;
 }
 
 // ─── Reviews Tab ────────────────────────────────────────────────────────────

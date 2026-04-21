@@ -793,6 +793,9 @@ window.confirmZoneLabel = function() {
   if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
   S.pushUndo();
   trackElementEdited(S.selectedEl.dataset.type, 'label');
+  const hasLabel = !!S.selectedEl.dataset.zoneLabel?.trim();
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'zone_label', { has_text: hasLabel, shape: S.selectedEl.dataset.type }).catch(() => {});
 };
 
 // ── Unified Zone panel functions ─────────────────────────────────────────────
@@ -888,6 +891,10 @@ window.applyZonePurpose = function(purpose) {
   if (lr) lr.style.display = '';
   updateShadowLabel(el);
   _syncZonePanelState(el);
+  // Analytics
+  trackElementEdited(el.dataset.type, 'zone_purpose');
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'zone_purpose', { purpose, shape: el.dataset.type }).catch(() => {});
 };
 
 window.applyZoneLabelSize = function(val) {
@@ -1034,6 +1041,10 @@ window.applyZoneShape = function(shapeType) {
 
   // Update panel state
   _syncZonePanelState(el);
+  // Analytics
+  trackElementEdited(shapeType, 'zone_shape');
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'zone_shape', { shape: shapeType, from: currentType }).catch(() => {});
 };
 
 // Convert rect/oval zone to freeform (draggable corners)
