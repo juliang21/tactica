@@ -863,6 +863,9 @@ export function addShadow(x, y, type) {
     shape.setAttribute('width', defHw * 2); shape.setAttribute('height', defHh * 2); shape.setAttribute('rx','4');
     // Default rect to yellow style (pressing zone look)
     g.dataset.zoneLabel = 'Pressing zone';
+    g.dataset.zonePurpose = 'press';
+    g.dataset.zoneFillStyle = 'soft';
+    g.dataset.zoneHex = '#D8FF3C';
   }
   const isRect = type === 'shadow-rect';
   shape.setAttribute('fill', isRect ? 'rgba(216,255,60,0.12)' : 'rgba(79,156,249,0.18)');

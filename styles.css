@@ -651,6 +651,14 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 .style-btn:hover { border-color: var(--text-dim); color: var(--text); }
 .style-btn.active { border-color: rgba(255,255,255,0.3); color: var(--text); background: var(--surface-active); }
 
+/* Zone panel fill-style buttons use the same yellow highlight as Purpose */
+#zone-edit-section .style-btn.active {
+  background: #D8FF3C;
+  border-color: #D8FF3C;
+  color: #0a0b0c;
+  font-weight: 700;
+}
+
 /* ── Unified Zone Panel ───────────────────────────────────────────────────── */
 /* Element icon in selection header */
 .el-icon {
