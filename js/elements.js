@@ -843,29 +843,212 @@ export function rewrapHeadline(g) {
 // ─── Add Shadow/Zone ──────────────────────────────────────────────────────────
 export function addShadow(x, y, type) {
   const id = 'shadow-' + S.nextObjectId();
-  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
   g.setAttribute('id', id); g.dataset.type = type;
   g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '1'; g.dataset.rotation = '0';
-  g.dataset.hw = '30'; g.dataset.hh = '20';
+  const defHw = type === 'shadow-rect' ? 80 : 55;
+  const defHh = type === 'shadow-rect' ? 45 : 30;
+  g.dataset.hw = String(defHw); g.dataset.hh = String(defHh);
+  g.dataset.zoneLabel = '';
 
   let shape;
   if (type === 'shadow-circle') {
-    shape = document.createElementNS('http://www.w3.org/2000/svg', 'ellipse');
+    shape = document.createElementNS(ns, 'ellipse');
     shape.setAttribute('cx', x); shape.setAttribute('cy', y);
-    shape.setAttribute('rx','30'); shape.setAttribute('ry','20');
+    shape.setAttribute('rx', defHw); shape.setAttribute('ry', defHh);
   } else {
-    shape = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    shape.setAttribute('x', x-30); shape.setAttribute('y', y-20);
-    shape.setAttribute('width','60'); shape.setAttribute('height','40'); shape.setAttribute('rx','4');
+    shape = document.createElementNS(ns, 'rect');
+    shape.setAttribute('x', x - defHw); shape.setAttribute('y', y - defHh);
+    shape.setAttribute('width', defHw * 2); shape.setAttribute('height', defHh * 2); shape.setAttribute('rx','4');
+    // Default rect to yellow style (pressing zone look)
+    g.dataset.zoneLabel = 'Pressing zone';
   }
-  shape.setAttribute('fill','rgba(79,156,249,0.18)');
-  shape.setAttribute('stroke','rgba(255,255,255,0.5)');
-  shape.setAttribute('stroke-width','1.5');
-  shape.setAttribute('stroke-dasharray','4,3');
+  const isRect = type === 'shadow-rect';
+  shape.setAttribute('fill', isRect ? 'rgba(216,255,60,0.12)' : 'rgba(79,156,249,0.18)');
+  shape.setAttribute('stroke', isRect ? 'rgba(216,255,60,0.85)' : 'rgba(255,255,255,0.5)');
+  shape.setAttribute('stroke-width', isRect ? '2.5' : '1.5');
+  shape.setAttribute('stroke-dasharray', isRect ? '8,5' : '4,3');
+
+  // Label text (hidden until user types something)
+  const label = document.createElementNS(ns, 'text');
+  label.classList.add('zone-label');
+  label.setAttribute('font-size', '14');
+  label.setAttribute('font-family', 'Inter, system-ui, sans-serif');
+  label.setAttribute('font-weight', '600');
+  label.setAttribute('pointer-events', 'none');
+  label.setAttribute('dominant-baseline', 'hanging');
+  label.textContent = '';
+  label.style.display = 'none';
 
   g.appendChild(shape);
+  g.appendChild(label);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
+  g.addEventListener('dblclick', e => {
+    e.stopPropagation();
+    select(g);
+    setTimeout(() => {
+      const inp = document.getElementById('zone-label-input');
+      if (inp) { inp.focus(); inp.select(); }
+    }, 50);
+  });
+  S.objectsLayer.appendChild(g);
+  updateShadowLabel(g);
+  return g;
+}
+
+// Update zone label position (after move/resize/rotate)
+export function updateShadowLabel(el) {
+  if (!el) return;
+  const label = el.querySelector('.zone-label');
+  if (!label) return;
+  const text = el.dataset.zoneLabel || '';
+  label.textContent = text;
+  label.style.display = text ? '' : 'none';
+  if (!text) return;
+
+  const t = el.dataset.type;
+  const cx = parseFloat(el.dataset.cx);
+  const cy = parseFloat(el.dataset.cy);
+  const scale = parseFloat(el.dataset.scale || '1');
+  const hw = parseFloat(el.dataset.hw || '30') * scale;
+  const hh = parseFloat(el.dataset.hh || '20') * scale;
+  const padX = 10 * scale;
+  const padY = 8 * scale;
+
+  const labelPos = el.dataset.zoneLabelPos || 'top-left';
+
+  if (t === 'shadow-rect') {
+    if (labelPos === 'bottom-left') {
+      label.setAttribute('x', cx - hw + padX);
+      label.setAttribute('y', cy + hh - padY * 1.8);
+      label.setAttribute('text-anchor', 'start');
+      label.setAttribute('dominant-baseline', 'auto');
+    } else {
+      label.setAttribute('x', cx - hw + padX);
+      label.setAttribute('y', cy - hh + padY);
+      label.setAttribute('text-anchor', 'start');
+      label.setAttribute('dominant-baseline', 'hanging');
+    }
+  } else {
+    // Ellipse: center horizontally and vertically
+    label.setAttribute('x', cx);
+    label.setAttribute('y', cy);
+    label.setAttribute('text-anchor', 'middle');
+    label.setAttribute('dominant-baseline', 'central');
+  }
+
+  // Apply same rotation as shape
+  const rot = parseFloat(el.dataset.rotation || '0');
+  if (rot) label.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+  else label.removeAttribute('transform');
+
+  // Scale font size with zone scale (use custom size if set)
+  const baseFontSize = parseFloat(el.dataset.zoneLabelSize || '14');
+  const fontSize = baseFontSize * scale;
+  label.setAttribute('font-size', fontSize);
+
+  // Label colour: use explicit text colour if set, else match border colour
+  if (el.dataset.zoneTextColor) {
+    label.setAttribute('fill', el.dataset.zoneTextColor);
+  } else {
+    const borderColor = el.dataset.savedStroke || el.querySelector('rect,ellipse,.freeform-shape')?.getAttribute('stroke');
+    if (borderColor) label.setAttribute('fill', borderColor);
+  }
+}
+
+// ─── Marker ──────────────────────────────────────────────────────────────────
+// Compact 3D-radar highlight for marking players on match screenshots.
+// Built at origin and positioned via translate() — same as player elements.
+export function addMarker(x, y) {
+  const id = 'marker-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'marker';
+  g.dataset.cx = x; g.dataset.cy = y;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.markerName = '';
+  g.dataset.borderColor = 'rgba(255,255,255,0.85)';
+  g.dataset.bgColor = 'rgba(255,255,255,0.10)';
+  g.dataset.lineColor = 'rgba(255,255,255,0.5)';
+  g.dataset.markerOpacity = '1';
+
+  // ── SVG defs: radial gradient for 3D ground-glow ────────────────────────
+  const defs = document.createElementNS(ns, 'defs');
+  const glowId = 'mglow-' + id;
+  const glowGrad = document.createElementNS(ns, 'radialGradient');
+  glowGrad.setAttribute('id', glowId);
+  const gs1 = document.createElementNS(ns, 'stop');
+  gs1.setAttribute('offset', '0%');  gs1.setAttribute('stop-color', 'rgba(255,255,255,0.18)');
+  const gs2 = document.createElementNS(ns, 'stop');
+  gs2.setAttribute('offset', '70%'); gs2.setAttribute('stop-color', 'rgba(255,255,255,0.05)');
+  const gs3 = document.createElementNS(ns, 'stop');
+  gs3.setAttribute('offset', '100%'); gs3.setAttribute('stop-color', 'rgba(255,255,255,0)');
+  glowGrad.appendChild(gs1); glowGrad.appendChild(gs2); glowGrad.appendChild(gs3);
+  defs.appendChild(glowGrad);
+  g.appendChild(defs);
+
+  // ── Outer glow (ambient ground projection) ──────────────────────────────
+  const glow = document.createElementNS(ns, 'ellipse');
+  glow.setAttribute('cx', 0); glow.setAttribute('cy', 2);
+  glow.setAttribute('rx', 24); glow.setAttribute('ry', 13);
+  glow.setAttribute('fill', `url(#${glowId})`);
+  glow.classList.add('marker-glow');
+  glow.setAttribute('pointer-events', 'none');
+
+  // ── Main ring (ground radar ellipse — wide, flat = perspective) ─────────
+  const ring = document.createElementNS(ns, 'ellipse');
+  ring.setAttribute('cx', 0); ring.setAttribute('cy', 0);
+  ring.setAttribute('rx', 17); ring.setAttribute('ry', 9);
+  ring.setAttribute('fill', 'rgba(255,255,255,0.10)');
+  ring.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+  ring.setAttribute('stroke-width', '1.6');
+  ring.classList.add('marker-ellipse');
+
+  // ── Inner shine (3D highlight — offset slightly up) ─────────────────────
+  const shine = document.createElementNS(ns, 'ellipse');
+  shine.setAttribute('cx', 0); shine.setAttribute('cy', -2);
+  shine.setAttribute('rx', 10); shine.setAttribute('ry', 4);
+  shine.setAttribute('fill', 'rgba(255,255,255,0.08)');
+  shine.setAttribute('pointer-events', 'none');
+  shine.classList.add('marker-shine');
+
+  // ── Name label ──────────────────────────────────────────────────────────
+  const text = document.createElementNS(ns, 'text');
+  text.setAttribute('x', 0); text.setAttribute('y', 18);
+  text.setAttribute('text-anchor', 'middle');
+  text.setAttribute('fill', 'white');
+  text.setAttribute('font-size', '11');
+  text.setAttribute('font-weight', '600');
+  text.setAttribute('font-family', 'Inter, system-ui, sans-serif');
+  text.setAttribute('paint-order', 'stroke');
+  text.setAttribute('stroke', 'rgba(0,0,0,0.55)');
+  text.setAttribute('stroke-width', '3');
+  text.setAttribute('stroke-linejoin', 'round');
+  text.classList.add('marker-label');
+  text.textContent = '';
+
+  g.appendChild(glow);
+  g.appendChild(ring);
+  g.appendChild(shine);
+  g.appendChild(text);
+
+  // Position via transform (enables clean drag via applyTransform)
+  g.setAttribute('transform', `translate(${x},${y})`);
+
+  makeDraggable(g);
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') {
+      e.stopPropagation();
+      // If this marker is part of a connected chain, select the whole chain
+      if (!selectMarkerChain(g, e)) {
+        // Lone marker — normal single selection
+        select(g, { additive: e.ctrlKey || e.metaKey });
+      }
+    }
+  });
   S.objectsLayer.appendChild(g);
   return g;
 }
@@ -1723,6 +1906,23 @@ export function addLink(player1Id, player2Id, opts = {}) {
   return g;
 }
 
+// ── Ellipse-border intersection ─────────────────────────────────────────────
+// Given a center (cx,cy), radii (rx,ry), scale, and a target point (tx,ty),
+// return the point on the ellipse border closest to the target direction.
+function ellipseBorderPoint(cx, cy, rx, ry, scale, tx, ty) {
+  const dx = tx - cx, dy = ty - cy;
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist === 0) return { x: cx + rx * scale, y: cy };
+  // Angle from center to target
+  const angle = Math.atan2(dy, dx);
+  // Point on ellipse at that angle
+  const srx = rx * scale, sry = ry * scale;
+  return {
+    x: cx + srx * Math.cos(angle),
+    y: cy + sry * Math.sin(angle),
+  };
+}
+
 export function updateLink(linkEl) {
   if (!linkEl || linkEl.dataset.type !== 'link') return;
   const p1Id = linkEl.dataset.player1;
@@ -1734,17 +1934,30 @@ export function updateLink(linkEl) {
   const hit = linkEl.querySelector('.link-hit');
   if (!line || !hit) return;
 
-  let x1, y1, x2, y2;
-  if (p1) { x1 = parseFloat(p1.dataset.cx); y1 = parseFloat(p1.dataset.cy); }
-  else { x1 = parseFloat(linkEl.dataset.lastX1 || '0'); y1 = parseFloat(linkEl.dataset.lastY1 || '0'); }
-  if (p2) { x2 = parseFloat(p2.dataset.cx); y2 = parseFloat(p2.dataset.cy); }
-  else { x2 = parseFloat(linkEl.dataset.lastX2 || '0'); y2 = parseFloat(linkEl.dataset.lastY2 || '0'); }
+  let cx1, cy1, cx2, cy2;
+  if (p1) { cx1 = parseFloat(p1.dataset.cx); cy1 = parseFloat(p1.dataset.cy); }
+  else { cx1 = parseFloat(linkEl.dataset.lastX1 || '0'); cy1 = parseFloat(linkEl.dataset.lastY1 || '0'); }
+  if (p2) { cx2 = parseFloat(p2.dataset.cx); cy2 = parseFloat(p2.dataset.cy); }
+  else { cx2 = parseFloat(linkEl.dataset.lastX2 || '0'); cy2 = parseFloat(linkEl.dataset.lastY2 || '0'); }
 
   // Store last known positions
-  linkEl.dataset.lastX1 = x1; linkEl.dataset.lastY1 = y1;
-  linkEl.dataset.lastX2 = x2; linkEl.dataset.lastY2 = y2;
+  linkEl.dataset.lastX1 = cx1; linkEl.dataset.lastY1 = cy1;
+  linkEl.dataset.lastX2 = cx2; linkEl.dataset.lastY2 = cy2;
   // Update cx/cy to midpoint
-  linkEl.dataset.cx = (x1 + x2) / 2; linkEl.dataset.cy = (y1 + y2) / 2;
+  linkEl.dataset.cx = (cx1 + cx2) / 2; linkEl.dataset.cy = (cy1 + cy2) / 2;
+
+  // Offset line endpoints to ellipse border for markers
+  let x1 = cx1, y1 = cy1, x2 = cx2, y2 = cy2;
+  if (p1?.dataset.type === 'marker') {
+    const s = parseFloat(p1.dataset.scale || '1');
+    const bp = ellipseBorderPoint(cx1, cy1, 17, 9, s, cx2, cy2);
+    x1 = bp.x; y1 = bp.y;
+  }
+  if (p2?.dataset.type === 'marker') {
+    const s = parseFloat(p2.dataset.scale || '1');
+    const bp = ellipseBorderPoint(cx2, cy2, 17, 9, s, cx1, cy1);
+    x2 = bp.x; y2 = bp.y;
+  }
 
   line.setAttribute('x1', x1); line.setAttribute('y1', y1);
   line.setAttribute('x2', x2); line.setAttribute('y2', y2);
@@ -1769,16 +1982,17 @@ export function updateAllLinks() {
   // Also check players layer in case links were moved there
   const links2 = S.playersLayer.querySelectorAll('g[data-type="link"]');
   links2.forEach(updateLink);
-  // Also update pair elements
+  // Also update pair elements and net-zones
   updateAllPairs();
+  updateAllNetZones();
 }
 
 // ─── Select Connected Group ──────────────────────────────────────────────────
 // When clicking a link line, find all transitively connected players and select them
-function selectConnectedGroup(linkEl, e) {
+// ── Build adjacency graph from all visible links ────────────────────────────
+function _buildLinkGraph() {
   const allLinks = [...S.objectsLayer.querySelectorAll('g[data-type="link"]'),
                      ...S.playersLayer.querySelectorAll('g[data-type="link"]')];
-  // Build adjacency graph
   const adj = {};
   for (const lk of allLinks) {
     if (lk.style.display === 'none') continue;
@@ -1787,17 +2001,26 @@ function selectConnectedGroup(linkEl, e) {
     if (!adj[b]) adj[b] = new Set();
     adj[a].add(b); adj[b].add(a);
   }
-  // BFS from both endpoints of the clicked link
-  const seed1 = linkEl.dataset.player1, seed2 = linkEl.dataset.player2;
+  return adj;
+}
+
+// ── BFS to find all connected element IDs from seeds ────────────────────────
+function _bfsConnected(adj, seeds) {
   const visited = new Set();
-  const queue = [seed1, seed2];
+  const queue = [...seeds];
   while (queue.length) {
     const id = queue.shift();
     if (visited.has(id)) continue;
     visited.add(id);
     if (adj[id]) for (const n of adj[id]) if (!visited.has(n)) queue.push(n);
   }
-  // Select all connected players
+  return visited;
+}
+
+function selectConnectedGroup(linkEl, e) {
+  const adj = _buildLinkGraph();
+  const seed1 = linkEl.dataset.player1, seed2 = linkEl.dataset.player2;
+  const visited = _bfsConnected(adj, [seed1, seed2]);
   const additive = e.ctrlKey || e.metaKey;
   let first = true;
   for (const pid of visited) {
@@ -1810,6 +2033,29 @@ function selectConnectedGroup(linkEl, e) {
       select(pEl, { additive: true });
     }
   }
+}
+
+// ── Select all markers/players connected to a given element ─────────────────
+// Called when a marker is clicked — selects the entire chain as a group.
+export function selectMarkerChain(markerEl, e) {
+  const adj = _buildLinkGraph();
+  // If this marker has no links, don't do group selection
+  if (!adj[markerEl.id]) return false;
+  const visited = _bfsConnected(adj, [markerEl.id]);
+  if (visited.size <= 1) return false; // lone marker, no group
+  const additive = e?.ctrlKey || e?.metaKey;
+  let first = true;
+  for (const pid of visited) {
+    const pEl = document.getElementById(pid);
+    if (!pEl) continue;
+    if (first && !additive) {
+      select(pEl, { additive: false });
+      first = false;
+    } else {
+      select(pEl, { additive: true });
+    }
+  }
+  return true;
 }
 
 // ─── Pair Element ────────────────────────────────────────────────────────────
@@ -1896,4 +2142,267 @@ export function updateAllPairs() {
   pairs.forEach(updatePair);
   const pairs2 = S.playersLayer.querySelectorAll('g[data-type="pair"]');
   pairs2.forEach(updatePair);
+}
+
+// ─── Net-Zone (Multi-Player Zone) ──────────────────────────────────────────
+// Filled polygon connecting 3+ players. Auto-follows player positions.
+
+// Sort points by angle from centroid to avoid self-intersecting polygon
+function _angleOrder(points) {
+  if (points.length <= 3) return points;
+  let cx = 0, cy = 0;
+  points.forEach(p => { cx += p.x; cy += p.y; });
+  cx /= points.length; cy /= points.length;
+  return [...points].sort((a, b) =>
+    Math.atan2(a.y - cy, a.x - cx) - Math.atan2(b.y - cy, b.x - cx)
+  );
+}
+
+export function addNetZone(playerIds, opts = {}) {
+  if (!playerIds || playerIds.length < 3) return null;
+  const id = 'nz-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'net-zone';
+  g.dataset.players = playerIds.join(',');
+  g.dataset.zoneColor = opts.color || 'rgba(79,156,249,0.15)';
+  g.dataset.zoneBorder = opts.border || 'rgba(255,255,255,0.35)';
+  g.dataset.zoneBorderStyle = opts.borderStyle || 'dashed';
+  g.dataset.cx = '0'; g.dataset.cy = '0';
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+
+  // Visible polygon fill
+  const fill = document.createElementNS(ns, 'polygon');
+  fill.classList.add('nz-fill');
+  fill.setAttribute('stroke-width', '1.5');
+  fill.setAttribute('stroke-linejoin', 'round');
+  fill.setAttribute('stroke-dasharray', '4,3');
+
+  // Thick invisible hit polygon for click targeting
+  const hit = document.createElementNS(ns, 'polygon');
+  hit.classList.add('nz-hit');
+  hit.setAttribute('fill', 'transparent');
+  hit.setAttribute('stroke', 'transparent');
+  hit.setAttribute('stroke-width', '14');
+  hit.setAttribute('pointer-events', 'fill');
+
+  g.appendChild(fill);
+  g.appendChild(hit);
+
+  // Vertex highlight circles — glow ring behind each player
+  for (const pid of playerIds) {
+    const vc = document.createElementNS(ns, 'circle');
+    vc.classList.add('nz-vertex');
+    vc.dataset.pid = pid;
+    vc.setAttribute('r', '20');
+    vc.setAttribute('fill', 'rgba(79,156,249,0.25)');
+    vc.setAttribute('stroke', 'rgba(79,156,249,0.6)');
+    vc.setAttribute('stroke-width', '2.5');
+    vc.setAttribute('pointer-events', 'none');
+    g.appendChild(vc);
+  }
+
+  // Insert at beginning of objectsLayer (behind players)
+  S.objectsLayer.insertBefore(g, S.objectsLayer.firstChild);
+
+  updateNetZone(g);
+
+  // Click → select zone (shows edit panel)
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') {
+      e.stopPropagation();
+      select(g, { additive: e.ctrlKey || e.metaKey });
+    }
+  });
+
+  // Mousedown → select referenced players as group and start drag
+  g.addEventListener('mousedown', e => {
+    if (S.tool !== 'select') return;
+    e.stopPropagation(); e.preventDefault();
+    _selectNetZoneGroup(g, e);
+    // Dispatch synthetic mousedown on first player for drag
+    const pids = g.dataset.players.split(',');
+    const p1 = document.getElementById(pids[0]);
+    if (p1) {
+      const synth = new MouseEvent('mousedown', {
+        bubbles: false, clientX: e.clientX, clientY: e.clientY,
+        ctrlKey: e.ctrlKey, metaKey: e.metaKey
+      });
+      p1.dispatchEvent(synth);
+    }
+  });
+
+  return g;
+}
+
+export function updateNetZone(el) {
+  if (!el || el.dataset.type !== 'net-zone') return;
+  // Free zones (image mode) don't track players — skip
+  if (el.dataset.freeZone === 'true') return;
+  const pids = (el.dataset.players || '').split(',').filter(Boolean);
+  const fillPoly = el.querySelector('.nz-fill');
+  const hitPoly = el.querySelector('.nz-hit');
+  if (!fillPoly || !hitPoly) return;
+
+  // Collect player positions
+  const rawPts = [];
+  for (const pid of pids) {
+    const p = document.getElementById(pid);
+    let x, y;
+    if (p) {
+      x = parseFloat(p.dataset.cx); y = parseFloat(p.dataset.cy);
+      el.dataset['lp_' + pid.replace(/[^a-zA-Z0-9]/g, '_')] = `${x},${y}`;
+    } else {
+      // Fallback to last known position
+      const key = 'lp_' + pid.replace(/[^a-zA-Z0-9]/g, '_');
+      const cached = el.dataset[key];
+      if (cached) {
+        const parts = cached.split(',');
+        x = parseFloat(parts[0]); y = parseFloat(parts[1]);
+      } else continue;
+    }
+    rawPts.push({ x, y, id: pid });
+  }
+
+  if (rawPts.length < 3) {
+    fillPoly.setAttribute('points', '');
+    hitPoly.setAttribute('points', '');
+    return;
+  }
+
+  // Sort by angle to avoid self-intersection
+  const ordered = _angleOrder(rawPts);
+  const ptsStr = ordered.map(p => `${p.x},${p.y}`).join(' ');
+  fillPoly.setAttribute('points', ptsStr);
+  hitPoly.setAttribute('points', ptsStr);
+
+  // Centroid
+  let cx = 0, cy = 0;
+  ordered.forEach(p => { cx += p.x; cy += p.y; });
+  cx /= ordered.length; cy /= ordered.length;
+  el.dataset.cx = cx; el.dataset.cy = cy;
+
+  // Apply colors
+  const color = el.dataset.zoneColor || 'rgba(79,156,249,0.15)';
+  const border = el.dataset.zoneBorder || 'rgba(255,255,255,0.35)';
+  fillPoly.setAttribute('fill', color);
+  fillPoly.setAttribute('stroke', border);
+  if (el.dataset.zoneBorderStyle === 'solid') {
+    fillPoly.removeAttribute('stroke-dasharray');
+  } else {
+    fillPoly.setAttribute('stroke-dasharray', '4,3');
+  }
+
+  // Reposition vertex highlight circles and match zone border color
+  const vcs = el.querySelectorAll('.nz-vertex');
+  for (const pt of rawPts) {
+    const vc = el.querySelector(`.nz-vertex[data-pid="${pt.id}"]`);
+    if (vc) { vc.setAttribute('cx', pt.x); vc.setAttribute('cy', pt.y); }
+  }
+  // Tint vertex circles to match border
+  vcs.forEach(vc => {
+    vc.setAttribute('stroke', border.replace(/[\d.]+\)$/, '0.6)'));
+    vc.setAttribute('fill', border.replace(/[\d.]+\)$/, '0.25)'));
+  });
+}
+
+export function updateAllNetZones() {
+  const zones = S.objectsLayer.querySelectorAll('g[data-type="net-zone"]');
+  zones.forEach(updateNetZone);
+  const zones2 = S.playersLayer.querySelectorAll('g[data-type="net-zone"]');
+  zones2.forEach(updateNetZone);
+}
+
+function _selectNetZoneGroup(zoneEl, e) {
+  const pids = zoneEl.dataset.players.split(',').filter(Boolean);
+  const additive = e?.ctrlKey || e?.metaKey;
+  let first = true;
+  for (const pid of pids) {
+    const pEl = document.getElementById(pid);
+    if (!pEl) continue;
+    if (first && !additive) {
+      select(pEl, { additive: false });
+      first = false;
+    } else {
+      select(pEl, { additive: true });
+    }
+  }
+}
+
+// ── Free Net-Zone (Image Analysis mode — no player anchors) ──────────────────
+export function addFreeNetZone(coords, opts = {}) {
+  if (!coords || coords.length < 3) return null;
+  const id = 'fnz-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'net-zone';
+  g.dataset.freeZone = 'true';                       // marks as free (no player anchors)
+  g.dataset.zoneColor = opts.color || 'rgba(79,156,249,0.15)';
+  g.dataset.zoneBorder = opts.border || 'rgba(255,255,255,0.35)';
+  g.dataset.zoneBorderStyle = opts.borderStyle || 'dashed';
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+
+  // Store raw coords so updateFreeNetZone can rebuild
+  g.dataset.zonePoints = coords.map(c => `${c.x},${c.y}`).join(' ');
+
+  // Centroid
+  let cx = 0, cy = 0;
+  coords.forEach(c => { cx += c.x; cy += c.y; });
+  cx /= coords.length; cy /= coords.length;
+  g.dataset.cx = String(cx); g.dataset.cy = String(cy);
+
+  // Visible polygon fill
+  const ordered = _angleOrder(coords);
+  const ptsStr = ordered.map(p => `${p.x},${p.y}`).join(' ');
+  const fill = document.createElementNS(ns, 'polygon');
+  fill.classList.add('nz-fill');
+  fill.setAttribute('points', ptsStr);
+  fill.setAttribute('fill', g.dataset.zoneColor);
+  fill.setAttribute('stroke', g.dataset.zoneBorder);
+  fill.setAttribute('stroke-width', '1.5');
+  fill.setAttribute('stroke-linejoin', 'round');
+  fill.setAttribute('stroke-dasharray', g.dataset.zoneBorderStyle === 'solid' ? '' : '4,3');
+
+  // Thick invisible hit polygon for click targeting
+  const hit = document.createElementNS(ns, 'polygon');
+  hit.classList.add('nz-hit');
+  hit.setAttribute('points', ptsStr);
+  hit.setAttribute('fill', 'transparent');
+  hit.setAttribute('stroke', 'transparent');
+  hit.setAttribute('stroke-width', '14');
+  hit.setAttribute('pointer-events', 'fill');
+
+  g.appendChild(fill);
+  g.appendChild(hit);
+
+  // Vertex highlight circles at each point
+  for (const c of ordered) {
+    const vc = document.createElementNS(ns, 'circle');
+    vc.classList.add('nz-vertex');
+    vc.setAttribute('cx', c.x);
+    vc.setAttribute('cy', c.y);
+    vc.setAttribute('r', '20');
+    vc.setAttribute('fill', 'rgba(79,156,249,0.25)');
+    vc.setAttribute('stroke', 'rgba(79,156,249,0.6)');
+    vc.setAttribute('stroke-width', '2.5');
+    vc.setAttribute('pointer-events', 'none');
+    g.appendChild(vc);
+  }
+
+  S.objectsLayer.insertBefore(g, S.objectsLayer.firstChild);
+
+  // Click → select zone
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') {
+      e.stopPropagation();
+      select(g, { additive: e.ctrlKey || e.metaKey });
+    }
+  });
+
+  // Free zone IS draggable (unlike player-anchored zones)
+  makeDraggable(g);
+
+  return g;
 }

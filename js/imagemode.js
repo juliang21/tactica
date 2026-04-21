@@ -3,6 +3,7 @@ import { rebuildPitch } from './pitch.js';
 import { deselect, switchTab, select, makeDraggable, applyTransform } from './interaction.js';
 import { trackModeSwitch, trackElementInserted } from './analytics.js';
 import { addPlayer, addBall, addCone, addReferee, addArrow, addShadow, addSpotlight, addVision, addTextBox, addHeadline, addTag } from './elements.js';
+import { activateMode } from './core/mode-registry.js';
 
 // ─── Trigger file picker ──────────────────────────────────────────────────────
 export function triggerImageUpload() {
@@ -105,9 +106,8 @@ export function enterImageMode(dataUrl, natW, natH) {
   // Enable grab-to-pan on the pitch wrap
   _initPanScroll();
 
-  // Update UI and switch to pitch tab (mini-pitch settings)
-  updateImageModeUI(true);
-  switchTab('pitch');
+  // Note: activateMode('image') is already called by _doSwitchToImage() when
+  // the user switches modes — before the upload overlay. No need to call again.
 }
 
 // ─── Exit Image Mode ──────────────────────────────────────────────────────────
@@ -142,10 +142,8 @@ export function exitImageMode() {
   // Restore pitch
   rebuildPitch();
 
-  updateImageModeUI(false);
-
-  // Switch to players tab
-  switchTab('players');
+  // Activate pitch mode via registry (toolbar config, side panel, mode buttons)
+  activateMode('pitch');
 }
 
 // ─── Mini Pitch (side pitch for image analysis) ─────────────────────────────
@@ -662,21 +660,4 @@ function _initPanScroll() {
   });
 }
 
-// ─── Update UI for image mode ─────────────────────────────────────────────────
-function updateImageModeUI(isImageMode) {
-  // Show/hide pitch-specific controls
-  const pitchPane = document.getElementById('pane-pitch');
-  const imagePlaceholder = document.getElementById('image-mode-info');
-  const uploadPane = document.getElementById('image-upload-pane');
-  if (pitchPane) pitchPane.style.display = isImageMode ? 'none' : '';
-  if (imagePlaceholder) imagePlaceholder.style.display = isImageMode ? '' : 'none';
-  if (uploadPane) uploadPane.style.display = 'none'; // always hide upload pane when entering/exiting
-
-  // Sync mode bar tab buttons
-  const pitchBtn = document.getElementById('mode-pitch-btn');
-  const imageBtn = document.getElementById('mode-image-btn');
-  if (pitchBtn && imageBtn) {
-    pitchBtn.classList.toggle('active', !isImageMode);
-    imageBtn.classList.toggle('active', isImageMode);
-  }
-}
+// updateImageModeUI() removed — now handled by mode-registry.js (activateMode)

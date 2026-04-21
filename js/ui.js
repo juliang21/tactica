@@ -24,7 +24,9 @@ export function setTool(t) {
     const arrowBtn = document.getElementById('arrow-' + S.arrowType + '-btn');
     if (arrowBtn) arrowBtn.classList.add('active');
   }
-  document.body.className = 'tool-' + (t.startsWith('player') ? 'player' : t.startsWith('shadow') ? 'shadow' : t === 'textbox' ? 'textbox' : t === 'vision' ? 'vision' : t);
+  const toolClass = 'tool-' + (t.startsWith('player') ? 'player' : t.startsWith('shadow') ? 'shadow' : t === 'textbox' ? 'textbox' : t === 'vision' ? 'vision' : t);
+  const keepImageMode = document.body.classList.contains('image-mode');
+  document.body.className = toolClass + (keepImageMode ? ' image-mode' : '');
   if (!t.startsWith('player')) deselect();
 }
 
@@ -460,6 +462,12 @@ export function openColorPicker(target) {
       const parts = c.split(',').map(Number);
       return '#' + parts.slice(0,3).map(v => v.toString(16).padStart(2,'0')).join('');
     }) || '#ffffff';
+  } else if (target === 'zone-colour') {
+    current = S.selectedEl?.dataset.zoneHex || '#D8FF3C';
+  } else if (target === 'zone-text') {
+    current = S.selectedEl?.dataset.zoneTextColor || '#ffffff';
+  } else if (target === 'zone-border-color') {
+    current = S.selectedEl?.dataset.zoneBorderHex || S.selectedEl?.dataset.zoneHex || '#ffffff';
   } else {
     const circ = S.selectedEl?.querySelector('circle:not(.hit-area)');
     if (circ && target === 'fill') current = circ.getAttribute('fill') || '#ffffff';
@@ -535,6 +543,24 @@ export function confirmColorPicker() {
       shape.setAttribute('stroke', hex);
       S.selectedEl.dataset.savedStroke = hex;
     }
+  } else if (colorPickerTarget === 'zone-colour') {
+    // Custom fill colour via unified zone panel
+    if (window.applyZoneColour) {
+      window.applyZoneColour({ dataset: { color: hex } });
+    }
+    return;
+  } else if (colorPickerTarget === 'zone-text') {
+    // Custom text colour
+    if (window.applyZoneTextColour) {
+      window.applyZoneTextColour({ dataset: { color: hex } });
+    }
+    return;
+  } else if (colorPickerTarget === 'zone-border-color') {
+    // Custom border colour
+    if (window.applyZoneBorderColour) {
+      window.applyZoneBorderColour({ dataset: { color: hex } });
+    }
+    return;
   } else if (colorPickerTarget === 'name-color') {
     trackElementEdited('player', 'name_color');
     const nl = S.selectedEl.querySelector('.player-name');
@@ -974,6 +1000,8 @@ export function applyZoneBorderStyle(style) {
   if (!shape) return;
   if (style === 'solid') {
     shape.removeAttribute('stroke-dasharray');
+  } else if (style === 'dotted') {
+    shape.setAttribute('stroke-dasharray', '2,3');
   } else {
     shape.setAttribute('stroke-dasharray', '4,3');
   }
@@ -1076,16 +1104,99 @@ export function applySize(val) {
 
 export function applyRotation(val) {
   const rv = Math.round(val) + '°';
+  // Sync all rotation displays
   document.getElementById('rot-val').textContent = rv;
+  document.getElementById('rot-slider').value = val;
   const armRotVal = document.getElementById('arm-rot-val');
   if (armRotVal) armRotVal.textContent = rv;
+  const zrs = document.getElementById('zone-rot-slider');
+  const zrv = document.getElementById('zone-rot-val');
+  if (zrs) zrs.value = val;
+  if (zrv) zrv.textContent = rv;
   if (!S.selectedEl) return;
   trackElementEdited(S.selectedEl.dataset.type, 'rotation');
   S.selectedEl.dataset.rotation = val;
   const t = S.selectedEl.dataset.type;
-  if (t.startsWith('shadow') || t === 'vision') applyTransform(S.selectedEl);
+  if (t.startsWith('shadow') || t === 'vision' || t === 'freeform' || t === 'pair') applyTransform(S.selectedEl);
   else if (t === 'arrow') updateArrowVisual(S.selectedEl);
   else if (t === 'player' && S.selectedEl.dataset.arms === '1') updatePlayerArms(S.selectedEl);
+}
+
+// ─── Marker Edit Functions ─────────────────────────────────────────────────
+export function applyMarkerBorderColor(el) {
+  const color = el.dataset.color;
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'marker') return;
+  // Apply to all selected markers (supports bulk edit)
+  for (const m of S.selectedEls) {
+    if (m.dataset.type !== 'marker') continue;
+    m.dataset.borderColor = color;
+    const ring = m.querySelector('.marker-ellipse');
+    if (ring) ring.setAttribute('stroke', color);
+  }
+}
+
+export function applyMarkerBgColor(el) {
+  const color = el.dataset.color;
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'marker') return;
+  // Apply to all selected markers (supports bulk edit)
+  for (const m of S.selectedEls) {
+    if (m.dataset.type !== 'marker') continue;
+    m.dataset.bgColor = color;
+    const ring = m.querySelector('.marker-ellipse');
+    if (ring) ring.setAttribute('fill', color);
+    // Also tint the glow
+    const defs = m.querySelector('defs radialGradient');
+    if (defs) {
+      const stops = defs.querySelectorAll('stop');
+      if (stops.length >= 3) {
+        stops[0].setAttribute('stop-color', color.replace(/[\d.]+\)$/, '0.22)'));
+        stops[1].setAttribute('stop-color', color.replace(/[\d.]+\)$/, '0.06)'));
+      }
+    }
+  }
+}
+
+export function applyMarkerLineColor(el) {
+  const color = el.dataset.color;
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'marker') return;
+  // Apply to all selected markers and their connected links
+  for (const m of S.selectedEls) {
+    if (m.dataset.type !== 'marker') continue;
+    m.dataset.lineColor = color;
+    updateMarkerLinks(m, color);
+  }
+}
+
+function updateMarkerLinks(markerEl, color) {
+  const markerId = markerEl.id;
+  document.querySelectorAll('[data-type="link"]').forEach(linkEl => {
+    if (linkEl.dataset.player1 === markerId || linkEl.dataset.player2 === markerId) {
+      linkEl.dataset.linkColor = color;
+      const line = linkEl.querySelector('.link-line');
+      if (line) line.setAttribute('stroke', color);
+    }
+  });
+}
+
+export function applyMarkerOpacity(val) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'marker') return;
+  // Apply to all selected markers
+  for (const m of S.selectedEls) {
+    if (m.dataset.type !== 'marker') continue;
+    m.dataset.markerOpacity = val;
+    m.style.opacity = val;
+  }
+}
+
+export function liveUpdateMarkerName(val) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'marker') return;
+  S.selectedEl.dataset.markerName = val;
+  const text = S.selectedEl.querySelector('.marker-label');
+  if (text) text.textContent = val;
+}
+
+export function confirmMarkerName() {
+  // Push undo state if needed
 }
 
 // ─── Clear All ────────────────────────────────────────────────────────────────

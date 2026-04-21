@@ -1,5 +1,24 @@
 import * as S from './state.js';
 import { trackElementSelected } from './analytics.js';
+import { switchTabForMode, getActiveMode } from './core/mode-registry.js';
+
+// ─── Element icon for selection panel ─────────────────────────────────────────
+function _getElementIcon(type, el) {
+  const stroke = el?.dataset.savedStroke || el?.querySelector('rect,ellipse,.freeform-shape')?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
+  if (type === 'shadow-rect') {
+    return `<svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="none" stroke="${stroke}" stroke-width="1" opacity="0.4"/><rect x="9" y="12" width="18" height="12" rx="2" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-dasharray="3,2"/></svg>`;
+  }
+  if (type === 'shadow-circle') {
+    return `<svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="none" stroke="${stroke}" stroke-width="1" opacity="0.4"/><ellipse cx="18" cy="18" rx="11" ry="7" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-dasharray="3,2"/></svg>`;
+  }
+  if (type === 'freeform') {
+    return `<svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="none" stroke="${stroke}" stroke-width="1" opacity="0.4"/><path d="M10 24 Q7 16 12 11 Q18 6 25 12 Q30 18 26 24 Q22 28 15 26 Z" fill="none" stroke="${stroke}" stroke-width="1.5" stroke-dasharray="3,2" stroke-linejoin="round"/></svg>`;
+  }
+  if (type === 'net-zone') {
+    return `<svg width="36" height="36" viewBox="0 0 36 36"><circle cx="18" cy="18" r="17" fill="none" stroke="rgba(79,156,249,0.5)" stroke-width="1" opacity="0.4"/><polygon points="11,26 18,8 27,24" fill="rgba(79,156,249,0.15)" stroke="rgba(79,156,249,0.6)" stroke-width="1.5" stroke-dasharray="3,2"/></svg>`;
+  }
+  return '';
+}
 
 // ─── Textbox rewrap callback (set from app.js to avoid circular import) ──────
 let _rewrapFn = null;
@@ -34,6 +53,14 @@ export function registerFreeformUpdate(fn) { _updateFreeformFn = fn; }
 // ─── Motion visual update callback ─────────────────────────────────────────
 let _updateMotionFn = null;
 export function registerMotionUpdate(fn) { _updateMotionFn = fn; }
+
+// ─── Shadow label update callback ─────────────────────────────────────────
+let _updateShadowLabelFn = null;
+export function registerShadowLabelUpdate(fn) { _updateShadowLabelFn = fn; }
+
+// ─── Zone panel sync callback (called when a zone is selected) ──────────
+let _syncZonePanelFn = null;
+export function registerZonePanelSync(fn) { _syncZonePanelFn = fn; }
 
 // ─── Spotlight name background helper ─────────────────────────────────────────
 export function updateSpotlightNameBg(g) {
@@ -81,7 +108,7 @@ export function applyTransform(el) {
   const rot = parseFloat(el.dataset.rotation || '0');
   const t = el.dataset.type;
 
-  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone') {
+  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'marker') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
   } else if (t === 'tag') {
     if (_repositionTagFn) _repositionTagFn(el);
@@ -101,6 +128,7 @@ export function applyTransform(el) {
     sh.setAttribute('cx', cx); sh.setAttribute('cy', cy);
     sh.setAttribute('rx', hw); sh.setAttribute('ry', hh);
     sh.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+    if (t === 'shadow-circle' && _updateShadowLabelFn) _updateShadowLabelFn(el);
   } else if (t === 'freeform') {
     if (_updateFreeformFn) _updateFreeformFn(el);
   } else if (t === 'motion') {
@@ -112,6 +140,7 @@ export function applyTransform(el) {
     sh.setAttribute('x', cx-hw); sh.setAttribute('y', cy-hh);
     sh.setAttribute('width', hw*2); sh.setAttribute('height', hh*2);
     sh.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+    if (_updateShadowLabelFn) _updateShadowLabelFn(el);
   } else if (t === 'spotlight') {
     const rx = parseFloat(el.dataset.rx || '28') * scale;
     const ry = parseFloat(el.dataset.ry || '5') * scale;
@@ -194,6 +223,7 @@ function moveElement(el, nx, ny) {
   else if (t === 'spotlight') applyTransform(el);
   else if (t === 'tag') applyTransform(el);
   else if (t === 'freeform') applyTransform(el);
+  else if (t === 'marker') applyTransform(el);
   else if (t.startsWith('shadow')) applyTransform(el);
 }
 
@@ -330,6 +360,21 @@ export function select(el, opts = {}) {
       linkLine.setAttribute('stroke-width', '3');
     }
   }
+  if (type === 'marker') {
+    const ring = el.querySelector('.marker-ellipse');
+    if (ring) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = ring.getAttribute('stroke');
+      ring.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+    }
+  }
+  if (type === 'net-zone') {
+    const shape = el.querySelector('.nz-fill');
+    if (shape) {
+      if (!el.dataset.savedStroke) el.dataset.savedStroke = shape.getAttribute('stroke');
+      shape.setAttribute('stroke', 'rgba(79,156,249,0.9)');
+      shape.setAttribute('stroke-width', '2');
+    }
+  }
   // If multi-select, show multi-select UI instead of individual panels
   if (S.selectedEls.size > 1) {
     _updateMultiSelectUI();
@@ -351,9 +396,14 @@ export function select(el, opts = {}) {
     : type === 'tag' ? 'Callout'
     : type === 'link' ? 'Player Link'
     : type === 'pair' ? 'Pair'
+    : type === 'marker' ? 'Marker'
+    : type === 'net-zone' ? 'Player Zone'
     : 'Zone';
-  const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : (type === 'textbox' || type === 'headline' || type === 'tag') ? ' · double-click to edit' : '';
-  S.selInfo.innerHTML = `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
+  const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : (type === 'textbox' || type === 'headline' || type === 'tag') ? ' · double-click to edit' : type?.startsWith('shadow') || type === 'freeform' ? ' · double-click to edit label' : '';
+  const icon = _getElementIcon(type, el);
+  S.selInfo.innerHTML = icon
+    ? `<div style="display:flex;align-items:center;gap:10px"><div class="el-icon">${icon}</div><div><strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span></div></div>`
+    : `<strong>${typeLabel}</strong><br><span style="font-size:10px;color:var(--text-muted)">Drag to move${hint}</span>`;
 
   // Mobile context bar
   if (window.innerWidth <= 768) {
@@ -375,6 +425,7 @@ export function select(el, opts = {}) {
   const visionSec = document.getElementById('vision-edit-section');
   const tagSec = document.getElementById('tag-edit-section');
   const linkSec = document.getElementById('link-edit-section');
+  const markerSecInit = document.getElementById('marker-edit-section');
   const delSec = document.getElementById('del-section');
   const layerSec = document.getElementById('layer-section');
 
@@ -390,25 +441,39 @@ export function select(el, opts = {}) {
   visionSec.style.display = 'none';
   if (tagSec) tagSec.style.display = 'none';
   if (linkSec) linkSec.style.display = 'none';
+  if (markerSecInit) markerSecInit.style.display = 'none';
+  const nzSec = document.getElementById('nz-edit-section');
+  if (nzSec) nzSec.style.display = 'none';
   delSec.style.display = '';
   layerSec.style.display = '';
 
   const isArrow = type === 'arrow';
   const isZone = type?.startsWith('shadow') || type === 'pair' || type === 'freeform';
+  const isNetZone = type === 'net-zone';
   const isText = type === 'textbox';
   const isHeadline = type === 'headline';
   const isTag = type === 'tag';
   const isLink = type === 'link';
-  const showSize = !isArrow && !isZone && !isText && !isHeadline && !isTag && !isLink;
+  const isMarker = type === 'marker';
+  const showSize = !isArrow && !isZone && !isNetZone && !isText && !isHeadline && !isTag && !isLink && !isMarker;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
   // Vision and zones use the standalone rotation-section; players use inline arm-rotation-group
   // Pair rotation is driven by player positions, not editable
-  const showStandaloneRot = (type === 'vision' || isZone) && type !== 'pair';
+  // Net-zone has no rotation (vertices are players)
+  // Zones have rotation/layer inside their Advanced panel, so hide standalone sections
+  const showStandaloneRot = type === 'vision' && !isZone;
   document.getElementById('rotation-section').style.display = showStandaloneRot ? '' : 'none';
+  // Layer section: zones have it inside their Advanced panel, so hide standalone
+  if (isZone) document.getElementById('layer-section').style.display = 'none';
   if (isZone) {
     const rv = el.dataset.rotation || '0';
+    // Sync standalone slider (for compat) and in-panel slider
     document.getElementById('rot-slider').value = rv;
     document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
+    const zrs = document.getElementById('zone-rot-slider');
+    const zrv = document.getElementById('zone-rot-val');
+    if (zrs) zrs.value = rv;
+    if (zrv) zrv.textContent = Math.round(parseFloat(rv)) + '°';
   }
 
   if (type === 'player') {
@@ -508,16 +573,36 @@ export function select(el, opts = {}) {
       const lStyle = el.dataset.linkStyle || 'dashed';
       linkSec.querySelectorAll('.formation-btn').forEach(b => b.classList.toggle('active', b.dataset.linkstyle === lStyle));
     }
+  } else if (isMarker) {
+    const markerSec = document.getElementById('marker-edit-section');
+    if (markerSec) {
+      markerSec.style.display = '';
+      document.getElementById('marker-name-input').value = el.dataset.markerName || '';
+      document.getElementById('marker-opacity-slider').value = el.dataset.markerOpacity || '1';
+      document.getElementById('marker-opacity-val').textContent = Math.round((el.dataset.markerOpacity || 1) * 100) + '%';
+    }
+  } else if (isNetZone) {
+    if (nzSec) {
+      nzSec.style.display = '';
+      // Parse current opacity from zone color
+      const color = el.dataset.zoneColor || 'rgba(79,156,249,0.15)';
+      const alphaMatch = color.match(/,\s*([\d.]+)\s*\)/);
+      const alpha = alphaMatch ? parseFloat(alphaMatch[1]) : 0.15;
+      const opSlider = document.getElementById('nz-opacity-slider');
+      const opLabel = document.getElementById('nz-opacity-value');
+      if (opSlider) opSlider.value = alpha;
+      if (opLabel) opLabel.textContent = Math.round(alpha * 100) + '%';
+      // Set active border style
+      const bStyle = el.dataset.zoneBorderStyle || 'dashed';
+      nzSec.querySelectorAll('[data-nzbstyle]').forEach(b => b.classList.toggle('active', b.dataset.nzbstyle === bStyle));
+    }
   } else if (isZone) {
     zoneSec.style.display = '';
-    // Set active border style button based on current shape
-    const shape = el.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
-    const dashArr = shape?.getAttribute('stroke-dasharray') || '';
-    const zStyle = (dashArr && dashArr !== 'none') ? 'dashed' : 'solid';
-    document.querySelectorAll('[data-zstyle]').forEach(b => b.classList.toggle('active', b.dataset.zstyle === zStyle));
-    const zoneOp = el.dataset.zoneOpacity || shape?.getAttribute('opacity') || '1';
-    document.getElementById('zone-opacity-slider').value = zoneOp;
-    document.getElementById('zone-opacity-val').textContent = Math.round(parseFloat(zoneOp) * 100) + '%';
+    // Populate zone label input
+    const zoneLabelInput = document.getElementById('zone-label-input');
+    if (zoneLabelInput) zoneLabelInput.value = el.dataset.zoneLabel || '';
+    // Sync the full zone panel state (purpose, colour, fill style, shape, etc.)
+    if (_syncZonePanelFn) _syncZonePanelFn(el);
   }
 
   const s = parseFloat(el.dataset.scale || '1') * 100;
@@ -646,6 +731,22 @@ export function deselectVisual(el) {
       delete el.dataset.savedStroke;
     }
   }
+  if (t === 'marker') {
+    const ring = el.querySelector('.marker-ellipse');
+    if (ring) {
+      const saved = el.dataset.savedStroke || el.dataset.borderColor || 'rgba(255,255,255,0.85)';
+      ring.setAttribute('stroke', saved);
+      delete el.dataset.savedStroke;
+    }
+  }
+  if (t === 'net-zone') {
+    const shape = el.querySelector('.nz-fill');
+    if (shape && el.dataset.savedStroke) {
+      shape.setAttribute('stroke', el.dataset.savedStroke);
+      shape.setAttribute('stroke-width', '1.5');
+      delete el.dataset.savedStroke;
+    }
+  }
 }
 
 export function deselect() {
@@ -668,6 +769,8 @@ export function deselect() {
   document.getElementById('vision-edit-section').style.display = 'none';
   const tagSec = document.getElementById('tag-edit-section');
   if (tagSec) tagSec.style.display = 'none';
+  const markerSec = document.getElementById('marker-edit-section');
+  if (markerSec) markerSec.style.display = 'none';
   document.getElementById('rotation-section').style.display = 'none';
   document.getElementById('size-section').style.display = 'none';
 }
@@ -705,23 +808,26 @@ export function deleteSelected() {
   if (tagDelSec) tagDelSec.style.display = 'none';
   const linkDelSec = document.getElementById('link-edit-section');
   if (linkDelSec) linkDelSec.style.display = 'none';
+  const markerDelSec = document.getElementById('marker-edit-section');
+  if (markerDelSec) markerDelSec.style.display = 'none';
   const multiSec = document.getElementById('multi-select-section');
   if (multiSec) multiSec.style.display = 'none';
 }
 
 // ─── Tab Switcher ─────────────────────────────────────────────────────────────
 export function switchTab(name) {
-  const isImageMode = document.body.classList.contains('image-mode');
+  // Delegate to mode registry so each mode declares its own tab→pane mapping.
+  // Falls back to default pitch-mode layout if no mode is active yet.
+  const mode = getActiveMode();
+  if (mode) {
+    switchTabForMode(name);
+    return;
+  }
+  // Fallback: default pitch-mode behavior (before mode registry initializes)
   ['players','pitch','element'].forEach(t => {
-    document.getElementById('tab-' + t).classList.toggle('active', t === name);
-    if (t === 'pitch' && isImageMode) {
-      // In image mode: always hide pane-pitch, show image-mode-info instead
-      document.getElementById('pane-pitch').style.display = 'none';
-      const imgInfo = document.getElementById('image-mode-info');
-      if (imgInfo) imgInfo.style.display = name === 'pitch' ? 'flex' : 'none';
-    } else {
-      document.getElementById('pane-' + t).style.display = t === name ? 'flex' : 'none';
-    }
+    document.getElementById('tab-' + t)?.classList.toggle('active', t === name);
+    const pane = document.getElementById('pane-' + t);
+    if (pane) pane.style.display = t === name ? 'flex' : 'none';
   });
 }
 
@@ -1515,7 +1621,7 @@ function _updateMultiSelectUI() {
   // Hide all individual edit sections
   const sections = ['player-edit-section', 'referee-edit-section', 'arrow-edit-section',
     'zone-edit-section', 'textbox-edit-section', 'headline-edit-section',
-    'spotlight-edit-section', 'vision-edit-section', 'tag-edit-section', 'link-edit-section'];
+    'spotlight-edit-section', 'vision-edit-section', 'tag-edit-section', 'link-edit-section', 'marker-edit-section', 'nz-edit-section'];
   for (const id of sections) {
     const sec = document.getElementById(id);
     if (sec) sec.style.display = 'none';
@@ -1572,6 +1678,22 @@ function _updateMultiSelectUI() {
       document.getElementById('number-input').placeholder = 'mixed';
       document.getElementById('name-input').value = '';
       document.getElementById('name-input').placeholder = 'mixed';
+    }
+  }
+
+  // Show marker-specific multi-edit if all are markers (connected chain)
+  if (types.size === 1 && types.has('marker')) {
+    const markerSec = document.getElementById('marker-edit-section');
+    if (markerSec) {
+      markerSec.style.display = '';
+      // Clear name field — it doesn't apply in bulk
+      document.getElementById('marker-name-input').value = '';
+      document.getElementById('marker-name-input').placeholder = `${count} markers`;
+      // Show first marker's opacity as reference
+      const firstMarker = [...S.selectedEls][0];
+      const op = firstMarker?.dataset.markerOpacity || '1';
+      document.getElementById('marker-opacity-slider').value = op;
+      document.getElementById('marker-opacity-val').textContent = Math.round(op * 100) + '%';
     }
   }
 }

@@ -199,26 +199,12 @@
   <!-- 3. Zones, Highlights & Annotations -->
   <div class="tool-group">
     <h3 class="tool-group-title">Annotations</h3>
-    <div class="tool-bundle" id="zone-bundle">
-      <button class="tool-btn" id="zone-main-btn" data-tool="shadow-circle" onclick="openBundle('zone-bundle')">
-        <svg width="18" height="18" viewBox="0 0 22 22"><ellipse cx="11" cy="11" rx="8" ry="5" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2"/></svg>
-        <span class="tool-label">Zone</span>
-      </button>
-      <div class="bundle-menu">
-        <button class="bundle-option" onclick="setTool('shadow-circle');closeBundle('zone-bundle');updateBundleIcon('zone-bundle','shadow-circle')">
-          <svg width="16" height="16" viewBox="0 0 22 22"><ellipse cx="11" cy="11" rx="8" ry="5" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2"/></svg>
-          Ellipse zone
-        </button>
-        <button class="bundle-option" onclick="setTool('shadow-rect');closeBundle('zone-bundle');updateBundleIcon('zone-bundle','shadow-rect')">
-          <svg width="16" height="16" viewBox="0 0 22 22"><rect x="3" y="6" width="16" height="10" rx="2" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2"/></svg>
-          Rectangle zone
-        </button>
-        <button class="bundle-option" onclick="setTool('freeform');closeBundle('zone-bundle');updateBundleIcon('zone-bundle','freeform')">
-          <svg width="16" height="16" viewBox="0 0 22 22" fill="none"><path d="M6 14 Q3 8 7 5 Q12 2 16 6 Q20 10 17 15 Q14 19 9 17 Z" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2" stroke-linejoin="round"/></svg>
-          Freeform zone
-        </button>
-      </div>
-    </div>
+    <button class="tool-btn" data-tool="shadow-rect" onclick="setTool('shadow-rect')">
+      <svg width="18" height="18" viewBox="0 0 22 22">
+        <rect x="3" y="5" width="16" height="12" rx="2" fill="rgba(216,255,60,0.2)" stroke="rgba(216,255,60,0.6)" stroke-width="1.2" stroke-dasharray="3,2"/>
+      </svg>
+      <span class="tool-label">Zone</span>
+    </button>
     <button class="tool-btn" data-tool="spotlight" onclick="setTool('spotlight')">
         <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
           <path d="M10 2 L5 16 L17 16 L12 2 Z" fill="rgba(200,210,230,0.2)"/>
@@ -285,6 +271,14 @@
       </svg>
       <span class="tool-label">Callout</span>
     </button>
+    <button class="tool-btn" data-tool="marker" onclick="setTool('marker')">
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+        <ellipse cx="11" cy="11" rx="9" ry="5" fill="rgba(255,255,255,0.08)" stroke="rgba(255,255,255,0.25)" stroke-width="0.8"/>
+        <ellipse cx="11" cy="11" rx="6" ry="3.5" fill="rgba(255,255,255,0.12)" stroke="rgba(255,255,255,0.7)" stroke-width="1.3"/>
+        <ellipse cx="11" cy="10" rx="3.5" ry="1.5" fill="rgba(255,255,255,0.1)"/>
+      </svg>
+      <span class="tool-label">Marker</span>
+    </button>
     <button class="tool-btn" data-tool="link" id="connect-btn" onclick="setTool('link')">
       <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
         <circle cx="4" cy="11" r="3" fill="#8B5CF6" opacity="0.7"/>
@@ -294,13 +288,22 @@
       <span class="tool-label">Connect</span>
     </button>
     <button class="tool-btn" data-tool="pair" id="pair-btn" onclick="setTool('pair')">
-      <span class="badge-new">New</span>
       <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
         <ellipse cx="11" cy="11" rx="10" ry="6" fill="rgba(234,179,8,0.2)" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-dasharray="2,1.5"/>
         <circle cx="7" cy="11" r="2.5" fill="#8B5CF6" opacity="0.8"/>
         <circle cx="15" cy="11" r="2.5" fill="#FBBF24" opacity="0.8"/>
       </svg>
       <span class="tool-label">Pair</span>
+    </button>
+    <button class="tool-btn" data-tool="net-zone" id="nz-btn" onclick="setTool('net-zone')">
+      <span class="badge-new">New</span>
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+        <polygon points="5,17 11,3 17,17" fill="rgba(79,156,249,0.2)" stroke="rgba(255,255,255,0.5)" stroke-width="1" stroke-dasharray="2,1.5" stroke-linejoin="round"/>
+        <circle cx="5" cy="17" r="2.5" fill="#8B5CF6" opacity="0.8"/>
+        <circle cx="17" cy="17" r="2.5" fill="#8B5CF6" opacity="0.8"/>
+        <circle cx="11" cy="3" r="2.5" fill="#FBBF24" opacity="0.8"/>
+      </svg>
+      <span class="tool-label">Zone</span>
     </button>
   </div>
 
@@ -1336,45 +1339,171 @@
 
     <!-- Zone properties -->
     <div class="panel-section" id="zone-edit-section" style="display:none">
-      <h3>Zone</h3>
-      <div class="field-group">
-        <div class="field-label">Fill colour</div>
-        <div class="picker-row">
-          <div class="color-swatch mini" style="background:#4f9cf9" data-color="rgba(79,156,249,0.18)" onclick="applyZoneFill(this)"></div>
-          <div class="color-swatch mini" style="background:#f9a84f" data-color="rgba(249,168,79,0.18)" onclick="applyZoneFill(this)"></div>
-          <div class="color-swatch mini" style="background:#f94f4f" data-color="rgba(249,79,79,0.18)" onclick="applyZoneFill(this)"></div>
-          <div class="color-swatch mini" style="background:#4ade80" data-color="rgba(74,222,128,0.18)" onclick="applyZoneFill(this)"></div>
-          <div class="color-swatch mini" style="background:#ffd700" data-color="rgba(255,215,0,0.18)" onclick="applyZoneFill(this)"></div>
-          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.15)" onclick="applyZoneFill(this)"></div>
-          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.25)" onclick="applyZoneFill(this)"></div>
-          <button class="color-picker-btn" onclick="openColorPicker('zone-fill')">＋</button>
+
+      <!-- WHAT THIS ZONE IS FOR -->
+      <div class="zone-panel-group">
+        <div class="field-group">
+          <div class="field-label" style="display:flex;align-items:center;justify-content:space-between">
+            Label
+            <label class="zone-toggle">
+              <input type="checkbox" id="zone-label-toggle" checked onchange="toggleZoneLabelVisibility(this.checked)">
+              <span class="zone-toggle-track"></span>
+            </label>
+          </div>
+          <div class="field-row" id="zone-label-row">
+            <input type="text" id="zone-label-input" placeholder="e.g. Pressing zone" maxlength="40"
+                   oninput="liveUpdateZoneLabel(this.value)"
+                   onkeydown="if(event.key==='Enter'){event.preventDefault();confirmZoneLabel();this.blur();}"/>
+          </div>
+          <div class="field-row" id="zone-label-opts" style="gap:8px;align-items:center">
+            <input type="range" id="zone-label-size" min="10" max="40" value="14" oninput="applyZoneLabelSize(this.value)" style="flex:1">
+            <span id="zone-label-size-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">14px</span>
+            <div class="style-btn-row" style="flex:none;gap:2px">
+              <button class="style-btn sm" data-labelpos="top-left" onclick="applyZoneLabelPos('top-left')" title="Top left" style="padding:2px 6px;font-size:9px">↖</button>
+              <button class="style-btn sm" data-labelpos="bottom-left" onclick="applyZoneLabelPos('bottom-left')" title="Bottom left" style="padding:2px 6px;font-size:9px">↙</button>
+            </div>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Purpose</div>
+          <div class="purpose-row">
+            <button class="purpose-btn" data-purpose="press" onclick="applyZonePurpose('press')">Press</button>
+            <button class="purpose-btn" data-purpose="possession" onclick="applyZonePurpose('possession')">Rondo</button>
+            <button class="purpose-btn" data-purpose="space" onclick="applyZonePurpose('space')">Space</button>
+            <button class="purpose-btn" data-purpose="danger" onclick="applyZonePurpose('danger')">Danger</button>
+          </div>
         </div>
       </div>
-      <div class="field-group">
-        <div class="field-label">Border colour</div>
-        <div class="picker-row">
-          <div class="color-swatch mini" style="background:#4f9cf9" data-color="rgba(79,156,249,0.6)" onclick="applyZoneBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#f9a84f" data-color="rgba(249,168,79,0.6)" onclick="applyZoneBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#f94f4f" data-color="rgba(249,79,79,0.6)" onclick="applyZoneBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#4ade80" data-color="rgba(74,222,128,0.6)" onclick="applyZoneBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#ffd700" data-color="rgba(255,215,0,0.6)" onclick="applyZoneBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.5)" onclick="applyZoneBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.6)" onclick="applyZoneBorder(this)"></div>
-          <button class="color-picker-btn" onclick="openColorPicker('zone-border')">＋</button>
+
+      <!-- HOW IT LOOKS -->
+      <div class="zone-panel-group">
+        <div class="zone-panel-heading">How it looks</div>
+        <div class="field-group">
+          <div class="field-label">Shape</div>
+          <div class="shape-card-row">
+            <button class="shape-card" data-shape="shadow-rect" onclick="applyZoneShape('shadow-rect')">
+              <svg width="22" height="16" viewBox="0 0 22 16"><rect x="1" y="1" width="20" height="14" rx="2" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+              <span>Rectangle</span>
+            </button>
+            <button class="shape-card" data-shape="shadow-circle" onclick="applyZoneShape('shadow-circle')">
+              <svg width="22" height="16" viewBox="0 0 22 16"><ellipse cx="11" cy="8" rx="10" ry="6" fill="none" stroke="currentColor" stroke-width="1.2"/></svg>
+              <span>Oval</span>
+            </button>
+            <button class="shape-card" data-shape="freeform" onclick="applyZoneShape('freeform')">
+              <svg width="22" height="16" viewBox="0 0 22 16" fill="none"><path d="M4 12 Q1 6 5 3 Q10 0 15 4 Q20 8 16 13 Q12 16 7 14 Z" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round"/></svg>
+              <span>Custom</span>
+            </button>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Colour</div>
+          <div class="picker-row">
+            <div class="color-swatch mini round" style="background:#D8FF3C" data-color="#D8FF3C" onclick="applyZoneColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#f472b6" data-color="#f472b6" onclick="applyZoneColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#60a5fa" data-color="#60a5fa" onclick="applyZoneColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#fb923c" data-color="#fb923c" onclick="applyZoneColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#4ade80" data-color="#4ade80" onclick="applyZoneColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#c084fc" data-color="#c084fc" onclick="applyZoneColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#ffffff" data-color="#ffffff" onclick="applyZoneColour(this)"></div>
+            <button class="color-picker-btn" style="border-radius:50%;width:22px;height:22px" onclick="openColorPicker('zone-colour')" title="Custom colour">＋</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Text colour</div>
+          <div class="picker-row" id="zone-text-color-row">
+            <div class="color-swatch mini round" style="background:#ffffff" data-color="#ffffff" onclick="applyZoneTextColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#D8FF3C" data-color="#D8FF3C" onclick="applyZoneTextColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#f87171" data-color="#f87171" onclick="applyZoneTextColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#60a5fa" data-color="#60a5fa" onclick="applyZoneTextColour(this)"></div>
+            <div class="color-swatch mini round" style="background:#111111" data-color="#111111" onclick="applyZoneTextColour(this)"></div>
+            <div class="color-swatch mini round auto-text-swatch" data-color="auto" onclick="applyZoneTextColour(this)" title="Auto (match border)">A</div>
+            <button class="color-picker-btn" style="border-radius:50%;width:22px;height:22px" onclick="openColorPicker('zone-text')" title="Custom text colour">＋</button>
+          </div>
+        </div>
+        <div class="field-group">
+          <div class="field-label">Fill style</div>
+          <div class="style-btn-row">
+            <button class="style-btn" data-fillstyle="faded" onclick="applyZoneFillStyle('faded')">Faded</button>
+            <button class="style-btn" data-fillstyle="soft" onclick="applyZoneFillStyle('soft')">Soft</button>
+            <button class="style-btn" data-fillstyle="strong" onclick="applyZoneFillStyle('strong')">Strong</button>
+            <button class="style-btn" data-fillstyle="outline" onclick="applyZoneFillStyle('outline')">Outline only</button>
+          </div>
         </div>
       </div>
-      <div class="field-group">
-        <div class="field-label">Border style</div>
-        <div class="style-btn-row">
-          <button class="style-btn" data-zstyle="solid" onclick="applyZoneBorderStyle('solid')">Solid</button>
-          <button class="style-btn active" data-zstyle="dashed" onclick="applyZoneBorderStyle('dashed')">Dashed</button>
-        </div>
+
+      <!-- ADVANCED (collapsible) -->
+      <div class="zone-advanced-toggle" onclick="toggleZoneAdvanced()">
+        <span id="zone-adv-arrow">▸</span> Advanced
       </div>
-      <div class="field-group">
-        <div class="field-label">Opacity</div>
-        <div class="field-row">
-          <input type="range" id="zone-opacity-slider" min="0.05" max="1" value="1" step="0.05" oninput="applyZoneOpacity(this.value)" style="flex:1">
-          <span id="zone-opacity-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">100%</span>
+      <div class="zone-advanced-body" id="zone-advanced-body" style="display:none">
+        <div class="zone-panel-group">
+          <div class="zone-panel-heading">Fine-tune</div>
+          <div class="field-group">
+            <div class="field-label">Border style</div>
+            <div class="shape-card-row">
+              <button class="shape-card sm" data-zstyle="solid" onclick="applyZoneBorderStyle('solid')">
+                <svg width="30" height="4" viewBox="0 0 30 4"><line x1="0" y1="2" x2="30" y2="2" stroke="currentColor" stroke-width="2"/></svg>
+                <span>Solid</span>
+              </button>
+              <button class="shape-card sm" data-zstyle="dashed" onclick="applyZoneBorderStyle('dashed')">
+                <svg width="30" height="4" viewBox="0 0 30 4"><line x1="0" y1="2" x2="30" y2="2" stroke="currentColor" stroke-width="2" stroke-dasharray="5,3"/></svg>
+                <span>Dashed</span>
+              </button>
+              <button class="shape-card sm" data-zstyle="dotted" onclick="applyZoneBorderStyle('dotted')">
+                <svg width="30" height="4" viewBox="0 0 30 4"><line x1="0" y1="2" x2="30" y2="2" stroke="currentColor" stroke-width="2" stroke-dasharray="2,3"/></svg>
+                <span>Dotted</span>
+              </button>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Border colour</div>
+            <div class="picker-row" id="zone-border-color-row">
+              <div class="color-swatch mini round" style="background:#ffffff" data-color="#ffffff" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#D8FF3C" data-color="#D8FF3C" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#f87171" data-color="#f87171" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#60a5fa" data-color="#60a5fa" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#fb923c" data-color="#fb923c" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#4ade80" data-color="#4ade80" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round auto-border-swatch" data-color="auto" onclick="applyZoneBorderColour(this)" title="Auto (match fill)">A</div>
+              <button class="color-picker-btn" style="border-radius:50%;width:22px;height:22px" onclick="openColorPicker('zone-border-color')" title="Custom border colour">＋</button>
+            </div>
+          </div>
+          <div class="field-group" id="zone-corners-group">
+            <div class="field-label">Corners</div>
+            <div class="style-btn-row">
+              <button class="style-btn" data-corners="sharp" onclick="applyZoneCorners('sharp')">Sharp</button>
+              <button class="style-btn" data-corners="rounded" onclick="applyZoneCorners('rounded')">Rounded</button>
+              <button class="style-btn" data-corners="very-round" onclick="applyZoneCorners('very-round')">Very round</button>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Rotation</div>
+            <div class="field-row">
+              <input type="range" id="zone-rot-slider" min="0" max="360" value="0" oninput="applyRotation(this.value)" style="flex:1">
+              <span id="zone-rot-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">0°</span>
+            </div>
+          </div>
+          <div class="field-group">
+            <div class="field-label">Layer order</div>
+            <div class="layer-btn-row">
+              <button class="layer-btn" onclick="layerSendToBack()" title="Send to Back">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/></svg>
+                <span>To back</span>
+              </button>
+              <button class="layer-btn" onclick="layerSendBackward()" title="Send Backward">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="5" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/></svg>
+                <span>Backward</span>
+              </button>
+              <button class="layer-btn" onclick="layerBringForward()" title="Bring Forward">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="5" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="1" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+                <span>Forward</span>
+              </button>
+              <button class="layer-btn" onclick="layerBringToFront()" title="Bring to Front">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
+                <span>To front</span>
+              </button>
+            </div>
+          </div>
         </div>
       </div>
     </div>
@@ -1587,6 +1716,100 @@
           <div class="color-swatch mini" style="background:rgba(59,130,246,0.5)" data-link-color="rgba(59,130,246,0.4)" onclick="applyLinkColor(this)"></div>
           <div class="color-swatch mini" style="background:rgba(34,197,94,0.5)" data-link-color="rgba(34,197,94,0.4)" onclick="applyLinkColor(this)"></div>
           <div class="color-swatch mini" style="background:rgba(251,191,36,0.5)" data-link-color="rgba(251,191,36,0.4)" onclick="applyLinkColor(this)"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Net-Zone (Player Zone) properties -->
+    <div class="panel-section" id="nz-edit-section" style="display:none">
+      <h3>Player Zone</h3>
+      <div class="field-group">
+        <div class="field-label">Fill colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#4f9cf9" data-nz-color="rgba(79,156,249,0.15)" onclick="applyNzColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-nz-color="rgba(239,68,68,0.15)" onclick="applyNzColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-nz-color="rgba(34,197,94,0.15)" onclick="applyNzColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-nz-color="rgba(251,191,36,0.15)" onclick="applyNzColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-nz-color="rgba(255,255,255,0.15)" onclick="applyNzColor(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-nz-color="rgba(0,0,0,0.15)" onclick="applyNzColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('nz-fill')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-nz-border="rgba(255,255,255,0.35)" onclick="applyNzBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#4f9cf9" data-nz-border="rgba(79,156,249,0.5)" onclick="applyNzBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-nz-border="rgba(239,68,68,0.5)" onclick="applyNzBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-nz-border="rgba(34,197,94,0.5)" onclick="applyNzBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-nz-border="rgba(251,191,36,0.5)" onclick="applyNzBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-nz-border="rgba(0,0,0,0.5)" onclick="applyNzBorder(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('nz-border')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border style</div>
+        <div class="style-btn-row">
+          <button class="style-btn active" data-nzbstyle="dashed" onclick="applyNzBorderStyle('dashed')">Dashed</button>
+          <button class="style-btn" data-nzbstyle="solid" onclick="applyNzBorderStyle('solid')">Solid</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Opacity</div>
+        <div class="field-row">
+          <input type="range" id="nz-opacity-slider" min="0.05" max="0.5" step="0.05" value="0.15" oninput="applyNzOpacity(this.value)" style="flex:1">
+          <span id="nz-opacity-value" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">15%</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Marker properties -->
+    <div class="panel-section" id="marker-edit-section" style="display:none">
+      <h3>Marker</h3>
+      <div class="field-group">
+        <div class="field-label">Name</div>
+        <input type="text" id="marker-name-input" class="text-input" placeholder="e.g. 2 Carvajal" maxlength="30" oninput="liveUpdateMarkerName(this.value)" onblur="confirmMarkerName()">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Background colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:rgba(255,255,255,0.5)" data-color="rgba(255,255,255,0.12)" onclick="applyMarkerBgColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4f9cf9" data-color="rgba(79,156,249,0.18)" onclick="applyMarkerBgColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-color="rgba(249,79,79,0.18)" onclick="applyMarkerBgColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-color="rgba(255,215,0,0.18)" onclick="applyMarkerBgColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="rgba(74,222,128,0.18)" onclick="applyMarkerBgColor(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.25)" onclick="applyMarkerBgColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('marker-bg')">+</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.7)" onclick="applyMarkerBorderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4f9cf9" data-color="rgba(79,156,249,0.7)" onclick="applyMarkerBorderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-color="rgba(249,79,79,0.7)" onclick="applyMarkerBorderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-color="rgba(255,215,0,0.7)" onclick="applyMarkerBorderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="rgba(74,222,128,0.7)" onclick="applyMarkerBorderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.7)" onclick="applyMarkerBorderColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('marker-border')">+</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Line colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.5)" onclick="applyMarkerLineColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4f9cf9" data-color="rgba(79,156,249,0.5)" onclick="applyMarkerLineColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-color="rgba(249,79,79,0.5)" onclick="applyMarkerLineColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffd700" data-color="rgba(255,215,0,0.5)" onclick="applyMarkerLineColor(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.5)" onclick="applyMarkerLineColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('marker-line')">+</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Opacity</div>
+        <div class="field-row">
+          <input type="range" id="marker-opacity-slider" min="0.1" max="1" value="1" step="0.05" oninput="applyMarkerOpacity(this.value); document.getElementById('marker-opacity-val').textContent = Math.round(this.value*100)+'%'" style="flex:1">
+          <span id="marker-opacity-val" class="field-value">100%</span>
         </div>
       </div>
     </div>

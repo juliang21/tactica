@@ -3,6 +3,7 @@
 //
 // Replace the Measurement ID below with your own GA4 property ID.
 // ──────────────────────────────────────────────────────────────────────────────
+import * as S from './state.js';
 
 const GA_MEASUREMENT_ID = 'G-Q9VK1EXXN8';
 
@@ -29,8 +30,9 @@ const GA_MEASUREMENT_ID = 'G-Q9VK1EXXN8';
 
 // ─── Helper ──────────────────────────────────────────────────────────────────
 function send(eventName, params = {}) {
-  // Always tag events with tool_name for easy filtering
+  // Always tag events with tool_name and current mode for easy filtering
   params.tool_name = 'tactica';
+  params.app_mode = S.appMode || 'pitch';
   if (typeof window.gtag === 'function') {
     window.gtag('event', eventName, params);
   }

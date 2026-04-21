@@ -1,6 +1,6 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs } from './elements.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
+import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addMarker, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel} from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -14,15 +14,29 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateTextBox, confirmTextBox, applyTextBoxSize, applyTextBoxColor, applyTextBoxBg, applyTextBoxAlign,
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
+         applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, liveUpdateMarkerName, confirmMarkerName,
          applySize, applyRotation, clearAll } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=5';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=6';
-import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignUp, trackSignIn, trackSignOut, registerAnalysisTracker } from './analytics.js';
+import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
-import { onAuthChange, signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut, getCurrentUser } from './auth.js';
+import { onAuthChange, getCurrentUser } from './auth.js';
 import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis } from './firestore.js?v=4';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
+import './features/feedback.js';
+import './features/bundles.js';
+import './features/zoom.js';
+import './features/notes.js';
+import { updateAuthUI, openAuthModal, closeAuthModal } from './features/auth-ui.js';
+import { registerMode, activateMode, getActiveModeId, switchTabForMode } from './core/mode-registry.js';
+import { pitchMode } from './modes/pitch/config.js';
+import { imageMode } from './modes/image/config.js';
+
+// ─── Register Modes & activate default ─────────────────────────────────────
+registerMode('pitch', pitchMode);
+registerMode('image', imageMode);
+activateMode('pitch');  // set initial toolbar + side panel state
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
 registerRewrap(rewrapTextBox);
@@ -31,6 +45,8 @@ registerSelectTeamContext(selectTeamContext);
 registerVisionUpdate(updateVisionPolygon);
 registerFreeformUpdate(updateFreeformPath);
 registerMotionUpdate(updateMotionVisual);
+registerShadowLabelUpdate(updateShadowLabel);
+registerZonePanelSync(_syncZonePanelState);
 registerTagReposition(repositionTag);
 registerLinkUpdate(updateAllLinks);
 // ─── Initialize subscription UI ────────────────────────────────────────────
@@ -74,8 +90,38 @@ function undo() {
 
   // Re-attach event listeners to all restored elements
   S.objectsLayer.querySelectorAll('[data-type]').forEach(g => {
-    if (g.dataset.type !== 'link') makeDraggable(g);
+    const isFreeNz = g.dataset.type === 'net-zone' && g.dataset.freeZone === 'true';
+    if (g.dataset.type !== 'link' && (g.dataset.type !== 'net-zone' || isFreeNz)) makeDraggable(g);
     g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
+    // Shadow zones: dblclick to edit label
+    if (g.dataset.type?.startsWith('shadow')) {
+      g.addEventListener('dblclick', e => {
+        e.stopPropagation(); select(g);
+        setTimeout(() => { const inp = document.getElementById('zone-label-input'); if (inp) { inp.focus(); inp.select(); } }, 50);
+      });
+    }
+    // Net-zone: mousedown selects group + starts drag
+    if (g.dataset.type === 'net-zone') {
+      g.addEventListener('mousedown', e => {
+        if (S.tool !== 'select') return;
+        e.stopPropagation(); e.preventDefault();
+        const pids = g.dataset.players.split(',').filter(Boolean);
+        let first = true;
+        for (const pid of pids) {
+          const pEl = document.getElementById(pid);
+          if (!pEl) continue;
+          if (first) { select(pEl, { additive: false }); first = false; }
+          else select(pEl, { additive: true });
+        }
+        const p1 = document.getElementById(pids[0]);
+        if (p1) {
+          p1.dispatchEvent(new MouseEvent('mousedown', {
+            bubbles: false, clientX: e.clientX, clientY: e.clientY,
+            ctrlKey: e.ctrlKey, metaKey: e.metaKey
+          }));
+        }
+      });
+    }
   });
   S.playersLayer.querySelectorAll('[data-type]').forEach(g => {
     makeDraggable(g);
@@ -190,7 +236,26 @@ window.setTool = function(t) {
     _pairStartPlayer = null;
     clearLinkHighlight();
   }
+  // Clean up marker chain state if leaving marker mode
+  if (S.tool === 'marker' && t !== 'marker') {
+    _lastChainMarker = null;
+  }
+  // Clean up net-zone tool state if leaving net-zone mode
+  if (S.tool === 'net-zone' && t !== 'net-zone') {
+    cancelNetZone();
+  }
   _baseSetTool(t);
+  // Show hints for multi-click tools
+  if (t === 'net-zone') {
+    switchTab('element');
+    _showNetZoneHint();
+  } else if (t === 'link') {
+    switchTab('element');
+    S.selInfo.innerHTML = '<strong>Connect</strong><br><span style="font-size:10px;color:var(--text-muted)">Click a player, then click another to connect them.</span>';
+  } else if (t === 'pair') {
+    switchTab('element');
+    S.selInfo.innerHTML = '<strong>Pair</strong><br><span style="font-size:10px;color:var(--text-muted)">Click a player, then click another to pair them.</span>';
+  }
 };
 window.setArrowType = setArrowType;
 window.setVisionType = S.setVisionType;
@@ -705,10 +770,518 @@ window.confirmSpotName = confirmSpotName;
 window.applySpotNameSize = applySpotNameSize;
 window.applySpotNameColor = applySpotNameColor;
 window.applySpotNameBg = applySpotNameBg;
-window.applyZoneFill = applyZoneFill;
-window.applyZoneBorder = applyZoneBorder;
+window.applyZoneFill = function(dotEl) {
+  applyZoneFill(dotEl);
+  // Also update label color to match border
+  if (S.selectedEl) updateShadowLabel(S.selectedEl);
+};
+window.applyZoneBorder = function(dotEl) {
+  applyZoneBorder(dotEl);
+  // Update label color to match border
+  if (S.selectedEl) updateShadowLabel(S.selectedEl);
+};
 window.applyZoneBorderStyle = applyZoneBorderStyle;
 window.applyZoneOpacity = applyZoneOpacity;
+
+// Zone label editing
+window.liveUpdateZoneLabel = function(val) {
+  if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
+  S.selectedEl.dataset.zoneLabel = val;
+  updateShadowLabel(S.selectedEl);
+};
+window.confirmZoneLabel = function() {
+  if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
+  S.pushUndo();
+  trackElementEdited(S.selectedEl.dataset.type, 'label');
+};
+
+// ── Unified Zone panel functions ─────────────────────────────────────────────
+const _zonePurposes = {
+  press:  { color: '#D8FF3C', label: 'Pressing zone', fillStyle: 'soft', border: 'dashed' },
+  possession: { color: '#ffffff', label: '4v3', fillStyle: 'faded', border: 'dashed', textColor: '#ffffff', labelSize: 23, labelPos: 'bottom-left' },
+  space:  { color: '#4ade80', label: 'Space',          fillStyle: 'soft', border: 'dashed' },
+  danger: { color: '#f87171', label: 'Danger zone',    fillStyle: 'strong', border: 'solid', textColor: '#f87171', borderColor: '#f87171' },
+};
+
+const _fillStyles = {
+  faded:   { fillAlpha: 0.08, strokeAlpha: 0.40, strokeWidth: 1.5 },
+  soft:    { fillAlpha: 0.15, strokeAlpha: 0.55, strokeWidth: 2 },
+  strong:  { fillAlpha: 0.30, strokeAlpha: 0.80, strokeWidth: 2.5 },
+  outline: { fillAlpha: 0,    strokeAlpha: 0.65, strokeWidth: 2 },
+};
+
+function _hexToRgba(hex, alpha) {
+  const r = parseInt(hex.slice(1,3), 16);
+  const g = parseInt(hex.slice(3,5), 16);
+  const b = parseInt(hex.slice(5,7), 16);
+  return `rgba(${r},${g},${b},${alpha})`;
+}
+
+function _applyZoneColorAndStyle(el, hex, styleName) {
+  if (!el) return;
+  const shape = el.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
+  if (!shape) return;
+  const fs = _fillStyles[styleName] || _fillStyles.soft;
+  shape.setAttribute('fill', _hexToRgba(hex, fs.fillAlpha));
+  // Use independent border colour if set, otherwise derive from fill
+  const borderHex = el.dataset.zoneBorderHex || hex;
+  const strokeVal = _hexToRgba(borderHex, fs.strokeAlpha);
+  shape.setAttribute('stroke', strokeVal);
+  shape.setAttribute('stroke-width', fs.strokeWidth);
+  // Keep savedStroke in sync so deselect restores the correct colour
+  if (el.dataset.savedStroke) el.dataset.savedStroke = strokeVal;
+  el.dataset.zoneHex = hex;
+  el.dataset.zoneFillStyle = styleName;
+  updateShadowLabel(el);
+  _syncZonePanelState(el);
+}
+
+window.applyZonePurpose = function(purpose) {
+  const el = S.selectedEl;
+  if (!el || !el.dataset.type?.startsWith('shadow') && el.dataset.type !== 'freeform') return;
+  S.pushUndo();
+  const p = _zonePurposes[purpose];
+  if (!p) return;
+  el.dataset.zonePurpose = purpose;
+  el.dataset.zoneLabel = p.label;
+  _applyZoneColorAndStyle(el, p.color, p.fillStyle);
+  applyZoneBorderStyle(p.border);
+  // Apply preset text color (if specified, otherwise auto)
+  if (p.textColor) {
+    el.dataset.zoneTextColor = p.textColor;
+  } else {
+    delete el.dataset.zoneTextColor;
+  }
+  // Apply preset border color (if specified, otherwise reset to auto/match fill)
+  if (p.borderColor) {
+    _applyBorderColorToShape(el, p.borderColor);
+  } else {
+    delete el.dataset.zoneBorderHex;
+    // Re-apply fill colour to border (since _applyZoneColorAndStyle already ran)
+    const shape = el.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
+    if (shape) {
+      const fs = _fillStyles[p.fillStyle] || _fillStyles.soft;
+      const strokeVal = _hexToRgba(p.color, fs.strokeAlpha);
+      shape.setAttribute('stroke', strokeVal);
+      if (el.dataset.savedStroke) el.dataset.savedStroke = strokeVal;
+    }
+  }
+  // Apply label size and position (if specified, otherwise reset to defaults)
+  if (p.labelSize) {
+    el.dataset.zoneLabelSize = p.labelSize;
+  } else {
+    delete el.dataset.zoneLabelSize;
+  }
+  if (p.labelPos) {
+    el.dataset.zoneLabelPos = p.labelPos;
+  } else {
+    delete el.dataset.zoneLabelPos;
+  }
+  // Update label input
+  const inp = document.getElementById('zone-label-input');
+  if (inp) inp.value = p.label;
+  // Ensure label is visible
+  el.dataset.zoneLabelVisible = 'true';
+  const lt = document.getElementById('zone-label-toggle');
+  if (lt) lt.checked = true;
+  const lr = document.getElementById('zone-label-row');
+  if (lr) lr.style.display = '';
+  updateShadowLabel(el);
+  _syncZonePanelState(el);
+};
+
+window.applyZoneLabelSize = function(val) {
+  const el = S.selectedEl;
+  if (!el) return;
+  el.dataset.zoneLabelSize = val;
+  document.getElementById('zone-label-size-val').textContent = val + 'px';
+  updateShadowLabel(el);
+};
+
+window.applyZoneLabelPos = function(pos) {
+  const el = S.selectedEl;
+  if (!el) return;
+  el.dataset.zoneLabelPos = pos;
+  updateShadowLabel(el);
+  _syncZonePanelState(el);
+};
+
+window.applyZoneColour = function(dotEl) {
+  const el = S.selectedEl;
+  if (!el) return;
+  S.pushUndo();
+  const hex = dotEl.dataset.color;
+  const styleName = el.dataset.zoneFillStyle || 'soft';
+  _applyZoneColorAndStyle(el, hex, styleName);
+};
+
+window.applyZoneFillStyle = function(styleName) {
+  const el = S.selectedEl;
+  if (!el) return;
+  S.pushUndo();
+  const hex = el.dataset.zoneHex || '#D8FF3C';
+  _applyZoneColorAndStyle(el, hex, styleName);
+};
+
+// ── Zone text colour ──
+window.applyZoneTextColour = function(dotEl) {
+  const el = S.selectedEl;
+  if (!el) return;
+  S.pushUndo();
+  const color = dotEl.dataset.color;
+  if (color === 'auto') {
+    delete el.dataset.zoneTextColor;
+  } else {
+    el.dataset.zoneTextColor = color;
+  }
+  updateShadowLabel(el);
+  _syncZonePanelState(el);
+};
+
+// ── Zone border colour (independent of fill) ──
+function _applyBorderColorToShape(el, hex) {
+  const shape = el.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
+  if (!shape) return;
+  const fs = _fillStyles[el.dataset.zoneFillStyle || 'soft'];
+  const strokeVal = _hexToRgba(hex, fs.strokeAlpha);
+  shape.setAttribute('stroke', strokeVal);
+  // Keep savedStroke in sync so deselect restores the correct colour
+  if (el.dataset.savedStroke) el.dataset.savedStroke = strokeVal;
+  el.dataset.zoneBorderHex = hex;
+  updateShadowLabel(el);
+}
+
+window.applyZoneBorderColour = function(dotEl) {
+  const el = S.selectedEl;
+  if (!el) return;
+  S.pushUndo();
+  const color = dotEl.dataset.color;
+  if (color === 'auto') {
+    // Reset to match fill colour
+    delete el.dataset.zoneBorderHex;
+    const hex = el.dataset.zoneHex || '#D8FF3C';
+    const styleName = el.dataset.zoneFillStyle || 'soft';
+    _applyZoneColorAndStyle(el, hex, styleName);
+  } else {
+    _applyBorderColorToShape(el, color);
+  }
+  _syncZonePanelState(el);
+};
+
+window.applyZoneShape = function(shapeType) {
+  const el = S.selectedEl;
+  if (!el) return;
+  const currentType = el.dataset.type;
+  if (currentType === shapeType) return;
+
+  // Convert to freeform (custom corners)
+  if (shapeType === 'freeform') {
+    _convertZoneToFreeform(el);
+    return;
+  }
+  // Convert FROM freeform to rect/oval
+  if (currentType === 'freeform') {
+    _convertFreeformToShape(el, shapeType);
+    return;
+  }
+
+  S.pushUndo();
+  const ns = 'http://www.w3.org/2000/svg';
+  const oldShape = el.querySelector('rect,ellipse');
+  if (!oldShape) return;
+
+  // Read current visual properties
+  const fill = oldShape.getAttribute('fill');
+  const stroke = oldShape.getAttribute('stroke');
+  const strokeWidth = oldShape.getAttribute('stroke-width');
+  const dashArray = oldShape.getAttribute('stroke-dasharray');
+  const cx = parseFloat(el.dataset.cx);
+  const cy = parseFloat(el.dataset.cy);
+  const hw = parseFloat(el.dataset.hw || '30');
+  const hh = parseFloat(el.dataset.hh || '20');
+  const scale = parseFloat(el.dataset.scale || '1');
+
+  let newShape;
+  if (shapeType === 'shadow-circle') {
+    // Create ellipse
+    newShape = document.createElementNS(ns, 'ellipse');
+    newShape.setAttribute('cx', cx);
+    newShape.setAttribute('cy', cy);
+    newShape.setAttribute('rx', hw * scale);
+    newShape.setAttribute('ry', hh * scale);
+  } else {
+    // Create rect
+    newShape = document.createElementNS(ns, 'rect');
+    newShape.setAttribute('x', cx - hw * scale);
+    newShape.setAttribute('y', cy - hh * scale);
+    newShape.setAttribute('width', hw * 2 * scale);
+    newShape.setAttribute('height', hh * 2 * scale);
+    newShape.setAttribute('rx', el.dataset.zoneCorners === 'sharp' ? 0 : el.dataset.zoneCorners === 'very-round' ? 20 : 4);
+  }
+
+  // Copy visual properties
+  newShape.setAttribute('fill', fill);
+  newShape.setAttribute('stroke', stroke);
+  newShape.setAttribute('stroke-width', strokeWidth);
+  if (dashArray) newShape.setAttribute('stroke-dasharray', dashArray);
+
+  // Swap elements
+  oldShape.replaceWith(newShape);
+  el.dataset.type = shapeType;
+
+  // Refresh label position
+  updateShadowLabel(el);
+
+  // Update panel state
+  _syncZonePanelState(el);
+};
+
+// Convert rect/oval zone to freeform (draggable corners)
+function _convertZoneToFreeform(el) {
+  const cx = parseFloat(el.dataset.cx);
+  const cy = parseFloat(el.dataset.cy);
+  const hw = parseFloat(el.dataset.hw || '30');
+  const hh = parseFloat(el.dataset.hh || '20');
+  const scale = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+  const cosR = Math.cos(rot), sinR = Math.sin(rot);
+
+  // Get visual properties from old shape
+  const oldShape = el.querySelector('rect,ellipse');
+  const fill = oldShape?.getAttribute('fill') || 'rgba(79,156,249,0.18)';
+  const stroke = oldShape?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
+  const strokeWidth = oldShape?.getAttribute('stroke-width') || '1.5';
+  const dashArray = oldShape?.getAttribute('stroke-dasharray') || '';
+  const label = el.dataset.zoneLabel || '';
+  const zoneHex = el.dataset.zoneHex || '';
+  const zoneFillStyle = el.dataset.zoneFillStyle || '';
+  const zonePurpose = el.dataset.zonePurpose || '';
+
+  // Compute corner points (apply rotation)
+  const corners = [
+    { dx: -hw * scale, dy: -hh * scale },
+    { dx:  hw * scale, dy: -hh * scale },
+    { dx:  hw * scale, dy:  hh * scale },
+    { dx: -hw * scale, dy:  hh * scale },
+  ];
+  const worldPts = corners.map(c => ({
+    x: cx + c.dx * cosR - c.dy * sinR,
+    y: cy + c.dx * sinR + c.dy * cosR,
+  }));
+
+  S.pushUndo();
+  el.remove();
+
+  const fz = addFreeformZone(worldPts);
+  if (!fz) return;
+
+  // Copy visual properties
+  const shape = fz.querySelector('.freeform-shape');
+  if (shape) {
+    shape.setAttribute('fill', fill);
+    shape.setAttribute('stroke', stroke);
+    shape.setAttribute('stroke-width', strokeWidth);
+    if (dashArray) shape.setAttribute('stroke-dasharray', dashArray);
+  }
+  fz.dataset.zoneLabel = label;
+  fz.dataset.zoneHex = zoneHex;
+  fz.dataset.zoneFillStyle = zoneFillStyle;
+  fz.dataset.zonePurpose = zonePurpose;
+
+  // Add label element
+  if (label) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const lbl = document.createElementNS(ns, 'text');
+    lbl.classList.add('zone-label');
+    lbl.setAttribute('font-size', '14');
+    lbl.setAttribute('font-family', 'Inter, system-ui, sans-serif');
+    lbl.setAttribute('font-weight', '600');
+    lbl.setAttribute('pointer-events', 'none');
+    lbl.setAttribute('dominant-baseline', 'central');
+    lbl.setAttribute('text-anchor', 'middle');
+    lbl.setAttribute('x', fz.dataset.cx);
+    lbl.setAttribute('y', fz.dataset.cy);
+    lbl.textContent = label;
+    if (stroke) lbl.setAttribute('fill', stroke);
+    fz.appendChild(lbl);
+  }
+
+  select(fz);
+}
+
+// Convert freeform back to rect/oval
+function _convertFreeformToShape(el, shapeType) {
+  const cx = parseFloat(el.dataset.cx);
+  const cy = parseFloat(el.dataset.cy);
+  const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+  if (deltas.length < 3) return;
+
+  // Compute bounding box of points to get hw/hh
+  let minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+  deltas.forEach(d => {
+    if (d.dx < minX) minX = d.dx;
+    if (d.dx > maxX) maxX = d.dx;
+    if (d.dy < minY) minY = d.dy;
+    if (d.dy > maxY) maxY = d.dy;
+  });
+  const hw = Math.max(20, (maxX - minX) / 2);
+  const hh = Math.max(15, (maxY - minY) / 2);
+
+  // Get visual properties
+  const oldShape = el.querySelector('.freeform-shape');
+  const fill = oldShape?.getAttribute('fill') || 'rgba(79,156,249,0.18)';
+  const stroke = oldShape?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
+  const strokeWidth = oldShape?.getAttribute('stroke-width') || '1.5';
+  const dashArray = oldShape?.getAttribute('stroke-dasharray') || '';
+  const label = el.dataset.zoneLabel || '';
+  const zoneHex = el.dataset.zoneHex || '';
+  const zoneFillStyle = el.dataset.zoneFillStyle || '';
+  const zonePurpose = el.dataset.zonePurpose || '';
+
+  S.pushUndo();
+  el.remove();
+
+  const newZone = addShadow(cx, cy, shapeType);
+  if (!newZone) return;
+
+  // Apply stored size
+  newZone.dataset.hw = String(hw);
+  newZone.dataset.hh = String(hh);
+
+  // Update shape geometry
+  const shape = newZone.querySelector('rect,ellipse');
+  if (shape) {
+    if (shapeType === 'shadow-rect') {
+      shape.setAttribute('x', cx - hw); shape.setAttribute('y', cy - hh);
+      shape.setAttribute('width', hw * 2); shape.setAttribute('height', hh * 2);
+    } else {
+      shape.setAttribute('cx', cx); shape.setAttribute('cy', cy);
+      shape.setAttribute('rx', hw); shape.setAttribute('ry', hh);
+    }
+    shape.setAttribute('fill', fill);
+    shape.setAttribute('stroke', stroke);
+    shape.setAttribute('stroke-width', strokeWidth);
+    if (dashArray) shape.setAttribute('stroke-dasharray', dashArray);
+  }
+
+  newZone.dataset.zoneLabel = label;
+  newZone.dataset.zoneHex = zoneHex;
+  newZone.dataset.zoneFillStyle = zoneFillStyle;
+  newZone.dataset.zonePurpose = zonePurpose;
+  updateShadowLabel(newZone);
+
+  select(newZone);
+}
+
+window.toggleZoneAdvanced = function() {
+  const body = document.getElementById('zone-advanced-body');
+  const toggle = document.querySelector('.zone-advanced-toggle');
+  if (!body) return;
+  const open = body.style.display === 'none';
+  body.style.display = open ? 'block' : 'none';
+  toggle?.classList.toggle('zone-advanced-open', open);
+};
+
+window.applyZoneCorners = function(style) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'shadow-rect') return;
+  S.pushUndo();
+  const rect = el.querySelector('rect');
+  if (!rect) return;
+  const rx = style === 'sharp' ? 0 : style === 'rounded' ? 8 : 20;
+  rect.setAttribute('rx', rx);
+  rect.setAttribute('ry', rx);
+  el.dataset.zoneCorners = style;
+  // Update active button
+  document.querySelectorAll('#zone-edit-section [data-corners]').forEach(b =>
+    b.classList.toggle('active', b.dataset.corners === style));
+};
+
+window.toggleZoneLabelVisibility = function(show) {
+  const el = S.selectedEl;
+  if (!el) return;
+  const label = el.querySelector('.zone-label');
+  if (label) label.setAttribute('display', show ? '' : 'none');
+  el.dataset.zoneLabelVisible = show ? 'true' : 'false';
+  // Show/hide the text input row and label options
+  const row = document.getElementById('zone-label-row');
+  if (row) row.style.display = show ? '' : 'none';
+  const opts = document.getElementById('zone-label-opts');
+  if (opts) opts.style.display = show ? '' : 'none';
+};
+
+function _syncZonePanelState(el) {
+  if (!el) return;
+  // Purpose buttons
+  const purpose = el.dataset.zonePurpose || '';
+  document.querySelectorAll('#zone-edit-section .purpose-btn').forEach(b =>
+    b.classList.toggle('active', b.dataset.purpose === purpose));
+  // Fill style buttons
+  const fs = el.dataset.zoneFillStyle || 'soft';
+  document.querySelectorAll('#zone-edit-section [data-fillstyle]').forEach(b =>
+    b.classList.toggle('active', b.dataset.fillstyle === fs));
+  // Colour swatches (fill)
+  const hex = (el.dataset.zoneHex || '').toLowerCase();
+  document.querySelectorAll('#zone-edit-section .picker-row:not(#zone-text-color-row):not(#zone-border-color-row) .color-swatch.round').forEach(s => {
+    s.classList.toggle('active', s.dataset.color?.toLowerCase() === hex);
+    if (s.classList.contains('active')) s.style.color = hex;
+  });
+  // Text colour swatches
+  const textColor = (el.dataset.zoneTextColor || '').toLowerCase();
+  const isAutoText = !el.dataset.zoneTextColor;
+  document.querySelectorAll('#zone-text-color-row .color-swatch.round').forEach(s => {
+    if (s.dataset.color === 'auto') {
+      s.classList.toggle('active', isAutoText);
+    } else {
+      s.classList.toggle('active', s.dataset.color?.toLowerCase() === textColor);
+    }
+  });
+  // Border colour swatches
+  const borderHex = (el.dataset.zoneBorderHex || '').toLowerCase();
+  const isAutoBorder = !el.dataset.zoneBorderHex;
+  document.querySelectorAll('#zone-border-color-row .color-swatch.round').forEach(s => {
+    if (s.dataset.color === 'auto') {
+      s.classList.toggle('active', isAutoBorder);
+    } else {
+      s.classList.toggle('active', s.dataset.color?.toLowerCase() === borderHex);
+    }
+  });
+  // Shape cards
+  const type = el.dataset.type || '';
+  document.querySelectorAll('#zone-edit-section .shape-card[data-shape]').forEach(c =>
+    c.classList.toggle('active', c.dataset.shape === type));
+  // Border style cards
+  const bstyle = el.querySelector('rect,ellipse,.freeform-shape')?.getAttribute('stroke-dasharray');
+  const bs = !bstyle ? 'solid' : bstyle.startsWith('2') ? 'dotted' : 'dashed';
+  document.querySelectorAll('#zone-edit-section .shape-card[data-zstyle]').forEach(c =>
+    c.classList.toggle('active', c.dataset.zstyle === bs));
+  // Corners
+  const corners = el.dataset.zoneCorners || 'rounded';
+  document.querySelectorAll('#zone-edit-section [data-corners]').forEach(b =>
+    b.classList.toggle('active', b.dataset.corners === corners));
+  // Corners group visibility (only for rects)
+  const cornersGroup = document.getElementById('zone-corners-group');
+  if (cornersGroup) cornersGroup.style.display = type === 'shadow-rect' ? '' : 'none';
+  // Label toggle + input visibility + label opts
+  const labelVisible = el.dataset.zoneLabelVisible !== 'false';
+  const lt = document.getElementById('zone-label-toggle');
+  if (lt) lt.checked = labelVisible;
+  const lr = document.getElementById('zone-label-row');
+  if (lr) lr.style.display = labelVisible ? '' : 'none';
+  const opts = document.getElementById('zone-label-opts');
+  if (opts) opts.style.display = labelVisible ? '' : 'none';
+  // Label size slider
+  const labelSize = el.dataset.zoneLabelSize || '14';
+  const lsSlider = document.getElementById('zone-label-size');
+  const lsVal = document.getElementById('zone-label-size-val');
+  if (lsSlider) lsSlider.value = labelSize;
+  if (lsVal) lsVal.textContent = labelSize + 'px';
+  // Label position buttons
+  const labelPos = el.dataset.zoneLabelPos || 'top-left';
+  document.querySelectorAll('#zone-edit-section [data-labelpos]').forEach(b =>
+    b.classList.toggle('active', b.dataset.labelpos === labelPos));
+}
+
 window.liveUpdateTextBox = liveUpdateTextBox;
 window.confirmTextBox = confirmTextBox;
 window.applyTextBoxSize = applyTextBoxSize;
@@ -730,6 +1303,13 @@ window.applyTagLineDash = applyTagLineDash;
 window.applyTagLineLen = applyTagLineLen;
 window.applyTagLineAngle = applyTagLineAngle;
 window.applyTagTextAnchor = applyTagTextAnchor;
+window.addMarker = addMarker;
+window.applyMarkerBorderColor = applyMarkerBorderColor;
+window.applyMarkerBgColor = applyMarkerBgColor;
+window.applyMarkerLineColor = applyMarkerLineColor;
+window.applyMarkerOpacity = applyMarkerOpacity;
+window.liveUpdateMarkerName = liveUpdateMarkerName;
+window.confirmMarkerName = confirmMarkerName;
 window.setLinkStyle = function(style) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'link') return;
   S.pushUndo();
@@ -755,6 +1335,42 @@ window.applyLinkColor = function(dotEl) {
   const linkLine = S.selectedEl.querySelector('.link-line');
   if (linkLine) linkLine.setAttribute('stroke', 'rgba(79,156,249,0.9)');
 };
+// ─── Net-Zone edit panel functions ──────────────────────────────────────────
+window.applyNzColor = function(dotEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'net-zone') return;
+  S.pushUndo();
+  S.selectedEl.dataset.zoneColor = dotEl.dataset.nzColor;
+  updateNetZone(S.selectedEl);
+  trackElementEdited('net-zone', 'color');
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'element_edited', { element: 'net-zone', property: 'color' }).catch(() => {});
+};
+window.applyNzBorder = function(dotEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'net-zone') return;
+  S.pushUndo();
+  S.selectedEl.dataset.zoneBorder = dotEl.dataset.nzBorder;
+  updateNetZone(S.selectedEl);
+  trackElementEdited('net-zone', 'border');
+};
+window.applyNzBorderStyle = function(style) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'net-zone') return;
+  S.pushUndo();
+  S.selectedEl.dataset.zoneBorderStyle = style;
+  updateNetZone(S.selectedEl);
+  trackElementEdited('net-zone', 'border-style');
+};
+window.applyNzOpacity = function(val) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'net-zone') return;
+  const color = S.selectedEl.dataset.zoneColor || 'rgba(79,156,249,0.15)';
+  const match = color.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+  if (match) {
+    S.selectedEl.dataset.zoneColor = `rgba(${match[1]},${match[2]},${match[3]},${val})`;
+    updateNetZone(S.selectedEl);
+  }
+  const lbl = document.getElementById('nz-opacity-value');
+  if (lbl) lbl.textContent = Math.round(val * 100) + '%';
+};
+
 window.triggerImageUpload = triggerImageUpload;
 window.handleImageUpload = function(input) {
   handleImageUpload(input);
@@ -827,48 +1443,41 @@ function hideImageUploadPane() {
 }
 
 function switchMode(mode) {
-  const pitchBtn = document.getElementById('mode-pitch-btn');
-  const imageBtn = document.getElementById('mode-image-btn');
-
   if (mode === 'image') {
     if (S.appMode === 'image') return;
     // If there's work on the tactical board, confirm before switching
     if (hasCanvasWork()) {
       showModeSwitchModal('Switching to Image Analysis will erase all elements on your tactical board. Are you sure?', () => {
-        pitchBtn.classList.remove('active');
-        imageBtn.classList.add('active');
-        showImageUploadPane();
+        _doSwitchToImage();
       });
       return;
     }
-    pitchBtn.classList.remove('active');
-    imageBtn.classList.add('active');
-    showImageUploadPane();
+    _doSwitchToImage();
   } else {
     // Hide upload pane if it's showing (user clicked back to pitch before uploading)
     hideImageUploadPane();
-    const pitchPane = document.getElementById('pane-pitch');
-    if (pitchPane) pitchPane.style.display = '';
     if (S.appMode !== 'image') {
-      pitchBtn.classList.add('active');
-      imageBtn.classList.remove('active');
+      // Already in pitch mode — restore toolbar + side panel via mode registry
+      activateMode('pitch');
       return;
     }
     // If there's work on the image, confirm before switching
     if (hasCanvasWork()) {
       showModeSwitchModal('Switching to Tactical Board will erase all elements on your image. Are you sure?', () => {
-        exitImageMode();
-        pitchBtn.classList.add('active');
-        imageBtn.classList.remove('active');
+        exitImageMode(); // exitImageMode calls activateMode('pitch')
       });
       return;
     }
-    exitImageMode();
-    pitchBtn.classList.add('active');
-    imageBtn.classList.remove('active');
+    exitImageMode(); // exitImageMode calls activateMode('pitch')
   }
 }
 window.switchMode = switchMode;
+
+function _doSwitchToImage() {
+  // Apply image mode toolbar + side panel + mode buttons immediately
+  activateMode('image');
+  showImageUploadPane();
+}
 
 function showModeSwitchModal(message, onConfirm) {
   const modal = document.getElementById('mode-switch-modal');
@@ -899,11 +1508,7 @@ window.toggleModeDropdown = toggleModeDropdown;
 
 function selectModeDropdown(mode) {
   document.getElementById('mode-dropdown-menu').style.display = 'none';
-  const label = document.getElementById('mode-dropdown-label');
-  const options = document.querySelectorAll('.mode-dropdown-option');
-  options.forEach(o => o.classList.toggle('active', o.dataset.mode === mode));
-  label.textContent = mode === 'pitch' ? 'Tactical Board' : 'Image Analysis';
-  // Also sync with the desktop tab bar buttons
+  // switchMode handles button/label sync via the mode registry
   switchMode(mode);
 }
 window.selectModeDropdown = selectModeDropdown;
@@ -923,8 +1528,20 @@ Object.defineProperty(window, 'teamContext', { get: () => S.teamContext });
 let _linkStartPlayer = null;
 let _linkHighlight = null;
 
+// ─── Marker Chain State ────────────────────────────────────────────────────
+// Each click with the marker tool places a circle and auto-connects it to
+// the previously placed marker, forming a chain.
+let _lastChainMarker = null;
+
 // ─── Pair Tool State ────────────────────────────────────────────────────────
 let _pairStartPlayer = null;
+
+// ─── Net-Zone Tool State ──────────────────────────────────────────────────
+let _netZonePlayers = [];       // accumulated player IDs (Tactical Board mode)
+let _netZoneHighlights = [];    // highlight ring SVG elements
+let _netZonePreview = null;     // live preview polygon
+let _netZoneCoords = [];        // accumulated {x,y} points (Image Analysis mode)
+let _netZoneVertexDots = [];    // small vertex marker SVGs for image mode
 
 function clearLinkHighlight() {
   if (_linkHighlight) {
@@ -968,7 +1585,7 @@ S.svg.addEventListener('click', e => {
 
   // ── Link tool handling ────────────────────────────────────────────────────
   if (S.tool === 'link') {
-    const clickedEl = e.target.closest('[data-type="player"]') || e.target.closest('[data-type="referee"]');
+    const clickedEl = e.target.closest('[data-type="player"]') || e.target.closest('[data-type="referee"]') || e.target.closest('[data-type="marker"]');
     if (!clickedEl) {
       // Clicked on empty area — cancel link
       _linkStartPlayer = null;
@@ -1037,6 +1654,61 @@ S.svg.addEventListener('click', e => {
     return;
   }
 
+  // ── Net-Zone tool handling ─────────────────────────────────────────────
+  if (S.tool === 'net-zone') {
+    // ── Image Analysis mode: click anywhere to place polygon vertices ────
+    if (S.appMode === 'image') {
+      const pt = S.getSVGPoint(e);
+      // Add vertex
+      _netZoneCoords.push({ x: pt.x, y: pt.y });
+      _addVertexDot(pt.x, pt.y);
+      updateNetZonePreview();
+      // Update hint
+      const n = _netZoneCoords.length;
+      if (n < 3) {
+        S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${n}/3 points placed · click ${3 - n} more on the image</span>`;
+      } else {
+        S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${n} points · click more or double-click to close</span>`;
+      }
+      return;
+    }
+
+    // ── Tactical Board mode: click on players to anchor zone ─────────────
+    const clickedEl = e.target.closest('[data-type="player"]') || e.target.closest('[data-type="referee"]');
+    if (!clickedEl) {
+      // Click on empty area: close zone if 3+ players, else cancel
+      if (_netZonePlayers.length >= 3) {
+        closeNetZone();
+      } else {
+        cancelNetZone();
+        _showNetZoneHint();
+      }
+      return;
+    }
+    const pid = clickedEl.id;
+    // Click first player again to close (if 3+)
+    if (_netZonePlayers.length >= 3 && pid === _netZonePlayers[0]) {
+      closeNetZone();
+      return;
+    }
+    // Skip if already in the list
+    if (_netZonePlayers.includes(pid)) return;
+    // Add player to zone
+    _netZonePlayers.push(pid);
+    highlightLinkStart(clickedEl);
+    _netZoneHighlights.push(_linkHighlight);
+    _linkHighlight = null;
+    updateNetZonePreview();
+    // Update hint
+    const n = _netZonePlayers.length;
+    if (n < 3) {
+      S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${n}/3 players selected · click ${3 - n} more</span>`;
+    } else {
+      S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${n} players · click more or click pitch to close</span>`;
+    }
+    return;
+  }
+
   const pt = S.getSVGPoint(e);
   let placed = null;
   if (S.tool !== 'select' && S.tool !== 'arrow') S.pushUndo();
@@ -1053,6 +1725,20 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
   else if (S.tool === 'headline') placed = addHeadline(pt.x, pt.y);
   else if (S.tool === 'tag') placed = addTag(pt.x, pt.y);
+  else if (S.tool === 'marker') {
+    // ── Chain-connect: place marker + auto-link to previous ─────────────
+    placed = addMarker(pt.x, pt.y);
+    if (placed && _lastChainMarker) {
+      const link = addLink(_lastChainMarker.id, placed.id);
+      if (link) {
+        trackElementInserted('connect');
+        const u2 = getCurrentUser();
+        if (u2) logAction(u2.uid, u2.email, 'element_inserted', { element: 'connect' }).catch(() => {});
+      }
+    }
+    _lastChainMarker = placed;
+    // Stay in marker tool (don't switch to select) — handled below
+  }
   if (placed) {
     const elType = placed.dataset.type;
     trackElementInserted(elType);
@@ -1060,9 +1746,9 @@ S.svg.addEventListener('click', e => {
     // Log element insertion to Firestore
     const u = getCurrentUser();
     if (u) logAction(u.uid, u.email, 'element_inserted', { element: elType }).catch(() => {});
-    // Players stay in placement mode so you can keep adding
-    if (S.tool === 'player-a' || S.tool === 'player-b' || S.tool === 'player-joker') {
-      // Don't switch tool — stay in player mode
+    // Players and markers stay in placement mode so you can keep adding
+    if (S.tool === 'player-a' || S.tool === 'player-b' || S.tool === 'player-joker' || S.tool === 'marker') {
+      // Don't switch tool — stay in placement/chain mode
     } else {
       setTool('select'); select(placed);
     }
@@ -1202,9 +1888,13 @@ S.svg.addEventListener('click', e => {
 });
 
 S.svg.addEventListener('dblclick', e => {
-  if (S.tool !== 'freeform') return;
-  e.preventDefault();
-  closeFreeform();
+  if (S.tool === 'freeform') { e.preventDefault(); closeFreeform(); return; }
+  if (S.tool === 'net-zone') {
+    // Image mode: close if 3+ coords
+    if (S.appMode === 'image' && _netZoneCoords.length >= 3) { e.preventDefault(); closeNetZone(); return; }
+    // Tactical Board: close if 3+ players
+    if (_netZonePlayers.length >= 3) { e.preventDefault(); closeNetZone(); return; }
+  }
 });
 
 S.svg.addEventListener('mousemove', e => {
@@ -1212,6 +1902,109 @@ S.svg.addEventListener('mousemove', e => {
   const pt = S.getSVGPoint(e);
   updateFreeformPreview(pt);
 });
+
+// ─── Net-Zone helpers ──────────────────────────────────────────────────────
+function closeNetZone() {
+  // Image mode: create free (non-anchored) polygon from raw coords
+  if (S.appMode === 'image') {
+    if (_netZoneCoords.length < 3) { cancelNetZone(); return; }
+    S.pushUndo();
+    const zone = addFreeNetZone([..._netZoneCoords]);
+    cancelNetZone();
+    if (zone) {
+      trackElementInserted('net-zone');
+      maybeSendPitchSnapshot();
+      const u = getCurrentUser();
+      if (u) logAction(u.uid, u.email, 'element_inserted', { element: 'net-zone' }).catch(() => {});
+      setTool('select');
+      select(zone);
+    }
+    return;
+  }
+  // Tactical Board mode: create player-anchored polygon
+  if (_netZonePlayers.length < 3) { cancelNetZone(); return; }
+  S.pushUndo();
+  const zone = addNetZone([..._netZonePlayers]);
+  cancelNetZone();
+  if (zone) {
+    trackElementInserted('net-zone');
+    maybeSendPitchSnapshot();
+    const u = getCurrentUser();
+    if (u) logAction(u.uid, u.email, 'element_inserted', { element: 'net-zone' }).catch(() => {});
+    setTool('select');
+    select(zone);
+  }
+}
+
+function cancelNetZone() {
+  _netZonePlayers = [];
+  _netZoneHighlights.forEach(h => h.remove());
+  _netZoneHighlights = [];
+  _netZoneCoords = [];
+  _netZoneVertexDots.forEach(d => d.remove());
+  _netZoneVertexDots = [];
+  if (_netZonePreview) { _netZonePreview.remove(); _netZonePreview = null; }
+}
+
+// Small dot to mark each clicked vertex in image mode
+function _addVertexDot(x, y) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const c = document.createElementNS(ns, 'circle');
+  c.setAttribute('cx', x);
+  c.setAttribute('cy', y);
+  c.setAttribute('r', '4');
+  c.setAttribute('fill', 'rgba(79,156,249,0.9)');
+  c.setAttribute('stroke', '#fff');
+  c.setAttribute('stroke-width', '1.5');
+  c.setAttribute('pointer-events', 'none');
+  S.playersLayer.appendChild(c);
+  _netZoneVertexDots.push(c);
+}
+
+function _showNetZoneHint() {
+  switchTab('element');
+  const msg = S.appMode === 'image'
+    ? 'Click on the image to place 3+ points.<br>Double-click to close the zone.'
+    : 'Click 3+ players to create a zone.<br>Place players first, then click each one.';
+  S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${msg}</span>`;
+  // Hide all edit sections so only the hint shows
+  ['player-edit-section','referee-edit-section','arrow-edit-section','zone-edit-section',
+   'textbox-edit-section','headline-edit-section','spotlight-edit-section','vision-edit-section',
+   'tag-edit-section','link-edit-section','marker-edit-section','nz-edit-section',
+   'size-section','rotation-section','del-section','layer-section'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.display = 'none';
+  });
+}
+
+function updateNetZonePreview() {
+  // Determine point count based on mode
+  const count = S.appMode === 'image' ? _netZoneCoords.length : _netZonePlayers.length;
+  if (count < 2) {
+    if (_netZonePreview) _netZonePreview.setAttribute('points', '');
+    return;
+  }
+  if (!_netZonePreview) {
+    _netZonePreview = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
+    _netZonePreview.setAttribute('fill', 'rgba(79,156,249,0.1)');
+    _netZonePreview.setAttribute('stroke', 'rgba(79,156,249,0.5)');
+    _netZonePreview.setAttribute('stroke-width', '1.5');
+    _netZonePreview.setAttribute('stroke-dasharray', '4,3');
+    _netZonePreview.setAttribute('stroke-linejoin', 'round');
+    _netZonePreview.setAttribute('pointer-events', 'none');
+    S.objectsLayer.appendChild(_netZonePreview);
+  }
+  let pts;
+  if (S.appMode === 'image') {
+    pts = _netZoneCoords.map(c => `${c.x},${c.y}`);
+  } else {
+    pts = _netZonePlayers.map(id => {
+      const el = document.getElementById(id);
+      return el ? `${el.dataset.cx},${el.dataset.cy}` : null;
+    }).filter(Boolean);
+  }
+  _netZonePreview.setAttribute('points', pts.join(' '));
+}
 
 function updateFreeformPreview(cursor) {
   if (!freeformPreview) {
@@ -2176,87 +2969,6 @@ window.exportAnimation = exportAnimation;
 window.exportVideo = exportVideo;
 window.clearAllSteps = clearAllSteps;
 
-// ─── Bundle menus (toolbar flyouts) ─────────────────────────────────────────
-function openBundle(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const isOpen = el.classList.contains('open');
-  document.querySelectorAll('.tool-bundle.open').forEach(b => { if (b.id !== id) closeBundle(b.id); });
-  if (!isOpen) {
-    el.classList.add('open');
-    const menuEl = el.querySelector('.bundle-menu') || document.querySelector(`.bundle-menu[data-bundle="${id}"]`);
-    const btn = el.querySelector('.tool-btn');
-    if (menuEl && btn) {
-      document.body.appendChild(menuEl);
-      menuEl.dataset.bundle = id;
-      const rect = btn.getBoundingClientRect();
-      menuEl.style.position = 'fixed';
-      menuEl.style.display = 'block';
-      menuEl.style.zIndex = '10000';
-      menuEl._parentBundle = el;
-      if (window.innerWidth <= 768) {
-        // Mobile: position above the button
-        menuEl.style.left = Math.max(8, Math.min(rect.left, window.innerWidth - 200)) + 'px';
-        menuEl.style.bottom = (window.innerHeight - rect.top + 8) + 'px';
-        menuEl.style.top = 'auto';
-      } else {
-        // Desktop: position to the right of the button
-        menuEl.style.left = (rect.right + 10) + 'px';
-        menuEl.style.top = rect.top + 'px';
-        menuEl.style.bottom = 'auto';
-      }
-    }
-  }
-}
-function closeBundle(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  el.classList.remove('open');
-  // Move detached menu back into the bundle
-  const detached = document.querySelector(`.bundle-menu[data-bundle="${id}"]`);
-  if (detached && detached._parentBundle === el) {
-    detached.style.display = '';
-    detached.style.position = '';
-    detached.style.left = '';
-    detached.style.bottom = '';
-    detached.style.top = '';
-    detached.style.zIndex = '';
-    el.appendChild(detached);
-  }
-}
-
-// When selecting a bundle option, swap the main button's icon to reflect the choice
-const bundleIcons = {
-  'shadow-circle': `<svg width="20" height="20" viewBox="0 0 22 22"><ellipse cx="11" cy="11" rx="8" ry="5" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2"/></svg>`,
-  'shadow-rect': `<svg width="20" height="20" viewBox="0 0 22 22"><rect x="3" y="6" width="16" height="10" rx="2" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2"/></svg>`,
-  'freeform': `<svg width="20" height="20" viewBox="0 0 22 22" fill="none"><path d="M6 14 Q3 8 7 5 Q12 2 16 6 Q20 10 17 15 Q14 19 9 17 Z" fill="rgba(79,156,249,0.25)" stroke="rgba(79,156,249,0.6)" stroke-width="1.2" stroke-linejoin="round"/></svg>`,
-  'spotlight': `<svg width="20" height="20" viewBox="0 0 22 22" fill="none"><path d="M10 2 L5 16 L17 16 L12 2 Z" fill="rgba(200,210,230,0.2)"/><ellipse cx="11" cy="16" rx="6" ry="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/></svg>`,
-  'vision': `<svg width="20" height="20" viewBox="0 0 22 22" fill="none"><polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/></svg>`,
-};
-function updateBundleIcon(bundleId, toolName) {
-  const bundle = document.getElementById(bundleId);
-  if (!bundle) return;
-  const mainBtn = bundle.querySelector('.tool-btn');
-  if (!mainBtn || !bundleIcons[toolName]) return;
-  // Replace only the SVG, keep the label
-  const label = mainBtn.querySelector('.tool-label');
-  const labelHTML = label ? label.outerHTML : '';
-  mainBtn.innerHTML = bundleIcons[toolName] + labelHTML;
-  mainBtn.setAttribute('data-tool', toolName);
-}
-
-// Close bundles when clicking elsewhere — use CAPTURE phase so it fires
-// before any element handler can call stopPropagation()
-function closeBundlesOnOutsideClick(e) {
-  if (!e.target.closest('.tool-bundle') && !e.target.closest('.bundle-menu')) {
-    document.querySelectorAll('.tool-bundle.open').forEach(b => {
-      closeBundle(b.id);
-    });
-  }
-}
-document.addEventListener('mousedown', closeBundlesOnOutsideClick, true);
-document.addEventListener('click', closeBundlesOnOutsideClick, true);
-
 // ─── Kit tooltip (name-of-team on hover) ────────────────────────────────────
 (function setupKitTooltip() {
   let tip = null;
@@ -2303,23 +3015,6 @@ document.addEventListener('click', closeBundlesOnOutsideClick, true);
     if (tip) tip.classList.remove('show');
   });
 })();
-
-const arrowIcons = {
-  'run': `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>`,
-  'pass': `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/><polygon points="13,9 9,6.5 9,11.5" fill="#F59E0B"/></svg>`,
-  'line': `<svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="15" y2="9" stroke="#f94f4f" stroke-width="2" stroke-linecap="round"/></svg>`,
-};
-const arrowLabels = { 'run': 'Run', 'pass': 'Pass', 'line': 'Line' };
-function updateArrowBundleIcon(type) {
-  const btn = document.getElementById('arrow-main-btn');
-  if (!btn || !arrowIcons[type]) return;
-  btn.innerHTML = arrowIcons[type] + `<span class="tool-label">${arrowLabels[type]}</span>`;
-}
-
-window.openBundle = openBundle;
-window.closeBundle = closeBundle;
-window.updateBundleIcon = updateBundleIcon;
-window.updateArrowBundleIcon = updateArrowBundleIcon;
 
 // ─── Copy / Paste ────────────────────────────────────────────────────────────
 let clipboard = null;
@@ -2759,8 +3454,7 @@ document.addEventListener('keydown', e => {
   if (e.key === '3') { setArrowType('line'); setTool('arrow'); }
   if (e.key === 'l') setTool('ball');
   if (e.key === 'c') setTool('cone');
-  if (e.key === 'z') setTool('shadow-circle');
-  if (e.key === 'x') setTool('shadow-rect');
+  if (e.key === 'z') setTool('shadow-rect');
   if (e.key === 't') setTool('textbox');
 });
 
@@ -2773,132 +3467,6 @@ document.addEventListener('click', e => {
   const msModal = document.getElementById('mode-switch-modal');
   if (e.target === msModal) closeModeSwitch();
 });
-
-// ─── Feedback Widget ─────────────────────────────────────────────────────────
-let feedbackType = 'improvement';
-
-function toggleFeedback() {
-  const panel = document.getElementById('feedback-panel');
-  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-  // Reset on open
-  if (panel.style.display === 'block') {
-    document.getElementById('fb-message').value = '';
-    document.getElementById('fb-status').style.display = 'none';
-    document.getElementById('fb-submit').disabled = false;
-    document.getElementById('fb-submit').textContent = 'Send Feedback';
-    document.getElementById('fb-file').value = '';
-    document.getElementById('fb-upload-text').textContent = 'Attach screenshot (optional)';
-    document.getElementById('fb-upload-label').classList.remove('has-file');
-    feedbackFile = null;
-  }
-}
-
-function setFeedbackType(btn) {
-  document.querySelectorAll('.fb-type-btn').forEach(b => b.classList.remove('active'));
-  btn.classList.add('active');
-  feedbackType = btn.dataset.fbtype;
-}
-
-let feedbackFile = null;
-
-function onFeedbackFile(input) {
-  const label = document.getElementById('fb-upload-label');
-  const textEl = document.getElementById('fb-upload-text');
-  if (input.files && input.files[0]) {
-    feedbackFile = input.files[0];
-    textEl.textContent = feedbackFile.name;
-    label.classList.add('has-file');
-  } else {
-    feedbackFile = null;
-    textEl.textContent = 'Attach screenshot (optional)';
-    label.classList.remove('has-file');
-  }
-}
-
-function compressImage(file, maxWidth, quality) {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.onload = () => {
-      const scale = Math.min(1, maxWidth / img.width);
-      const canvas = document.createElement('canvas');
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      canvas.getContext('2d').drawImage(img, 0, 0, canvas.width, canvas.height);
-      canvas.toBlob(blob => resolve(blob), 'image/jpeg', quality);
-    };
-    img.src = URL.createObjectURL(file);
-  });
-}
-
-async function submitFeedback() {
-  const msg = document.getElementById('fb-message').value.trim();
-  if (!msg) { document.getElementById('fb-message').focus(); return; }
-
-  const btn = document.getElementById('fb-submit');
-  const status = document.getElementById('fb-status');
-  btn.disabled = true;
-  btn.textContent = 'Sending…';
-  status.style.display = 'none';
-
-  const user = getCurrentUser();
-  const userEmail = user ? user.email : 'unknown';
-  const userName = user ? (user.displayName || user.email) : 'unknown';
-
-  try {
-    const formData = new FormData();
-    formData.append('access_key', '315e7f89-890f-4b05-8b81-605325f4f8e4');
-    formData.append('subject', `Táctica Feedback: ${feedbackType}`);
-    formData.append('type', feedbackType);
-    formData.append('message', `From: ${userName} (${userEmail})\n\n${msg}`);
-    formData.append('from_name', 'Táctica Feedback');
-    formData.append('email', userEmail);
-
-    // Upload screenshot to temp host and include URL
-    if (feedbackFile) {
-      btn.textContent = 'Uploading image…';
-      const compressed = await compressImage(feedbackFile, 800, 0.6);
-      const uploadData = new FormData();
-      uploadData.append('reqtype', 'fileupload');
-      uploadData.append('time', '72h');
-      uploadData.append('fileToUpload', compressed, 'screenshot.jpg');
-      const uploadRes = await fetch('https://litterbox.catbox.moe/resources/internals/api.php', { method: 'POST', body: uploadData });
-      if (uploadRes.ok) {
-        const imageUrl = (await uploadRes.text()).trim();
-        formData.set('message', msg + `\n\nScreenshot: ${imageUrl}`);
-      }
-    }
-
-    btn.textContent = 'Sending…';
-    const res = await fetch('https://api.web3forms.com/submit', {
-      method: 'POST',
-      headers: { 'Accept': 'application/json' },
-      body: formData,
-    });
-
-    const data = await res.json().catch(() => ({}));
-    if (res.ok && data.success) {
-      status.textContent = 'Thanks! Feedback sent.';
-      status.className = 'success';
-      status.style.display = 'block';
-      btn.textContent = 'Sent ✓';
-      setTimeout(() => toggleFeedback(), 1800);
-    } else {
-      throw new Error(data.message || 'Send failed');
-    }
-  } catch(e) {
-    console.error('Feedback error:', e);
-    status.textContent = e.message || 'Failed to send. Please try again.';
-    status.className = 'error';
-    status.style.display = 'block';
-    btn.textContent = 'Send Feedback';
-    btn.disabled = false;
-  }
-}
-
-window.toggleFeedback = toggleFeedback;
-window.setFeedbackType = setFeedbackType;
-window.submitFeedback = submitFeedback;
-window.onFeedbackFile = onFeedbackFile;
 
 // ─── Save Menu & Analysis Management ────────────────────────────────────────
 function toggleSaveMenu() {
@@ -3425,12 +3993,46 @@ function reattachListeners() {
   // Re-attach drag + click listeners to all restored elements
   [S.objectsLayer, S.playersLayer].forEach(layer => {
     layer.querySelectorAll('[data-type]').forEach(g => {
-      if (g.dataset.type !== 'link') makeDraggable(g);
+      // Free net-zones (image mode) are draggable; player-anchored net-zones are not
+      const isFreeZone = g.dataset.type === 'net-zone' && g.dataset.freeZone === 'true';
+      if (g.dataset.type !== 'link' && (g.dataset.type !== 'net-zone' || isFreeZone)) makeDraggable(g);
       g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
       if (g.dataset.type === 'textbox') {
         g.addEventListener('dblclick', e => {
           e.stopPropagation();
           try { import('./elements.js').then(m => m.openTextBoxEditFn?.(g)); } catch(err) {}
+        });
+      }
+      // Shadow zones: dblclick to edit label
+      if (g.dataset.type?.startsWith('shadow')) {
+        g.addEventListener('dblclick', e => {
+          e.stopPropagation(); select(g);
+          setTimeout(() => { const inp = document.getElementById('zone-label-input'); if (inp) { inp.focus(); inp.select(); } }, 50);
+        });
+      }
+      // Net-zone: mousedown selects group + starts drag via synthetic event
+      if (g.dataset.type === 'net-zone') {
+        g.addEventListener('mousedown', e => {
+          if (S.tool !== 'select') return;
+          e.stopPropagation(); e.preventDefault();
+          // Select all referenced players
+          const pids = g.dataset.players.split(',').filter(Boolean);
+          let first = true;
+          for (const pid of pids) {
+            const pEl = document.getElementById(pid);
+            if (!pEl) continue;
+            if (first) { select(pEl, { additive: false }); first = false; }
+            else select(pEl, { additive: true });
+          }
+          // Dispatch synthetic mousedown on first player for drag
+          const p1 = document.getElementById(pids[0]);
+          if (p1) {
+            const synth = new MouseEvent('mousedown', {
+              bubbles: false, clientX: e.clientX, clientY: e.clientY,
+              ctrlKey: e.ctrlKey, metaKey: e.metaKey
+            });
+            p1.dispatchEvent(synth);
+          }
         });
       }
     });
@@ -3572,101 +4174,6 @@ function showSaveReminder() {
   setTimeout(() => { hint.remove(); }, 3500);
 }
 
-// ─── Pitch Zoom ─────────────────────────────────────────────────────────────
-let _zoomLevel = 1;
-const ZOOM_MIN = 0.5;
-const ZOOM_MAX = 2.5;
-const ZOOM_STEP = 0.1;
-
-function applyZoom() {
-  const container = document.getElementById('pitch-container');
-  if (!container) return;
-  container.style.transform = `scale(${_zoomLevel})`;
-  container.style.transformOrigin = 'center center';
-  document.getElementById('zoom-level').textContent = Math.round(_zoomLevel * 100) + '%';
-}
-
-function zoomIn() {
-  _zoomLevel = Math.min(ZOOM_MAX, _zoomLevel + ZOOM_STEP);
-  applyZoom();
-}
-window.zoomIn = zoomIn;
-
-function zoomOut() {
-  _zoomLevel = Math.max(ZOOM_MIN, _zoomLevel - ZOOM_STEP);
-  applyZoom();
-}
-window.zoomOut = zoomOut;
-
-function zoomReset() {
-  _zoomLevel = 1;
-  applyZoom();
-}
-window.zoomReset = zoomReset;
-
-// Scroll wheel zoom (Ctrl/Cmd + scroll)
-document.getElementById('canvas-wrap')?.addEventListener('wheel', (e) => {
-  if (!e.ctrlKey && !e.metaKey) return;
-  e.preventDefault();
-  if (e.deltaY < 0) zoomIn();
-  else zoomOut();
-}, { passive: false });
-
-// ─── Notes Panel ────────────────────────────────────────────────────────────
-let _notesOpenTracked = false;
-
-function toggleNotes() {
-  const panel = document.getElementById('notes-panel');
-  const btn = document.getElementById('notes-toggle-btn');
-  const isOpen = panel.style.display !== 'none';
-  panel.style.display = isOpen ? 'none' : 'flex';
-  btn.style.display = isOpen ? 'flex' : 'none';
-  // Track opening
-  if (!isOpen && !_notesOpenTracked) {
-    _notesOpenTracked = true;
-    const u = getCurrentUser();
-    if (u) logAction(u.uid, u.email, 'feature_notes_open', {}).catch(() => {});
-  }
-}
-window.toggleNotes = toggleNotes;
-
-// Auto-save notes on blur (when user clicks away) with "Saved" indicator + tracking
-let _notesSaveTimer = null;
-const notesTextarea = document.getElementById('notes-textarea');
-
-notesTextarea?.addEventListener('input', function() {
-  const btn = document.getElementById('notes-toggle-btn');
-  if (btn) btn.classList.toggle('has-notes', this.value.trim().length > 0);
-  // Debounced auto-save indicator
-  clearTimeout(_notesSaveTimer);
-  _notesSaveTimer = setTimeout(() => showNotesSaved(), 1500);
-});
-
-notesTextarea?.addEventListener('blur', function() {
-  clearTimeout(_notesSaveTimer);
-  if (this.value.trim().length > 0) showNotesSaved();
-});
-
-function showNotesSaved() {
-  const status = document.getElementById('notes-save-status');
-  if (!status) return;
-  status.textContent = 'Saved';
-  status.classList.add('visible');
-  // Track save
-  const u = getCurrentUser();
-  if (u) logAction(u.uid, u.email, 'feature_notes_save', { length: notesTextarea?.value.length || 0 }).catch(() => {});
-  setTimeout(() => status.classList.remove('visible'), 2000);
-}
-
-// Expose notes for captureState
-window._getNotesText = () => document.getElementById('notes-textarea')?.value || '';
-window._setNotesText = (text) => {
-  const ta = document.getElementById('notes-textarea');
-  if (ta) ta.value = text || '';
-  const btn = document.getElementById('notes-toggle-btn');
-  if (btn) btn.classList.toggle('has-notes', (text || '').trim().length > 0);
-};
-
 // ─── Auto-save on Cmd+S ──────────────────────────────────────────────────────
 document.addEventListener('keydown', async e => {
   if ((e.metaKey || e.ctrlKey) && e.key === 's') {
@@ -3733,174 +4240,6 @@ function showDesktopWelcome() {
     </div>`;
   document.body.appendChild(overlay);
 }
-
-// ─── Auth UI ────────────────────────────────────────────────────────────────
-function updateAuthUI(user) {
-  const menuIcon = document.getElementById('app-menu-icon');
-  const menuAvatarImg = document.getElementById('app-menu-avatar-img');
-  const menuAvatarInitials = document.getElementById('app-menu-avatar-initials');
-  const menuUserInfo = document.getElementById('app-menu-user-info');
-  const menuUserName = document.getElementById('app-menu-user-name');
-  const menuUserEmail = document.getElementById('app-menu-user-email');
-  const menuUserDivider = document.getElementById('app-menu-user-divider');
-  const menuSignin = document.getElementById('app-menu-signin');
-  const menuSignout = document.getElementById('app-menu-signout');
-  const menuSignoutDivider = document.getElementById('app-menu-signout-divider');
-  const menuBtn = document.getElementById('app-menu-btn');
-
-  if (user) {
-    // Show avatar, hide hamburger icon
-    menuIcon.style.display = 'none';
-    menuBtn.style.borderColor = 'var(--accent)';
-
-    if (user.photoURL) {
-      menuAvatarImg.src = user.photoURL;
-      menuAvatarImg.style.display = 'block';
-      menuAvatarInitials.style.display = 'none';
-    } else {
-      menuAvatarImg.style.display = 'none';
-      menuAvatarInitials.style.display = 'flex';
-      const name = user.displayName || user.email || 'U';
-      menuAvatarInitials.textContent = name.charAt(0).toUpperCase();
-    }
-
-    // Dropdown: show user info, hide sign-in, show sign-out
-    menuUserInfo.style.display = 'block';
-    menuUserName.textContent = user.displayName || 'User';
-    menuUserEmail.textContent = user.email || '';
-    menuUserDivider.style.display = 'block';
-    menuSignin.style.display = 'none';
-    menuSignout.style.display = 'flex';
-    menuSignoutDivider.style.display = 'block';
-  } else {
-    // Show hamburger icon, hide avatar
-    menuIcon.style.display = 'flex';
-    menuAvatarImg.style.display = 'none';
-    menuAvatarInitials.style.display = 'none';
-    menuBtn.style.borderColor = '';
-
-    // Dropdown: hide user info, show sign-in, hide sign-out
-    menuUserInfo.style.display = 'none';
-    menuUserDivider.style.display = 'none';
-    menuSignin.style.display = 'flex';
-    menuSignout.style.display = 'none';
-    menuSignoutDivider.style.display = 'none';
-  }
-}
-
-function toggleAppMenu() {
-  const dd = document.getElementById('app-menu-dropdown');
-  const isOpen = dd.style.display !== 'none';
-  dd.style.display = isOpen ? 'none' : 'block';
-}
-window.toggleAppMenu = toggleAppMenu;
-
-// Close app menu when clicking outside
-document.addEventListener('click', (e) => {
-  const wrapper = document.getElementById('app-menu-wrapper');
-  const dd = document.getElementById('app-menu-dropdown');
-  if (wrapper && dd && !wrapper.contains(e.target)) {
-    dd.style.display = 'none';
-  }
-});
-
-function openAuthModal(tab) {
-  document.getElementById('auth-modal').style.display = 'flex';
-  switchAuthTab(tab === 'signup' ? 'signup' : 'signin');
-  clearAuthMessage();
-}
-window.openAuthModal = openAuthModal;
-
-function closeAuthModal() {
-  document.getElementById('auth-modal').style.display = 'none';
-  clearAuthMessage();
-}
-window.closeAuthModal = closeAuthModal;
-
-function switchAuthTab(tab) {
-  document.getElementById('auth-form-signin').style.display = tab === 'signin' ? 'flex' : 'none';
-  document.getElementById('auth-form-signup').style.display = tab === 'signup' ? 'flex' : 'none';
-  document.getElementById('auth-form-forgot').style.display = tab === 'forgot' ? 'flex' : 'none';
-
-  const tabSignin = document.getElementById('auth-tab-signin');
-  const tabSignup = document.getElementById('auth-tab-signup');
-  tabSignin.classList.toggle('active', tab === 'signin' || tab === 'forgot');
-  tabSignup.classList.toggle('active', tab === 'signup');
-
-  // Show/hide Google button and divider for forgot
-  const googleBtn = document.querySelector('.auth-google-btn');
-  const divider = document.querySelector('.auth-divider');
-  if (googleBtn) googleBtn.style.display = tab === 'forgot' ? 'none' : 'flex';
-  if (divider) divider.style.display = tab === 'forgot' ? 'none' : 'flex';
-
-  clearAuthMessage();
-}
-window.switchAuthTab = switchAuthTab;
-
-function showAuthMessage(msg, type) {
-  const el = document.getElementById('auth-message');
-  el.textContent = msg;
-  el.className = 'auth-message ' + type;
-  el.style.display = 'block';
-}
-
-function clearAuthMessage() {
-  const el = document.getElementById('auth-message');
-  el.style.display = 'none';
-  el.textContent = '';
-}
-
-async function doGoogleSignIn() {
-  clearAuthMessage();
-  const { user, error } = await signInWithGoogle();
-  if (error) showAuthMessage(error, 'error');
-  else if (user) trackSignIn('google');
-}
-window.doGoogleSignIn = doGoogleSignIn;
-
-async function doEmailSignIn() {
-  clearAuthMessage();
-  const email = document.getElementById('auth-email-in').value.trim();
-  const pass = document.getElementById('auth-pass-in').value;
-  if (!email || !pass) { showAuthMessage('Please fill in all fields.', 'error'); return; }
-  const { user, error } = await signInWithEmail(email, pass);
-  if (error) showAuthMessage(error, 'error');
-  else if (user) trackSignIn('email');
-}
-window.doEmailSignIn = doEmailSignIn;
-
-async function doEmailSignUp() {
-  clearAuthMessage();
-  const name = document.getElementById('auth-name-up').value.trim();
-  const email = document.getElementById('auth-email-up').value.trim();
-  const pass = document.getElementById('auth-pass-up').value;
-  if (!email || !pass) { showAuthMessage('Please fill in email and password.', 'error'); return; }
-  const { user, error } = await signUpWithEmail(email, pass, name);
-  if (error) showAuthMessage(error, 'error');
-  else if (user) trackSignUp('email');
-}
-window.doEmailSignUp = doEmailSignUp;
-
-async function doPasswordReset() {
-  clearAuthMessage();
-  const email = document.getElementById('auth-email-reset').value.trim();
-  if (!email) { showAuthMessage('Please enter your email.', 'error'); return; }
-  const { success, error } = await sendPasswordReset(email);
-  if (error) showAuthMessage(error, 'error');
-  else showAuthMessage('Reset link sent! Check your inbox.', 'success');
-}
-window.doPasswordReset = doPasswordReset;
-
-async function doSignOut() {
-  await signOut();
-  trackSignOut();
-  const dropdown = document.getElementById('user-dropdown');
-  if (dropdown) dropdown.style.display = 'none';
-  showNotification('You have been signed out', 'info', 4000);
-}
-window.doSignOut = doSignOut;
-
-// (toggleUserMenu removed — replaced by toggleAppMenu)
 
 // ─── Sharing ────────────────────────────────────────────────────────────────
 let _pendingShareId = null;
@@ -4258,6 +4597,7 @@ onAuthChange(async (user) => {
     try { _sc = await logSession(user.uid, user.email, user.displayName); } catch (e) { console.warn('Session log error:', e); }
     // Show review modal based on real Firestore session count
     maybeShowReview(_sc);
+
     // Always start a fresh board on new session
     clearCurrentId();
     const nameInput = document.getElementById('analysis-name-input');
