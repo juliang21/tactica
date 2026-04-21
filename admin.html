@@ -356,7 +356,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth, setPersistence, browserLocalPersistence, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, where, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getFirestore, collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBda3avj-hYXV72mgbc5ueLw7QAQnqTI34",
@@ -425,38 +425,17 @@ window.loadDashboard = async function() {
   const endMs = new Date(endStr + 'T23:59:59.999').getTime();
 
   try {
-    // Build all queries in parallel
-    const promises = [];
+    // Fetch all three collections in parallel (no where — avoids index issues, fast enough)
+    const [usersSnap, sessionsSnap, actionsSnap] = await Promise.all([
+      _usersLoaded ? null : getDocs(query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'))),
+      getDocs(query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'))),
+      getDocs(query(collection(db, 'tactica_actions'), orderBy('timestamp', 'desc'))).catch(e => { console.warn('Actions fetch failed:', e); return null; }),
+    ]);
 
-    // Users: fetch all only once (small collection, needed for milestones/total count)
-    if (!_usersLoaded) {
-      promises.push(
-        getDocs(query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc')))
-          .then(snap => { _allUsers = snap.docs.map(d => ({ uid: d.id, ...d.data() })); _usersLoaded = true; })
-      );
-    }
+    if (usersSnap) { _allUsers = usersSnap.docs.map(d => ({ uid: d.id, ...d.data() })); _usersLoaded = true; }
+    _allSessions = sessionsSnap.docs.map(d => d.data());
+    _allActions = actionsSnap ? actionsSnap.docs.map(d => d.data()) : [];
 
-    // Sessions + Actions: query selected date range in parallel
-    promises.push(
-      getDocs(query(
-        collection(db, 'tactica_sessions'),
-        where('timestamp', '>=', startMs),
-        where('timestamp', '<=', endMs),
-        orderBy('timestamp', 'desc')
-      )).then(snap => { _allSessions = snap.docs.map(d => d.data()); })
-    );
-
-    promises.push(
-      getDocs(query(
-        collection(db, 'tactica_actions'),
-        where('timestamp', '>=', startMs),
-        where('timestamp', '<=', endMs),
-        orderBy('timestamp', 'desc')
-      )).then(snap => { _allActions = snap.docs.map(d => d.data()); })
-        .catch(e => { console.warn('Actions fetch failed:', e); _allActions = []; })
-    );
-
-    await Promise.all(promises);
     applyDateFilter();
   } catch (e) { console.error('Dashboard error:', e); }
   finally {
@@ -465,9 +444,9 @@ window.loadDashboard = async function() {
   }
 };
 
-// Re-fetch when dates change
-document.getElementById('date-start').addEventListener('change', () => loadDashboard());
-document.getElementById('date-end').addEventListener('change', () => loadDashboard());
+// Date changes filter in-memory (instant) — re-fetch only on Refresh
+document.getElementById('date-start').addEventListener('change', () => applyDateFilter());
+document.getElementById('date-end').addEventListener('change', () => applyDateFilter());
 
 window.applyDateFilter = function() {
   const startStr = document.getElementById('date-start').value;
@@ -480,9 +459,8 @@ window.applyDateFilter = function() {
   const excludeMe = document.getElementById('exclude-me').checked;
   const excludeUids = excludeMe ? new Set(_allUsers.filter(u => ADMIN_EMAILS.includes(u.email)).map(u => u.uid)) : new Set();
 
-  // Data is already date-scoped from Firestore — just apply excludeMe filter
-  const filteredSessions = excludeUids.size > 0 ? _allSessions.filter(s => !excludeUids.has(s.uid)) : _allSessions;
-  const filteredActions = excludeUids.size > 0 ? _allActions.filter(a => !excludeUids.has(a.uid)) : _allActions;
+  const filteredSessions = _allSessions.filter(s => s.timestamp >= startMs && s.timestamp <= endMs && !excludeUids.has(s.uid));
+  const filteredActions = _allActions.filter(a => a.timestamp >= startMs && a.timestamp <= endMs && !excludeUids.has(a.uid));
   const activeUids = new Set(filteredSessions.map(s => s.uid));
   const filteredUsers = _allUsers.filter(u => activeUids.has(u.uid) && !excludeUids.has(u.uid));
 
