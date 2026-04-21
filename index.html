@@ -14,15 +14,20 @@
       var langs = (navigator.languages || []).map(function(l){ return (l||'').toLowerCase(); });
       var trLang = lang === 'tr' || lang.indexOf('tr-') === 0 || langs.some(function(l){ return l === 'tr' || l.indexOf('tr-') === 0; });
       if (blockedTz[tz] || trLang) {
+        // Signal to app.js that the overlay is already shown, so it logs (via Firestore)
+        // but does NOT render a second overlay.
+        window.__tacticaMaintenanceShown = true;
+        window.__tacticaMaintenanceReason = 'region';
         document.addEventListener('DOMContentLoaded', function() {
           document.documentElement.style.background = '#000';
-          document.body.innerHTML = '';
-          document.body.setAttribute('style', 'margin:0;background:#000;color:#fff;font-family:Manrope,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;');
           var o = document.createElement('div');
-          o.setAttribute('style', 'position:fixed;inset:0;z-index:2147483647;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;');
-          o.innerHTML = '<div style="max-width:440px;padding:40px 32px;text-align:center"><div style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin-bottom:14px">Under maintenance</div><div style="font-size:14px;color:#9ca3af;line-height:1.6;margin-bottom:32px">The site is temporarily unavailable while we perform scheduled maintenance.<br>We\'ll be back on <strong style="color:#e5e7eb">30 April</strong>.</div><button id="m-ok" style="padding:11px 32px;border:none;border-radius:8px;background:#fff;color:#000;font-family:Manrope,system-ui,sans-serif;font-size:14px;font-weight:600;cursor:pointer">OK</button></div>';
+          o.id = 'maintenance-overlay';
+          o.setAttribute('style', 'position:fixed;inset:0;z-index:2147483647;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;font-family:Manrope,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;');
+          o.innerHTML = '<div id="m-inner" style="max-width:440px;padding:40px 32px;text-align:center"><div style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin-bottom:14px">Under maintenance</div><div style="font-size:14px;color:#9ca3af;line-height:1.6;margin-bottom:32px">The site is temporarily unavailable while we perform scheduled maintenance.<br>We\'ll be back on <strong style="color:#e5e7eb">30 April</strong>.</div><button id="m-ok" style="padding:11px 32px;border:none;border-radius:8px;background:#fff;color:#000;font-family:Manrope,system-ui,sans-serif;font-size:14px;font-weight:600;cursor:pointer">OK</button></div>';
           document.body.appendChild(o);
-          document.getElementById('m-ok').onclick = function() { window.location.href = 'landing.html'; };
+          document.getElementById('m-ok').onclick = function() {
+            document.getElementById('m-inner').innerHTML = '<div style="font-size:22px;font-weight:600;letter-spacing:-0.01em">See you soon!</div>';
+          };
         });
       }
     } catch (e) {}

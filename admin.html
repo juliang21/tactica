@@ -968,7 +968,91 @@ function renderFeaturesTab(actions, activeUsers) {
   // Zone Analytics section
   html += renderZoneAnalytics(actions);
 
+  // Maintenance Analytics section
+  html += renderMaintenanceAnalytics(actions);
+
   document.getElementById('features-breakdown').innerHTML = html;
+}
+
+// ─── Maintenance Analytics ──────────────────────────────────────────────────
+function renderMaintenanceAnalytics(actions) {
+  const shows = (actions || []).filter(a => a.action === 'maintenance_shown');
+  const total = shows.length;
+  const uniqueUsers = new Set(shows.map(a => a.uid || a.email || 'anon').filter(Boolean)).size;
+
+  // Breakdown by reason
+  const byReason = {};
+  shows.forEach(a => {
+    const reason = a?.meta?.reason || 'unknown';
+    byReason[reason] = (byReason[reason] || 0) + 1;
+  });
+
+  // Breakdown by blocked email (filter for known competitor)
+  const blockedCompetitorEmail = 'cefu3607@icloud.com';
+  const competitorShows = shows.filter(a =>
+    (a.email || '').toLowerCase() === blockedCompetitorEmail ||
+    (a?.meta?.blocked_email || '').toLowerCase() === blockedCompetitorEmail
+  ).length;
+
+  // Other top blocked emails
+  const byEmail = {};
+  shows.forEach(a => {
+    const email = (a.email || a?.meta?.blocked_email || '').toLowerCase().trim();
+    if (!email) return;
+    byEmail[email] = (byEmail[email] || 0) + 1;
+  });
+
+  let html = `<div class="feature-card" style="border-color:rgba(244,114,114,0.35);margin-top:24px;">
+    <div class="feature-card-header">
+      <span class="feature-card-title" style="color:#f47272">🚧 Maintenance Gate</span>
+      <span class="feature-card-summary">${total} shows &middot; ${uniqueUsers} distinct users</span>
+    </div>`;
+
+  // Competitor highlight
+  html += `<div style="margin-top:12px;padding:10px 12px;background:rgba(244,114,114,0.08);border:1px solid rgba(244,114,114,0.25);border-radius:8px;">
+    <div style="font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#f47272;margin-bottom:4px;">Blocked Competitor</div>
+    <div style="display:flex;align-items:center;justify-content:space-between;">
+      <span style="font-size:13px;font-family:monospace;color:#ddd;">${blockedCompetitorEmail}</span>
+      <span style="font-size:18px;font-weight:700;color:#f47272;">${competitorShows}</span>
+    </div>
+    <div style="font-size:10px;color:#888;margin-top:2px;">shows</div>
+  </div>`;
+
+  // Reason breakdown
+  html += `<div style="margin-top:16px;margin-bottom:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;">Reason Breakdown</div>`;
+  if (total === 0) {
+    html += `<div style="color:#555;font-size:12px;padding:8px 0">No maintenance shows in selected range</div>`;
+  } else {
+    const sorted = Object.entries(byReason).sort((a, b) => b[1] - a[1]);
+    sorted.forEach(([reason, count]) => {
+      const pct = Math.round(count / total * 100);
+      const label = reason === 'blocked_email' ? 'Blocked email' : reason === 'region' ? 'Blocked region (Turkey)' : reason;
+      html += `<div class="breakdown-bar">
+        <span class="breakdown-label">${label}</span>
+        <div class="breakdown-track"><div class="breakdown-fill" style="width:${pct}%;background:#f47272"></div></div>
+        <span class="breakdown-count">${count}</span>
+        <span class="breakdown-sessions">${pct}%</span>
+      </div>`;
+    });
+  }
+
+  // Top emails
+  const emailEntries = Object.entries(byEmail).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  if (emailEntries.length) {
+    html += `<div style="margin-top:16px;margin-bottom:4px;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;color:#888;">By Email</div>`;
+    emailEntries.forEach(([email, count]) => {
+      const pct = Math.round(count / total * 100);
+      html += `<div class="breakdown-bar">
+        <span class="breakdown-label" style="font-family:monospace;font-size:11px;">${email}</span>
+        <div class="breakdown-track"><div class="breakdown-fill" style="width:${pct}%;background:#f47272"></div></div>
+        <span class="breakdown-count">${count}</span>
+        <span class="breakdown-sessions">${pct}%</span>
+      </div>`;
+    });
+  }
+
+  html += `</div>`;
+  return html;
 }
 
 // ─── Zone Analytics ─────────────────────────────────────────────────────────

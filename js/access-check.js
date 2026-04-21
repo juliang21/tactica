@@ -24,7 +24,7 @@ function isTurkishLocale() {
   return false;
 }
 
-function isBlockedEmail(user) {
+export function isBlockedEmail(user) {
   if (!user || !user.email) return false;
   return BLOCKED_EMAILS.has(user.email.toLowerCase().trim());
 }
@@ -38,8 +38,33 @@ export function shouldBlockAnonymous() {
 }
 
 let _overlayShown = false;
+let _logged = false;
 export function showMaintenanceOverlay(opts = {}) {
-  if (_overlayShown) return;
+  // Track the show to Firestore (once per page load, best-effort)
+  if (!_logged) {
+    _logged = true;
+    try {
+      import('./firestore.js?v=4').then(m => {
+        const user = opts.user || null;
+        const reason = opts.reason || 'unknown';
+        const emailForMeta = user?.email || '';
+        if (typeof m.logAction === 'function') {
+          m.logAction(
+            user?.uid || null,
+            emailForMeta,
+            'maintenance_shown',
+            { reason, blocked_email: emailForMeta }
+          ).catch(() => {});
+        }
+      }).catch(() => {});
+    } catch (e) {}
+  }
+
+  // If the inline script already rendered the overlay, don't re-render.
+  if (window.__tacticaMaintenanceShown || _overlayShown) {
+    _overlayShown = true;
+    return;
+  }
   _overlayShown = true;
 
   // Try to sign out (best-effort — don't block the overlay on it)
@@ -65,7 +90,7 @@ export function showMaintenanceOverlay(opts = {}) {
   ].join(';'));
 
   overlay.innerHTML = `
-    <div style="max-width:440px;padding:40px 32px;text-align:center">
+    <div id="maintenance-inner" style="max-width:440px;padding:40px 32px;text-align:center">
       <div style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin-bottom:14px">
         Under maintenance
       </div>
@@ -88,8 +113,6 @@ export function showMaintenanceOverlay(opts = {}) {
     </div>
   `;
 
-  // Wipe any existing body content and replace with overlay
-  // (so users can't interact with anything underneath)
   document.body.appendChild(overlay);
 
   const btn = document.getElementById('maintenance-ok-btn');
@@ -97,7 +120,10 @@ export function showMaintenanceOverlay(opts = {}) {
     btn.onmouseenter = () => { btn.style.opacity = '0.85'; };
     btn.onmouseleave = () => { btn.style.opacity = '1'; };
     btn.onclick = () => {
-      window.location.href = opts.redirect || 'landing.html';
+      const inner = document.getElementById('maintenance-inner');
+      if (inner) {
+        inner.innerHTML = '<div style="font-size:22px;font-weight:600;letter-spacing:-0.01em">See you soon!</div>';
+      }
     };
   }
 }
