@@ -32,7 +32,7 @@ export const pitchMode = {
     tabs: [
       { id: 'players', label: 'Edit Team',  paneId: 'pane-players' },
       { id: 'pitch',   label: 'Pitch',      paneId: 'pane-pitch' },
-      { id: 'element', label: 'Element',     paneId: 'pane-element' },
+      { id: 'element', label: 'Selection',   paneId: 'pane-element' },
     ],
     defaultTab: 'players',
   },

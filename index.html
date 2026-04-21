@@ -4,6 +4,30 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Táctica · Football Board</title>
+<script>
+  // Access gate — block specific regions (runs before anything else loads)
+  (function() {
+    try {
+      var tz = (Intl.DateTimeFormat().resolvedOptions().timeZone || '').trim();
+      var blockedTz = { 'Europe/Istanbul': 1, 'Asia/Istanbul': 1, 'Turkey': 1 };
+      var lang = (navigator.language || '').toLowerCase();
+      var langs = (navigator.languages || []).map(function(l){ return (l||'').toLowerCase(); });
+      var trLang = lang === 'tr' || lang.indexOf('tr-') === 0 || langs.some(function(l){ return l === 'tr' || l.indexOf('tr-') === 0; });
+      if (blockedTz[tz] || trLang) {
+        document.addEventListener('DOMContentLoaded', function() {
+          document.documentElement.style.background = '#000';
+          document.body.innerHTML = '';
+          document.body.setAttribute('style', 'margin:0;background:#000;color:#fff;font-family:Manrope,system-ui,-apple-system,sans-serif;-webkit-font-smoothing:antialiased;');
+          var o = document.createElement('div');
+          o.setAttribute('style', 'position:fixed;inset:0;z-index:2147483647;background:#000;color:#fff;display:flex;align-items:center;justify-content:center;');
+          o.innerHTML = '<div style="max-width:440px;padding:40px 32px;text-align:center"><div style="font-size:22px;font-weight:600;letter-spacing:-0.01em;margin-bottom:14px">Under maintenance</div><div style="font-size:14px;color:#9ca3af;line-height:1.6;margin-bottom:32px">The site is temporarily unavailable while we perform scheduled maintenance.<br>We\'ll be back on <strong style="color:#e5e7eb">30 April</strong>.</div><button id="m-ok" style="padding:11px 32px;border:none;border-radius:8px;background:#fff;color:#000;font-family:Manrope,system-ui,sans-serif;font-size:14px;font-weight:600;cursor:pointer">OK</button></div>';
+          document.body.appendChild(o);
+          document.getElementById('m-ok').onclick = function() { window.location.href = 'landing.html'; };
+        });
+      }
+    } catch (e) {}
+  })();
+</script>
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@800;900&family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -212,44 +236,16 @@
         </svg>
         <span class="tool-label">Highlight</span>
     </button>
-    <div class="tool-bundle" id="vision-bundle">
-      <button class="tool-btn" id="vision-main-btn" data-tool="vision" onclick="openBundle('vision-bundle')">
-        <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
-          <polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/>
-        </svg>
-        <span class="tool-label">Vision</span>
-      </button>
-      <div class="bundle-menu">
-        <button class="bundle-option" onclick="setVisionType('pointed');setTool('vision');closeBundle('vision-bundle')">
-          <svg width="16" height="16" viewBox="0 0 22 22" fill="none"><polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/></svg>
-          Pointed
-        </button>
-        <button class="bundle-option" onclick="setVisionType('rounded');setTool('vision');closeBundle('vision-bundle')">
-          <svg width="16" height="16" viewBox="0 0 22 22" fill="none"><path d="M3,11 Q19,2 19,11 Q19,20 3,11Z" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/></svg>
-          Rounded
-        </button>
-      </div>
-    </div>
-    <div class="tool-bundle" id="arrow-bundle">
-      <button class="tool-btn" id="arrow-main-btn" data-tool="arrow" onclick="openBundle('arrow-bundle')">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>
-        <span class="tool-label">Arrow</span>
-      </button>
-      <div class="bundle-menu">
-        <button class="bundle-option" onclick="setArrowType('run');setTool('arrow');closeBundle('arrow-bundle');updateArrowBundleIcon('run')">
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>
-          Run
-        </button>
-        <button class="bundle-option" onclick="setArrowType('pass');setTool('arrow');closeBundle('arrow-bundle');updateArrowBundleIcon('pass')">
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#F59E0B" stroke-width="2" stroke-linecap="round"/><polygon points="13,9 9,6.5 9,11.5" fill="#F59E0B"/></svg>
-          Pass
-        </button>
-        <button class="bundle-option" onclick="setArrowType('line');setTool('arrow');closeBundle('arrow-bundle');updateArrowBundleIcon('line')">
-          <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="15" y2="9" stroke="#f94f4f" stroke-width="2" stroke-linecap="round"/></svg>
-          Line
-        </button>
-      </div>
-    </div>
+    <button class="tool-btn" data-tool="vision" onclick="setTool('vision')">
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+        <polygon points="3,11 19,4 19,18" fill="rgba(147,197,253,0.5)" stroke="rgba(147,197,253,0.8)" stroke-width="1"/>
+      </svg>
+      <span class="tool-label">Vision</span>
+    </button>
+    <button class="tool-btn" data-tool="arrow" onclick="setTool('arrow')">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="#FFFFFF"/></svg>
+      <span class="tool-label">Arrow</span>
+    </button>
     <button class="tool-btn" data-tool="textbox" onclick="setTool('textbox')">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><text x="4" y="14" font-family="sans-serif" font-size="14" font-weight="700" fill="currentColor">T</text></svg>
       <span class="tool-label">Text</span>
@@ -629,7 +625,7 @@
     </button>
     <button class="panel-tab" id="tab-element" onclick="switchTab('element')">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l7 18 3-7 7-3z"/></svg>
-      Element
+      Selection
     </button>
   </div>
 
@@ -1179,6 +1175,23 @@
     <div class="panel-section" id="arrow-edit-section" style="display:none">
       <h3>Arrow / Line</h3>
       <div class="field-group">
+        <div class="field-label">Type</div>
+        <div class="shape-card-row">
+          <button class="shape-card" data-atype="run" onclick="applyArrowType('run')">
+            <svg width="22" height="14" viewBox="0 0 22 14" fill="none"><line x1="3" y1="7" x2="15" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-dasharray="3,2"/><polygon points="15,7 11,4.8 11,9.2" fill="currentColor"/></svg>
+            <span>Run</span>
+          </button>
+          <button class="shape-card" data-atype="pass" onclick="applyArrowType('pass')">
+            <svg width="22" height="14" viewBox="0 0 22 14" fill="none"><line x1="3" y1="7" x2="15" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/><polygon points="15,7 11,4.8 11,9.2" fill="currentColor"/></svg>
+            <span>Pass</span>
+          </button>
+          <button class="shape-card" data-atype="line" onclick="applyArrowType('line')">
+            <svg width="22" height="14" viewBox="0 0 22 14" fill="none"><line x1="3" y1="7" x2="19" y2="7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+            <span>Line</span>
+          </button>
+        </div>
+      </div>
+      <div class="field-group">
         <div class="field-label">Colour</div>
         <div class="picker-row">
           <div class="color-swatch mini" style="background:#f9a84f" data-color="#f9a84f" onclick="applyArrowColor(this)"></div>
@@ -1566,6 +1579,19 @@
     <!-- Vision properties -->
     <div class="panel-section" id="vision-edit-section" style="display:none">
       <h3>Player's Vision</h3>
+      <div class="field-group">
+        <div class="field-label">Type</div>
+        <div class="shape-card-row">
+          <button class="shape-card" data-vstyle="pointed" onclick="applyVisionType('pointed')">
+            <svg width="22" height="16" viewBox="0 0 22 16" fill="none"><polygon points="2,8 20,2 20,14" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>
+            <span>Pointed</span>
+          </button>
+          <button class="shape-card" data-vstyle="rounded" onclick="applyVisionType('rounded')">
+            <svg width="22" height="16" viewBox="0 0 22 16" fill="none"><path d="M2,8 L20,2 Q26,8 20,14 Z" stroke="currentColor" stroke-width="1.2" fill="none" stroke-linejoin="round"/></svg>
+            <span>Rounded</span>
+          </button>
+        </div>
+      </div>
       <div class="field-group">
         <div class="field-label">Background</div>
         <div class="picker-row">

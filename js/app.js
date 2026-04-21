@@ -22,6 +22,7 @@ import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, t
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
+import { shouldBlockUser, shouldBlockAnonymous, showMaintenanceOverlay } from './access-check.js';
 import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis } from './firestore.js?v=4';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
 import './features/feedback.js';
@@ -214,6 +215,26 @@ window.layerBringForward = layerBringForward;
 window.layerSendBackward = layerSendBackward;
 window.layerSendToBack = layerSendToBack;
 
+// ─── Systematized Post-Insert Selection ─────────────────────────────────────
+// After any element is inserted, we want to:
+//   1) Switch to the select tool
+//   2) Select the new element (which shows its properties panel + Selection tab)
+//
+// For drag-based insertions (arrow, freeform zone), a stray 'click' event
+// follows the mouseup on the SVG canvas, which the click handler at line ~1684
+// interprets as a click on empty pitch and calls deselect() — instantly hiding
+// the properties panel we just opened. Setting S.dragMoved(true) makes that
+// handler bail out (it already has `if (S.dragMoved) return;`).
+function finishInsert(el, opts = {}) {
+  if (!el) return;
+  if (opts.dragBased) {
+    S.setDragMoved(true);
+    setTimeout(() => S.setDragMoved(false), 0);
+  }
+  setTool('select');
+  select(el);
+}
+
 // ─── Expose to inline HTML handlers ──────────────────────────────────────────
 // (These bridge the onclick="" attributes in the HTML to the module functions)
 // Wrap setTool to clean up freeform preview when switching tools
@@ -277,6 +298,16 @@ window.setTool = function(t) {
     const sec = document.getElementById(toolPanel.panel);
     if (sec) sec.style.display = '';
     S.selInfo.innerHTML = `<strong>${toolPanel.label}</strong><br><span style="font-size:10px;color:var(--text-muted)">${toolPanel.hint}</span>`;
+    // Reflect the current default variant as the active card
+    if (t === 'vision') {
+      const v = S.visionType || 'pointed';
+      document.querySelectorAll('#vision-edit-section .shape-card[data-vstyle]').forEach(c =>
+        c.classList.toggle('active', c.dataset.vstyle === v));
+    } else if (t === 'arrow') {
+      const a = S.arrowType || 'run';
+      document.querySelectorAll('#arrow-edit-section .shape-card[data-atype]').forEach(c =>
+        c.classList.toggle('active', c.dataset.atype === a));
+    }
   } else if (t === 'net-zone') {
     switchTab('element');
     _showNetZoneHint();
@@ -288,6 +319,7 @@ window.setTool = function(t) {
     S.selInfo.innerHTML = '<strong>Pair</strong><br><span style="font-size:10px;color:var(--text-muted)">Click a player, then click another to pair them.</span>';
   }
 };
+// Legacy aliases (kept for backward compat; panel Type cards are the primary path now)
 window.setArrowType = setArrowType;
 window.setVisionType = S.setVisionType;
 window.selectTeamContext = selectTeamContext;
@@ -1004,6 +1036,54 @@ window.applyZoneBorderColour = function(dotEl) {
     _applyBorderColorToShape(el, color);
   }
   _syncZonePanelState(el);
+};
+
+window.applyVisionType = function(style) {
+  S.setVisionType(style);
+  const el = S.selectedEl;
+  if (el && el.dataset.type === 'vision') {
+    S.pushUndo();
+    el.dataset.visionStyle = style;
+    updateVisionPolygon(el);
+    trackElementEdited('vision', 'type');
+  }
+  document.querySelectorAll('#vision-edit-section .shape-card[data-vstyle]').forEach(c =>
+    c.classList.toggle('active', c.dataset.vstyle === style));
+};
+
+window.applyArrowType = function(type) {
+  S.setArrowType(type);
+  const el = S.selectedEl;
+  if (el && el.dataset.type === 'arrow') {
+    S.pushUndo();
+    el.dataset.arrowType = type;
+    const line = el.querySelector('.arrow-line');
+    const st = S.ARROW_STYLES[type];
+    if (line && st) {
+      // Apply new color (unless user had a custom one — arrow color is part of type)
+      line.setAttribute('stroke', st.color);
+      el.dataset.arrowColor = st.color;
+      // Apply dash pattern
+      if (st.dash) line.setAttribute('stroke-dasharray', st.dash);
+      else line.removeAttribute('stroke-dasharray');
+      el.dataset.arrowDash = st.dash || '';
+      // Apply marker (arrowhead)
+      if (type === 'line') {
+        line.removeAttribute('marker-end');
+      } else {
+        line.setAttribute('marker-end', st.marker);
+      }
+    }
+    trackElementEdited('arrow', 'type');
+    // Sync the Style buttons + Color swatches active state based on new values
+    const style = type === 'run' ? 'dashed' : 'solid';
+    document.querySelectorAll('#arrow-edit-section .style-btn[data-style]').forEach(b =>
+      b.classList.toggle('active', b.dataset.style === style));
+    document.querySelectorAll('#arrow-edit-section .color-swatch.mini').forEach(s =>
+      s.classList.toggle('active', (s.dataset.color || '').toLowerCase() === (st?.color || '').toLowerCase()));
+  }
+  document.querySelectorAll('#arrow-edit-section .shape-card[data-atype]').forEach(c =>
+    c.classList.toggle('active', c.dataset.atype === type));
 };
 
 window.applyZoneShape = function(shapeType) {
@@ -1792,7 +1872,7 @@ S.svg.addEventListener('click', e => {
     if (S.tool === 'player-a' || S.tool === 'player-b' || S.tool === 'player-joker' || S.tool === 'marker') {
       // Don't switch tool — stay in placement/chain mode
     } else {
-      setTool('select'); select(placed);
+      finishInsert(placed);
     }
   }
   else if (S.tool === 'select') {
@@ -1894,7 +1974,7 @@ function arrowEnd(e) {
   if (Math.sqrt(dx*dx + dy*dy) > 10) {
     S.pushUndo();
     const arrow = addArrow(S.arrowStart.x, S.arrowStart.y, pt.x, pt.y, S.arrowType);
-    if (arrow) { setTool('select'); select(arrow); }
+    if (arrow) finishInsert(arrow, { dragBased: true });
   }
 }
 S.svg.addEventListener('mouseup', arrowEnd);
@@ -1908,7 +1988,7 @@ function closeFreeform() {
   if (freeformPts.length >= 3) {
     S.pushUndo();
     const zone = addFreeformZone([...freeformPts]);
-    if (zone) { setTool('select'); select(zone); }
+    if (zone) finishInsert(zone);
   }
   // Clean up
   freeformPts = [];
@@ -4597,6 +4677,12 @@ window.copyShareLink = copyShareLink;
 // ─── Auth State Listener ────────────────────────────────────────────────────
 let _authInitialized = false;
 onAuthChange(async (user) => {
+  // ─── Access Gate ─────────────────────────────────────────────────────────
+  // Block specific emails and users in blocked regions.
+  if (shouldBlockUser(user)) {
+    showMaintenanceOverlay();
+    return;
+  }
   updateAuthUI(user);
   closeAuthModal();
   const gate = document.getElementById('landing-gate');

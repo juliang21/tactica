@@ -506,6 +506,10 @@ export function select(el, opts = {}) {
     }
   } else if (type === 'arrow') {
     arrowSec.style.display = '';
+    // Arrow type cards
+    const aType = el.dataset.arrowType || 'run';
+    document.querySelectorAll('#arrow-edit-section .shape-card[data-atype]').forEach(c =>
+      c.classList.toggle('active', c.dataset.atype === aType));
     const w = el.dataset.arrowWidth || '2.5';
     document.getElementById('arrow-width-slider').value = w;
     document.getElementById('arrow-width-val').textContent = w;
@@ -548,6 +552,10 @@ export function select(el, opts = {}) {
     document.getElementById('spot-name-size-val').textContent = sNameSize + 'px';
   } else if (type === 'vision') {
     visionSec.style.display = '';
+    // Vision type cards
+    const vStyle = el.dataset.visionStyle || 'pointed';
+    document.querySelectorAll('#vision-edit-section .shape-card[data-vstyle]').forEach(c =>
+      c.classList.toggle('active', c.dataset.vstyle === vStyle));
     const opVal = parseFloat(el.dataset.visionOpacity || '0.55');
     const opSlider = document.getElementById('vision-opacity-slider');
     const opLabel = document.getElementById('vision-opacity-value');
