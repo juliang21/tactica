@@ -1455,6 +1455,18 @@
         <div class="zone-panel-group">
           <div class="zone-panel-heading">Fine-tune</div>
           <div class="field-group">
+            <div class="field-label">Border colour</div>
+            <div class="picker-row" id="zone-border-color-row">
+              <div class="color-swatch mini round" style="background:#ffffff" data-color="#ffffff" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#D8FF3C" data-color="#D8FF3C" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#f87171" data-color="#f87171" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#60a5fa" data-color="#60a5fa" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#fb923c" data-color="#fb923c" onclick="applyZoneBorderColour(this)"></div>
+              <div class="color-swatch mini round" style="background:#4ade80" data-color="#4ade80" onclick="applyZoneBorderColour(this)"></div>
+              <button class="color-picker-btn" style="border-radius:50%;width:22px;height:22px" onclick="openColorPicker('zone-border-color')" title="Custom border colour">＋</button>
+            </div>
+          </div>
+          <div class="field-group">
             <div class="field-label">Border style</div>
             <div class="shape-card-row">
               <button class="shape-card sm" data-zstyle="solid" onclick="applyZoneBorderStyle('solid')">
@@ -1469,19 +1481,6 @@
                 <svg width="30" height="4" viewBox="0 0 30 4"><line x1="0" y1="2" x2="30" y2="2" stroke="currentColor" stroke-width="2" stroke-dasharray="2,3"/></svg>
                 <span>Dotted</span>
               </button>
-            </div>
-          </div>
-          <div class="field-group">
-            <div class="field-label">Border colour</div>
-            <div class="picker-row" id="zone-border-color-row">
-              <div class="color-swatch mini round" style="background:#ffffff" data-color="#ffffff" onclick="applyZoneBorderColour(this)"></div>
-              <div class="color-swatch mini round" style="background:#D8FF3C" data-color="#D8FF3C" onclick="applyZoneBorderColour(this)"></div>
-              <div class="color-swatch mini round" style="background:#f87171" data-color="#f87171" onclick="applyZoneBorderColour(this)"></div>
-              <div class="color-swatch mini round" style="background:#60a5fa" data-color="#60a5fa" onclick="applyZoneBorderColour(this)"></div>
-              <div class="color-swatch mini round" style="background:#fb923c" data-color="#fb923c" onclick="applyZoneBorderColour(this)"></div>
-              <div class="color-swatch mini round" style="background:#4ade80" data-color="#4ade80" onclick="applyZoneBorderColour(this)"></div>
-              <div class="color-swatch mini round auto-border-swatch" data-color="auto" onclick="applyZoneBorderColour(this)" title="Auto (match fill)">A</div>
-              <button class="color-picker-btn" style="border-radius:50%;width:22px;height:22px" onclick="openColorPicker('zone-border-color')" title="Custom border colour">＋</button>
             </div>
           </div>
           <div class="field-group" id="zone-corners-group">
