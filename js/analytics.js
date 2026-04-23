@@ -9,6 +9,16 @@ const GA_MEASUREMENT_ID = 'G-Q9VK1EXXN8';
 
 // ─── Initialise gtag ─────────────────────────────────────────────────────────
 (function initGA() {
+  // Short-circuit for blocked users (Turkey region block via inline gate in <head>).
+  // We don't want blocked visits polluting GA. For email-based blocks, auth hasn't
+  // resolved at this point so those still fire — acceptable since interaction is
+  // minimal once the overlay appears.
+  if (window.__tacticaMaintenanceShown) {
+    // Stub gtag so any downstream `window.gtag(...)` calls no-op instead of erroring
+    window.gtag = function () {};
+    return;
+  }
+
   // Load gtag.js script
   const script = document.createElement('script');
   script.async = true;

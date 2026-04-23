@@ -39,41 +39,45 @@ export function shouldBlockAnonymous() {
 
 let _overlayShown = false;
 let _logged = false;
-export function showMaintenanceOverlay(opts = {}) {
-  // Track the show to Firestore (once per page load, best-effort)
+export async function showMaintenanceOverlay(opts = {}) {
+  // ── 1. Render the overlay immediately (instant visual feedback) ─────────
+  if (!(window.__tacticaMaintenanceShown || _overlayShown)) {
+    _overlayShown = true;
+    _renderOverlay();
+  } else {
+    _overlayShown = true;
+  }
+
+  // ── 2. Log BEFORE signing out ─────────────────────────────────────────────
+  // The Firestore write needs auth to succeed. If we fire signOut in parallel,
+  // auth can tear down first and the write gets rejected. So: log first (await),
+  // then sign out.
   if (!_logged) {
     _logged = true;
     try {
-      import('./firestore.js?v=4').then(m => {
+      const m = await import('./firestore.js?v=4');
+      if (typeof m.logAction === 'function') {
         const user = opts.user || null;
         const reason = opts.reason || 'unknown';
-        const emailForMeta = user?.email || '';
-        if (typeof m.logAction === 'function') {
-          m.logAction(
-            user?.uid || null,
-            emailForMeta,
-            'maintenance_shown',
-            { reason, blocked_email: emailForMeta }
-          ).catch(() => {});
-        }
-      }).catch(() => {});
+        const email = user?.email || '';
+        await m.logAction(
+          user?.uid || null,
+          email,
+          'maintenance_shown',
+          { reason, blocked_email: email }
+        ).catch(() => {});
+      }
     } catch (e) {}
   }
 
-  // If the inline script already rendered the overlay, don't re-render.
-  if (window.__tacticaMaintenanceShown || _overlayShown) {
-    _overlayShown = true;
-    return;
-  }
-  _overlayShown = true;
-
-  // Try to sign out (best-effort — don't block the overlay on it)
+  // ── 3. Sign out (only after the log write has resolved) ───────────────────
   try {
-    import('./auth.js').then(m => {
-      if (typeof m.signOut === 'function') m.signOut();
-    }).catch(() => {});
+    const m = await import('./auth.js');
+    if (typeof m.signOut === 'function') await m.signOut();
   } catch (e) {}
+}
 
+function _renderOverlay() {
   const overlay = document.createElement('div');
   overlay.id = 'maintenance-overlay';
   overlay.setAttribute('style', [
