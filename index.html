@@ -135,39 +135,38 @@
 <!-- ── Logo ── -->
 <div class="tool-logo"><span class="logo-text">Táctica</span> <span class="beta-badge">BETA</span></div>
 
-<!-- ── Top-right menu ── -->
-<div class="app-menu-wrapper" id="app-menu-wrapper">
-  <button class="app-menu-btn" id="app-menu-btn" onclick="toggleAppMenu()" title="Menu">
-    <!-- Default: hamburger icon (not signed in) -->
-    <span id="app-menu-icon">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 5h10M4 9h10M4 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
-    </span>
-    <!-- Signed in: avatar -->
-    <img id="app-menu-avatar-img" class="app-menu-avatar-img" src="" alt="" style="display:none">
-    <span id="app-menu-avatar-initials" class="app-menu-avatar-initials" style="display:none"></span>
+<!-- ── Top-right: Sign-in link (when logged out) + Share + Export CTA ── -->
+<div class="topbar-right" id="topbar-right">
+  <a id="topbar-signin-link" class="topbar-signin-link" onclick="openAuthModal()">Sign in</a>
+  <button class="topbar-share-btn" id="topbar-share-btn" onclick="shareAnalysis()" title="Share">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="4" r="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="4" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="6.2" y1="6.9" x2="9.8" y2="5.1" stroke="currentColor" stroke-width="1.3"/><line x1="6.2" y1="9.1" x2="9.8" y2="10.9" stroke="currentColor" stroke-width="1.3"/></svg>
+    <span>Share</span>
   </button>
-  <div class="app-menu-dropdown" id="app-menu-dropdown" style="display:none">
-    <!-- Signed-in user info (hidden when not signed in) -->
-    <div id="app-menu-user-info" class="app-menu-user-info" style="display:none">
-      <span id="app-menu-user-name" class="app-menu-user-name"></span>
-      <span id="app-menu-user-email" class="app-menu-user-email"></span>
+  <div class="save-wrapper topbar-save-wrapper">
+    <button class="topbar-export-btn" id="topbar-export-btn" onclick="toggleSaveMenu()">
+      <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><path d="M9 2v9M6 8l3 3 3-3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></svg>
+      <span>Export</span>
+    </button>
+    <div class="save-menu" id="save-menu" style="display:none">
+      <button class="save-menu-item" onclick="openSaveAnalysis()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h8l4 4v8H2V2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 2v4h5V2" stroke="currentColor" stroke-width="1.1"/><rect x="4" y="9" width="8" height="4" rx="0.5" stroke="currentColor" stroke-width="1.1"/></svg>
+        Save Analysis
+      </button>
+      <div class="save-menu-sep"></div>
+      <button class="save-menu-item" onclick="closeSaveMenu();exportImage()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v7M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
+        Export Image
+      </button>
+      <div class="save-menu-sep save-menu-anim" style="display:none"></div>
+      <button class="save-menu-item save-menu-anim" style="display:none" onclick="closeSaveMenu();exportAnimation()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2" fill="none"/><polygon points="6,6 11,8 6,10" fill="currentColor" opacity="0.7"/></svg>
+        Export GIF
+      </button>
+      <button class="save-menu-item save-menu-anim" style="display:none" onclick="closeSaveMenu();exportVideo()">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 4a1 1 0 011-1h8a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M11 6l4-2v8l-4-2" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none"/></svg>
+        Export Video
+      </button>
     </div>
-    <div id="app-menu-user-divider" class="app-menu-divider" style="display:none"></div>
-    <!-- Sign In (hidden when signed in) -->
-    <button id="app-menu-signin" class="app-menu-item" onclick="toggleAppMenu(); openAuthModal()">
-      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
-      Sign In
-    </button>
-    <!-- Always visible -->
-    <button class="app-menu-item" onclick="toggleAppMenu(); openMyAnalyses()">
-      <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3h5l1 1.5H14v9H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
-      My Analyses
-    </button>
-    <!-- Sign Out (hidden when not signed in) -->
-    <div id="app-menu-signout-divider" class="app-menu-divider" style="display:none"></div>
-    <button id="app-menu-signout" class="app-menu-item app-menu-signout" onclick="toggleAppMenu(); doSignOut()" style="display:none">
-      Sign Out
-    </button>
   </div>
 </div>
 
@@ -326,37 +325,39 @@
 
   <input type="file" id="image-file-input" accept="image/*" style="display:none" onchange="handleImageUpload(this)">
 
-  <!-- Save (full width) -->
-  <div class="tool-group tool-group-save">
-    <div class="save-wrapper">
-      <button class="tool-btn save-btn" onclick="toggleSaveMenu()">
-        <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M9 2v9M6 8l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 13v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-        <span class="save-label">Export</span>
+  <!-- Account (bottom of sidebar) -->
+  <div class="tool-group tool-group-account">
+    <div class="app-menu-wrapper" id="app-menu-wrapper">
+      <button class="app-menu-btn" id="app-menu-btn" onclick="toggleAppMenu()" title="Account">
+        <!-- Default: hamburger icon (not signed in) -->
+        <span id="app-menu-icon">
+          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 5h10M4 9h10M4 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        </span>
+        <!-- Signed in: avatar -->
+        <img id="app-menu-avatar-img" class="app-menu-avatar-img" src="" alt="" style="display:none">
+        <span id="app-menu-avatar-initials" class="app-menu-avatar-initials" style="display:none"></span>
       </button>
-      <div class="save-menu" id="save-menu" style="display:none">
-        <button class="save-menu-item" onclick="openSaveAnalysis()">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h8l4 4v8H2V2z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/><path d="M5 2v4h5V2" stroke="currentColor" stroke-width="1.1"/><rect x="4" y="9" width="8" height="4" rx="0.5" stroke="currentColor" stroke-width="1.1"/></svg>
-          Save Analysis
+      <div class="app-menu-dropdown" id="app-menu-dropdown" style="display:none">
+        <!-- Signed-in user info (hidden when not signed in) -->
+        <div id="app-menu-user-info" class="app-menu-user-info" style="display:none">
+          <span id="app-menu-user-name" class="app-menu-user-name"></span>
+          <span id="app-menu-user-email" class="app-menu-user-email"></span>
+        </div>
+        <div id="app-menu-user-divider" class="app-menu-divider" style="display:none"></div>
+        <!-- Sign In (hidden when signed in) -->
+        <button id="app-menu-signin" class="app-menu-item" onclick="toggleAppMenu(); openAuthModal()">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+          Sign In
         </button>
-        <div class="save-menu-sep"></div>
-        <button class="save-menu-item" onclick="closeSaveMenu();exportImage()">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M8 2v7M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 11v2a1 1 0 001 1h10a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.3" stroke-linecap="round"/></svg>
-          Export Image
+        <!-- Always visible -->
+        <button class="app-menu-item" onclick="toggleAppMenu(); openMyAnalyses()">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3h5l1 1.5H14v9H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
+          My Analyses
         </button>
-        <div class="save-menu-sep save-menu-anim" style="display:none"></div>
-        <button class="save-menu-item save-menu-anim" style="display:none" onclick="closeSaveMenu();exportAnimation()">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><rect x="1" y="3" width="14" height="10" rx="1.5" stroke="currentColor" stroke-width="1.2" fill="none"/><polygon points="6,6 11,8 6,10" fill="currentColor" opacity="0.7"/></svg>
-          Export GIF
-        </button>
-        <button class="save-menu-item save-menu-anim" style="display:none" onclick="closeSaveMenu();exportVideo()">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M1 4a1 1 0 011-1h8a1 1 0 011 1v8a1 1 0 01-1 1H2a1 1 0 01-1-1V4z" stroke="currentColor" stroke-width="1.2" fill="none"/><path d="M11 6l4-2v8l-4-2" stroke="currentColor" stroke-width="1.2" stroke-linejoin="round" fill="none"/></svg>
-          Export Video
-        </button>
-        <div class="save-menu-sep"></div>
-        <button class="save-menu-item" onclick="closeSaveMenu();shareAnalysis()">
-          <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="4" r="2.5" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="4" cy="8" r="2.5" stroke="currentColor" stroke-width="1.2" fill="none"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.2" fill="none"/><line x1="6.2" y1="6.9" x2="9.8" y2="5.1" stroke="currentColor" stroke-width="1.2"/><line x1="6.2" y1="9.1" x2="9.8" y2="10.9" stroke="currentColor" stroke-width="1.2"/></svg>
-          Share
-          <span class="new-badge-inline">New</span>
+        <!-- Sign Out (hidden when not signed in) -->
+        <div id="app-menu-signout-divider" class="app-menu-divider" style="display:none"></div>
+        <button id="app-menu-signout" class="app-menu-item app-menu-signout" onclick="toggleAppMenu(); doSignOut()" style="display:none">
+          Sign Out
         </button>
       </div>
     </div>

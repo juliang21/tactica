@@ -17,6 +17,10 @@ export function updateAuthUI(user) {
   const menuSignout = document.getElementById('app-menu-signout');
   const menuSignoutDivider = document.getElementById('app-menu-signout-divider');
   const menuBtn = document.getElementById('app-menu-btn');
+  const topbarSigninLink = document.getElementById('topbar-signin-link');
+
+  // Top-right signin link: only visible when signed out (for discoverability)
+  if (topbarSigninLink) topbarSigninLink.style.display = user ? 'none' : '';
 
   if (user) {
     // Show avatar, hide hamburger icon

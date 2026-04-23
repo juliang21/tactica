@@ -53,8 +53,9 @@ export function applyToolbarForMode(modeConfig) {
   toolbar.querySelectorAll('.tool-group').forEach(group => {
     const buttons = group.querySelectorAll('[data-tool], .tool-bundle, #undo-btn, #step-btn');
     const anyVisible = [...buttons].some(el => el.style.display !== 'none');
-    // Don't hide the save group (it's always shown)
+    // Don't hide the save or account groups (always shown — they hold utility UI, not tools)
     if (group.classList.contains('tool-group-save')) return;
+    if (group.classList.contains('tool-group-account')) return;
     group.style.display = anyVisible ? '' : 'none';
     // Also hide the following separator
     const sep = group.nextElementSibling;

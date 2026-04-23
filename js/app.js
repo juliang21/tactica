@@ -3606,7 +3606,7 @@ document.addEventListener('click', e => {
 // ─── Save Menu & Analysis Management ────────────────────────────────────────
 function toggleSaveMenu() {
   const menu = document.getElementById('save-menu');
-  const btn = document.querySelector('.save-btn');
+  const btn = document.getElementById('topbar-export-btn') || document.querySelector('.save-btn');
   if (menu.style.display === 'none') {
     // Show/hide animation export items based on whether steps exist
     const hasAnim = typeof frames !== 'undefined' && frames.length >= 2;
@@ -3621,15 +3621,24 @@ function toggleSaveMenu() {
     menu.style.display = 'block';
     // Position relative to save button
     const rect = btn.getBoundingClientRect();
+    const isTopHalf = rect.top < window.innerHeight / 2;
     if (isMobile) {
       menu.style.left = rect.left + 'px';
       menu.style.bottom = (window.innerHeight - rect.top + 12) + 'px';
       menu.style.top = 'auto';
       menu.style.right = 'auto';
+    } else if (isTopHalf) {
+      // Top-right CTA: open downward, right-aligned to the button
+      menu.style.right = Math.max(8, window.innerWidth - rect.right) + 'px';
+      menu.style.top = (rect.bottom + 8) + 'px';
+      menu.style.left = 'auto';
+      menu.style.bottom = 'auto';
     } else {
+      // Legacy (bottom-of-sidebar): open to the right
       menu.style.left = (rect.right + 8) + 'px';
       menu.style.bottom = Math.max(8, window.innerHeight - rect.bottom) + 'px';
       menu.style.top = 'auto';
+      menu.style.right = 'auto';
     }
   } else {
     menu.style.display = 'none';
