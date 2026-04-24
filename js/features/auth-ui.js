@@ -44,7 +44,7 @@ export function updateAuthUI(user) {
     const firstName = fullName.split(' ')[0];
     if (labelPrimary) labelPrimary.textContent = firstName;
     if (labelSecondary) {
-      labelSecondary.textContent = 'Free plan';
+      labelSecondary.textContent = 'Analyst Plan';
       labelSecondary.style.display = '';
     }
 
