@@ -112,9 +112,12 @@ function syncModeButtons(modeId, label) {
     const btn = document.getElementById(`mode-${id}-btn`);
     if (btn) btn.classList.toggle('active', id === modeId);
   });
-  // Mobile dropdown
+  // Mobile dropdown (uses a shorter label on small viewports to avoid colliding
+  // with the Settings icon + Export/Share CTAs).
   const ddLabel = document.getElementById('mode-dropdown-label');
-  if (ddLabel) ddLabel.textContent = label || modeId;
+  const shortLabels = { pitch: 'Board', image: 'Image' };
+  const isNarrow = window.innerWidth <= 768;
+  if (ddLabel) ddLabel.textContent = (isNarrow && shortLabels[modeId]) || label || modeId;
   document.querySelectorAll('.mode-dropdown-option').forEach(o => {
     o.classList.toggle('active', o.dataset.mode === modeId);
   });
