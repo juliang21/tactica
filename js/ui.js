@@ -525,6 +525,13 @@ export function confirmColorPicker() {
     });
     return;
   }
+  if (colorPickerTarget === 'bulk-border') {
+    // Custom border colour for all players in the current team
+    if (typeof window.applyBulkPlayerBorder === 'function') {
+      window.applyBulkPlayerBorder({ dataset: { color: hex } });
+    }
+    return;
+  }
   if (!S.selectedEl) return;
   if (colorPickerTarget === 'arrow') {
     applyArrowColorValue(hex);
