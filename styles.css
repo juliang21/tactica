@@ -1594,8 +1594,6 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
   .tool-group { display: contents; }
   .tool-group-save { display: contents; }
   .tool-group-account { display: contents; padding: 0; border-top: none; }
-  .topbar-right { top: 8px; right: 10px; gap: 10px; }
-  .topbar-export-btn { height: 32px; padding: 0 12px; font-size: 12px; }
   .tool-label { display: none; }
   .tool-group-title { display: none; }
   .tool-bundle > .tool-btn::after { display: none; }
@@ -2911,3 +2909,18 @@ body.shared-view .shared-watermark {
   transition: opacity 0.15s;
 }
 .mobile-hint-btn:hover { opacity: 0.9; }
+
+/* ─── Mobile topbar compaction (appended so it wins the cascade) ─────────── */
+@media (max-width: 768px) {
+  .topbar-right { top: 10px; right: 10px; gap: 6px; }
+  .topbar-signin-link { display: none; }
+  .topbar-share-btn span,
+  .topbar-export-btn span { display: none; }
+  .topbar-share-btn,
+  .topbar-export-btn {
+    width: 36px; height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+  }
+}
