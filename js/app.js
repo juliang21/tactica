@@ -659,7 +659,18 @@ window.liveUpdateName = liveUpdateName;
 window.confirmName = confirmName;
 window.applySize = applySize;
 window.applyRotation = applyRotation;
-window.clearAll = clearAll;
+// Wrap clearAll with a themed confirm modal (replaces the native confirm() popup)
+window.clearAll = async function() {
+  const confirmed = await showConfirmModal({
+    icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/></svg>',
+    title: 'Clear all elements?',
+    desc: 'This will remove every player, zone, arrow, and annotation from the pitch. This cannot be undone.',
+    confirmLabel: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Clear All',
+    confirmClass: 'danger',
+  });
+  if (!confirmed) return;
+  clearAll();
+};
 window.toggleToolbar = function() {
   const tb = document.getElementById('toolbar');
   const btn = document.getElementById('toolbar-toggle');

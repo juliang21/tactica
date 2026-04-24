@@ -1207,8 +1207,9 @@ export function confirmMarkerName() {
 }
 
 // ─── Clear All ────────────────────────────────────────────────────────────────
+// Note: the confirmation dialog is wired from app.js (window.clearAll override)
+// so we can use the themed modal instead of a native confirm() popup.
 export function clearAll() {
-  if (!confirm('Clear all elements?')) return;
   S.pushUndo();
   S.playersLayer.innerHTML = '';
   S.objectsLayer.innerHTML = '';
