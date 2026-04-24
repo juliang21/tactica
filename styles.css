@@ -1529,9 +1529,10 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
 .ctx-btn.ctx-delete:hover { background: #3A1520; }
 
 /* ── Mobile panel toggle button ── */
+/* right: 100px sits clear of the top-right CTA group (Share + Export, ~88px wide) */
 #mobile-panel-toggle {
   display: none;
-  position: fixed; top: 10px; right: 60px; z-index: 400;
+  position: fixed; top: 10px; right: 100px; z-index: 400;
   width: 36px; height: 36px; border-radius: 8px;
   background: var(--panel2); border: 1px solid var(--border);
   color: var(--text-muted); cursor: pointer;
