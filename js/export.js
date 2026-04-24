@@ -782,6 +782,59 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.restore();
   }
 
+  // ── Kit pattern renderers ────────────────────────────────────────────────
+  // Canvas 2D can't use SVG pattern URLs as fillStyle. When a player's circle
+  // has `fill="url(#kit-xyz)"`, we draw the equivalent pattern by hand, clipped
+  // to the player's 32px-diameter circle.
+  function _drawVerticalStripesKit(ctx, r, c1, c2) {
+    const stripeW = 6;
+    for (let x = -r; x < r; x += stripeW) {
+      const i = Math.floor((x + r) / stripeW);
+      ctx.fillStyle = (i % 2 === 0) ? c1 : c2;
+      ctx.fillRect(x, -r, stripeW, r * 2);
+    }
+  }
+  const _kitRenderers = {
+    'kit-arg': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#75aadb', '#ffffff'),
+    'kit-atm': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#cb3524', '#ffffff'),
+    'kit-juv': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#000000', '#ffffff'),
+    'kit-rso': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#003da5', '#ffffff'),
+    'kit-ars': (ctx, r) => {
+      const d = r * 2;
+      ctx.fillStyle = '#EF0107'; ctx.fillRect(-r, -r, d, d);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-r, -r, d * 0.16, d);
+      ctx.fillRect(-r + d * 0.84, -r, d * 0.16, d);
+    },
+    'kit-psg': (ctx, r) => {
+      const d = r * 2;
+      ctx.fillStyle = '#004170'; ctx.fillRect(-r, -r, d, d);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(-r + d * 0.40, -r, d * 0.04, d);
+      ctx.fillStyle = '#DA291C'; ctx.fillRect(-r + d * 0.44, -r, d * 0.12, d);
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(-r + d * 0.56, -r, d * 0.04, d);
+    },
+    'kit-riv': (ctx, r) => {
+      const d = r * 2;
+      ctx.fillStyle = '#ffffff'; ctx.fillRect(-r, -r, d, d);
+      ctx.fillStyle = '#cd1e2b';
+      ctx.beginPath();
+      ctx.moveTo(-r + d * 0.58, -r);
+      ctx.lineTo(-r + d * 0.95, -r);
+      ctx.lineTo(-r + d * 0.42,  r);
+      ctx.lineTo(-r + d * 0.05,  r);
+      ctx.closePath(); ctx.fill();
+    },
+    'kit-boc': (ctx, r) => {
+      const d = r * 2;
+      ctx.fillStyle = '#003da5'; ctx.fillRect(-r, -r, d, d);
+      ctx.fillStyle = '#fde100'; ctx.fillRect(-r, -r + d * 0.33, d, d * 0.34);
+    },
+  };
+  function _extractPatternId(fillValue) {
+    const m = /^url\(#([^)]+)\)$/.exec(fillValue || '');
+    return m ? m[1] : null;
+  }
+
   function renderPlayer(g) {
     const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
     const sc = parseFloat(g.dataset.scale || '1');
@@ -791,7 +844,10 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const hasArms = g.dataset.arms === '1';
     const circleEl = g.querySelector('circle:not(.hit-area):not(.player-arm):not(.player-shadow)');
     const color = circleEl ? circleEl.getAttribute('fill') : '#e8f0ff';
-    const dark = S.isDarkColor(color);
+    const patternId = _extractPatternId(color);
+    const isPattern = !!patternId;
+    // For patterns, fall back to "dark" treatment (white number with shadow)
+    const dark = isPattern ? true : S.isDarkColor(color);
     const borderColor = g.dataset.borderColor;
 
     if (hasArms) {
@@ -818,13 +874,31 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
       ctx.restore();
     }
 
+    const r = 16;
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,0.43)';
     ctx.shadowOffsetX = 0;
     ctx.shadowOffsetY = 5;
     ctx.shadowBlur = 10;
-    ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI*2);
-    ctx.fillStyle = color; ctx.fill();
+    if (isPattern && _kitRenderers[patternId]) {
+      // Pattern-based kit: first fill a solid base circle so the drop shadow
+      // lands correctly (a clipped pattern fill casts shadows that get masked).
+      // Then disable shadow and overlay the pattern within a circular clip.
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.fillStyle = '#1a1a1a';
+      ctx.fill();
+      ctx.save();
+      ctx.shadowColor = 'transparent';
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.clip();
+      _kitRenderers[patternId](ctx, r);
+      ctx.restore();
+      // Re-draw the arc path for the border stroke
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+    } else {
+      ctx.beginPath(); ctx.arc(0, 0, r, 0, Math.PI*2);
+      ctx.fillStyle = color; ctx.fill();
+    }
     if (borderColor === 'none') {
       // no border
     } else if (borderColor) {
@@ -838,10 +912,20 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const texts = g.querySelectorAll('text');
     const numEl = texts[0];
     if (numEl && numEl.textContent.trim()) {
-      ctx.font='700 10px Arial,sans-serif';
-      ctx.fillStyle = dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)';
-      ctx.textAlign='center'; ctx.textBaseline='middle';
-      ctx.fillText(numEl.textContent.trim(), 0, 0);
+      ctx.font = '700 10px Arial,sans-serif';
+      ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+      const num = numEl.textContent.trim();
+      if (isPattern) {
+        // Pattern kits: white text with a dark stroke halo (matches SVG behavior)
+        ctx.strokeStyle = 'rgba(0,0,0,0.5)';
+        ctx.lineWidth = 3;
+        ctx.lineJoin = 'round';
+        ctx.strokeText(num, 0, 0);
+        ctx.fillStyle = '#fff';
+      } else {
+        ctx.fillStyle = dark ? 'rgba(255,255,255,0.9)' : 'rgba(0,0,0,0.75)';
+      }
+      ctx.fillText(num, 0, 0);
     }
     const nameEl = texts[1];
     if (nameEl && nameEl.style.display !== 'none' && nameEl.textContent.trim()) {
