@@ -329,13 +329,19 @@
   <div class="tool-group tool-group-account">
     <div class="app-menu-wrapper" id="app-menu-wrapper">
       <button class="app-menu-btn" id="app-menu-btn" onclick="toggleAppMenu()" title="Account">
-        <!-- Default: hamburger icon (not signed in) -->
-        <span id="app-menu-icon">
-          <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 5h10M4 9h10M4 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+        <span class="app-menu-avatar-slot">
+          <!-- Default: hamburger icon (not signed in) -->
+          <span id="app-menu-icon">
+            <svg width="16" height="16" viewBox="0 0 18 18" fill="none"><path d="M4 5h10M4 9h10M4 13h10" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+          </span>
+          <!-- Signed in: avatar -->
+          <img id="app-menu-avatar-img" class="app-menu-avatar-img" src="" alt="" style="display:none">
+          <span id="app-menu-avatar-initials" class="app-menu-avatar-initials" style="display:none"></span>
         </span>
-        <!-- Signed in: avatar -->
-        <img id="app-menu-avatar-img" class="app-menu-avatar-img" src="" alt="" style="display:none">
-        <span id="app-menu-avatar-initials" class="app-menu-avatar-initials" style="display:none"></span>
+        <span class="app-menu-labels">
+          <span id="app-menu-label-primary" class="app-menu-label-primary">Sign in</span>
+          <span id="app-menu-label-secondary" class="app-menu-label-secondary" style="display:none">Free plan</span>
+        </span>
       </button>
       <div class="app-menu-dropdown" id="app-menu-dropdown" style="display:none">
         <!-- Signed-in user info (hidden when not signed in) -->
@@ -363,7 +369,6 @@
     </div>
   </div>
 
-  <a href="/terms.html" target="_blank" class="sidebar-terms-link">Terms &amp; Conditions</a>
 
 </div><!-- /toolbar-scroll -->
 </div>

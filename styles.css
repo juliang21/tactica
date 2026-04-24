@@ -1830,22 +1830,59 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
 .app-menu-wrapper {
   position: relative;
   width: 100%;
-  display: flex; justify-content: center;
 }
 .app-menu-btn {
-  width: 36px; height: 36px; border-radius: 50%;
+  display: flex; align-items: center; gap: 10px;
+  width: 100%; min-height: 44px;
+  padding: 6px 10px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  background: transparent;
+  color: var(--text); cursor: pointer;
+  transition: background 0.15s, border-color 0.15s;
+  text-align: left;
+}
+.app-menu-btn:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+.app-menu-avatar-slot {
+  flex-shrink: 0;
+  width: 32px; height: 32px;
+  border-radius: 50%;
   border: 1px solid rgba(255, 255, 255, 0.1);
   background: rgba(30, 30, 40, 0.6);
-  backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
-  color: var(--text-muted); cursor: pointer;
+  color: var(--text-muted);
   display: flex; align-items: center; justify-content: center;
-  transition: all 0.15s; padding: 0; overflow: hidden;
+  overflow: hidden;
 }
-.app-menu-btn:hover { border-color: var(--accent); color: var(--accent); background: rgba(30,215,96,0.08); }
+.app-menu-btn:hover .app-menu-avatar-slot {
+  border-color: rgba(255, 255, 255, 0.18);
+  color: var(--text);
+}
 .app-menu-avatar-img { width: 100%; height: 100%; object-fit: cover; border-radius: 50%; }
 .app-menu-avatar-initials {
-  font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
+  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 700;
   color: var(--accent);
+}
+.app-menu-labels {
+  display: flex; flex-direction: column; align-items: flex-start;
+  flex: 1 1 auto; min-width: 0;
+  line-height: 1.25;
+  overflow: hidden;
+}
+.app-menu-label-primary {
+  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 600;
+  color: var(--text);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+}
+.app-menu-label-secondary {
+  font-family: 'Manrope', sans-serif; font-size: 11px; font-weight: 500;
+  color: var(--text-muted);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 100%;
+  margin-top: 1px;
 }
 /* Opens upward + to the right since the button is bottom-left of the sidebar */
 .app-menu-dropdown {

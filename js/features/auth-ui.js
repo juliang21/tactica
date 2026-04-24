@@ -18,6 +18,8 @@ export function updateAuthUI(user) {
   const menuSignoutDivider = document.getElementById('app-menu-signout-divider');
   const menuBtn = document.getElementById('app-menu-btn');
   const topbarSigninLink = document.getElementById('topbar-signin-link');
+  const labelPrimary = document.getElementById('app-menu-label-primary');
+  const labelSecondary = document.getElementById('app-menu-label-secondary');
 
   // Top-right signin link: only visible when signed out (for discoverability)
   if (topbarSigninLink) topbarSigninLink.style.display = user ? 'none' : '';
@@ -25,7 +27,6 @@ export function updateAuthUI(user) {
   if (user) {
     // Show avatar, hide hamburger icon
     menuIcon.style.display = 'none';
-    menuBtn.style.borderColor = 'var(--accent)';
 
     if (user.photoURL) {
       menuAvatarImg.src = user.photoURL;
@@ -36,6 +37,15 @@ export function updateAuthUI(user) {
       menuAvatarInitials.style.display = 'flex';
       const name = user.displayName || user.email || 'U';
       menuAvatarInitials.textContent = name.charAt(0).toUpperCase();
+    }
+
+    // Two-line label: first name + plan tier
+    const fullName = user.displayName || (user.email ? user.email.split('@')[0] : 'User');
+    const firstName = fullName.split(' ')[0];
+    if (labelPrimary) labelPrimary.textContent = firstName;
+    if (labelSecondary) {
+      labelSecondary.textContent = 'Free plan';
+      labelSecondary.style.display = '';
     }
 
     // Dropdown: show user info, hide sign-in, show sign-out
@@ -51,7 +61,10 @@ export function updateAuthUI(user) {
     menuIcon.style.display = 'flex';
     menuAvatarImg.style.display = 'none';
     menuAvatarInitials.style.display = 'none';
-    menuBtn.style.borderColor = '';
+
+    // Two-line label collapses to single "Sign in" prompt
+    if (labelPrimary) labelPrimary.textContent = 'Sign in';
+    if (labelSecondary) labelSecondary.style.display = 'none';
 
     // Dropdown: hide user info, show sign-in, hide sign-out
     menuUserInfo.style.display = 'none';
