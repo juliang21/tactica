@@ -1741,8 +1741,8 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
   #mode-tabs-bar { display: none !important; }
   #mode-dropdown {
     display: block;
-    position: absolute; top: 8px; left: 50%;
-    transform: translateX(-50%);
+    position: absolute; top: 28px; left: 50%;
+    transform: translate(-50%, -50%);
     z-index: 200;
   }
 
