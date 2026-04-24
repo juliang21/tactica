@@ -28,7 +28,7 @@ function drawWatermark(ctx, W, H, logoImg) {
   const padding = 8;
   const logoSize = 16;
   const gap = 5;
-  const text = 'Built with tactica.rondos.futbol';
+  const text = 'Built with tactica.football';
 
   ctx.font = '600 11px Inter, system-ui, sans-serif';
   const textW = ctx.measureText(text).width;
@@ -799,6 +799,13 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     'kit-atm': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#cb3524', '#ffffff'),
     'kit-juv': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#000000', '#ffffff'),
     'kit-rso': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#003da5', '#ffffff'),
+    'kit-rac': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#75aadb', '#ffffff'),
+    'kit-cen': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#003da5', '#ffd700'),
+    'kit-nob': (ctx, r) => {
+      const d = r * 2;
+      ctx.fillStyle = '#cc0000'; ctx.fillRect(-r, -r, d * 0.5, d);
+      ctx.fillStyle = '#000000'; ctx.fillRect(-r + d * 0.5, -r, d * 0.5, d);
+    },
     'kit-ars': (ctx, r) => {
       const d = r * 2;
       ctx.fillStyle = '#EF0107'; ctx.fillRect(-r, -r, d, d);
