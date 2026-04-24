@@ -343,41 +343,39 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   display: flex; align-items: center; justify-content: center;
 }
 .mode-tab-group {
-  display: inline-flex; gap: 6px;
-  background: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
-  height: auto;
+  display: inline-flex; gap: 2px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 3px;
+  height: 36px;
   align-items: center;
 }
 .mode-tab {
-  display: flex; align-items: center; gap: 8px;
-  padding: 0 14px; height: 36px;
-  border-radius: 10px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  font-family: 'Manrope', sans-serif; font-size: 13px; font-weight: 500;
-  color: var(--text-dim); background: rgba(255, 255, 255, 0.02);
+  display: flex; align-items: center; gap: 7px;
+  padding: 0 12px; height: 100%;
+  border-radius: 7px;
+  border: 1px solid transparent;
+  font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 500;
+  color: var(--text-dim); background: transparent;
   cursor: pointer; transition: color 0.15s, background 0.15s;
   white-space: nowrap;
 }
 .mode-tab:hover {
   color: var(--text);
-  border-color: rgba(255, 255, 255, 0.18);
-  background: rgba(255,255,255,0.04);
+  background: rgba(255, 255, 255, 0.03);
 }
 .mode-tab.active {
-  background: rgba(16, 18, 22, 0.9);
-  border-color: rgba(255, 255, 255, 0.14);
+  background: rgba(255, 255, 255, 0.09);
+  border-color: rgba(255, 255, 255, 0.1);
   color: var(--text);
   font-weight: 600;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
 }
 .mode-tab.active:hover {
-  background: rgba(16, 18, 22, 0.95);
-  border-color: rgba(255, 255, 255, 0.2);
-  color: var(--text);
+  background: rgba(255, 255, 255, 0.11);
 }
-.mode-tab svg { opacity: 0.65; }
+.mode-tab svg { opacity: 0.55; transition: opacity 0.15s; }
 .mode-tab.active svg { opacity: 1; }
 
 /* ── Zoom Controls ── */
