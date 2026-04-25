@@ -466,7 +466,16 @@ function renderKitGrid(teams) {
     }
     if ((t.pattern === 'stripes' || t.pattern === 'stripes-rw') && t.stripe === '#000000') {
       label.style.fontWeight = '700';
-      label.style.textShadow = '0 0 3px rgba(0,0,0,0.7)';
+      if (t.labelDark) {
+        // Dark text on a yellow/light kit gets lost on black stripes.
+        // Add a kit-color pill behind the label so it always sits on a
+        // solid swatch that contrasts with the text.
+        label.style.background = t.color;
+        label.style.borderRadius = '2px';
+        label.style.padding = '0 3px';
+      } else {
+        label.style.textShadow = '0 0 3px rgba(0,0,0,0.7)';
+      }
     }
     if (t.pattern === 'half' || t.pattern === 'sash') {
       label.style.fontWeight = '700';
