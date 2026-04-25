@@ -806,6 +806,8 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
       ctx.fillStyle = '#cc0000'; ctx.fillRect(-r, -r, d * 0.5, d);
       ctx.fillStyle = '#000000'; ctx.fillRect(-r + d * 0.5, -r, d * 0.5, d);
     },
+    'kit-gim': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#003da5', '#ffffff'),
+    'kit-pen': (ctx, r) => _drawVerticalStripesKit(ctx, r, '#FFD200', '#000000'),
     'kit-ars': (ctx, r) => {
       const d = r * 2;
       ctx.fillStyle = '#EF0107'; ctx.fillRect(-r, -r, d, d);
