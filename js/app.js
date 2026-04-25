@@ -514,11 +514,19 @@ function maybeShowReview(sessionCount) {
   _currentSessionCount = sessionCount;
   const SESSIONS_BEFORE_PROMPT = 5;
   const SESSIONS_BETWEEN_PROMPTS = 10;
+  const SESSIONS_AFTER_REVIEW = 50;
   const KEY_REVIEWED = 'tactica_reviewed';
+  const KEY_REVIEWED_AT = 'tactica_review_submitted_at';
   const KEY_SHOWN_AT = 'tactica_review_shown_at';
 
   // Already submitted a review? Never show again.
   if (localStorage.getItem(KEY_REVIEWED)) return;
+
+  // Backup gate: if we have a stored "submitted at session N" timestamp, hold
+  // off for SESSIONS_AFTER_REVIEW more sessions even if KEY_REVIEWED is missing
+  // (e.g. localStorage cleared or domain changed).
+  const reviewedAt = parseInt(localStorage.getItem(KEY_REVIEWED_AT) || '0');
+  if (reviewedAt > 0 && sessionCount < reviewedAt + SESSIONS_AFTER_REVIEW) return;
 
   // Shown before (skip, dismiss, or just closed the tab)? Wait 10 more sessions.
   const shownAt = parseInt(localStorage.getItem(KEY_SHOWN_AT) || '0');
@@ -619,6 +627,8 @@ window.submitReview = async function() {
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
       localStorage.setItem('tactica_reviewed', '1');
+      // Also stamp the session count so the cooldown survives if KEY_REVIEWED is lost
+      localStorage.setItem('tactica_review_submitted_at', String(_currentSessionCount || 0));
       if (typeof window.gtag === 'function') window.gtag('event', 'review_submitted', { tool_name: 'tactica', rating: _reviewRating, has_text: !!text });
       if (user) logAction(user.uid, user.email, 'review_submitted', { rating: _reviewRating, has_text: !!text, text: text || '' }).catch(() => {});
       status.textContent = 'Thanks for your review! 🙌';
