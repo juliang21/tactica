@@ -64,12 +64,18 @@ export function applyKit(el) {
   const borderColor = el.dataset.border || null;
   const pattern = el.dataset.pattern || null;
   const fillValue = pattern ? 'url(#' + pattern + ')' : color;
-  S.teamColors[S.teamContext] = fillValue;
-  S.gkColors[S.teamContext] = gkColor;
-  document.getElementById('dot-' + S.teamContext).style.background = pattern
+  const team = S.teamContext;
+  // Aha-moment: if this side is empty, spawn a 4-3-3 after applying the kit
+  // so the user sees players immediately. If players are already there, we
+  // just recolor them and leave the layout alone.
+  const sideIsEmpty = S.playersLayer && !S.playersLayer.querySelector(`g[data-team="${team}"]`);
+  S.teamColors[team] = fillValue;
+  S.gkColors[team] = gkColor;
+  document.getElementById('dot-' + team).style.background = pattern
     ? el.style.background
     : color;
-  updateTeamPlayerColors(S.teamContext, fillValue, gkColor, borderColor);
+  updateTeamPlayerColors(team, fillValue, gkColor, borderColor);
+  if (sideIsEmpty && S.FORMATIONS && S.FORMATIONS['4-3-3']) placeFormation('4-3-3');
 }
 
 export function applyColor(swatchEl) {
