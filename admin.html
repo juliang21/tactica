@@ -356,7 +356,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth, setPersistence, browserLocalPersistence, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, where, limit, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getFirestore, collection, query, orderBy, where, limit, startAfter, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBda3avj-hYXV72mgbc5ueLw7QAQnqTI34",
@@ -433,23 +433,34 @@ window.loadDashboard = async function() {
   }
 };
 
-// Scope actions to the selected date window — fetching the full collection
-// times out once it grows past a few tens of thousands of docs.
+// Scope actions to the selected date window. Firestore caps a single query
+// at 10000 docs, so we paginate with startAfter() until the range is fully
+// drained. Hard-stop after 50 pages (500k docs) as a runaway guard.
 async function reloadActions() {
   const startStr = document.getElementById('date-start').value;
   const endStr = document.getElementById('date-end').value;
   if (!startStr || !endStr) { _allActions = []; return; }
   const startMs = new Date(startStr + 'T00:00:00').getTime();
   const endMs = new Date(endStr + 'T23:59:59.999').getTime();
+  const PAGE_SIZE = 10000;
+  const MAX_PAGES = 50;
+  const collected = [];
+  let lastDoc = null;
   try {
-    const actionsQ = query(
-      collection(db, 'tactica_actions'),
-      where('timestamp', '>=', startMs),
-      where('timestamp', '<=', endMs),
-      orderBy('timestamp', 'desc'),
-      limit(10000)
-    );
-    _allActions = (await getDocs(actionsQ)).docs.map(d => d.data());
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const constraints = [
+        where('timestamp', '>=', startMs),
+        where('timestamp', '<=', endMs),
+        orderBy('timestamp', 'desc'),
+        limit(PAGE_SIZE),
+      ];
+      if (lastDoc) constraints.push(startAfter(lastDoc));
+      const snap = await getDocs(query(collection(db, 'tactica_actions'), ...constraints));
+      for (const d of snap.docs) collected.push(d.data());
+      if (snap.docs.length < PAGE_SIZE) break;
+      lastDoc = snap.docs[snap.docs.length - 1];
+    }
+    _allActions = collected;
   } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
 }
 
