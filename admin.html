@@ -447,7 +447,7 @@ async function reloadActions() {
       where('timestamp', '>=', startMs),
       where('timestamp', '<=', endMs),
       orderBy('timestamp', 'desc'),
-      limit(50000)
+      limit(10000)
     );
     _allActions = (await getDocs(actionsQ)).docs.map(d => d.data());
   } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
