@@ -282,10 +282,10 @@
 
   <div class="date-filters">
     <label>From</label>
-    <input type="date" id="date-start" onchange="applyDateFilter()">
+    <input type="date" id="date-start" onchange="loadDashboard()">
     <span class="sep">&rarr;</span>
     <label>To</label>
-    <input type="date" id="date-end" onchange="applyDateFilter()">
+    <input type="date" id="date-end" onchange="loadDashboard()">
     <span class="sep" style="margin-left:12px"></span>
     <label style="display:flex;align-items:center;gap:6px;cursor:pointer;user-select:none">
       <input type="checkbox" id="exclude-me" checked onchange="applyDateFilter()" style="accent-color:#34D399;cursor:pointer">
@@ -453,12 +453,10 @@ async function reloadActions() {
   } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
 }
 
-window.applyDateFilter = async function() {
+window.applyDateFilter = function() {
   const startStr = document.getElementById('date-start').value;
   const endStr = document.getElementById('date-end').value;
   if (!startStr || !endStr) return;
-  // Re-fetch actions for the new range, since the query is date-scoped
-  await reloadActions();
 
   const startMs = new Date(startStr + 'T00:00:00').getTime();
   const endMs = new Date(endStr + 'T23:59:59.999').getTime();
