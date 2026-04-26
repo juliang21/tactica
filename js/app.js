@@ -4789,8 +4789,8 @@ onAuthChange(async (user) => {
     const nameInput = document.getElementById('analysis-name-input');
     if (nameInput) nameInput.value = 'New analysis';
 
-    // Show welcome notification (skip on initial page load auto-restore)
-    if (_authInitialized) {
+    // Show welcome notification only on sign-up (first session ever)
+    if (_authInitialized && _sc === 1) {
       const name = user.displayName || user.email || 'User';
       showNotification('Welcome to Táctica, ' + name + '!', 'success', 4000);
     }
@@ -4840,25 +4840,6 @@ onAuthChange(async (user) => {
           });
           pairBtn.removeEventListener('click', _pairAnnounce);
         });
-      }
-      // Notes feature announcement — show once, on load, pointing at the notes toggle button
-      const notesBtn = document.getElementById('notes-toggle-btn');
-      if (notesBtn) {
-        setTimeout(() => {
-          notesBtn.classList.add('announce-highlight');
-          // Auto-remove highlight after 6s regardless
-          setTimeout(() => notesBtn.classList.remove('announce-highlight'), 6000);
-          showFeatureAnnounce({
-            id: 'notes-tooltip-v1',
-            anchorEl: notesBtn,
-            title: 'Notes',
-            text: 'Add coaching notes to any analysis for future reference. Your notes are saved automatically.',
-            cta: 'Got it',
-            position: 'below',
-            maxShows: 2,
-            onCta: () => notesBtn.classList.remove('announce-highlight'),
-          });
-        }, 1200);
       }
     }
 

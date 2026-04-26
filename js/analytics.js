@@ -5,7 +5,7 @@
 // ──────────────────────────────────────────────────────────────────────────────
 import * as S from './state.js';
 
-const GA_MEASUREMENT_ID = 'G-Q9VK1EXXN8';
+const GA_MEASUREMENT_ID = 'G-6HX9DJLME1';
 
 // ─── Initialise gtag ─────────────────────────────────────────────────────────
 (function initGA() {
@@ -30,8 +30,6 @@ const GA_MEASUREMENT_ID = 'G-Q9VK1EXXN8';
   window.gtag = function () { window.dataLayer.push(arguments); };
   window.gtag('js', new Date());
   window.gtag('config', GA_MEASUREMENT_ID, {
-    // Custom dimension so you can filter "Táctica Tool" traffic
-    // inside your Rondos GA4 property
     custom_map: { dimension1: 'tool_name' },
     tool_name: 'tactica',
     send_page_view: true,
