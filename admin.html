@@ -356,7 +356,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth, setPersistence, browserLocalPersistence, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getFirestore, collection, query, orderBy, where, limit, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBda3avj-hYXV72mgbc5ueLw7QAQnqTI34",
@@ -423,10 +423,7 @@ window.loadDashboard = async function() {
     const sessionsQ = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
     _allSessions = (await getDocs(sessionsQ)).docs.map(d => d.data());
 
-    try {
-      const actionsQ = query(collection(db, 'tactica_actions'), orderBy('timestamp', 'desc'));
-      _allActions = (await getDocs(actionsQ)).docs.map(d => d.data());
-    } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
+    await reloadActions();
 
     applyDateFilter();
   } catch (e) { console.error('Dashboard error:', e); }
@@ -436,10 +433,32 @@ window.loadDashboard = async function() {
   }
 };
 
-window.applyDateFilter = function() {
+// Scope actions to the selected date window — fetching the full collection
+// times out once it grows past a few tens of thousands of docs.
+async function reloadActions() {
+  const startStr = document.getElementById('date-start').value;
+  const endStr = document.getElementById('date-end').value;
+  if (!startStr || !endStr) { _allActions = []; return; }
+  const startMs = new Date(startStr + 'T00:00:00').getTime();
+  const endMs = new Date(endStr + 'T23:59:59.999').getTime();
+  try {
+    const actionsQ = query(
+      collection(db, 'tactica_actions'),
+      where('timestamp', '>=', startMs),
+      where('timestamp', '<=', endMs),
+      orderBy('timestamp', 'desc'),
+      limit(50000)
+    );
+    _allActions = (await getDocs(actionsQ)).docs.map(d => d.data());
+  } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
+}
+
+window.applyDateFilter = async function() {
   const startStr = document.getElementById('date-start').value;
   const endStr = document.getElementById('date-end').value;
   if (!startStr || !endStr) return;
+  // Re-fetch actions for the new range, since the query is date-scoped
+  await reloadActions();
 
   const startMs = new Date(startStr + 'T00:00:00').getTime();
   const endMs = new Date(endStr + 'T23:59:59.999').getTime();
