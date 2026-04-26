@@ -23,7 +23,7 @@ import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElement
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
 import { shouldBlockUser, shouldBlockAnonymous, showMaintenanceOverlay, isBlockedEmail } from './access-check.js';
-import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis } from './firestore.js?v=4';
+import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed } from './firestore.js?v=5';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
 import './features/feedback.js';
 import './features/bundles.js';
@@ -510,23 +510,22 @@ loadTeamsDB();
 // ─── Review Modal ────────────────────────────────────────────────────────────
 // Called from onAuthChange after logSession resolves with real Firestore count.
 let _currentSessionCount = 0;
-function maybeShowReview(sessionCount) {
+function maybeShowReview(sessionCount, hasReviewed) {
   _currentSessionCount = sessionCount;
   const SESSIONS_BEFORE_PROMPT = 5;
   const SESSIONS_BETWEEN_PROMPTS = 10;
-  const SESSIONS_AFTER_REVIEW = 50;
   const KEY_REVIEWED = 'tactica_reviewed';
-  const KEY_REVIEWED_AT = 'tactica_review_submitted_at';
   const KEY_SHOWN_AT = 'tactica_review_shown_at';
 
-  // Already submitted a review? Never show again.
-  if (localStorage.getItem(KEY_REVIEWED)) return;
+  // Server-side flag (cross-device): user has submitted a review on any device.
+  if (hasReviewed) {
+    // Sync local cache so subsequent sessions on this device take the fast path.
+    localStorage.setItem(KEY_REVIEWED, '1');
+    return;
+  }
 
-  // Backup gate: if we have a stored "submitted at session N" timestamp, hold
-  // off for SESSIONS_AFTER_REVIEW more sessions even if KEY_REVIEWED is missing
-  // (e.g. localStorage cleared or domain changed).
-  const reviewedAt = parseInt(localStorage.getItem(KEY_REVIEWED_AT) || '0');
-  if (reviewedAt > 0 && sessionCount < reviewedAt + SESSIONS_AFTER_REVIEW) return;
+  // Local cache (fast path on the same device).
+  if (localStorage.getItem(KEY_REVIEWED)) return;
 
   // Shown before (skip, dismiss, or just closed the tab)? Wait 10 more sessions.
   const shownAt = parseInt(localStorage.getItem(KEY_SHOWN_AT) || '0');
@@ -627,8 +626,9 @@ window.submitReview = async function() {
     const data = await res.json().catch(() => ({}));
     if (res.ok && data.success) {
       localStorage.setItem('tactica_reviewed', '1');
-      // Also stamp the session count so the cooldown survives if KEY_REVIEWED is lost
-      localStorage.setItem('tactica_review_submitted_at', String(_currentSessionCount || 0));
+      // Persist a server-side flag so the prompt is never shown again, even on
+      // a different device/browser where localStorage is empty.
+      if (user) markUserReviewed(user.uid).catch(() => {});
       if (typeof window.gtag === 'function') window.gtag('event', 'review_submitted', { tool_name: 'tactica', rating: _reviewRating, has_text: !!text });
       if (user) logAction(user.uid, user.email, 'review_submitted', { rating: _reviewRating, has_text: !!text, text: text || '' }).catch(() => {});
       status.textContent = 'Thanks for your review! 🙌';
@@ -4775,9 +4775,14 @@ onAuthChange(async (user) => {
     // Generate session ID and log session to Firestore
     setSessionId(user.uid + '_' + Date.now());
     let _sc = 0;
-    try { _sc = await logSession(user.uid, user.email, user.displayName); } catch (e) { console.warn('Session log error:', e); }
-    // Show review modal based on real Firestore session count
-    maybeShowReview(_sc);
+    let _hasReviewed = false;
+    try {
+      const res = await logSession(user.uid, user.email, user.displayName);
+      _sc = res?.sessionCount || 0;
+      _hasReviewed = res?.hasReviewed === true;
+    } catch (e) { console.warn('Session log error:', e); }
+    // Show review modal based on real Firestore session count + reviewed flag
+    maybeShowReview(_sc, _hasReviewed);
 
     // Always start a fresh board on new session
     clearCurrentId();

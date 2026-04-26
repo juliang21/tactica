@@ -55,7 +55,7 @@ export async function showMaintenanceOverlay(opts = {}) {
   if (!_logged) {
     _logged = true;
     try {
-      const m = await import('./firestore.js?v=4');
+      const m = await import('./firestore.js?v=5');
       if (typeof m.logAction === 'function') {
         const user = opts.user || null;
         const reason = opts.reason || 'unknown';

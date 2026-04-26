@@ -131,6 +131,7 @@ export async function loadSharedAnalysis(shareId) {
 }
 
 // ─── Session Tracking ───────────────────────────────────────────────────────
+// Returns { sessionCount, hasReviewed } so callers can decide whether to prompt.
 export async function logSession(uid, email, displayName) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10); // YYYY-MM-DD
@@ -141,6 +142,7 @@ export async function logSession(uid, email, displayName) {
   const existing = userSnap.exists() ? userSnap.data() : {};
   const sessionCount = (existing.sessionCount || 0) + 1;
   const firstSeen = existing.firstSeen || now;
+  const hasReviewed = existing.reviewed === true;
 
   await setDoc(userRef, {
     email: email || '',
@@ -162,7 +164,15 @@ export async function logSession(uid, email, displayName) {
     device,
   });
 
-  return sessionCount;
+  return { sessionCount, hasReviewed };
+}
+
+// Persist a "user submitted a review" flag on the user doc so the prompt is
+// suppressed across devices/browsers (localStorage is per-browser only).
+export async function markUserReviewed(uid) {
+  if (!uid) return;
+  const userRef = doc(db, 'tactica_users', uid);
+  await setDoc(userRef, { reviewed: true, reviewedAt: Date.now() }, { merge: true });
 }
 
 // ─── Session ID (one per page load) ────────────────────────────────────────

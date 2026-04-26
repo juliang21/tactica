@@ -2,7 +2,7 @@
 // Extracted from app.js — toggle, auto-save indicator, and analytics for the notes panel.
 
 import { getCurrentUser } from '../auth.js';
-import { logAction } from '../firestore.js?v=4';
+import { logAction } from '../firestore.js?v=5';
 
 let _notesOpenTracked = false;
 
