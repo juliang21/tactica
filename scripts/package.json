@@ -1,0 +1,8 @@
+{
+  "name": "tactica-scripts",
+  "private": true,
+  "description": "One-off admin scripts (backfills, migrations) for the Tactica Firestore project.",
+  "dependencies": {
+    "firebase-admin": "^12.0.0"
+  }
+}

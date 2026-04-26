@@ -1,2 +1,5 @@
 .DS_Store
 .claude/
+scripts/serviceAccount.json
+scripts/node_modules/
+scripts/package-lock.json
