@@ -272,6 +272,9 @@ export function addArrow(x1, y1, x2, y2, type) {
   line.setAttribute('stroke', st.color); line.setAttribute('stroke-width','2.5');
   line.setAttribute('stroke-linecap','round'); line.setAttribute('fill', 'none');
   if (st.dash) line.setAttribute('stroke-dasharray', st.dash);
+  // Track the dash style by name so width changes can re-scale the pattern.
+  // Map the legacy presets: '6,4' was always 'dashed', and only 'run' uses one.
+  g.dataset.arrowDashStyle = st.dash ? 'dashed' : 'solid';
   if (st.marker !== 'none') line.setAttribute('marker-end', st.marker);
   line.setAttribute('opacity','0.95');
   g.dataset.arrowOpacity = '0.95';

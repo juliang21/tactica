@@ -643,14 +643,23 @@ export function confirmColorPicker() {
 }
 
 // ─── Arrow Editing ───────────────────────────────────────────────────────────
-function getOrCreateMarker(color) {
-  const safeId = 'marker-' + color.replace('#', '');
-  let marker = document.getElementById(safeId);
+export function getOrCreateMarker(color, scale, ownerSvgArg) {
+  const s = parseFloat(scale);
+  const sFinal = (Number.isFinite(s) && s > 0) ? s : 1;
+  const safeId = 'marker-' + color.replace('#', '') + (sFinal === 1 ? '' : '-s' + Math.round(sFinal * 100));
+  // Add the marker to the SAME SVG the arrow lives in. In image mode the arrow
+  // is on the mini-pitch SVG, not the main one, and url(#…) only resolves
+  // within the same SVG document.
+  const ownerSvg = ownerSvgArg || S.selectedEl?.ownerSVGElement || S.svg;
+  const ownerDefs = ownerSvg.querySelector('defs');
+  if (!ownerDefs) return 'url(#' + safeId + ')';
+  let marker = ownerDefs.querySelector('#' + safeId);
   if (!marker) {
     marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
     marker.setAttribute('id', safeId);
-    marker.setAttribute('markerWidth', '7');
-    marker.setAttribute('markerHeight', '6');
+    marker.setAttribute('viewBox', '0 0 7 6');
+    marker.setAttribute('markerWidth', String(7 * sFinal));
+    marker.setAttribute('markerHeight', String(6 * sFinal));
     marker.setAttribute('refX', '5.5');
     marker.setAttribute('refY', '3');
     marker.setAttribute('orient', 'auto');
@@ -658,7 +667,7 @@ function getOrCreateMarker(color) {
     poly.setAttribute('points', '0 0, 7 3, 0 6');
     poly.setAttribute('fill', color);
     marker.appendChild(poly);
-    S.svg.querySelector('defs').appendChild(marker);
+    ownerDefs.appendChild(marker);
   }
   return 'url(#' + safeId + ')';
 }
@@ -671,7 +680,8 @@ function applyArrowColorValue(color) {
     // Update marker if arrow has a head
     const hasHead = S.selectedEl.dataset.arrowType !== 'line';
     if (hasHead) {
-      line.setAttribute('marker-end', getOrCreateMarker(color));
+      const scale = S.selectedEl.dataset.arrowHeadScale || '1';
+      line.setAttribute('marker-end', getOrCreateMarker(color, scale));
     }
   }
   S.selectedEl.dataset.arrowColor = color;
@@ -682,14 +692,26 @@ export function applyArrowColor(swatchEl) {
   applyArrowColorValue(swatchEl.dataset.color);
 }
 
+// Compute a stroke-dasharray that scales with line width so the pattern stays
+// visible on thick arrows. Ratios match the legacy '6,4' / '2,5' values at
+// stroke=2.5 (the original default width).
+function computeArrowDash(style, width) {
+  const W = parseFloat(width);
+  const w = (Number.isFinite(W) && W > 0) ? W : 2.5;
+  if (style === 'dashed') return (2.4 * w).toFixed(2) + ',' + (1.6 * w).toFixed(2);
+  if (style === 'dotted') return (0.8 * w).toFixed(2) + ',' + (2.0 * w).toFixed(2);
+  return '';
+}
+
 export function applyArrowStyle(style) {
   document.querySelectorAll('.style-btn').forEach(b => b.classList.toggle('active', b.dataset.style === style));
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
   trackElementEdited('arrow', 'style');
   const line = S.selectedEl.querySelector('.arrow-line');
   if (!line) return;
-  const map = { solid: '', dashed: '6,4', dotted: '2,5' };
-  const dash = map[style] || '';
+  S.selectedEl.dataset.arrowDashStyle = style;
+  const width = S.selectedEl.dataset.arrowWidth || line.getAttribute('stroke-width') || '2.5';
+  const dash = computeArrowDash(style, width);
   if (dash) line.setAttribute('stroke-dasharray', dash);
   else line.removeAttribute('stroke-dasharray');
   S.selectedEl.dataset.arrowDash = dash;
@@ -700,7 +722,24 @@ export function applyArrowWidth(val) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
   trackElementEdited('arrow', 'width');
   S.selectedEl.dataset.arrowWidth = val;
-  S.selectedEl.querySelector('.arrow-line')?.setAttribute('stroke-width', val);
+  const line = S.selectedEl.querySelector('.arrow-line');
+  if (!line) return;
+  line.setAttribute('stroke-width', val);
+  // Re-scale dash so the pattern stays visible at the new width
+  let style = S.selectedEl.dataset.arrowDashStyle;
+  if (!style) {
+    const existing = line.getAttribute('stroke-dasharray') || '';
+    if (!existing) style = 'solid';
+    else {
+      const parts = existing.split(',').map(Number);
+      style = (parts[0] && parts[1] && parts[1] > parts[0]) ? 'dotted' : 'dashed';
+    }
+    S.selectedEl.dataset.arrowDashStyle = style;
+  }
+  const dash = computeArrowDash(style, val);
+  if (dash) line.setAttribute('stroke-dasharray', dash);
+  else line.removeAttribute('stroke-dasharray');
+  S.selectedEl.dataset.arrowDash = dash;
 }
 
 export function applyArrowCurve(val) {
@@ -719,6 +758,23 @@ export function applyArrowOpacity(val) {
   trackElementEdited('arrow', 'opacity');
   S.selectedEl.dataset.arrowOpacity = val;
   S.selectedEl.querySelector('.arrow-line')?.setAttribute('opacity', val);
+}
+
+export function applyArrowHeadScale(val) {
+  const pct = Math.round(parseFloat(val) * 100);
+  document.getElementById('arrow-head-val').textContent = pct + '%';
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'arrow') return;
+  if (S.selectedEl.dataset.arrowType === 'line') return;
+  trackElementEdited('arrow', 'head_scale');
+  S.selectedEl.dataset.arrowHeadScale = val;
+  const line = S.selectedEl.querySelector('.arrow-line');
+  if (!line) return;
+  const aType = S.selectedEl.dataset.arrowType || 'run';
+  const color = S.selectedEl.dataset.arrowColor
+    || line.getAttribute('stroke')
+    || S.ARROW_STYLES[aType]?.color
+    || '#FFFFFF';
+  line.setAttribute('marker-end', getOrCreateMarker(color, val));
 }
 
 // ─── Text Box Editing ────────────────────────────────────────────────────────

@@ -2,6 +2,7 @@
 import * as S from './state.js';
 import { getCurrentUser } from './auth.js';
 import { deselectVisual } from './interaction.js';
+import { getOrCreateMarker } from './ui.js';
 import {
   saveAnalysisToCloud, loadAnalysisFromCloud, listAnalysesFromCloud,
   deleteAnalysisFromCloud, duplicateAnalysisInCloud, migrateLocalToCloud,
@@ -212,22 +213,12 @@ export async function loadAnalysis(id, onReady) {
     const w = g.dataset.arrowWidth || '2.5';
     line.setAttribute('stroke-width', w);
     const customColor = g.dataset.arrowColor;
+    const headScale = g.dataset.arrowHeadScale || '1';
+    const hasCustomScale = parseFloat(headScale) !== 1;
     const st = S.ARROW_STYLES[aType];
-    if (customColor && customColor !== st?.color) {
-      // Custom color — ensure marker def exists
-      const safeId = 'marker-' + customColor.replace('#', '');
-      if (!document.getElementById(safeId)) {
-        const defs = S.svg.querySelector('defs');
-        const marker = document.createElementNS('http://www.w3.org/2000/svg', 'marker');
-        marker.setAttribute('id', safeId);
-        marker.setAttribute('markerWidth', '7'); marker.setAttribute('markerHeight', '6');
-        marker.setAttribute('refX', '5.5'); marker.setAttribute('refY', '3');
-        marker.setAttribute('orient', 'auto');
-        const poly = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-        poly.setAttribute('points', '0 0, 7 3, 0 6'); poly.setAttribute('fill', customColor);
-        marker.appendChild(poly); defs.appendChild(marker);
-      }
-      line.setAttribute('marker-end', `url(#${safeId})`);
+    if ((customColor && customColor !== st?.color) || hasCustomScale) {
+      const color = customColor || st?.color || '#FFFFFF';
+      line.setAttribute('marker-end', getOrCreateMarker(color, headScale, g.ownerSVGElement || S.svg));
     } else if (st?.marker && st.marker !== 'none') {
       line.setAttribute('marker-end', st.marker);
     }

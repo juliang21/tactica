@@ -7,7 +7,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyPlayerFill, applyPlayerBorder, togglePlayerArms,
          liveUpdateRefName, confirmRefName, applyRefFill, applyRefBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
-         applyArrowColor, applyArrowStyle, applyArrowWidth, applyArrowCurve, applyArrowOpacity,
+         applyArrowColor, applyArrowStyle, applyArrowWidth, applyArrowCurve, applyArrowOpacity, applyArrowHeadScale,
          applySpotlightColor, setSpotlightColor, applyVisionColor, applyVisionBorder, applyVisionOpacity,
          liveUpdateSpotName, confirmSpotName, applySpotNameSize, applySpotNameColor, applySpotNameBg,
          applyZoneFill, applyZoneBorder, applyZoneBorderStyle, applyZoneOpacity,
@@ -862,6 +862,7 @@ window.applyArrowStyle = applyArrowStyle;
 window.applyArrowWidth = applyArrowWidth;
 window.applyArrowCurve = applyArrowCurve;
 window.applyArrowOpacity = applyArrowOpacity;
+window.applyArrowHeadScale = applyArrowHeadScale;
 window.applySpotlightColor = applySpotlightColor;
 window.applyVisionColor = applyVisionColor;
 window.applyVisionBorder = applyVisionBorder;

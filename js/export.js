@@ -469,6 +469,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const col = line?.getAttribute('stroke') || S.ARROW_STYLES[aType]?.color || '#f9a84f';
     const lineDash = line?.getAttribute('stroke-dasharray') || '';
     const lineW = parseFloat(g.dataset.arrowWidth || '2.5');
+    const headScale = parseFloat(g.dataset.arrowHeadScale || '1') || 1;
     const hasMarker = aType !== 'line' && line?.getAttribute('marker-end') !== '';
 
     const midX = (p1.x+p2.x)/2, midY = (p1.y+p2.y)/2;
@@ -481,7 +482,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const tanLen = Math.sqrt(tanX*tanX+tanY*tanY);
     const ux = tanLen > 0 ? tanX/tanLen : ddx/len;
     const uy = tanLen > 0 ? tanY/tanLen : ddy/len;
-    const aSize=11;
+    const aSize = 11 * headScale;
 
     ctx.save();
     ctx.strokeStyle=col; ctx.lineWidth=lineW; ctx.lineCap='round';

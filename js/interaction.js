@@ -524,6 +524,12 @@ export function select(el, opts = {}) {
     const arrowOp = el.dataset.arrowOpacity || el.querySelector('.arrow-line')?.getAttribute('opacity') || '0.95';
     document.getElementById('arrow-opacity-slider').value = arrowOp;
     document.getElementById('arrow-opacity-val').textContent = Math.round(parseFloat(arrowOp) * 100) + '%';
+    const headScale = el.dataset.arrowHeadScale || '1';
+    const headSlider = document.getElementById('arrow-head-slider');
+    if (headSlider) {
+      headSlider.value = headScale;
+      document.getElementById('arrow-head-val').textContent = Math.round(parseFloat(headScale) * 100) + '%';
+    }
   } else if (type === 'textbox') {
     textboxSec.style.display = '';
     document.getElementById('textbox-input').value = el.dataset.textContent || '';
