@@ -627,8 +627,12 @@ window.submitReview = async function() {
     if (res.ok && data.success) {
       localStorage.setItem('tactica_reviewed', '1');
       // Persist a server-side flag so the prompt is never shown again, even on
-      // a different device/browser where localStorage is empty.
-      if (user) markUserReviewed(user.uid).catch(() => {});
+      // a different device/browser where localStorage is empty. Awaited so a
+      // silent failure can't leave the user prompted again on another device.
+      if (user) {
+        try { await markUserReviewed(user.uid); }
+        catch (e) { console.warn('Failed to persist review flag — may re-prompt on other devices:', e); }
+      }
       if (typeof window.gtag === 'function') window.gtag('event', 'review_submitted', { tool_name: 'tactica', rating: _reviewRating, has_text: !!text });
       if (user) logAction(user.uid, user.email, 'review_submitted', { rating: _reviewRating, has_text: !!text, text: text || '' }).catch(() => {});
       status.textContent = 'Thanks for your review! 🙌';
@@ -4844,15 +4848,13 @@ onAuthChange(async (user) => {
       }
     }
 
-    // Welcome modals (show for first 2 sessions)
-    if (window.innerWidth <= 768) {
-      const mobileCount = parseInt(localStorage.getItem('tactica_mobile_sessions') || '0', 10) + 1;
-      localStorage.setItem('tactica_mobile_sessions', mobileCount);
-      if (mobileCount <= 2) showMobileHint();
-    } else {
-      const desktopCount = parseInt(localStorage.getItem('tactica_desktop_sessions') || '0', 10) + 1;
-      localStorage.setItem('tactica_desktop_sessions', desktopCount);
-      if (desktopCount <= 2) showDesktopWelcome();
+    // Welcome modal — only on sign-up (first session ever, regardless of device).
+    // Previously this used a per-device localStorage counter, so users saw it
+    // twice on every new device they signed in from. _sc comes from the server
+    // and is the lifetime session count, so === 1 means "this is sign-up".
+    if (_authInitialized && _sc === 1) {
+      if (window.innerWidth <= 768) showMobileHint();
+      else showDesktopWelcome();
     }
   } else {
     // Show landing gate when not authenticated
