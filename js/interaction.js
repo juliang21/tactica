@@ -277,7 +277,22 @@ export function select(el, opts = {}) {
   // Visual highlight
   if (type === 'player' || type === 'referee' || type === 'ball' || type === 'cone') {
     el.querySelector('circle:not(.hit-area):not(.player-shadow),polygon')?.setAttribute('stroke-width', '3');
-    if (type === 'player' || type === 'referee') el.querySelector('circle:not(.hit-area):not(.player-shadow)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+    if (type === 'referee') el.querySelector('circle:not(.hit-area):not(.player-shadow)')?.setAttribute('stroke', 'rgba(79,156,249,0.8)');
+  }
+  // Players get a dashed lime ring around them on selection (preserves the
+  // player's own team border instead of overriding it with a blue highlight).
+  if (type === 'player' && !el.querySelector('.select-ring')) {
+    const ring = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
+    ring.setAttribute('class', 'select-ring');
+    ring.setAttribute('cx', '0');
+    ring.setAttribute('cy', '0');
+    ring.setAttribute('r', '22');
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', '#d8ff3c');
+    ring.setAttribute('stroke-width', '2');
+    ring.setAttribute('stroke-dasharray', '3,2.5');
+    ring.setAttribute('pointer-events', 'none');
+    el.appendChild(ring);
   }
   if (type === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
@@ -640,6 +655,7 @@ export function deselectVisual(el) {
   removeHandles();
   const t = el.dataset.type;
   if (t === 'player') {
+    el.querySelector('.select-ring')?.remove();
     const circ = el.querySelector('circle:not(.hit-area):not(.player-shadow)');
     if (circ) {
       const customBorder = el.dataset.borderColor;
