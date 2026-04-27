@@ -65,10 +65,10 @@ registerSelectTracker((type) => {
 
 registerDragEnd((el) => {
   trackElementDragged();
-  // When a player is dragged in a step > 0, save and redraw trails
-  if (el.dataset.type === 'player' && frames.length > 0) {
+  if (frames.length > 0) {
     saveCurrentToFrame();
-    drawTrails();
+    if (el.dataset.type === 'player') drawTrails();
+    refreshActiveStepThumbnail();
   }
 });
 
@@ -2474,6 +2474,118 @@ function drawTrails() {
   S.objectsLayer.appendChild(trailsGroup);
 }
 
+// Render a tiny pitch preview for a given frame: green rect + colored dots
+// for each player/referee plus simplified arrows/zones/vision so frames are
+// visually distinguishable from each other. Used inside the step cards.
+function generateStepThumbnail(frameIdx) {
+  const f = frames[frameIdx];
+  if (!f) return '';
+  const svgEl = S.svg;
+  const W = parseFloat(svgEl.getAttribute('width')) || 700;
+  const H = parseFloat(svgEl.getAttribute('height')) || 480;
+  const TW = 100, TH = 50;
+  const sx = TW / W, sy = TH / H;
+  const pitchColor = (S.pitchColors && S.pitchColors.s1) || '#2d5a27';
+
+  let zones = '', arrows = '', dots = '';
+  for (const id of f.elementIds) {
+    const snap = f.positions[id];
+    if (!snap) continue;
+    const t = snap.type;
+    const cx = parseFloat(snap.cx);
+    const cy = parseFloat(snap.cy);
+    if (!isFinite(cx) || !isFinite(cy)) continue;
+    const x = cx * sx, y = cy * sy;
+    if (t === 'player' || t === 'referee') {
+      const liveEl = document.getElementById(id);
+      const circ = liveEl?.querySelector('circle:not(.hit-area):not(.player-shadow):not(.select-ring)');
+      const fill = circ?.getAttribute('fill') || (snap.team === 'b' ? '#F97066' : '#8B5CF6');
+      dots += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="2.4" fill="${fill}"/>`;
+    } else if (t === 'arrow') {
+      const dx1 = parseFloat(snap.dx1) || 0, dy1 = parseFloat(snap.dy1) || 0;
+      const dx2 = parseFloat(snap.dx2) || 0, dy2 = parseFloat(snap.dy2) || 0;
+      const x1 = (cx + dx1) * sx, y1 = (cy + dy1) * sy;
+      const x2 = (cx + dx2) * sx, y2 = (cy + dy2) * sy;
+      const stroke = (snap.arrowType === 'pass') ? '#F59E0B' : (snap.arrowType === 'line') ? '#f94f4f' : '#FFFFFF';
+      const dash = (snap.arrowType === 'run') ? ' stroke-dasharray="2,1.5"' : '';
+      arrows += `<line x1="${x1.toFixed(2)}" y1="${y1.toFixed(2)}" x2="${x2.toFixed(2)}" y2="${y2.toFixed(2)}" stroke="${snap.arrowColor || stroke}" stroke-width="0.9" stroke-linecap="round"${dash} opacity="0.85"/>`;
+    } else if (t === 'shadow' || t === 'pair' || t === 'shadow-rect') {
+      const w = (parseFloat(snap.zoneWidth) || 100) * sx;
+      const h = (parseFloat(snap.zoneHeight) || 60) * sy;
+      const rx = w / 2;
+      const liveEl = document.getElementById(id);
+      const fill = liveEl?.querySelector('rect, ellipse, .pair-ellipse')?.getAttribute('fill') || 'rgba(216,255,60,0.18)';
+      const tag = (t === 'shadow-rect') ? 'rect' : 'ellipse';
+      const attrs = (tag === 'rect')
+        ? `x="${(x - w / 2).toFixed(2)}" y="${(y - h / 2).toFixed(2)}" width="${w.toFixed(2)}" height="${h.toFixed(2)}" rx="1"`
+        : `cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" rx="${rx.toFixed(2)}" ry="${(h / 2).toFixed(2)}"`;
+      zones += `<${tag} ${attrs} fill="${fill}" opacity="0.6"/>`;
+    } else if (t === 'vision') {
+      const len = (parseFloat(snap.visionLength) || 80) * sx;
+      const spread = (parseFloat(snap.visionSpread) || 35) * sy;
+      const rot = (parseFloat(snap.rotation) || 0) * Math.PI / 180;
+      const cos = Math.cos(rot), sin = Math.sin(rot);
+      const tx = x + len * cos - (-spread) * sin, ty = y + len * sin + (-spread) * cos;
+      const bx = x + len * cos - spread * sin,    by = y + len * sin + spread * cos;
+      zones += `<polygon points="${x.toFixed(2)},${y.toFixed(2)} ${tx.toFixed(2)},${ty.toFixed(2)} ${bx.toFixed(2)},${by.toFixed(2)}" fill="${snap.visionColor || 'rgba(147,197,253,0.4)'}" opacity="0.55"/>`;
+    } else if (t === 'spotlight') {
+      const r = (parseFloat(snap.spotRadius) || 30) * sx;
+      zones += `<circle cx="${x.toFixed(2)}" cy="${y.toFixed(2)}" r="${r.toFixed(2)}" fill="none" stroke="${snap.spotColor || 'rgba(255,255,255,0.5)'}" stroke-width="0.6" opacity="0.7"/>`;
+    }
+  }
+
+  return `<svg viewBox="0 0 ${TW} ${TH}" preserveAspectRatio="none"><rect width="${TW}" height="${TH}" fill="${pitchColor}"/>${zones}${arrows}${dots}</svg>`;
+}
+
+// Show the scroll arrows only when step-bar overflows, and disable each one
+// when the user has scrolled to that end.
+function updateStepScrollArrows() {
+  const bar = document.getElementById('step-bar');
+  const left = document.querySelector('.step-scroll-left');
+  const right = document.querySelector('.step-scroll-right');
+  if (!bar || !left || !right) return;
+  const overflow = bar.scrollWidth - bar.clientWidth > 1;
+  left.classList.toggle('visible', overflow);
+  right.classList.toggle('visible', overflow);
+  if (!overflow) return;
+  if (bar.scrollLeft <= 1) left.setAttribute('disabled', '');
+  else left.removeAttribute('disabled');
+  if (bar.scrollLeft + bar.clientWidth >= bar.scrollWidth - 1) right.setAttribute('disabled', '');
+  else right.removeAttribute('disabled');
+}
+
+window.scrollStepBar = function(dir) {
+  const bar = document.getElementById('step-bar');
+  if (!bar) return;
+  // Scroll by ~one card-and-a-half so users see the next chunk
+  bar.scrollBy({ left: dir * 200, behavior: 'smooth' });
+};
+
+// Wire scroll listener once the bar exists
+(function initStepScrollWiring() {
+  const tryWire = () => {
+    const bar = document.getElementById('step-bar');
+    if (!bar) { setTimeout(tryWire, 100); return; }
+    bar.addEventListener('scroll', updateStepScrollArrows, { passive: true });
+    window.addEventListener('resize', updateStepScrollArrows);
+  };
+  tryWire();
+})();
+
+// Refresh just the active frame's thumbnail in place (cheaper than redrawing
+// the whole bar; preserves scroll position when the user is mid-edit).
+function refreshActiveStepThumbnail() {
+  if (!frames.length || currentFrame < 0) return;
+  saveCurrentToFrame();
+  const bar = document.getElementById('step-bar');
+  if (!bar) return;
+  const cards = bar.querySelectorAll('.step-card');
+  const card = cards[currentFrame];
+  if (!card) return;
+  const thumbHost = card.querySelector('.step-card-thumb');
+  if (thumbHost) thumbHost.innerHTML = generateStepThumbnail(currentFrame);
+}
+
 function renderStepBar() {
   const bar = document.getElementById('step-bar');
   if (!bar) return;
@@ -2483,13 +2595,13 @@ function renderStepBar() {
   let html = '';
   frames.forEach((f, i) => {
     const active = i === currentFrame ? ' active' : '';
-    const label = i + 1; // Steps start at 1
+    const num = String(i + 1).padStart(2, '0');
     const removeBtn = frames.length > 1
-      ? `<span class="step-remove" onclick="event.stopPropagation(); deleteStep(${i})" title="Remove step ${label}">&minus;</span>`
+      ? `<span class="step-card-remove" onclick="event.stopPropagation(); deleteStep(${i})" title="Remove step ${i + 1}">×</span>`
       : '';
-    html += `<button class="step-pill${active}" onclick="goToStep(${i})"><span class="step-label">${label}</span>${removeBtn}</button>`;
+    const thumb = generateStepThumbnail(i);
+    html += `<button class="step-card${active}" onclick="goToStep(${i})"><span class="step-card-num">${num}</span><div class="step-card-thumb">${thumb}</div>${removeBtn}</button>`;
   });
-  html += `<button class="step-pill step-add" onclick="addStep()">+</button>`;
 
   bar.innerHTML = html;
 
@@ -2499,13 +2611,17 @@ function renderStepBar() {
   const exportVideoBtn = document.getElementById('motion-export-video-btn');
   const clearBtn = document.getElementById('motion-clear-btn');
   const separator = document.getElementById('motion-separator');
+  const addBtn = document.getElementById('step-add-btn');
   const hasMultiple = frames.length >= 2;
+  if (addBtn) addBtn.style.display = frames.length >= 1 ? 'flex' : 'none';
   if (playBtn) playBtn.style.display = hasMultiple ? 'flex' : 'none';
   if (resetBtn) resetBtn.style.display = (hasMultiple && currentFrame > 0) ? 'flex' : 'none';
   if (separator) separator.style.display = hasMultiple ? 'inline-block' : 'none';
   if (exportBtn) exportBtn.style.display = hasMultiple ? 'flex' : 'none';
   if (exportVideoBtn) exportVideoBtn.style.display = hasMultiple ? 'flex' : 'none';
   if (clearBtn) clearBtn.style.display = frames.length >= 1 ? 'flex' : 'none';
+  // Defer to next tick so layout has settled before measuring scrollWidth
+  requestAnimationFrame(updateStepScrollArrows);
 }
 
 function playAllSteps() {

@@ -481,6 +481,10 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 #pitch-wrap {
   display: flex; flex-direction: column; align-items: center;
   position: relative; z-index: 1;
+  /* Don't let inner content (motion-controls, step-bar) blow this out past
+     canvas-wrap's available width — needed so step-bar can scroll instead of
+     pushing pitch-wrap beyond the viewport. */
+  min-width: 0; max-width: 100%;
 }
 #pitch-container {
   position: relative; border-radius: 8px; overflow: hidden;
@@ -1239,18 +1243,25 @@ body.tool-freeform #pitch-svg { cursor: crosshair; }
 body.tool-motion #pitch-svg { cursor: crosshair; }
 body.tool-net-zone #pitch-svg { cursor: crosshair; }
 
-/* Step animation controls — below pitch */
+/* Step animation controls — below pitch.
+   flex-wrap + flex-basis 100% on step-bar puts cards on row 1 and the action
+   buttons on row 2 so wider cards don't squeeze the controls into wrapped text.
+   width:100% caps the container at its parent (pitch-wrap) so step-bar can
+   actually overflow + scroll instead of growing motion-controls indefinitely. */
 #motion-controls {
-  display: none; align-items: center; justify-content: center; gap: 6px;
+  display: none; align-items: center; justify-content: center; gap: 8px;
   padding: 10px 0 0;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
 }
-#motion-controls #step-bar { display: flex; gap: 4px; }
 #motion-play-btn, #motion-reset-btn, #motion-export-btn, #motion-export-video-btn, #motion-clear-btn {
   display: none; align-items: center; gap: 5px;
   padding: 7px 14px; border-radius: 8px;
   background: rgba(15,15,15,0.85); backdrop-filter: blur(12px);
   font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
   cursor: pointer; transition: all 0.15s;
+  white-space: nowrap; flex-shrink: 0;
 }
 #motion-play-btn {
   border: 1px solid rgba(30,215,96,0.4); color: var(--accent);
@@ -1264,38 +1275,92 @@ body.tool-net-zone #pitch-svg { cursor: crosshair; }
 #motion-clear-btn {
   border: 1px solid rgba(239,68,68,0.3); color: rgba(239,68,68,0.7);
 }
-.step-pill {
-  padding: 5px 12px; border-radius: 6px;
-  border: 1px solid rgba(255,255,255,0.12);
-  background: rgba(15,15,15,0.8);
-  backdrop-filter: blur(12px);
-  color: var(--text-muted);
-  font-family: 'Manrope', sans-serif;
-  font-size: 11px; font-weight: 600;
-  cursor: pointer; transition: all 0.15s;
-  min-width: 36px; text-align: center;
+/* Wrap step-bar with scroll arrows so users can navigate past 8-10 frames
+   without losing access to the controls below. */
+#motion-controls .step-bar-wrap {
+  flex-basis: 100%;
+  display: flex; align-items: stretch; gap: 4px;
+  min-width: 0;
 }
-.step-pill:hover { border-color: rgba(255,255,255,0.25); color: var(--text); }
-.step-pill.active {
-  background: rgba(30,215,96,0.15);
-  border-color: var(--accent);
-  color: var(--accent);
+#motion-controls #step-bar {
+  display: flex; gap: 4px;
+  flex: 1; min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+  padding-bottom: 4px;
+  scroll-behavior: smooth;
+  justify-content: flex-start;
 }
-.step-pill { position: relative; display: inline-flex; align-items: center; gap: 4px; }
-.step-label { pointer-events: none; }
-.step-remove {
+#motion-controls #step-bar::before,
+#motion-controls #step-bar::after {
+  content: ''; flex: 1; min-width: 0;
+}
+.step-scroll {
+  flex-shrink: 0;
+  width: 28px; height: 84.5px;
   display: none; align-items: center; justify-content: center;
-  width: 14px; height: 14px; border-radius: 50%;
-  font-size: 12px; line-height: 1; font-weight: 700;
-  color: rgba(239,68,68,0.7); background: rgba(239,68,68,0.12);
+  background: rgba(15,15,15,0.85); backdrop-filter: blur(12px);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 7px;
+  color: rgba(255,255,255,0.7);
   cursor: pointer; transition: all 0.15s;
 }
-.step-pill:hover .step-remove { display: inline-flex; }
-.step-remove:hover { background: rgba(239,68,68,0.25); color: rgba(239,68,68,1); }
-.step-pill.step-add {
-  color: var(--text-dim); font-size: 14px; padding: 4px 10px;
+.step-scroll:hover { color: #d8ff3c; border-color: #d8ff3c; }
+.step-scroll.visible { display: inline-flex; }
+.step-scroll[disabled] { opacity: 0.3; cursor: default; pointer-events: none; }
+.step-card {
+  position: relative;
+  width: 120px; height: 84.5px;
+  flex-shrink: 0;
+  padding: 6px 6px 4px 6px;
+  border-radius: 7px;
+  background: #0f1013;
+  border: 1px solid #2d3038;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: stretch; gap: 4px;
+  font-family: 'Manrope', sans-serif;
+  transition: border-color 0.15s, transform 0.15s;
 }
-.step-pill.step-add:hover { color: var(--accent); border-color: var(--accent); }
+.step-card:hover { border-color: rgba(216,255,60,0.4); }
+.step-card.active { border-color: #d8ff3c; }
+.step-card.active .step-card-num { color: #d8ff3c; }
+.step-card-num {
+  font-size: 10px; font-weight: 700;
+  letter-spacing: 0.08em;
+  color: rgba(255,255,255,0.4);
+  pointer-events: none;
+}
+.step-card-thumb {
+  flex: 1; min-height: 0;
+  border-radius: 3px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.step-card-thumb svg { display: block; width: 100%; height: 100%; }
+.step-card-remove {
+  position: absolute; top: 4px; right: 4px;
+  width: 14px; height: 14px; border-radius: 50%;
+  display: none; align-items: center; justify-content: center;
+  font-size: 11px; line-height: 1; font-weight: 700;
+  color: rgba(239,68,68,0.85);
+  background: rgba(239,68,68,0.18);
+  cursor: pointer; transition: all 0.15s;
+}
+.step-card:hover .step-card-remove { display: inline-flex; }
+.step-card-remove:hover { background: rgba(239,68,68,0.32); color: #fff; }
+/* Add-step action button — sibling of step-bar so it's always visible
+   regardless of how far the cards are scrolled. */
+#step-add-btn {
+  display: none; align-items: center; gap: 5px;
+  padding: 7px 12px; border-radius: 8px;
+  background: rgba(15,15,15,0.85); backdrop-filter: blur(12px);
+  border: 1px solid rgba(216,255,60,0.4);
+  color: #d8ff3c;
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+#step-add-btn:hover { background: rgba(216,255,60,0.12); border-color: #d8ff3c; }
 
 /* Motion playback buttons */
 #motion-play-btn:hover {
