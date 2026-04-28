@@ -15,7 +15,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
          applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, liveUpdateMarkerName, confirmMarkerName,
-         applySize, applyRotation, clearAll } from './ui.js';
+         applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=5';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=6';
@@ -1110,11 +1110,16 @@ window.applyArrowType = function(type) {
       if (st.dash) line.setAttribute('stroke-dasharray', st.dash);
       else line.removeAttribute('stroke-dasharray');
       el.dataset.arrowDash = st.dash || '';
-      // Apply marker (arrowhead)
+      // Apply marker (arrowhead). Use getOrCreateMarker so the marker is
+      // appended to the SAME SVG that owns the arrow — the static mRun/mPass
+      // markers only live in the main pitch SVG, so referencing them from
+      // an arrow in the image-mode mini SVG would leave the head stale or
+      // missing. Color follows the type so head matches the line.
       if (type === 'line') {
         line.removeAttribute('marker-end');
       } else {
-        line.setAttribute('marker-end', st.marker);
+        const headScale = el.dataset.arrowHeadScale || '1';
+        line.setAttribute('marker-end', getOrCreateMarker(st.color, headScale));
       }
     }
     trackElementEdited('arrow', 'type');
