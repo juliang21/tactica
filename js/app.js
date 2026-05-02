@@ -3059,14 +3059,20 @@ async function exportVideo() {
       videoEncoder = new VideoEncoder({
         output: (chunk, meta) => {
           _chunksOut++;
-          if (_firstChunkBytes === null) {
-            const probe = new Uint8Array(Math.min(8, chunk.byteLength));
-            chunk.copyTo(probe);
-            _firstChunkBytes = Array.from(probe).map(b => b.toString(16).padStart(2, '0')).join(' ');
-            console.log('[exportVideo] first chunk bytes:', _firstChunkBytes, 'type:', chunk.type);
-          }
+          // Mux first — never let diagnostics break the actual export
           try { mp4Muxer.addVideoChunk(chunk, meta); _chunksMuxed++; }
           catch (e) { console.error('[exportVideo] muxer.addVideoChunk threw:', e); }
+          // Diagnostic probe of first chunk's leading bytes (AVCC vs Annex B).
+          // copyTo requires the destination to be at least chunk.byteLength,
+          // so allocate the full size and slice the first 8 for display.
+          if (_firstChunkBytes === null) {
+            try {
+              const full = new Uint8Array(chunk.byteLength);
+              chunk.copyTo(full);
+              _firstChunkBytes = Array.from(full.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ');
+              console.log('[exportVideo] first chunk:', _firstChunkBytes, 'len:', chunk.byteLength, 'type:', chunk.type);
+            } catch (e) { console.warn('[exportVideo] probe failed:', e); }
+          }
         },
         error: (e) => console.error('[exportVideo] VideoEncoder error:', e),
       });
