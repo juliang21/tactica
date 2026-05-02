@@ -3055,28 +3055,18 @@ async function exportVideo() {
         fastStart: 'in-memory',
       });
 
-      let _chunksOut = 0, _chunksMuxed = 0, _firstChunkBytes = null;
+      // Each frame's duration in microseconds; Safari leaves chunk.duration
+      // null whereas Chrome derives it from the framerate config, and
+      // mp4-muxer rejects chunks without a valid non-negative duration.
+      const frameDurUs = Math.round(1_000_000 / fps);
       videoEncoder = new VideoEncoder({
         output: (chunk, meta) => {
-          _chunksOut++;
-          // Mux first — never let diagnostics break the actual export
-          try { mp4Muxer.addVideoChunk(chunk, meta); _chunksMuxed++; }
-          catch (e) { console.error('[exportVideo] muxer.addVideoChunk threw:', e); }
-          // Diagnostic probe of first chunk's leading bytes (AVCC vs Annex B).
-          // copyTo requires the destination to be at least chunk.byteLength,
-          // so allocate the full size and slice the first 8 for display.
-          if (_firstChunkBytes === null) {
-            try {
-              const full = new Uint8Array(chunk.byteLength);
-              chunk.copyTo(full);
-              _firstChunkBytes = Array.from(full.slice(0, 8)).map(b => b.toString(16).padStart(2, '0')).join(' ');
-              console.log('[exportVideo] first chunk:', _firstChunkBytes, 'len:', chunk.byteLength, 'type:', chunk.type);
-            } catch (e) { console.warn('[exportVideo] probe failed:', e); }
-          }
+          try {
+            mp4Muxer.addVideoChunk(chunk, meta, chunk.timestamp, chunk.duration ?? frameDurUs);
+          } catch (e) { console.error('[exportVideo] muxer.addVideoChunk threw:', e); }
         },
         error: (e) => console.error('[exportVideo] VideoEncoder error:', e),
       });
-      window._tacticaVideoStats = () => ({ chunksOut: _chunksOut, chunksMuxed: _chunksMuxed, firstChunkBytes: _firstChunkBytes });
 
       // Probe profiles in descending quality. Safari can decode High but only
       // encodes Main/Baseline via VideoToolbox, so a hardcoded High config
