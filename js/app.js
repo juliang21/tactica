@@ -3055,10 +3055,22 @@ async function exportVideo() {
         fastStart: 'in-memory',
       });
 
+      let _chunksOut = 0, _chunksMuxed = 0, _firstChunkBytes = null;
       videoEncoder = new VideoEncoder({
-        output: (chunk, meta) => mp4Muxer.addVideoChunk(chunk, meta),
-        error: (e) => console.error('VideoEncoder error:', e),
+        output: (chunk, meta) => {
+          _chunksOut++;
+          if (_firstChunkBytes === null) {
+            const probe = new Uint8Array(Math.min(8, chunk.byteLength));
+            chunk.copyTo(probe);
+            _firstChunkBytes = Array.from(probe).map(b => b.toString(16).padStart(2, '0')).join(' ');
+            console.log('[exportVideo] first chunk bytes:', _firstChunkBytes, 'type:', chunk.type);
+          }
+          try { mp4Muxer.addVideoChunk(chunk, meta); _chunksMuxed++; }
+          catch (e) { console.error('[exportVideo] muxer.addVideoChunk threw:', e); }
+        },
+        error: (e) => console.error('[exportVideo] VideoEncoder error:', e),
       });
+      window._tacticaVideoStats = () => ({ chunksOut: _chunksOut, chunksMuxed: _chunksMuxed, firstChunkBytes: _firstChunkBytes });
 
       // Probe profiles in descending quality. Safari can decode High but only
       // encodes Main/Baseline via VideoToolbox, so a hardcoded High config
