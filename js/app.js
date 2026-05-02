@@ -3066,6 +3066,12 @@ async function exportVideo() {
         height: ch,
         bitrate: 5_000_000,
         framerate: fps,
+        // Force AVCC bitstream format. Spec default is 'avc' but Safari has
+        // historically emitted Annex B unless this is set explicitly, which
+        // produces an MP4 mp4-muxer can't read back (won't play anywhere,
+        // including VLC). Chrome already defaults to AVCC so this is a no-op
+        // there.
+        avc: { format: 'avc' },
       });
     } catch (e) {
       console.warn('MP4 setup failed, falling back to WebM:', e);
