@@ -3061,36 +3061,25 @@ async function exportVideo() {
       // because mp4-muxer rejects anything non-finite or negative. Fall back
       // to a self-maintained frame counter if the chunk's own timestamp is
       // also missing.
-      // mp4-muxer's addVideoChunk(chunk, meta, ...) reads chunk.duration
-      // directly — it ignores any duration argument passed to it. Safari
-      // leaves chunk.duration null/NaN, which made the muxer throw
-      // "duration must be a non-negative real number" and reject all 96
-      // chunks. Bypass that and call addVideoChunkRaw, which accepts an
-      // explicit duration.
+      // mp4-muxer's addVideoChunk reads chunk.duration directly and Safari
+      // leaves that field null, so we have to call addVideoChunkRaw and
+      // pass an explicit per-frame duration. Same for timestamp — guard
+      // both with Number.isFinite so a stray NaN can't slip through.
       const frameDurUs = Math.round(1_000_000 / fps);
-      let _chunksOut = 0, _chunksMuxed = 0, _firstError = null;
+      let _muxedCount = 0;
       videoEncoder = new VideoEncoder({
         output: (chunk, meta) => {
-          _chunksOut++;
           const tsRaw = chunk.timestamp;
-          const ts = (Number.isFinite(tsRaw) && tsRaw >= 0) ? tsRaw : (_chunksMuxed * frameDurUs);
+          const ts = (Number.isFinite(tsRaw) && tsRaw >= 0) ? tsRaw : (_muxedCount * frameDurUs);
           const durRaw = chunk.duration;
           const dur = (Number.isFinite(durRaw) && durRaw > 0) ? durRaw : frameDurUs;
-          try {
-            const data = new Uint8Array(chunk.byteLength);
-            chunk.copyTo(data);
-            mp4Muxer.addVideoChunkRaw(data, chunk.type, ts, dur, meta);
-            _chunksMuxed++;
-          } catch (e) {
-            if (!_firstError) {
-              _firstError = String(e);
-              console.error('[exportVideo] addVideoChunkRaw threw:', e, { ts, dur, tsRaw, durRaw });
-            }
-          }
+          const data = new Uint8Array(chunk.byteLength);
+          chunk.copyTo(data);
+          mp4Muxer.addVideoChunkRaw(data, chunk.type, ts, dur, meta);
+          _muxedCount++;
         },
-        error: (e) => console.error('[exportVideo] VideoEncoder error:', e),
+        error: (e) => console.error('VideoEncoder error:', e),
       });
-      window._tacticaVideoStats = () => ({ chunksOut: _chunksOut, chunksMuxed: _chunksMuxed, firstError: _firstError, codec: chosenCodec });
 
       // Probe profiles in descending quality. Safari can decode High but only
       // encodes Main/Baseline via VideoToolbox, so a hardcoded High config
