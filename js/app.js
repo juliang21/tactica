@@ -3062,20 +3062,27 @@ async function exportVideo() {
       // to a self-maintained frame counter if the chunk's own timestamp is
       // also missing.
       const frameDurUs = Math.round(1_000_000 / fps);
-      let _muxIdx = 0;
+      let _chunksOut = 0, _chunksMuxed = 0, _firstError = null;
       videoEncoder = new VideoEncoder({
         output: (chunk, meta) => {
+          _chunksOut++;
           const tsRaw = chunk.timestamp;
-          const ts = (Number.isFinite(tsRaw) && tsRaw >= 0) ? tsRaw : (_muxIdx * frameDurUs);
+          const ts = (Number.isFinite(tsRaw) && tsRaw >= 0) ? tsRaw : (_chunksMuxed * frameDurUs);
           const durRaw = chunk.duration;
           const dur = (Number.isFinite(durRaw) && durRaw > 0) ? durRaw : frameDurUs;
           try {
             mp4Muxer.addVideoChunk(chunk, meta, ts, dur);
-            _muxIdx++;
-          } catch (e) { console.error('[exportVideo] muxer.addVideoChunk threw:', e, { ts, dur, tsRaw, durRaw }); }
+            _chunksMuxed++;
+          } catch (e) {
+            if (!_firstError) {
+              _firstError = String(e);
+              console.error('[exportVideo] addVideoChunk threw:', e, { ts, dur, tsRaw, durRaw });
+            }
+          }
         },
         error: (e) => console.error('[exportVideo] VideoEncoder error:', e),
       });
+      window._tacticaVideoStats = () => ({ chunksOut: _chunksOut, chunksMuxed: _chunksMuxed, firstError: _firstError, codec: chosenCodec });
 
       // Probe profiles in descending quality. Safari can decode High but only
       // encodes Main/Baseline via VideoToolbox, so a hardcoded High config
