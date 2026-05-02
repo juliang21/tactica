@@ -1249,7 +1249,7 @@ export function addVision(x, y) {
   g.dataset.visionLength = '80';   // depth from apex to base
   g.dataset.visionSpread = '35';   // half-width at base
   g.dataset.visionColor = 'rgba(147,197,253,0.55)';
-  g.dataset.visionStyle = S.visionType || 'pointed';
+  g.dataset.visionStyle = S.visionType || 'rounded';
 
   const tri = document.createElementNS(ns, 'path');
   tri.setAttribute('fill', 'rgba(147,197,253,0.55)');
