@@ -3060,17 +3060,33 @@ async function exportVideo() {
         error: (e) => console.error('VideoEncoder error:', e),
       });
 
+      // Probe profiles in descending quality. Safari can decode High but only
+      // encodes Main/Baseline via VideoToolbox, so a hardcoded High config
+      // produced zero frames there. Force AVCC bitstream so mp4-muxer can
+      // parse the chunks (Safari otherwise defaults to Annex B).
+      const candidateCodecs = [
+        'avc1.640028', // High @ L4.0
+        'avc1.4D4028', // Main @ L4.0
+        'avc1.42E028', // Baseline @ L4.0
+      ];
+      let chosenCodec = null;
+      for (const codec of candidateCodecs) {
+        try {
+          const res = await VideoEncoder.isConfigSupported({
+            codec, width: cw, height: ch, bitrate: 5_000_000, framerate: fps,
+            avc: { format: 'avc' },
+          });
+          if (res?.supported) { chosenCodec = codec; break; }
+        } catch (_) { /* try next */ }
+      }
+      if (!chosenCodec) throw new Error('No supported H.264 profile for VideoEncoder');
+
       videoEncoder.configure({
-        codec: 'avc1.640028',
+        codec: chosenCodec,
         width: cw,
         height: ch,
         bitrate: 5_000_000,
         framerate: fps,
-        // Force AVCC bitstream format. Spec default is 'avc' but Safari has
-        // historically emitted Annex B unless this is set explicitly, which
-        // produces an MP4 mp4-muxer can't read back (won't play anywhere,
-        // including VLC). Chrome already defaults to AVCC so this is a no-op
-        // there.
         avc: { format: 'avc' },
       });
     } catch (e) {
