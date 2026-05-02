@@ -381,6 +381,7 @@ export function select(el, opts = {}) {
       if (!el.dataset.savedStroke) el.dataset.savedStroke = ring.getAttribute('stroke');
       ring.setAttribute('stroke', 'rgba(79,156,249,0.9)');
     }
+    showMarkerHandles(el);
   }
   if (type === 'net-zone') {
     const shape = el.querySelector('.nz-fill');
@@ -470,7 +471,7 @@ export function select(el, opts = {}) {
   const isTag = type === 'tag';
   const isLink = type === 'link';
   const isMarker = type === 'marker';
-  const showSize = !isArrow && !isZone && !isNetZone && !isText && !isHeadline && !isTag && !isLink && !isMarker;
+  const showSize = !isArrow && !isZone && !isNetZone && !isText && !isHeadline && !isTag && !isLink;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
   // Vision and zones use the standalone rotation-section; players use inline arm-rotation-group
   // Pair rotation is driven by player positions, not editable
@@ -1009,6 +1010,25 @@ export function showSpotlightHandles(el) {
   S.svg.appendChild(handleGroup);
 }
 
+// ── Marker handles ──
+// Marker is a flat ellipse with a fixed base radius of 17 (see addMarker), so
+// effective rx = 17 * dataset.scale. Drag either side handle to scale.
+const MARKER_BASE_RX = 17;
+export function showMarkerHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'marker';
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const rx = MARKER_BASE_RX * parseFloat(el.dataset.scale || '1');
+
+  handleGroup.appendChild(createHandle(ns, cx - rx, cy, 'marker-left', 'ew-resize'));
+  handleGroup.appendChild(createHandle(ns, cx + rx, cy, 'marker-right', 'ew-resize'));
+  S.svg.appendChild(handleGroup);
+}
+
 // ── Vision handles ──
 function visionWorldPoints(el) {
   const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
@@ -1162,7 +1182,7 @@ function onTagHandleDrag(el, pt) {
   updateHandlePositions(el);
 }
 
-function updateHandlePositions(el) {
+export function updateHandlePositions(el) {
   if (!handleGroup) return;
   const type = handleGroup.dataset.handleType;
 
@@ -1223,6 +1243,12 @@ function updateHandlePositions(el) {
     const children = handleGroup.children;
     moveHandleTo(children[0], cx - rx, cy);
     moveHandleTo(children[1], cx + rx, cy);
+  } else if (type === 'marker') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const rx = MARKER_BASE_RX * parseFloat(el.dataset.scale || '1');
+    const children = handleGroup.children;
+    moveHandleTo(children[0], cx - rx, cy);
+    moveHandleTo(children[1], cx + rx, cy);
   } else if (type === 'vision') {
     const pts = visionWorldPoints(el);
     const children = handleGroup.children;
@@ -1280,6 +1306,8 @@ function onEndpointDrag(e) {
     onArrowEndpointDrag(el, pt);
   } else if (t === 'spotlight') {
     onSpotlightHandleDrag(el, pt);
+  } else if (t === 'marker') {
+    onMarkerHandleDrag(el, pt);
   } else if (t === 'vision') {
     onVisionHandleDrag(el, pt);
   } else if (t === 'freeform') {
@@ -1343,6 +1371,22 @@ function onSpotlightHandleDrag(el, pt) {
   // Keep ry proportional (flat ratio)
   el.dataset.ry = Math.max(3, newRx * 5 / 28);
   applyTransform(el);
+  updateHandlePositions(el);
+}
+
+function onMarkerHandleDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx);
+  const dist = Math.abs(pt.x - cx);
+  // Scale = dist / base radius. Clamp to the same range as the Size slider
+  // so panel + handle stay in sync (50% – 220%).
+  const newScale = Math.max(0.5, Math.min(2.2, dist / MARKER_BASE_RX));
+  el.dataset.scale = String(newScale);
+  applyTransform(el);
+  // Sync the Size slider in the right panel
+  const slider = document.getElementById('size-slider');
+  if (slider) slider.value = Math.round(newScale * 100);
+  const valSpan = document.getElementById('size-val');
+  if (valSpan) valSpan.textContent = newScale.toFixed(1) + '×';
   updateHandlePositions(el);
 }
 

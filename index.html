@@ -1884,8 +1884,13 @@
     <div class="panel-section" id="marker-edit-section" style="display:none">
       <h3>Marker</h3>
       <div class="field-group">
-        <div class="field-label">Name</div>
-        <input type="text" id="marker-name-input" class="text-input" placeholder="e.g. 2 Carvajal" maxlength="30" oninput="liveUpdateMarkerName(this.value)" onblur="confirmMarkerName()">
+        <div class="field-label">Name <span style="opacity:0.5">(optional)</span></div>
+        <div class="field-row">
+          <input type="text" id="marker-name-input" maxlength="30" placeholder="e.g. 2 Carvajal"
+                 oninput="liveUpdateMarkerName(this.value)"
+                 onkeydown="if(event.key==='Enter'){event.preventDefault();confirmMarkerName();}"
+                 onblur="confirmMarkerName()">
+        </div>
       </div>
       <div class="field-group">
         <div class="field-label">Background colour</div>

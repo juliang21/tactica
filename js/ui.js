@@ -1,5 +1,5 @@
 import * as S from './state.js';
-import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg } from './interaction.js';
+import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg, updateHandlePositions } from './interaction.js';
 import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag } from './elements.js';
 import { trackElementEdited } from './analytics.js';
 import { rebuildPitch } from './pitch.js';
@@ -1166,8 +1166,10 @@ export function applySize(val) {
     trackElementEdited(el.dataset.type, 'scale');
     el.dataset.scale = val/100;
     const t = el.dataset.type;
-    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision' || t.startsWith('shadow')) applyTransform(el);
+    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision' || t === 'marker' || t.startsWith('shadow')) applyTransform(el);
     else if (t === 'arrow') updateArrowVisual(el);
+    // Keep resize handles in sync with the slider
+    if (S.selectedEl === el) updateHandlePositions(el);
   }
 }
 
