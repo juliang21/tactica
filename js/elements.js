@@ -17,7 +17,7 @@ export function addPlayer(x, y, team, num, isGK) {
   g.setAttribute('id', id);
   g.dataset.type = 'player'; g.dataset.team = team;
   g.dataset.label = String(num); g.dataset.isGK = isGK ? '1' : '0';
-  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.9';
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.7';
 
   // Shadow circle: fill only, no stroke — shadow applies to body only
   const shadowCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -67,7 +67,7 @@ export function addPlayer(x, y, team, num, isGK) {
   hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
 
   g.appendChild(hitArea); g.appendChild(shadowCircle); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
-  g.setAttribute('transform', `translate(${x},${y}) scale(0.9)`);
+  g.setAttribute('transform', `translate(${x},${y}) scale(0.7)`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   g.addEventListener('dblclick', e => { e.stopPropagation(); openPlayerEdit(g); });
