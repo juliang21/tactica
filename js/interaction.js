@@ -110,6 +110,18 @@ export function applyTransform(el) {
 
   if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'marker') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
+    // If marker has its highlight beam on, redraw the beam path so it always
+    // extends from the top of the SVG down to the marker's ring. Length is
+    // expressed in local coords (post-scale), hence the divide by scale.
+    if (t === 'marker' && el.dataset.markerHighlight === '1') {
+      const beam = el.querySelector('.marker-highlight .mh-beam');
+      if (beam) {
+        const sourceW = 6;
+        const beamW = 17 * 2; // base ring rx * 2
+        const topY = -cy / Math.max(0.01, scale);
+        beam.setAttribute('d', `M ${-sourceW} ${topY} L ${-beamW/2} 0 L ${beamW/2} 0 L ${sourceW} ${topY} Z`);
+      }
+    }
   } else if (t === 'tag') {
     if (_repositionTagFn) _repositionTagFn(el);
   } else if (t === 'vision') {
@@ -610,6 +622,8 @@ export function select(el, opts = {}) {
       document.getElementById('marker-name-input').value = el.dataset.markerName || '';
       document.getElementById('marker-opacity-slider').value = el.dataset.markerOpacity || '1';
       document.getElementById('marker-opacity-val').textContent = Math.round((el.dataset.markerOpacity || 1) * 100) + '%';
+      const hl = document.getElementById('marker-highlight-toggle');
+      if (hl) hl.checked = el.dataset.markerHighlight === '1';
     }
   } else if (isNetZone) {
     if (nzSec) {

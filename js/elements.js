@@ -994,7 +994,69 @@ export function addMarker(x, y) {
   gs3.setAttribute('offset', '100%'); gs3.setAttribute('stop-color', 'rgba(255,255,255,0)');
   glowGrad.appendChild(gs1); glowGrad.appendChild(gs2); glowGrad.appendChild(gs3);
   defs.appendChild(glowGrad);
+
+  // ── Spotlight highlight gradients (used when Highlight toggle is on) ─────
+  const beamGradId = 'mbeam-' + id;
+  const spotGlowGradId = 'msglow-' + id;
+  const spotRingGradId = 'msring-' + id;
+  const beamGrad = document.createElementNS(ns, 'linearGradient');
+  beamGrad.setAttribute('id', beamGradId);
+  beamGrad.setAttribute('x1', '0'); beamGrad.setAttribute('y1', '0');
+  beamGrad.setAttribute('x2', '0'); beamGrad.setAttribute('y2', '1');
+  beamGrad.innerHTML = `
+    <stop offset="0" stop-color="rgba(255,255,255,1)"/>
+    <stop offset="0.2" stop-color="rgba(255,255,255,0.7)"/>
+    <stop offset="0.5" stop-color="rgba(255,255,255,0.3)"/>
+    <stop offset="0.8" stop-color="rgba(255,255,255,0.08)"/>
+    <stop offset="1" stop-color="rgba(255,255,255,0)"/>`;
+  defs.appendChild(beamGrad);
+  const spotGlowGrad = document.createElementNS(ns, 'radialGradient');
+  spotGlowGrad.setAttribute('id', spotGlowGradId);
+  spotGlowGrad.innerHTML = `
+    <stop offset="0" stop-color="rgba(255,255,255,0.85)"/>
+    <stop offset="0.4" stop-color="rgba(255,255,255,0.4)"/>
+    <stop offset="1" stop-color="rgba(255,255,255,0)"/>`;
+  defs.appendChild(spotGlowGrad);
+  const spotRingGrad = document.createElementNS(ns, 'radialGradient');
+  spotRingGrad.setAttribute('id', spotRingGradId);
+  spotRingGrad.innerHTML = `
+    <stop offset="0" stop-color="rgba(255,255,255,0.4)"/>
+    <stop offset="1" stop-color="rgba(255,255,255,0.15)"/>`;
+  defs.appendChild(spotRingGrad);
+
   g.appendChild(defs);
+
+  // ── Highlight beam group (hidden by default, toggled via marker panel) ───
+  // Contains the beam cone, base glow, and ring fill — all in the marker's
+  // local coords so they translate/scale with the marker. Placed FIRST so
+  // it draws behind the marker visuals (beam appears to land ON the marker).
+  // Pointer events stay enabled so clicking the beam drags the marker (the
+  // mousedown bubbles up to the marker g and triggers makeDraggable).
+  const hlGroup = document.createElementNS(ns, 'g');
+  hlGroup.classList.add('marker-highlight');
+  hlGroup.style.display = 'none';
+  // Beam path (path d set later in applyTransform once we know cy)
+  const hlBeam = document.createElementNS(ns, 'path');
+  hlBeam.classList.add('mh-beam');
+  hlBeam.setAttribute('fill', `url(#${beamGradId})`);
+  hlBeam.setAttribute('filter', 'url(#spotlight-cone-blur)');
+  // Base glow (1.5x marker ring radius, blurred)
+  const hlGlow = document.createElementNS(ns, 'ellipse');
+  hlGlow.classList.add('mh-glow');
+  hlGlow.setAttribute('cx', 0); hlGlow.setAttribute('cy', 0);
+  hlGlow.setAttribute('rx', 26); hlGlow.setAttribute('ry', 14);
+  hlGlow.setAttribute('fill', `url(#${spotGlowGradId})`);
+  hlGlow.setAttribute('filter', 'url(#spotlight-glow-blur)');
+  // Ring fill (overlays the marker's regular ring)
+  const hlRing = document.createElementNS(ns, 'ellipse');
+  hlRing.classList.add('mh-ring');
+  hlRing.setAttribute('cx', 0); hlRing.setAttribute('cy', 0);
+  hlRing.setAttribute('rx', 17); hlRing.setAttribute('ry', 9);
+  hlRing.setAttribute('fill', `url(#${spotRingGradId})`);
+  hlRing.setAttribute('stroke', 'none');
+  hlGroup.appendChild(hlBeam);
+  hlGroup.appendChild(hlGlow);
+  hlGroup.appendChild(hlRing);
 
   // ── Outer glow (ambient ground projection) ──────────────────────────────
   const glow = document.createElementNS(ns, 'ellipse');
@@ -1036,6 +1098,7 @@ export function addMarker(x, y) {
   text.classList.add('marker-label');
   text.textContent = '';
 
+  g.appendChild(hlGroup);
   g.appendChild(glow);
   g.appendChild(ring);
   g.appendChild(shine);
@@ -1048,11 +1111,11 @@ export function addMarker(x, y) {
   g.addEventListener('click', e => {
     if (S.tool === 'select') {
       e.stopPropagation();
-      // If this marker is part of a connected chain, select the whole chain
-      if (!selectMarkerChain(g, e)) {
-        // Lone marker — normal single selection
-        select(g, { additive: e.ctrlKey || e.metaKey });
-      }
+      // Single click = single marker, like every other element. The connecting
+      // link line still triggers chain selection when clicked, so users can
+      // grab the whole group from there. Auto-chaining on plain marker click
+      // was confusing — typing a name only updated one of the two selected.
+      select(g, { additive: e.ctrlKey || e.metaKey });
     }
   });
   S.objectsLayer.appendChild(g);

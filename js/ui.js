@@ -1270,6 +1270,19 @@ export function confirmMarkerName() {
   // Push undo state if needed
 }
 
+export function applyMarkerHighlight(on) {
+  const m = S.selectedEl;
+  if (!m || m.dataset.type !== 'marker') return;
+  S.pushUndo();
+  trackElementEdited('marker', 'highlight');
+  m.dataset.markerHighlight = on ? '1' : '0';
+  const hl = m.querySelector('.marker-highlight');
+  if (hl) hl.style.display = on ? '' : 'none';
+  // Trigger the beam-length recompute via applyTransform
+  if (on) applyTransform(m);
+}
+
+
 // ─── Clear All ────────────────────────────────────────────────────────────────
 // Note: the confirmation dialog is wired from app.js (window.clearAll override)
 // so we can use the themed modal instead of a native confirm() popup.

@@ -1884,6 +1884,13 @@
     <div class="panel-section" id="marker-edit-section" style="display:none">
       <h3>Marker</h3>
       <div class="field-group">
+        <label class="toggle-row">
+          <span class="toggle-label">Highlight</span>
+          <input type="checkbox" id="marker-highlight-toggle" onchange="applyMarkerHighlight(this.checked)">
+          <span class="toggle-switch toggle-switch-lg"></span>
+        </label>
+      </div>
+      <div class="field-group">
         <div class="field-label">Name <span style="opacity:0.5">(optional)</span></div>
         <div class="field-row">
           <input type="text" id="marker-name-input" maxlength="30" placeholder="e.g. 2 Carvajal"
@@ -1933,6 +1940,12 @@
           <input type="range" id="marker-opacity-slider" min="0.1" max="1" value="1" step="0.05" oninput="applyMarkerOpacity(this.value); document.getElementById('marker-opacity-val').textContent = Math.round(this.value*100)+'%'" style="flex:1">
           <span id="marker-opacity-val" class="field-value">100%</span>
         </div>
+      </div>
+      <div class="field-group">
+        <button class="action-btn" id="marker-add-connection-btn" onclick="startMarkerConnection()" style="width:100%;justify-content:center;padding:9px 14px;font-size:12px;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M8 2v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+          Add connected marker
+        </button>
       </div>
     </div>
 

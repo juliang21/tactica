@@ -14,7 +14,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateTextBox, confirmTextBox, applyTextBoxSize, applyTextBoxColor, applyTextBoxBg, applyTextBoxAlign,
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
-         applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, liveUpdateMarkerName, confirmMarkerName,
+         applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, applyMarkerHighlight, liveUpdateMarkerName, confirmMarkerName,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=5';
@@ -1485,6 +1485,18 @@ window.applyMarkerLineColor = applyMarkerLineColor;
 window.applyMarkerOpacity = applyMarkerOpacity;
 window.liveUpdateMarkerName = liveUpdateMarkerName;
 window.confirmMarkerName = confirmMarkerName;
+window.applyMarkerHighlight = applyMarkerHighlight;
+// Continue the marker chain from the currently selected marker. Switches to
+// the marker tool with this marker pre-armed as the chain origin, so the
+// next click on the pitch places a NEW marker that auto-links to it. Useful
+// when the user wants to extend a chain after placing the initial group.
+window.startMarkerConnection = function() {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'marker') return;
+  _lastChainMarker = el;
+  setTool('marker');
+  S.selInfo.innerHTML = '<strong>Add connected marker</strong><br><span style="font-size:10px;color:var(--text-muted)">Click on the pitch to place a new marker connected to this one — Esc to cancel</span>';
+};
 window.setLinkStyle = function(style) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'link') return;
   S.pushUndo();

@@ -2033,6 +2033,9 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
   animation: saveMenuIn 0.15s ease;
 }
 @keyframes saveMenuIn { from { opacity:0; transform: translateX(-4px); } to { opacity:1; transform: translateX(0); } }
+
+/* Cursor for marker tool — crosshair conveys "place me here" instead of grab */
+body.tool-marker #pitch-svg { cursor: crosshair; }
 .save-menu-item {
   display: flex; align-items: center; gap: 10px;
   width: 100%; padding: 11px 14px;
