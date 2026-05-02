@@ -3061,6 +3061,12 @@ async function exportVideo() {
       // because mp4-muxer rejects anything non-finite or negative. Fall back
       // to a self-maintained frame counter if the chunk's own timestamp is
       // also missing.
+      // mp4-muxer's addVideoChunk(chunk, meta, ...) reads chunk.duration
+      // directly — it ignores any duration argument passed to it. Safari
+      // leaves chunk.duration null/NaN, which made the muxer throw
+      // "duration must be a non-negative real number" and reject all 96
+      // chunks. Bypass that and call addVideoChunkRaw, which accepts an
+      // explicit duration.
       const frameDurUs = Math.round(1_000_000 / fps);
       let _chunksOut = 0, _chunksMuxed = 0, _firstError = null;
       videoEncoder = new VideoEncoder({
@@ -3071,12 +3077,14 @@ async function exportVideo() {
           const durRaw = chunk.duration;
           const dur = (Number.isFinite(durRaw) && durRaw > 0) ? durRaw : frameDurUs;
           try {
-            mp4Muxer.addVideoChunk(chunk, meta, ts, dur);
+            const data = new Uint8Array(chunk.byteLength);
+            chunk.copyTo(data);
+            mp4Muxer.addVideoChunkRaw(data, chunk.type, ts, dur, meta);
             _chunksMuxed++;
           } catch (e) {
             if (!_firstError) {
               _firstError = String(e);
-              console.error('[exportVideo] addVideoChunk threw:', e, { ts, dur, tsRaw, durRaw });
+              console.error('[exportVideo] addVideoChunkRaw threw:', e, { ts, dur, tsRaw, durRaw });
             }
           }
         },
