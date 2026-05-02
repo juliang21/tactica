@@ -3055,15 +3055,24 @@ async function exportVideo() {
         fastStart: 'in-memory',
       });
 
-      // Each frame's duration in microseconds; Safari leaves chunk.duration
-      // null whereas Chrome derives it from the framerate config, and
-      // mp4-muxer rejects chunks without a valid non-negative duration.
+      // Per-frame duration in microseconds. Safari's WebCodecs leaves
+      // chunk.duration as null/NaN; Chrome derives it from framerate. We pass
+      // both timestamp and duration explicitly with strict numeric guards
+      // because mp4-muxer rejects anything non-finite or negative. Fall back
+      // to a self-maintained frame counter if the chunk's own timestamp is
+      // also missing.
       const frameDurUs = Math.round(1_000_000 / fps);
+      let _muxIdx = 0;
       videoEncoder = new VideoEncoder({
         output: (chunk, meta) => {
+          const tsRaw = chunk.timestamp;
+          const ts = (Number.isFinite(tsRaw) && tsRaw >= 0) ? tsRaw : (_muxIdx * frameDurUs);
+          const durRaw = chunk.duration;
+          const dur = (Number.isFinite(durRaw) && durRaw > 0) ? durRaw : frameDurUs;
           try {
-            mp4Muxer.addVideoChunk(chunk, meta, chunk.timestamp, chunk.duration ?? frameDurUs);
-          } catch (e) { console.error('[exportVideo] muxer.addVideoChunk threw:', e); }
+            mp4Muxer.addVideoChunk(chunk, meta, ts, dur);
+            _muxIdx++;
+          } catch (e) { console.error('[exportVideo] muxer.addVideoChunk threw:', e, { ts, dur, tsRaw, durRaw }); }
         },
         error: (e) => console.error('[exportVideo] VideoEncoder error:', e),
       });
