@@ -5,7 +5,11 @@ let _refCount = 0;
 
 // ─── Add Player ───────────────────────────────────────────────────────────────
 export function addPlayer(x, y, team, num, isGK) {
-  if (num === undefined) { S.playerCounts[team]++; num = S.playerCounts[team]; }
+  if (num === undefined) {
+    // Jokers default to no number; user can type one in the edit panel.
+    if (team === 'joker') { num = ''; }
+    else { S.playerCounts[team]++; num = S.playerCounts[team]; }
+  }
   isGK = isGK || false;
   const fillColor = isGK ? S.gkColors[team] : S.teamColors[team];
   const isPattern = fillColor.startsWith('url(');
