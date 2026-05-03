@@ -506,6 +506,17 @@ export function select(el, opts = {}) {
 
   if (type === 'player') {
     playerSec.style.display = '';
+    // For Joker players, surface Size at the top of the panel — they have no
+    // team kit/colour scheme so size is the most useful first control.
+    const sizeSec = document.getElementById('size-section');
+    const rotSec = document.getElementById('rotation-section');
+    if (sizeSec && playerSec.parentNode) {
+      if (el.dataset.team === 'joker') {
+        playerSec.parentNode.insertBefore(sizeSec, playerSec);
+      } else if (rotSec) {
+        playerSec.parentNode.insertBefore(sizeSec, rotSec);
+      }
+    }
     document.getElementById('number-input').value = el.dataset.label || '';
     document.getElementById('name-input').value = el.dataset.playerName || '';
     const nameSize = el.dataset.nameSize || '11';
