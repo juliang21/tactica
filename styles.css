@@ -582,23 +582,24 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 #kit-search { width: 100%; padding: 7px 10px; font-size: 12px; background: var(--bg); border: 1.5px solid rgba(255,255,255,0.15); color: var(--text); border-radius: 8px; outline: none; font-family: 'Manrope', sans-serif; }
 #kit-search:focus { border-color: var(--accent); background: var(--panel2); }
 #kit-search::placeholder { color: var(--text-dim); }
-.kit-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; padding: 2px; max-height: 200px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; }
+.kit-grid { display: grid; grid-template-columns: repeat(8, 1fr); gap: 6px; padding: 2px; max-height: 200px; overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; scrollbar-color: rgba(255,255,255,0.15) transparent; justify-items: center; }
 .kit-grid::-webkit-scrollbar { width: 4px; }
 .kit-grid::-webkit-scrollbar-track { background: transparent; }
 .kit-grid::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 2px; }
-.kit-group-label { grid-column: 1 / -1; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-top: 6px; font-family: 'Manrope', sans-serif; }
+.kit-group-label { grid-column: 1 / -1; font-size: 8px; font-weight: 700; letter-spacing: 1.5px; text-transform: uppercase; color: var(--text-muted); margin-top: 6px; font-family: 'Manrope', sans-serif; justify-self: stretch; }
 .kit-group-label:first-child { margin-top: 0; }
 .kit-btn {
-  height: 32px; cursor: pointer;
+  width: 28px; height: 28px; cursor: pointer;
   border: none; transition: transform 0.1s;
   position: relative; overflow: hidden;
+  border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
 }
-.kit-btn:hover { transform: scale(1.06); }
-.kit-btn.selected { outline: 2px solid var(--text); outline-offset: -2px; }
+.kit-btn:hover { transform: scale(1.1); }
+.kit-btn.selected { outline: 2px solid var(--text); outline-offset: 1px; }
 .kit-btn .kit-label {
-  font-size: 7px; font-weight: 700; text-align: center;
-  color: #fff; text-transform: uppercase; letter-spacing: 0.5px;
+  font-size: 6px; font-weight: 700; text-align: center;
+  color: #fff; text-transform: uppercase; letter-spacing: 0.3px;
 }
 .kit-riv-preview {
   background: linear-gradient(135deg, #fff 35%, #cd1e2b 35%, #cd1e2b 65%, #fff 65%);
@@ -816,10 +817,12 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .custom-color-strip { display: flex; gap: 6px; }
 .custom-swatch {
-  flex: 1; height: 28px; cursor: pointer;
+  width: 28px; height: 28px; cursor: pointer;
+  border-radius: 50%;
   border: 2px solid transparent; transition: transform 0.1s, border-color 0.1s;
+  flex-shrink: 0;
 }
-.custom-swatch:hover { transform: scaleY(1.08); }
+.custom-swatch:hover { transform: scale(1.1); }
 .custom-swatch.selected { border-color: var(--accent); }
 .color-swatch {
   width: 100%; aspect-ratio: 1;
@@ -2036,6 +2039,8 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
 
 /* Cursor for marker tool — crosshair conveys "place me here" instead of grab */
 body.tool-marker #pitch-svg { cursor: crosshair; }
+/* Image tool — crosshair while waiting for a click to place */
+body.tool-image #pitch-svg { cursor: crosshair; }
 .save-menu-item {
   display: flex; align-items: center; gap: 10px;
   width: 100%; padding: 11px 14px;

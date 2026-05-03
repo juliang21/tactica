@@ -293,6 +293,18 @@
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><text x="4" y="14" font-family="sans-serif" font-size="14" font-weight="700" fill="currentColor">T</text></svg>
       <span class="tool-label">Text</span>
     </button>
+    <button class="tool-btn" data-tool="image" id="image-btn" onclick="setTool('image')">
+      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+        <rect x="2" y="3" width="14" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
+        <circle cx="6" cy="7" r="1.4" fill="currentColor"/>
+        <path d="M2 13 L7 9 L11 12 L16 8 L16 15 L2 15 Z" fill="currentColor" opacity="0.55"/>
+      </svg>
+      <span class="tool-label">Image</span>
+    </button>
+    <input type="file" id="image-file-input" accept="image/*" style="display:none">
+    <!-- Panel for selected image (Crop to circle toggle) -->
+    <!-- Note: actual panel section lives further down with the other element panels -->
+
     <button class="tool-btn" data-tool="headline" onclick="setTool('headline')">
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
         <rect x="2" y="2" width="3" height="14" rx="1.5" fill="currentColor" opacity="0.8"/>
@@ -731,24 +743,57 @@
       </div>
     </div>
 
-    <!-- ADD PLAYERS -->
-    <div class="panel-section compact-add">
-      <h3 class="collapsible" data-collapse="add">Place on pitch</h3>
-      <div class="collapsible-body" data-collapse-body="add">
-        <div class="add-row">
-          <span class="add-row-label">Add players</span>
-          <button class="single-player-btn active" id="single-btn" onclick="trackToolActivated('single_player','button'); setTool(teamContext==='a'?'player-a':'player-b')">+ Single (click pitch)</button>
+    <!-- PLAYER APPEARANCE (bulk) -->
+    <div class="panel-section">
+      <h3 class="collapsible" data-collapse="appearance">Player appearance</h3>
+      <div class="collapsible-body" data-collapse-body="appearance">
+      <div class="field-group">
+        <div class="field-label">Size (all players)</div>
+        <div class="field-row">
+          <input type="range" id="bulk-size-slider" min="50" max="180" value="90" step="5" oninput="applyBulkPlayerSize(this.value)" style="flex:1">
+          <span id="bulk-size-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">0.9x</span>
         </div>
-        <div class="add-row">
-          <span class="add-row-label">Formation</span>
-          <div class="formation-grid">
-            <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>
-            <button class="formation-btn" onclick="placeFormation('4-4-2')">4-4-2</button>
-            <button class="formation-btn" onclick="placeFormation('4-3-1-2')">4-3-1-2</button>
-            <button class="formation-btn" onclick="placeFormation('4-2-1-3')">4-2-1-3</button>
-            <button class="formation-btn" onclick="placeFormation('3-5-2')">3-5-2</button>
-            <button class="formation-btn" onclick="placeFormation('5-3-2')">5-3-2</button>
-          </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Background (all players)</div>
+        <div class="picker-row">
+          <div class="custom-swatch" style="background:#38BDF8" data-color="#38BDF8" onclick="applyColor(this)"></div>
+          <div class="custom-swatch" style="background:#FBBF24" data-color="#FBBF24" onclick="applyColor(this)"></div>
+          <div class="custom-swatch" style="background:#a8f0d0" data-color="#a8f0d0" onclick="applyColor(this)"></div>
+          <div class="custom-swatch" style="background:#c8a8f4" data-color="#c8a8f4" onclick="applyColor(this)"></div>
+          <div class="custom-swatch" style="background:#ffffff" data-color="#ffffff" onclick="applyColor(this)"></div>
+          <div class="custom-swatch" style="background:#f87171" data-color="#f87171" onclick="applyColor(this)"></div>
+          <div class="custom-swatch" style="background:#1a1a2e;border:2px solid rgba(255,255,255,0.2)" data-color="#1a1a2e" onclick="applyColor(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('kit-custom')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Border colour (all players)</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="#ffffff" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="#000000" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#f9a84f" data-color="#f9a84f" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#f94f4f" data-color="#f94f4f" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#4f9cf9" data-color="#4f9cf9" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyBulkPlayerBorder(this)"></div>
+          <div class="color-swatch mini checkerboard" data-color="none" onclick="applyBulkPlayerBorder(this)" title="No border"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('bulk-border')" title="Custom border colour">＋</button>
+        </div>
+      </div>
+      </div><!-- /collapsible-body appearance -->
+    </div>
+
+    <!-- FORMATION -->
+    <div class="panel-section compact-add">
+      <h3 class="collapsible" data-collapse="add">Formation</h3>
+      <div class="collapsible-body" data-collapse-body="add">
+        <div class="formation-grid">
+          <button class="formation-btn" onclick="placeFormation('4-3-3')">4-3-3</button>
+          <button class="formation-btn" onclick="placeFormation('4-4-2')">4-4-2</button>
+          <button class="formation-btn" onclick="placeFormation('4-3-1-2')">4-3-1-2</button>
+          <button class="formation-btn" onclick="placeFormation('4-2-1-3')">4-2-1-3</button>
+          <button class="formation-btn" onclick="placeFormation('3-5-2')">3-5-2</button>
+          <button class="formation-btn" onclick="placeFormation('5-3-2')">5-3-2</button>
         </div>
       </div>
     </div>
@@ -825,47 +870,7 @@
         <div class="kit-btn" style="background:#ffffff;border:2px solid #ffd700" data-color="#ffffff" data-border="#ffd700" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Ghana" title="Ghana"><div class="kit-label" style="color:#000">GHA</div></div>
         <div class="kit-btn" style="background:#c8102e" data-color="#c8102e" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="Panama" title="Panama"><div class="kit-label">PAN</div></div>
       </div>
-      <div class="sub-label" style="margin-top:10px">Custom</div>
-      <div class="custom-color-strip">
-        <div class="custom-swatch" style="background:#38BDF8" data-color="#38BDF8" onclick="applyColor(this)"></div>
-        <div class="custom-swatch" style="background:#FBBF24" data-color="#FBBF24" onclick="applyColor(this)"></div>
-        <div class="custom-swatch" style="background:#f4a8a0" data-color="#f4a8a0" onclick="applyColor(this)"></div>
-        <div class="custom-swatch" style="background:#a8d4f4" data-color="#a8d4f4" onclick="applyColor(this)"></div>
-        <div class="custom-swatch" style="background:#a8f0d0" data-color="#a8f0d0" onclick="applyColor(this)"></div>
-        <div class="custom-swatch" style="background:#c8a8f4" data-color="#c8a8f4" onclick="applyColor(this)"></div>
-        <div class="custom-swatch" style="background:#ffffff" data-color="#ffffff" onclick="applyColor(this)"></div>
-        <div class="custom-swatch" style="background:#f87171" data-color="#f87171" onclick="applyColor(this)"></div>
-        <div class="custom-swatch" style="background:#1a1a2e;border:2px solid rgba(255,255,255,0.2)" data-color="#1a1a2e" onclick="applyColor(this)"></div>
-        <button class="color-picker-btn" onclick="openColorPicker('kit-custom')">＋</button>
-      </div>
       </div><!-- /collapsible-body kit -->
-    </div>
-
-    <!-- PLAYER APPEARANCE (bulk) -->
-    <div class="panel-section">
-      <h3 class="collapsible" data-collapse="appearance">Player appearance</h3>
-      <div class="collapsible-body" data-collapse-body="appearance">
-      <div class="field-group">
-        <div class="field-label">Size (all players)</div>
-        <div class="field-row">
-          <input type="range" id="bulk-size-slider" min="50" max="180" value="90" step="5" oninput="applyBulkPlayerSize(this.value)" style="flex:1">
-          <span id="bulk-size-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">0.9x</span>
-        </div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Border colour (all players)</div>
-        <div class="picker-row">
-          <div class="color-swatch mini" style="background:#ffffff" data-color="#ffffff" onclick="applyBulkPlayerBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="#000000" onclick="applyBulkPlayerBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#f9a84f" data-color="#f9a84f" onclick="applyBulkPlayerBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#f94f4f" data-color="#f94f4f" onclick="applyBulkPlayerBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#4f9cf9" data-color="#4f9cf9" onclick="applyBulkPlayerBorder(this)"></div>
-          <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyBulkPlayerBorder(this)"></div>
-          <div class="color-swatch mini checkerboard" data-color="none" onclick="applyBulkPlayerBorder(this)" title="No border"></div>
-          <button class="color-picker-btn" onclick="openColorPicker('bulk-border')" title="Custom border colour">＋</button>
-        </div>
-      </div>
-      </div><!-- /collapsible-body appearance -->
     </div>
 
   </div><!-- /pane-players -->
@@ -1945,6 +1950,31 @@
         <button class="action-btn" id="marker-add-connection-btn" onclick="startMarkerConnection()" style="width:100%;justify-content:center;padding:9px 14px;font-size:12px;gap:6px">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M2 8h12M8 2v12" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
           Add connected marker
+        </button>
+      </div>
+    </div>
+
+    <!-- Image properties -->
+    <div class="panel-section" id="image-edit-section" style="display:none">
+      <h3>Image</h3>
+      <div class="field-group">
+        <label class="toggle-row">
+          <span class="toggle-label">Crop to circle</span>
+          <input type="checkbox" id="image-crop-toggle" onchange="applyImageCrop(this.checked)">
+          <span class="toggle-switch toggle-switch-lg"></span>
+        </label>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Opacity</div>
+        <div class="field-row">
+          <input type="range" id="image-opacity-slider" min="0.1" max="1" value="1" step="0.05" oninput="applyImageOpacity(this.value); document.getElementById('image-opacity-val').textContent = Math.round(this.value*100)+'%'" style="flex:1">
+          <span id="image-opacity-val" class="field-value">100%</span>
+        </div>
+      </div>
+      <div class="field-group">
+        <button class="action-btn" onclick="replaceSelectedImage()" style="width:100%;justify-content:center;padding:9px 14px;font-size:12px;gap:6px">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none"><path d="M8 2v9M5 5l3-3 3 3M3 12v2a1 1 0 001 1h8a1 1 0 001-1v-2" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          Replace image
         </button>
       </div>
     </div>
