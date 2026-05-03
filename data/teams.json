@@ -61,7 +61,7 @@
     {"name":"Holstein Kiel","code":"KIE","league":"Bundesliga","color":"#003da5","border":"#c8102e","gk":"#ffd700"},
     {"name":"Bochum","code":"BOC","league":"Bundesliga","color":"#005BA1","gk":"#ffd700"},
 
-    {"name":"Inter Milan","code":"INT","league":"Serie A","color":"#010E80","border":"#000000","gk":"#ffd700","pattern":"stripes","stripe":"#000000"},
+    {"name":"Inter Milan","code":"INT","league":"Serie A","color":"#010E80","border":"#000000","gk":"#ffd700","pattern":"stripes","stripe":"#000000","svgPattern":"kit-int"},
     {"name":"AC Milan","code":"ACM","league":"Serie A","color":"#c8102e","border":"#000000","gk":"#ffd700","pattern":"stripes","stripe":"#000000","svgPattern":"kit-acm"},
     {"name":"Juventus","code":"JUV","league":"Serie A","color":"#000000","gk":"#ffd700","pattern":"stripes","stripe":"#ffffff","svgPattern":"kit-juv"},
     {"name":"Napoli","code":"NAP","league":"Serie A","color":"#12A0D7","gk":"#ffd700","labelDark":true},
