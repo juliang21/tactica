@@ -245,16 +245,31 @@ export function rebuildPitch() {
     pat.setAttribute('width', vStripes ? dim : String(pairW));
     pat.setAttribute('height', vStripes ? String(pairW) : dim);
     pat.innerHTML = '';
-    const r1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    const r2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-    if (vStripes) {
-      r1.setAttribute('width', dim); r1.setAttribute('height', stripeW); r1.setAttribute('fill', S.pitchColors.s1);
-      r2.setAttribute('y', stripeW); r2.setAttribute('width', dim); r2.setAttribute('height', stripeW); r2.setAttribute('fill', S.pitchColors.s2);
+    const stripesOff = S.pitchColors.s1 === S.pitchColors.s2;
+    if (stripesOff) {
+      // Single rect avoids subpixel hairlines at the boundary between two
+      // same-colored rects when stripes are toggled off.
+      const r = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      r.setAttribute('width', vStripes ? dim : pairW);
+      r.setAttribute('height', vStripes ? pairW : dim);
+      r.setAttribute('fill', S.pitchColors.s1);
+      pat.appendChild(r);
     } else {
-      r1.setAttribute('width', stripeW); r1.setAttribute('height', dim); r1.setAttribute('fill', S.pitchColors.s1);
-      r2.setAttribute('x', stripeW); r2.setAttribute('width', stripeW); r2.setAttribute('height', dim); r2.setAttribute('fill', S.pitchColors.s2);
+      const r1 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      const r2 = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
+      // crispEdges suppresses anti-aliasing at tile boundaries — without it
+      // the seam between repeating tiles renders as a faint hairline.
+      r1.setAttribute('shape-rendering', 'crispEdges');
+      r2.setAttribute('shape-rendering', 'crispEdges');
+      if (vStripes) {
+        r1.setAttribute('width', dim); r1.setAttribute('height', stripeW); r1.setAttribute('fill', S.pitchColors.s1);
+        r2.setAttribute('y', stripeW); r2.setAttribute('width', dim); r2.setAttribute('height', stripeW); r2.setAttribute('fill', S.pitchColors.s2);
+      } else {
+        r1.setAttribute('width', stripeW); r1.setAttribute('height', dim); r1.setAttribute('fill', S.pitchColors.s1);
+        r2.setAttribute('x', stripeW); r2.setAttribute('width', stripeW); r2.setAttribute('height', dim); r2.setAttribute('fill', S.pitchColors.s2);
+      }
+      pat.appendChild(r1); pat.appendChild(r2);
     }
-    pat.appendChild(r1); pat.appendChild(r2);
   }
 
   // Update background rect
@@ -267,9 +282,13 @@ export function rebuildPitch() {
     child.remove();
   });
 
-  // Recreate background
+  // Recreate background. With stripes off, paint a solid colour directly —
+  // a tiled pattern at non-integer scale factors anti-aliases its tile
+  // boundaries into faint bands even when both stripe rects share a colour.
   const bg = document.createElementNS('http://www.w3.org/2000/svg', 'rect');
-  bg.setAttribute('width', W); bg.setAttribute('height', H); bg.setAttribute('fill', 'url(#stripes)');
+  const solidBg = S.pitchColors.s1 === S.pitchColors.s2;
+  bg.setAttribute('width', W); bg.setAttribute('height', H);
+  bg.setAttribute('fill', solidBg ? S.pitchColors.s1 : 'url(#stripes)');
   svgEl.insertBefore(bg, document.getElementById('objects-layer'));
 
   // Markings group — flip transform applied here when pitch direction is flipped
