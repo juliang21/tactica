@@ -479,12 +479,10 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   display: none;
 }
 #pitch-wrap {
-  display: flex; flex-direction: column; align-items: center;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
   position: relative; z-index: 1;
-  /* Don't let inner content (motion-controls, step-bar) blow this out past
-     canvas-wrap's available width — needed so step-bar can scroll instead of
-     pushing pitch-wrap beyond the viewport. */
-  min-width: 0; max-width: 100%;
+  min-width: 0; min-height: 0; width: 100%; height: 100%;
+  max-width: 100%; max-height: 100%;
 }
 #pitch-container {
   position: relative; border-radius: 8px; overflow: hidden;

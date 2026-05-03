@@ -1,6 +1,35 @@
 import * as S from './state.js';
 import { canAccess, showUpgradePrompt } from './subscription.js';
 
+// Scale the SVG visually to fill canvas-wrap while preserving aspect ratio.
+// Logical width/height attributes (and viewBox) stay untouched so element
+// coordinates and downstream calculations don't shift.
+export function fitPitchToViewport() {
+  const svgEl = S.svg;
+  const wrap = document.getElementById('canvas-wrap');
+  if (!svgEl || !wrap) return;
+  const W = parseFloat(svgEl.getAttribute('width'));
+  const H = parseFloat(svgEl.getAttribute('height'));
+  if (!W || !H) return;
+  const cs = getComputedStyle(wrap);
+  const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
+  const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  const availW = wrap.clientWidth - padX;
+  const availH = wrap.clientHeight - padY;
+  if (availW <= 0 || availH <= 0) return;
+  const scale = Math.min(availW / W, availH / H);
+  const renderW = Math.floor(W * scale);
+  const renderH = Math.floor(H * scale);
+  svgEl.style.width = renderW + 'px';
+  svgEl.style.height = renderH + 'px';
+}
+
+let _resizeRaf = 0;
+window.addEventListener('resize', () => {
+  if (_resizeRaf) cancelAnimationFrame(_resizeRaf);
+  _resizeRaf = requestAnimationFrame(() => { _resizeRaf = 0; fitPitchToViewport(); });
+});
+
 // ─── Compose layout string from toggle states ────────────────────────────────
 function getToggledLayout() {
   const orient = document.querySelector('.pitch-opt[data-opt="orientation"].active')?.dataset.val || 'horizontal';
@@ -200,6 +229,7 @@ export function rebuildPitch() {
   svgEl.setAttribute('width', W);
   svgEl.setAttribute('height', H);
   svgEl.setAttribute('viewBox', `0 0 ${W} ${H}`);
+  fitPitchToViewport();
 
   // Update stripe pattern — 9 stripes per half (18 total on a full pitch).
   // Stripe width is based on the FULL pitch playing-field interior so it stays
