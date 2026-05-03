@@ -341,7 +341,7 @@ export function rebuildPitch() {
     const pad = 20, py = 20, pw = W - pad*2, ph = H - py*2;
     const cy = H/2;
     const R = pad + pw;    // right edge = goal line
-    const halfX = pad + Math.round(pw * 0.33); // halfway line ~1/3 from left
+    const halfX = pad + pw / 3; // halfway line at exactly 1/3 from left, matches grid
     mk('line',{x1:pad,y1:py,x2:R,y2:py,stroke:LC,'stroke-width':'1.5'});               // top touchline
     mk('line',{x1:R,y1:py,x2:R,y2:py+ph,stroke:LC,'stroke-width':'1.5'});              // right goal line
     mk('line',{x1:pad,y1:py+ph,x2:R,y2:py+ph,stroke:LC,'stroke-width':'1.5'});         // bottom touchline
@@ -367,7 +367,7 @@ export function rebuildPitch() {
     const pad = 20, py = 20, pw = W - pad*2, ph = H - py*2;
     const cx = W/2;
     const B = py + ph;    // bottom edge = goal line
-    const halfY = py + Math.round(ph * 0.33); // halfway line ~1/3 from top
+    const halfY = py + ph / 3; // halfway line at exactly 1/3 from top, matches grid
     mk('line',{x1:pad,y1:py,x2:pad,y2:B,stroke:LC,'stroke-width':'1.5'});              // left touchline
     mk('line',{x1:pad,y1:B,x2:pad+pw,y2:B,stroke:LC,'stroke-width':'1.5'});            // bottom goal line
     mk('line',{x1:pad+pw,y1:py,x2:pad+pw,y2:B,stroke:LC,'stroke-width':'1.5'});        // right touchline
@@ -532,25 +532,25 @@ export function rebuildPitch() {
         });
       }
     } else if (isHalf && !isVertical) {
-      // Horizontal half pitch
-      const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
+      // Horizontal half pitch — goal on the right
+      // gV mirrors full-horizontal's near-goal third line so it sits the same
+      // absolute distance from the goal line, avoiding the penalty-box "D".
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2, R=pad+pw;
       if (gH) {
         [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => {
           mk('line',{x1:pad,y1:y,x2:pad+pw,y2:y,...ga});
         });
       }
       if (gV) {
-        for (let i=1; i<=2; i++) {
-          mk('line',{x1:pad+pw*i/3,y1:py,x2:pad+pw*i/3,y2:py+ph,...ga});
-        }
+        mk('line',{x1:R-213,y1:py,x2:R-213,y2:py+ph,...ga});
       }
     } else if (isHalf && isVertical) {
-      // Vertical half pitch
-      const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
+      // Vertical half pitch — goal at the bottom
+      // gH mirrors full-vertical's near-goal third line so it sits the same
+      // absolute distance from the goal line, avoiding the penalty-box "D".
+      const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2, B=py+ph;
       if (gH) {
-        for (let i=1; i<=2; i++) {
-          mk('line',{x1:pad,y1:py+ph*i/3,x2:pad+pw,y2:py+ph*i/3,...ga});
-        }
+        mk('line',{x1:pad,y1:B-213,x2:pad+pw,y2:B-213,...ga});
       }
       if (gV) {
         [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => {
