@@ -1933,8 +1933,9 @@ S.svg.addEventListener('click', e => {
     // Log element insertion to Firestore
     const u = getCurrentUser();
     if (u) logAction(u.uid, u.email, 'element_inserted', { element: elType }).catch(() => {});
-    // Players and markers stay in placement mode so you can keep adding
-    if (S.tool === 'player-a' || S.tool === 'player-b' || S.tool === 'player-joker' || S.tool === 'marker') {
+    // Team players and markers stay in placement mode so you can keep adding.
+    // Jokers are usually one-offs — auto-select so the properties panel opens.
+    if (S.tool === 'player-a' || S.tool === 'player-b' || S.tool === 'marker') {
       // Don't switch tool — stay in placement/chain mode
     } else {
       finishInsert(placed);
