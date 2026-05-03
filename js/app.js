@@ -349,7 +349,7 @@ window.applyColor = function(swatchEl) {
 // ─── Bulk Player Appearance ──────────────────────────────────────────────────
 window.applyBulkPlayerSize = function(val) {
   const scale = (val / 100).toFixed(2);
-  document.getElementById('bulk-size-val').textContent = scale + 'x';
+  document.getElementById('bulk-size-val').textContent = (scale / 0.8).toFixed(2) + 'x';
   const team = S.teamContext;
   S.playersLayer.querySelectorAll('[data-type="player"]').forEach(g => {
     if (g.dataset.team === team) {

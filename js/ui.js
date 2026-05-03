@@ -48,11 +48,11 @@ export function selectTeamContext(team) {
   // Update bulk size slider to reflect current team's average player size
   const players = S.playersLayer.querySelectorAll(`[data-type="player"][data-team="${team}"]`);
   if (players.length > 0) {
-    const avg = Array.from(players).reduce((s, p) => s + parseFloat(p.dataset.scale || '0.9'), 0) / players.length;
+    const avg = Array.from(players).reduce((s, p) => s + parseFloat(p.dataset.scale || '0.8'), 0) / players.length;
     const slider = document.getElementById('bulk-size-slider');
     const label = document.getElementById('bulk-size-val');
     if (slider) slider.value = Math.round(avg * 100);
-    if (label) label.textContent = avg.toFixed(2) + 'x';
+    if (label) label.textContent = (avg / 0.8).toFixed(2) + 'x';
   }
 }
 
