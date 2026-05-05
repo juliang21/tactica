@@ -812,6 +812,17 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   transition: all 0.15s; padding: 0; line-height: 1;
 }
 .color-picker-btn:hover { border-color: var(--accent); color: var(--text); }
+.jersey-style-row { gap: 8px; }
+.jersey-style-btn {
+  width: 32px; height: 32px; flex-shrink: 0; border-radius: 50%;
+  border: 1.5px solid var(--border); background: transparent;
+  cursor: pointer; padding: 0;
+  display: flex; align-items: center; justify-content: center;
+  transition: border-color 0.15s, transform 0.1s;
+}
+.jersey-style-btn:hover { transform: scale(1.08); border-color: var(--accent); }
+.jersey-style-btn.selected { border-color: var(--accent); }
+.jersey-style-btn svg { display: block; }
 .color-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 .custom-color-strip { display: flex; gap: 6px; }
 .custom-swatch {

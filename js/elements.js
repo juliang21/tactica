@@ -71,12 +71,54 @@ export function addPlayer(x, y, team, num, isGK) {
   hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
 
   g.appendChild(hitArea); g.appendChild(shadowCircle); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
+  // Apply team jersey style (plain / vertical-stripe / horizontal-stripe / half-half)
+  const teamStyle = S.teamStyles ? S.teamStyles[team] : 'plain';
+  const teamColor2 = S.teamColors2 ? S.teamColors2[team] : '#ffffff';
+  if (teamStyle && teamStyle !== 'plain' && !isGK) {
+    applyJerseyStyle(g, teamStyle, teamColor2);
+  }
   g.setAttribute('transform', `translate(${x},${y}) scale(0.8)`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   g.addEventListener('dblclick', e => { e.stopPropagation(); openPlayerEdit(g); });
   S.playersLayer.appendChild(g);
   return g;
+}
+
+// ─── Jersey Style Overlays ───────────────────────────────────────────────────
+// Draw secondary-color shapes on top of the body fill, clipped to the body
+// circle. Styles: 'plain' (no overlays), 'vertical-stripe', 'horizontal-stripe',
+// 'half-half'. The number text is appended after, so digits remain on top.
+export function applyJerseyStyle(g, style, color2) {
+  g.querySelectorAll('.player-overlay').forEach(el => el.remove());
+  g.dataset.jerseyStyle = style || 'plain';
+  if (color2) g.dataset.color2 = color2;
+  if (!style || style === 'plain' || !color2) return;
+
+  const NS = 'http://www.w3.org/2000/svg';
+  const overlays = [];
+  const mk = (x, y, w, h) => {
+    const r = document.createElementNS(NS, 'rect');
+    r.setAttribute('x', x); r.setAttribute('y', y);
+    r.setAttribute('width', w); r.setAttribute('height', h);
+    r.setAttribute('fill', color2);
+    r.setAttribute('clip-path', 'url(#player-body-clip)');
+    r.setAttribute('pointer-events', 'none');
+    r.classList.add('player-overlay');
+    return r;
+  };
+  if (style === 'vertical-stripe') {
+    overlays.push(mk(-12, -16, 8, 32));
+    overlays.push(mk(4, -16, 8, 32));
+  } else if (style === 'horizontal-stripe') {
+    overlays.push(mk(-16, -12, 32, 8));
+    overlays.push(mk(-16, 4, 32, 8));
+  } else if (style === 'half-half') {
+    overlays.push(mk(0, -16, 16, 32));
+  }
+  // Insert overlays after the main circle, before the number text so digits stay on top.
+  const numText = g.querySelector('text');
+  overlays.forEach(o => g.insertBefore(o, numText));
 }
 
 // ─── Toggle / Update Arms on Player ──────────────────────────────────────────

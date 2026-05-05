@@ -534,6 +534,12 @@ export function select(el, opts = {}) {
     } else {
       if (armRotGroup) armRotGroup.style.display = 'none';
     }
+    // Sync jersey style buttons + secondary color picker visibility
+    const jStyle = el.dataset.jerseyStyle || (S.teamStyles && S.teamStyles[el.dataset.team]) || 'plain';
+    const jStyleRow = document.getElementById('player-jersey-style-row');
+    if (jStyleRow) jStyleRow.querySelectorAll('.jersey-style-btn').forEach(b => b.classList.toggle('selected', b.dataset.style === jStyle));
+    const c2Group = document.getElementById('player-color2-group');
+    if (c2Group) c2Group.style.display = (jStyle && jStyle !== 'plain') ? '' : 'none';
     // Switch right panel to the player's team context
     if ((el.dataset.team === 'a' || el.dataset.team === 'b') && _selectTeamContextFn) {
       _selectTeamContextFn(el.dataset.team);

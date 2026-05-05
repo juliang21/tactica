@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg, updateHandlePositions } from './interaction.js';
-import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag } from './elements.js';
+import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag, applyJerseyStyle } from './elements.js';
 import { trackElementEdited } from './analytics.js';
 import { rebuildPitch } from './pitch.js';
 
@@ -360,6 +360,73 @@ function _applyBorderToPlayer(el, color) {
   }
   el.dataset.borderColor = color;
   if (el.dataset.arms === '1') updatePlayerArms(el);
+}
+
+// ─── Jersey Style ────────────────────────────────────────────────────────────
+function _selectStyleBtn(rowEl, style) {
+  if (!rowEl) return;
+  rowEl.querySelectorAll('.jersey-style-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.style === style);
+  });
+}
+function _toggleColor2Group(groupId, style) {
+  const grp = document.getElementById(groupId);
+  if (grp) grp.style.display = (style && style !== 'plain') ? '' : 'none';
+}
+
+export function applyBulkJerseyStyle(btn) {
+  const style = btn.dataset.style;
+  const team = S.teamContext;
+  S.teamStyles[team] = style;
+  const color2 = S.teamColors2[team] || '#ffffff';
+  _selectStyleBtn(document.getElementById('bulk-jersey-style-row'), style);
+  _toggleColor2Group('bulk-color2-group', style);
+  S.playersLayer.querySelectorAll(`g[data-team="${team}"]`).forEach(g => {
+    if (g.dataset.isGK === '1') return;
+    applyJerseyStyle(g, style, color2);
+  });
+  trackElementEdited('player', 'jersey_style');
+}
+
+export function applyBulkPlayerColor2(swatchEl) {
+  const color = swatchEl.dataset.color;
+  const team = S.teamContext;
+  S.teamColors2[team] = color;
+  document.querySelectorAll('#bulk-color2-group .color-swatch').forEach(s => s.classList.remove('selected'));
+  swatchEl.classList.add('selected');
+  const style = S.teamStyles[team] || 'plain';
+  S.playersLayer.querySelectorAll(`g[data-team="${team}"]`).forEach(g => {
+    if (g.dataset.isGK === '1') return;
+    applyJerseyStyle(g, style, color);
+  });
+  trackElementEdited('player', 'jersey_color2');
+}
+
+export function applyPlayerJerseyStyle(btn) {
+  const style = btn.dataset.style;
+  const targets = [...S.selectedEls].filter(el => el.dataset.type === 'player');
+  const list = targets.length > 1 ? targets : (S.selectedEl && S.selectedEl.dataset.type === 'player' ? [S.selectedEl] : []);
+  if (!list.length) return;
+  _selectStyleBtn(document.getElementById('player-jersey-style-row'), style);
+  _toggleColor2Group('player-color2-group', style);
+  for (const g of list) {
+    const color2 = g.dataset.color2 || S.teamColors2[g.dataset.team] || '#ffffff';
+    applyJerseyStyle(g, style, color2);
+  }
+  trackElementEdited('player', 'jersey_style');
+}
+
+export function applyPlayerColor2(swatchEl) {
+  const color = swatchEl.dataset.color;
+  document.querySelectorAll('#player-color2-group .color-swatch').forEach(s => s.classList.remove('selected'));
+  swatchEl.classList.add('selected');
+  const targets = [...S.selectedEls].filter(el => el.dataset.type === 'player');
+  const list = targets.length > 1 ? targets : (S.selectedEl && S.selectedEl.dataset.type === 'player' ? [S.selectedEl] : []);
+  for (const g of list) {
+    const style = g.dataset.jerseyStyle || S.teamStyles[g.dataset.team] || 'plain';
+    applyJerseyStyle(g, style, color);
+  }
+  trackElementEdited('player', 'jersey_color2');
 }
 
 // ─── Player Arms Toggle ──────────────────────────────────────────────────────

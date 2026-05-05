@@ -597,6 +597,8 @@
         <marker id="mRun"  markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#FFFFFF"/></marker>
         <marker id="mPass" markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#F59E0B"/></marker>
         <marker id="mLong" markerWidth="7" markerHeight="6" refX="5.5" refY="3" orient="auto"><polygon points="0 0, 7 3, 0 6" fill="#f94f4f"/></marker>
+        <!-- Clip overlays slightly inside the body so the border stroke stays visible -->
+        <clipPath id="player-body-clip"><circle cx="0" cy="0" r="14.5"/></clipPath>
       </defs>
       <!-- Pitch fill -->
       <rect width="700" height="480" fill="url(#stripes)"/>
@@ -788,6 +790,27 @@
           <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyBulkPlayerBorder(this)"></div>
           <div class="color-swatch mini checkerboard" data-color="none" onclick="applyBulkPlayerBorder(this)" title="No border"></div>
           <button class="color-picker-btn" onclick="openColorPicker('bulk-border')" title="Custom border colour">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Jersey style (all players)</div>
+        <div class="picker-row jersey-style-row" id="bulk-jersey-style-row">
+          <button class="jersey-style-btn selected" data-style="plain" onclick="applyBulkJerseyStyle(this)" title="Plain"><svg viewBox="-16 -16 32 32" width="20" height="20"><circle r="14" fill="#888"/></svg></button>
+          <button class="jersey-style-btn" data-style="vertical-stripe" onclick="applyBulkJerseyStyle(this)" title="Vertical stripes"><svg viewBox="-16 -16 32 32" width="20" height="20"><circle r="14" fill="#888"/><g clip-path="url(#player-body-clip)"><rect x="-12" y="-16" width="8" height="32" fill="#fff"/><rect x="4" y="-16" width="8" height="32" fill="#fff"/></g></svg></button>
+          <button class="jersey-style-btn" data-style="horizontal-stripe" onclick="applyBulkJerseyStyle(this)" title="Horizontal stripes"><svg viewBox="-16 -16 32 32" width="20" height="20"><circle r="14" fill="#888"/><g clip-path="url(#player-body-clip)"><rect x="-16" y="-12" width="32" height="8" fill="#fff"/><rect x="-16" y="4" width="32" height="8" fill="#fff"/></g></svg></button>
+          <button class="jersey-style-btn" data-style="half-half" onclick="applyBulkJerseyStyle(this)" title="Half &amp; half"><svg viewBox="-16 -16 32 32" width="20" height="20"><circle r="14" fill="#888"/><g clip-path="url(#player-body-clip)"><rect x="0" y="-16" width="16" height="32" fill="#fff"/></g></svg></button>
+        </div>
+      </div>
+      <div class="field-group" id="bulk-color2-group" style="display:none">
+        <div class="field-label">Secondary colour (all players)</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="#ffffff" onclick="applyBulkPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="#000000" onclick="applyBulkPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyBulkPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyBulkPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#FBBF24" data-color="#FBBF24" onclick="applyBulkPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyBulkPlayerColor2(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('bulk-color2')" title="Custom secondary colour">＋</button>
         </div>
       </div>
       </div><!-- /collapsible-body appearance -->
@@ -1207,6 +1230,27 @@
           <div class="color-swatch mini" style="background:#ffd700" data-color="#ffd700" onclick="applyPlayerBorder(this)"></div>
           <div class="color-swatch mini checkerboard" data-color="none" onclick="applyPlayerBorder(this)" title="No border"></div>
           <button class="color-picker-btn" onclick="openColorPicker('border')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Jersey style</div>
+        <div class="picker-row jersey-style-row" id="player-jersey-style-row">
+          <button class="jersey-style-btn selected" data-style="plain" onclick="applyPlayerJerseyStyle(this)" title="Plain"><svg viewBox="-16 -16 32 32" width="20" height="20"><circle r="14" fill="#888"/></svg></button>
+          <button class="jersey-style-btn" data-style="vertical-stripe" onclick="applyPlayerJerseyStyle(this)" title="Vertical stripes"><svg viewBox="-16 -16 32 32" width="20" height="20"><circle r="14" fill="#888"/><g clip-path="url(#player-body-clip)"><rect x="-12" y="-16" width="8" height="32" fill="#fff"/><rect x="4" y="-16" width="8" height="32" fill="#fff"/></g></svg></button>
+          <button class="jersey-style-btn" data-style="horizontal-stripe" onclick="applyPlayerJerseyStyle(this)" title="Horizontal stripes"><svg viewBox="-16 -16 32 32" width="20" height="20"><circle r="14" fill="#888"/><g clip-path="url(#player-body-clip)"><rect x="-16" y="-12" width="32" height="8" fill="#fff"/><rect x="-16" y="4" width="32" height="8" fill="#fff"/></g></svg></button>
+          <button class="jersey-style-btn" data-style="half-half" onclick="applyPlayerJerseyStyle(this)" title="Half &amp; half"><svg viewBox="-16 -16 32 32" width="20" height="20"><circle r="14" fill="#888"/><g clip-path="url(#player-body-clip)"><rect x="0" y="-16" width="16" height="32" fill="#fff"/></g></svg></button>
+        </div>
+      </div>
+      <div class="field-group" id="player-color2-group" style="display:none">
+        <div class="field-label">Secondary colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#ffffff" data-color="#ffffff" onclick="applyPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="#000000" onclick="applyPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#FBBF24" data-color="#FBBF24" onclick="applyPlayerColor2(this)"></div>
+          <div class="color-swatch mini" style="background:#4ade80" data-color="#4ade80" onclick="applyPlayerColor2(this)"></div>
+          <button class="color-picker-btn" onclick="openColorPicker('player-color2')">＋</button>
         </div>
       </div>
       <div class="field-group">

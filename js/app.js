@@ -5,6 +5,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
          applyPlayerFill, applyPlayerBorder, togglePlayerArms,
+         applyBulkJerseyStyle, applyBulkPlayerColor2, applyPlayerJerseyStyle, applyPlayerColor2,
          liveUpdateRefName, confirmRefName, applyRefFill, applyRefBorder,
          openColorPicker, closeColorPicker, confirmColorPicker,
          applyArrowColor, applyArrowStyle, applyArrowWidth, applyArrowCurve, applyArrowOpacity, applyArrowHeadScale,
@@ -853,6 +854,10 @@ window.applyPlayerFill = function(swatchEl) {
   if (u) logAction(u.uid, u.email, 'feature_custom_color', { color: swatchEl.dataset.color, source: 'player_fill' }).catch(() => {});
 };
 window.applyPlayerBorder = applyPlayerBorder;
+window.applyBulkJerseyStyle = applyBulkJerseyStyle;
+window.applyBulkPlayerColor2 = applyBulkPlayerColor2;
+window.applyPlayerJerseyStyle = applyPlayerJerseyStyle;
+window.applyPlayerColor2 = applyPlayerColor2;
 window.togglePlayerArms = togglePlayerArms;
 window.liveUpdateRefName = liveUpdateRefName;
 window.confirmRefName = confirmRefName;
