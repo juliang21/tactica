@@ -1185,12 +1185,14 @@
           <input type="range" id="arm-rot-slider" min="0" max="360" value="90" oninput="applyRotation(this.value)">
         </div>
       </div>
-      <div class="field-group">
+      <div class="field-group field-row-inline">
         <div class="field-label">Number</div>
-        <div class="field-row">
-          <input type="text" id="number-input" maxlength="3" placeholder="1–99"
+        <div class="number-stepper">
+          <button type="button" class="stepper-btn" onclick="adjustPlayerNumber(-1)" aria-label="Decrease">−</button>
+          <input type="text" id="number-input" maxlength="3" placeholder="–"
                  oninput="liveUpdateNumber(this.value)"
                  onkeydown="if(event.key==='Enter'){event.preventDefault();confirmNumber();}"/>
+          <button type="button" class="stepper-btn" onclick="adjustPlayerNumber(1)" aria-label="Increase">+</button>
         </div>
       </div>
       <div class="field-group">

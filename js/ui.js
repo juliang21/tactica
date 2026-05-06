@@ -227,6 +227,7 @@ export function placeFormation(name) {
 // ─── Player Edit ──────────────────────────────────────────────────────────────
 export function liveUpdateNumber(val) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  S.selectedEl.dataset.label = val;
   S.selectedEl.querySelectorAll('text')[0].textContent = val;
 }
 
@@ -237,6 +238,20 @@ export function confirmNumber() {
   trackElementEdited('player', 'number');
   S.selectedEl.dataset.label = val;
   S.selectedEl.querySelectorAll('text')[0].textContent = val;
+}
+
+export function adjustPlayerNumber(delta) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'player') return;
+  const input = document.getElementById('number-input');
+  if (!input) return;
+  const cur = parseInt(input.value, 10);
+  let next = (Number.isFinite(cur) ? cur : 0) + delta;
+  if (next < 0) next = 0;
+  if (next > 99) next = 99;
+  input.value = String(next);
+  trackElementEdited('player', 'number');
+  S.selectedEl.dataset.label = input.value;
+  S.selectedEl.querySelectorAll('text')[0].textContent = input.value;
 }
 
 export function liveUpdateName(val) {

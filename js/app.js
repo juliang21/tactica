@@ -2,7 +2,7 @@ import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
 import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addMarker, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel} from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
-         liveUpdateNumber, confirmNumber, liveUpdateName, confirmName,
+         liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
          applyPlayerFill, applyPlayerBorder, togglePlayerArms,
          applyBulkJerseyStyle, applyBulkPlayerColor2, applyPlayerJerseyStyle, applyPlayerColor2,
@@ -679,6 +679,7 @@ window.placeFormation = function(name) {
 };
 window.liveUpdateNumber = liveUpdateNumber;
 window.confirmNumber = confirmNumber;
+window.adjustPlayerNumber = adjustPlayerNumber;
 window.liveUpdateName = liveUpdateName;
 window.confirmName = confirmName;
 window.applySize = applySize;
