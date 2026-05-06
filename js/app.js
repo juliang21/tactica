@@ -17,7 +17,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
          applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, applyMarkerHighlight, liveUpdateMarkerName, confirmMarkerName,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
-import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch } from './pitch.js';
+import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=5';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=6';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -2613,7 +2613,11 @@ function renderStepBar() {
   const bar = document.getElementById('step-bar');
   if (!bar) return;
   const container = document.getElementById('motion-controls');
+  const wasHidden = container && getComputedStyle(container).display === 'none';
   if (container) container.style.display = 'flex';
+  // Showing the step bar shrinks the available canvas height — refit so the
+  // pitch SVG doesn't overlap the controls on shorter viewports.
+  if (wasHidden) fitPitchToViewport();
 
   let html = '';
   frames.forEach((f, i) => {

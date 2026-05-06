@@ -14,8 +14,13 @@ export function fitPitchToViewport() {
   const cs = getComputedStyle(wrap);
   const padX = parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight);
   const padY = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+  // Reserve space for motion-controls (animation step bar) when visible —
+  // it sits inside pitch-wrap below the SVG and would otherwise overlap on
+  // shorter viewports.
+  const motion = document.getElementById('motion-controls');
+  const motionH = motion && getComputedStyle(motion).display !== 'none' ? motion.offsetHeight : 0;
   const availW = wrap.clientWidth - padX;
-  const availH = wrap.clientHeight - padY;
+  const availH = wrap.clientHeight - padY - motionH;
   if (availW <= 0 || availH <= 0) return;
   const scale = Math.min(availW / W, availH / H);
   const renderW = Math.floor(W * scale);
