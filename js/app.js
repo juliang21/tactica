@@ -23,7 +23,8 @@ import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, t
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
-import { shouldBlockUser, shouldBlockAnonymous, showMaintenanceOverlay, isBlockedEmail } from './access-check.js';
+// access-check.js kept for future reactivation (Turkey/email blocking disabled)
+// import { shouldBlockUser, shouldBlockAnonymous, showMaintenanceOverlay, isBlockedEmail } from './access-check.js';
 import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed } from './firestore.js?v=5';
 import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
 import './features/feedback.js';
@@ -4921,13 +4922,6 @@ window.copyShareLink = copyShareLink;
 // ─── Auth State Listener ────────────────────────────────────────────────────
 let _authInitialized = false;
 onAuthChange(async (user) => {
-  // ─── Access Gate ─────────────────────────────────────────────────────────
-  // Block specific emails and users in blocked regions.
-  if (shouldBlockUser(user)) {
-    const reason = isBlockedEmail(user) ? 'blocked_email' : 'region';
-    showMaintenanceOverlay({ user, reason });
-    return;
-  }
   updateAuthUI(user);
   closeAuthModal();
   const gate = document.getElementById('landing-gate');
