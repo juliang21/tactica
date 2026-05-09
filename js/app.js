@@ -422,6 +422,8 @@ function renderKitGrid(teams) {
     btn.dataset.gk = t.gk || '#ffd700';
     if (t.border) btn.dataset.border = t.border;
     if (t.svgPattern) btn.dataset.pattern = t.svgPattern;
+    if (t.pattern) btn.dataset.kitPattern = t.pattern;
+    if (t.stripe) btn.dataset.stripe = t.stripe;
     btn.dataset.trackName = t.name;
     btn.title = t.name;
     btn.onclick = function() { applyKit(this); };

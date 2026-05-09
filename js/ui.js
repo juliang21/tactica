@@ -75,6 +75,25 @@ export function applyKit(el) {
     ? el.style.background
     : color;
   updateTeamPlayerColors(team, fillValue, gkColor, borderColor);
+
+  const kitPattern = el.dataset.kitPattern || null;
+  const stripe = el.dataset.stripe || null;
+  const styleMap = { half: 'half-half', stripes: 'vertical-stripe', 'stripes-rw': 'vertical-stripe', 'stripes-h': 'horizontal-stripe', sash: 'sash' };
+  const jerseyStyle = styleMap[kitPattern] || 'plain';
+  S.teamStyles[team] = jerseyStyle;
+  if (stripe) S.teamColors2[team] = stripe;
+  if (jerseyStyle !== 'plain' && stripe) {
+    S.playersLayer.querySelectorAll(`g[data-team="${team}"]`).forEach(g => {
+      if (g.dataset.isGK === '1') return;
+      applyJerseyStyle(g, jerseyStyle, stripe);
+    });
+  } else {
+    S.playersLayer.querySelectorAll(`g[data-team="${team}"]`).forEach(g => {
+      if (g.dataset.isGK === '1') return;
+      applyJerseyStyle(g, 'plain', null);
+    });
+  }
+
   if (sideIsEmpty && S.FORMATIONS && S.FORMATIONS['4-3-3']) placeFormation('4-3-3');
 }
 
