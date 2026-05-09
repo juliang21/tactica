@@ -105,7 +105,7 @@
     {"name":"Celtic","code":"CEL","league":"Scottish Premiership","color":"#006847","border":"#ffffff","gk":"#ffd700"},
     {"name":"Rangers","code":"RAN","league":"Scottish Premiership","color":"#003DA5","gk":"#ffd700"},
 
-    {"name":"Galatasaray","code":"GAL","league":"Süper Lig","color":"#c8102e","border":"#ffd700","gk":"#000000","pattern":"half","stripe":"#ffd700"},
+    {"name":"Galatasaray","code":"GAL","league":"Süper Lig","color":"#c8102e","gk":"#000000","pattern":"half","stripe":"#ffd700"},
     {"name":"Fenerbahçe","code":"FEN","league":"Süper Lig","color":"#003da5","border":"#fde100","gk":"#000000"},
     {"name":"Beşiktaş","code":"BJK","league":"Süper Lig","color":"#000000","border":"#ffffff","gk":"#ffd700"},
     {"name":"Trabzonspor","code":"TRA","league":"Süper Lig","color":"#6C1D45","border":"#003da5","gk":"#ffd700"},
