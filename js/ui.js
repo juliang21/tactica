@@ -78,8 +78,9 @@ export function applyKit(el) {
 
   const kitPattern = el.dataset.kitPattern || null;
   const stripe = el.dataset.stripe || null;
+  const hasSvgPattern = !!el.dataset.pattern;
   const styleMap = { half: 'half-half', stripes: 'vertical-stripe', 'stripes-rw': 'vertical-stripe', 'stripes-h': 'horizontal-stripe', sash: 'sash' };
-  const jerseyStyle = styleMap[kitPattern] || 'plain';
+  const jerseyStyle = hasSvgPattern ? 'plain' : (styleMap[kitPattern] || 'plain');
   S.teamStyles[team] = jerseyStyle;
   if (stripe) S.teamColors2[team] = stripe;
   if (jerseyStyle !== 'plain' && stripe) {
