@@ -426,7 +426,7 @@ function renderKitGrid(teams) {
     if (t.stripe) btn.dataset.stripe = t.stripe;
     btn.dataset.trackName = t.name;
     btn.title = t.name;
-    btn.onclick = function() { applyKit(this); };
+    btn.onclick = function() { window.applyKit(this); };
 
     // Label (created early so previewClass path can style it)
     const label = document.createElement('div');
