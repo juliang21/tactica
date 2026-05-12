@@ -651,6 +651,265 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.restore();
   }
 
+  // ── Link (player-to-player connecting line) ─────────────────────────────────
+  function renderLink(g) {
+    const line = g.querySelector('.link-line');
+    if (!line) return;
+    const x1 = parseFloat(line.getAttribute('x1'));
+    const y1 = parseFloat(line.getAttribute('y1'));
+    const x2 = parseFloat(line.getAttribute('x2'));
+    const y2 = parseFloat(line.getAttribute('y2'));
+    const color = g.dataset.linkColor || 'rgba(255,255,255,0.4)';
+    const style = g.dataset.linkStyle || 'dashed';
+
+    ctx.save();
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 3;
+    ctx.lineCap = 'round';
+    if (style === 'dashed') ctx.setLineDash([6, 4]);
+    ctx.beginPath();
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // ── Marker (ground radar ellipse with optional label) ──────────────────────
+  function renderMarker(g) {
+    const t = g.getAttribute('transform') || '';
+    const m = t.match(/translate\(\s*([\d.e+-]+)[\s,]+([\d.e+-]+)\s*\)/);
+    const cx = m ? parseFloat(m[1]) : parseFloat(g.dataset.cx);
+    const cy = m ? parseFloat(m[2]) : parseFloat(g.dataset.cy);
+    const sc = parseFloat(g.dataset.scale || '1');
+    const borderColor = g.dataset.borderColor || 'rgba(255,255,255,0.85)';
+    const bgColor = g.dataset.bgColor || 'rgba(255,255,255,0.10)';
+    const opacity = parseFloat(g.dataset.markerOpacity || '1');
+
+    ctx.save();
+    ctx.globalAlpha = opacity;
+
+    // Highlight beam (if visible)
+    const hl = g.querySelector('.marker-highlight');
+    if (hl && hl.style.display !== 'none') {
+      const beamW = 17 * sc * 2;
+      const sourceW = 6;
+      ctx.save();
+      ctx.filter = 'blur(6px)';
+      ctx.beginPath();
+      ctx.moveTo(cx - sourceW, 0);
+      ctx.lineTo(cx - beamW / 2, cy);
+      ctx.lineTo(cx + beamW / 2, cy);
+      ctx.lineTo(cx + sourceW, 0);
+      ctx.closePath();
+      const beamGrad = ctx.createLinearGradient(cx, 0, cx, cy);
+      beamGrad.addColorStop(0, 'rgba(255,255,255,1)');
+      beamGrad.addColorStop(0.2, 'rgba(255,255,255,0.7)');
+      beamGrad.addColorStop(0.5, 'rgba(255,255,255,0.3)');
+      beamGrad.addColorStop(0.8, 'rgba(255,255,255,0.08)');
+      beamGrad.addColorStop(1, 'rgba(255,255,255,0)');
+      ctx.fillStyle = beamGrad;
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Ground glow
+    ctx.save();
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 2, 24 * sc, 13 * sc, 0, 0, Math.PI * 2);
+    const glowGrad = ctx.createRadialGradient(cx, cy + 2, 0, cx, cy + 2, 24 * sc);
+    glowGrad.addColorStop(0, 'rgba(255,255,255,0.18)');
+    glowGrad.addColorStop(0.7, 'rgba(255,255,255,0.05)');
+    glowGrad.addColorStop(1, 'rgba(255,255,255,0)');
+    ctx.fillStyle = glowGrad;
+    ctx.fill();
+    ctx.restore();
+
+    // Main ellipse ring
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 17 * sc, 9 * sc, 0, 0, Math.PI * 2);
+    ctx.fillStyle = bgColor;
+    ctx.fill();
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    // Inner shine
+    ctx.beginPath();
+    ctx.ellipse(cx, cy - 2 * sc, 10 * sc, 4 * sc, 0, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,0.08)';
+    ctx.fill();
+
+    // Name label
+    const label = g.querySelector('.marker-label');
+    const name = label ? label.textContent : (g.dataset.markerName || '');
+    if (name) {
+      ctx.font = `600 ${11 * sc}px Inter, system-ui, sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.lineWidth = 3;
+      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
+      ctx.lineJoin = 'round';
+      ctx.strokeText(name, cx, cy + 18 * sc);
+      ctx.fillStyle = 'white';
+      ctx.fillText(name, cx, cy + 18 * sc);
+    }
+
+    ctx.restore();
+  }
+
+  // ── Pair (dashed ellipse between two players) ──────────────────────────────
+  function renderPair(g) {
+    const ellipse = g.querySelector('.pair-ellipse');
+    if (!ellipse) return;
+    const ecx = parseFloat(ellipse.getAttribute('cx'));
+    const ecy = parseFloat(ellipse.getAttribute('cy'));
+    const rx = parseFloat(ellipse.getAttribute('rx'));
+    const ry = parseFloat(ellipse.getAttribute('ry'));
+    const color = g.dataset.pairColor || 'rgba(234,179,8,0.4)';
+    const angle = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+
+    ctx.save();
+    ctx.translate(ecx, ecy);
+    ctx.rotate(angle);
+    ctx.beginPath();
+    ctx.ellipse(0, 0, rx, ry, 0, 0, Math.PI * 2);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255,255,255,0.5)';
+    ctx.lineWidth = 1.5;
+    ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  // ── Net-Zone (filled polygon connecting 3+ players) ────────────────────────
+  function renderNetZone(g) {
+    const fill = g.querySelector('.nz-fill');
+    if (!fill) return;
+    const points = fill.getAttribute('points');
+    if (!points) return;
+    const color = g.dataset.zoneColor || 'rgba(79,156,249,0.15)';
+    const border = g.dataset.zoneBorder || 'rgba(255,255,255,0.35)';
+    const borderStyle = g.dataset.zoneBorderStyle || 'dashed';
+
+    const pts = points.trim().split(/\s+/).map(p => {
+      const [x, y] = p.split(',').map(Number);
+      return { x, y };
+    });
+    if (pts.length < 3) return;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.moveTo(pts[0].x, pts[0].y);
+    for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    ctx.closePath();
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.strokeStyle = border;
+    ctx.lineWidth = 1.5;
+    ctx.lineJoin = 'round';
+    if (borderStyle === 'dashed') ctx.setLineDash([4, 3]);
+    ctx.stroke();
+    ctx.setLineDash([]);
+
+    // Vertex glow circles
+    g.querySelectorAll('.nz-vertex').forEach(vc => {
+      const pid = vc.dataset.pid;
+      const player = document.getElementById(pid);
+      if (!player) return;
+      const px = parseFloat(player.dataset.cx);
+      const py = parseFloat(player.dataset.cy);
+      ctx.beginPath();
+      ctx.arc(px, py, 20, 0, Math.PI * 2);
+      ctx.fillStyle = vc.getAttribute('fill') || 'rgba(79,156,249,0.25)';
+      ctx.fill();
+      ctx.strokeStyle = vc.getAttribute('stroke') || 'rgba(79,156,249,0.6)';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+    });
+
+    ctx.restore();
+  }
+
+  // ── Tag (data label with dashed line and anchor dot) ───────────────────────
+  function renderTag(g) {
+    const cx = parseFloat(g.dataset.cx);
+    const cy = parseFloat(g.dataset.cy);
+    const lineColor = g.dataset.tagLineColor || 'rgba(255,255,255,0.7)';
+    const lineDash = (g.dataset.tagLineDash || '6,4').split(',').map(Number);
+    const labelColor = g.dataset.tagLabelColor || 'rgba(255,255,255,0.9)';
+    const valueColor = g.dataset.tagValueColor || '#39FF14';
+    const label = g.dataset.tagLabel || '';
+    const value = g.dataset.tagValue || '';
+
+    // Read line endpoints from the SVG line element
+    const lineEl = g.querySelector('.tag-line');
+    const dotEl = g.querySelector('.tag-dot');
+    const labelEl = g.querySelector('.tag-label');
+    const valueEl = g.querySelector('.tag-value');
+
+    if (lineEl) {
+      const x1 = parseFloat(lineEl.getAttribute('x1'));
+      const y1 = parseFloat(lineEl.getAttribute('y1'));
+      const x2 = parseFloat(lineEl.getAttribute('x2'));
+      const y2 = parseFloat(lineEl.getAttribute('y2'));
+
+      // Dashed line
+      ctx.save();
+      ctx.strokeStyle = lineColor;
+      ctx.lineWidth = 1.5;
+      ctx.setLineDash(lineDash);
+      ctx.beginPath();
+      ctx.moveTo(x1, y1);
+      ctx.lineTo(x2, y2);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
+    }
+
+    // Anchor dot
+    if (dotEl) {
+      const dcx = parseFloat(dotEl.getAttribute('cx'));
+      const dcy = parseFloat(dotEl.getAttribute('cy'));
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(dcx, dcy, 5, 0, Math.PI * 2);
+      ctx.fillStyle = dotEl.getAttribute('fill') || 'rgba(255,255,255,0.9)';
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Label text
+    if (labelEl) {
+      const lx = parseFloat(labelEl.getAttribute('x'));
+      const ly = parseFloat(labelEl.getAttribute('y'));
+      const anchor = labelEl.getAttribute('text-anchor') || 'start';
+      ctx.save();
+      ctx.font = '600 12px Poppins, sans-serif';
+      ctx.fillStyle = labelEl.getAttribute('fill') || labelColor;
+      ctx.textAlign = anchor === 'end' ? 'right' : anchor === 'middle' ? 'center' : 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(label, lx, ly);
+      ctx.restore();
+    }
+
+    // Value text
+    if (valueEl) {
+      const vx = parseFloat(valueEl.getAttribute('x'));
+      const vy = parseFloat(valueEl.getAttribute('y'));
+      const anchor = valueEl.getAttribute('text-anchor') || 'start';
+      ctx.save();
+      ctx.font = '700 12px Poppins, sans-serif';
+      ctx.fillStyle = valueEl.getAttribute('fill') || valueColor;
+      ctx.textAlign = anchor === 'end' ? 'right' : anchor === 'middle' ? 'center' : 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(value, vx, vy);
+      ctx.restore();
+    }
+  }
+
   function renderTextbox(g) {
     const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
     const hw = parseFloat(g.dataset.hw || '60');
@@ -1037,7 +1296,11 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const type = g.dataset.type;
     if (!type) return;
     if (type === 'shadow-circle' || type === 'shadow-rect') renderShadow(g, type);
+    else if (type === 'net-zone') renderNetZone(g);
+    else if (type === 'pair') renderPair(g);
     else if (type === 'spotlight') renderSpotlight(g);
+    else if (type === 'link') renderLink(g);
+    else if (type === 'marker') renderMarker(g);
     else if (type === 'arrow') renderArrow(g);
     else if (type === 'vision') renderVision(g);
     else if (type === 'freeform') renderFreeform(g);
@@ -1054,7 +1317,13 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     else if (type === 'referee') renderReferee(g);
     else if (type === 'ball') renderBall(g);
     else if (type === 'cone') renderCone(g);
+    else if (type === 'tag') renderTag(g);
   });
+
+  // ── Draw watermark for free users ───────────────────────────────────────────
+  if (!canAccess('export:no-watermark')) {
+    drawWatermark(ctx, W * SCALE, H * SCALE, null);
+  }
 
   function finalizeExport() {
     try {
