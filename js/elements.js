@@ -263,6 +263,145 @@ export function addReferee(x, y, label, fillColor, borderColor) {
 }
 
 // ─── Add Cone ─────────────────────────────────────────────────────────────────
+// ─── Disc Cone (training drills) ────────────────────────────────────────────
+// A low-profile training marker: small flat disc with a darker base shadow.
+// Color is configurable via dataset.color (defaults to yellow).
+const DISC_COLORS = {
+  yellow: { fill: '#FFD43B', stroke: '#C8A21E', shadow: 'rgba(0,0,0,0.28)' },
+  red:    { fill: '#E63946', stroke: '#A8222E', shadow: 'rgba(0,0,0,0.28)' },
+  blue:   { fill: '#3D6FE5', stroke: '#2A4FA3', shadow: 'rgba(0,0,0,0.28)' },
+  orange: { fill: '#F58A1E', stroke: '#B85F11', shadow: 'rgba(0,0,0,0.28)' },
+};
+export function addDiscCone(x, y, color = 'yellow') {
+  const id = 'disc-' + S.nextObjectId();
+  const c = DISC_COLORS[color] || DISC_COLORS.yellow;
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'disc-cone';
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '1';
+  g.dataset.discColor = color;
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Drop shadow ellipse below
+  const sh = document.createElementNS(ns, 'ellipse');
+  sh.setAttribute('cx','0'); sh.setAttribute('cy','3');
+  sh.setAttribute('rx','9'); sh.setAttribute('ry','2.2');
+  sh.setAttribute('fill', c.shadow);
+  sh.setAttribute('pointer-events','none');
+
+  // Disc body — wider than tall, like a low-profile cone
+  const disc = document.createElementNS(ns, 'ellipse');
+  disc.setAttribute('cx','0'); disc.setAttribute('cy','0');
+  disc.setAttribute('rx','8'); disc.setAttribute('ry','3.2');
+  disc.setAttribute('fill', c.fill);
+  disc.setAttribute('stroke', c.stroke);
+  disc.setAttribute('stroke-width','1');
+
+  // Small dark cap on top so it reads as a 3D dome
+  const cap = document.createElementNS(ns, 'ellipse');
+  cap.setAttribute('cx','0'); cap.setAttribute('cy','-1.2');
+  cap.setAttribute('rx','2.6'); cap.setAttribute('ry','0.9');
+  cap.setAttribute('fill','rgba(0,0,0,0.45)');
+  cap.setAttribute('pointer-events','none');
+
+  // Invisible hit area
+  const hitArea = document.createElementNS(ns, 'circle');
+  hitArea.classList.add('hit-area');
+  hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','14');
+  hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
+
+  g.appendChild(hitArea);
+  g.appendChild(sh);
+  g.appendChild(disc);
+  g.appendChild(cap);
+  g.setAttribute('transform', `translate(${x},${y})`);
+  makeDraggable(g);
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
+  });
+  S.playersLayer.appendChild(g);
+  return g;
+}
+
+// ─── Small Goal (training drills) ────────────────────────────────────────────
+// A mini-net icon: solid back panel + criss-cross netting lines + two posts.
+// Default colour: white. Used in the Training Builder; safe to use anywhere.
+export function addSmallGoal(x, y) {
+  const id = 'sgoal-' + S.nextObjectId();
+  const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'small-goal';
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '1';
+  const ns = 'http://www.w3.org/2000/svg';
+
+  // Drop shadow (subtle ellipse below)
+  const sh = document.createElementNS(ns, 'ellipse');
+  sh.setAttribute('cx','0'); sh.setAttribute('cy','7');
+  sh.setAttribute('rx','14'); sh.setAttribute('ry','2.5');
+  sh.setAttribute('fill','rgba(0,0,0,0.28)');
+  sh.setAttribute('pointer-events','none');
+
+  // Net translucent body
+  const net = document.createElementNS(ns, 'rect');
+  net.setAttribute('x','-13'); net.setAttribute('y','-6');
+  net.setAttribute('width','26'); net.setAttribute('height','12');
+  net.setAttribute('fill','rgba(255,255,255,0.18)');
+  net.setAttribute('stroke','#ffffff');
+  net.setAttribute('stroke-width','1.4');
+  net.setAttribute('rx','1');
+
+  // Netting cross-lines (a few thin verticals + 1 horizontal)
+  const linesGroup = document.createElementNS(ns, 'g');
+  linesGroup.setAttribute('stroke','#ffffff');
+  linesGroup.setAttribute('stroke-width','0.55');
+  linesGroup.setAttribute('opacity','0.85');
+  linesGroup.setAttribute('pointer-events','none');
+  [-9, -4.5, 0, 4.5, 9].forEach(vx => {
+    const l = document.createElementNS(ns, 'line');
+    l.setAttribute('x1', vx); l.setAttribute('y1', -6);
+    l.setAttribute('x2', vx); l.setAttribute('y2', 6);
+    linesGroup.appendChild(l);
+  });
+  const hLine = document.createElementNS(ns, 'line');
+  hLine.setAttribute('x1','-13'); hLine.setAttribute('y1','0');
+  hLine.setAttribute('x2','13'); hLine.setAttribute('y2','0');
+  linesGroup.appendChild(hLine);
+
+  // Posts (thicker side bars to read as a goal)
+  const postL = document.createElementNS(ns, 'line');
+  postL.setAttribute('x1','-13'); postL.setAttribute('y1','-6');
+  postL.setAttribute('x2','-13'); postL.setAttribute('y2','6');
+  postL.setAttribute('stroke','#ffffff');
+  postL.setAttribute('stroke-width','2');
+  postL.setAttribute('stroke-linecap','round');
+  const postR = document.createElementNS(ns, 'line');
+  postR.setAttribute('x1','13'); postR.setAttribute('y1','-6');
+  postR.setAttribute('x2','13'); postR.setAttribute('y2','6');
+  postR.setAttribute('stroke','#ffffff');
+  postR.setAttribute('stroke-width','2');
+  postR.setAttribute('stroke-linecap','round');
+
+  // Invisible hit area for easier touch tapping
+  const hitArea = document.createElementNS(ns, 'circle');
+  hitArea.classList.add('hit-area');
+  hitArea.setAttribute('cx','0'); hitArea.setAttribute('cy','0'); hitArea.setAttribute('r','18');
+  hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
+
+  g.appendChild(hitArea);
+  g.appendChild(sh);
+  g.appendChild(net);
+  g.appendChild(linesGroup);
+  g.appendChild(postL);
+  g.appendChild(postR);
+  g.setAttribute('transform', `translate(${x},${y})`);
+  makeDraggable(g);
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
+  });
+  S.playersLayer.appendChild(g);
+  return g;
+}
+
 export function addCone(x, y) {
   const id = 'cone-' + S.nextObjectId();
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
@@ -910,17 +1049,17 @@ export function addShadow(x, y, type) {
     shape = document.createElementNS(ns, 'rect');
     shape.setAttribute('x', x - defHw); shape.setAttribute('y', y - defHh);
     shape.setAttribute('width', defHw * 2); shape.setAttribute('height', defHh * 2); shape.setAttribute('rx','4');
-    // Default rect to yellow style (pressing zone look)
-    g.dataset.zoneLabel = 'Pressing zone';
-    g.dataset.zonePurpose = 'press';
-    g.dataset.zoneFillStyle = 'soft';
-    g.dataset.zoneHex = '#D8FF3C';
+    // Default rect to "Rondo" (possession) look — white/faded
+    g.dataset.zoneLabel = '4v3';
+    g.dataset.zonePurpose = 'possession';
+    g.dataset.zoneFillStyle = 'faded';
+    g.dataset.zoneHex = '#ffffff';
   }
   const isRect = type === 'shadow-rect';
-  shape.setAttribute('fill', isRect ? 'rgba(216,255,60,0.12)' : 'rgba(79,156,249,0.18)');
-  shape.setAttribute('stroke', isRect ? 'rgba(216,255,60,0.85)' : 'rgba(255,255,255,0.5)');
-  shape.setAttribute('stroke-width', isRect ? '2.5' : '1.5');
-  shape.setAttribute('stroke-dasharray', isRect ? '8,5' : '4,3');
+  shape.setAttribute('fill', isRect ? 'rgba(255,255,255,0.08)' : 'rgba(79,156,249,0.18)');
+  shape.setAttribute('stroke', isRect ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.5)');
+  shape.setAttribute('stroke-width', isRect ? '1.5' : '1.5');
+  shape.setAttribute('stroke-dasharray', isRect ? '4,3' : '4,3');
 
   // Label text (hidden until user types something)
   const label = document.createElementNS(ns, 'text');

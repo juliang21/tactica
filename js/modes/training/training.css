@@ -1,0 +1,601 @@
+/* ─── Training Mode Styles ──────────────────────────────────────────────── */
+
+/* Beta badge next to the "Training" mode tab */
+.mode-tab-beta {
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(52, 211, 153, 0.12);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  padding: 2px 5px;
+  border-radius: 4px;
+  line-height: 1;
+  margin-left: 2px;
+}
+/* Namespaced under #training-shell or .training-mode / .training-drill-mode  */
+
+/* ═══ TRAINING SHELL (landing page) ═══════════════════════════════════════ */
+#training-shell {
+  display: none;
+  flex-direction: column;
+  position: fixed;
+  inset: 56px 0 0 0;
+  z-index: 50;
+  background: var(--bg);
+  color: var(--text);
+  overflow-y: auto;
+  padding: 32px;
+}
+
+.training-container {
+  width: 100%;
+  max-width: 960px;
+  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 40px;
+}
+
+/* ── Hero ───────────────────────────────────────────────────────────────── */
+.training-hero { display: flex; flex-direction: column; gap: 10px; }
+.training-hero-eyebrow {
+  font-size: 11px; font-weight: 600; letter-spacing: 1.5px;
+  text-transform: uppercase; color: var(--accent);
+}
+.training-hero-title {
+  font-size: 32px; font-weight: 700; letter-spacing: -0.02em;
+  color: var(--text); margin: 0;
+}
+.training-hero-sub {
+  font-size: 15px; color: var(--text-muted); margin: 0;
+  max-width: 520px; line-height: 1.5;
+}
+
+/* ── Action cards ──────────────────────────────────────────────────────── */
+.training-actions {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+}
+.training-action-card {
+  background: var(--panel); border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 14px; padding: 28px;
+  display: flex; flex-direction: column; gap: 14px;
+  cursor: pointer; transition: all 0.15s;
+  text-align: left; font-family: inherit; color: inherit;
+}
+.training-action-card:hover {
+  border-color: var(--accent); background: var(--panel2); transform: translateY(-1px);
+}
+.training-action-icon {
+  width: 44px; height: 44px; border-radius: 10px;
+  background: var(--accent-subtle); color: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+}
+.training-action-title { font-size: 17px; font-weight: 700; color: var(--text); margin: 0; }
+.training-action-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0; }
+
+/* ── Library section ───────────────────────────────────────────────────── */
+.training-library { display: flex; flex-direction: column; gap: 22px; }
+.training-library-section { display: flex; flex-direction: column; gap: 12px; }
+.training-library-header { display: flex; align-items: baseline; justify-content: space-between; }
+.training-library-title {
+  font-size: 13px; font-weight: 600; letter-spacing: 0.8px;
+  text-transform: uppercase; color: var(--text-muted); margin: 0;
+}
+.training-empty {
+  background: var(--panel); border: 1px dashed rgba(255,255,255,0.08);
+  border-radius: 12px; padding: 28px;
+  text-align: left; color: var(--text-dim); font-size: 13px; line-height: 1.5;
+}
+
+/* ── Hide UI bits not relevant in training mode (landing only) ────────── */
+body.training-mode #side-panel { display: none !important; }
+body.training-mode #mobile-panel-toggle { display: none !important; }
+body.training-mode #toolbar { display: none !important; }
+body.training-mode #toolbar-toggle { display: none !important; }
+body.training-mode #current-analysis-bar { visibility: hidden; }
+body.training-mode #pitch-wrap { padding: 0; }
+body.training-mode #topbar-share-btn,
+body.training-mode #topbar-export-btn { display: none !important; }
+body.training-mode #topbar-drill-save-btn { display: none !important; }
+
+
+/* ═══ DRILL EDITOR ═════════════════════════════════════════════════════════ */
+/* When in drill editor: the landing view is hidden; the editor takes over the
+   training-shell. Side panel + topbar Save become visible and behave like the
+   tactical board. */
+
+/* In drill mode, leave room for the existing #toolbar on the left AND
+   the existing #side-panel on the right. The training-shell sits inside
+   the central pitch area only — exactly mirroring the Tactical Board layout. */
+body.training-drill-mode #training-shell {
+  padding: 0;
+  inset: 56px var(--panel-w, 320px) 0 var(--toolbar-w, 110px);
+}
+@media (max-width: 720px) {
+  body.training-drill-mode #training-shell { inset: 56px 0 0 0; }
+}
+
+/* Reuse the existing toolbar + side panel in drill mode */
+body.training-drill-mode #toolbar { display: flex !important; }
+body.training-drill-mode #toolbar-toggle { display: flex !important; }
+body.training-drill-mode #side-panel { display: flex !important; }
+/* Hide our custom drill-left-panel — we now use #toolbar instead */
+body.training-drill-mode .drill-left-panel { display: none !important; }
+/* Keep the topbar's analysis-name slot hidden in drill mode; we use a dedicated
+   drill-name input at the top of the Drill tab instead (no topbar overlap). */
+body.training-drill-mode #current-analysis-bar { display: none !important; }
+body.training-drill-mode #topbar-share-btn { display: none !important; }
+body.training-drill-mode #topbar-export-btn { display: none !important; }
+body.training-drill-mode #topbar-drill-save-btn,
+body.training-drill-mode #topbar-drill-back-btn { display: inline-flex !important; }
+/* Hide the right-panel Edit Team tab in drill mode (drills don't have team rosters) */
+body.training-drill-mode #tab-players { display: none !important; }
+
+/* In drill mode the pitch is relocated into `.drill-canvas-slot`; the
+   existing `fitPitchToViewport()` function sizes the SVG correctly based
+   on the slot dimensions, exactly like it does on the Tactical Board. */
+body.training-drill-mode #pitch-container {
+  display: block !important;
+  position: relative !important;
+  margin: 0 auto;
+}
+
+.training-drill-editor {
+  display: flex;
+  width: 100%;
+  height: 100%;
+}
+.drill-canvas-slot { flex: 1; min-width: 0; }
+.drill-left-panel { width: 240px; flex-shrink: 0; }
+
+/* ── Left panel ─────────────────────────────────────────────────────────── */
+.drill-left-panel {
+  display: flex;
+  flex-direction: column;
+  background: var(--panel);
+  border-right: 1px solid rgba(255,255,255,0.06);
+  overflow: hidden;
+}
+
+/* Left-panel tabs were removed when Drill metadata moved to the right panel. */
+
+.drill-left-pane {
+  flex: 1;
+  overflow-y: auto;
+  padding: 18px 18px 28px;
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+}
+
+/* ── Back link ─────────────────────────────────────────────────────────── */
+.drill-back-link {
+  display: inline-flex; align-items: center; gap: 6px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 500;
+  cursor: pointer;
+  padding: 0;
+  align-self: flex-start;
+  transition: color 0.15s;
+}
+.drill-back-link:hover { color: var(--accent); }
+
+/* ── Meta sections (Drill tab) ─────────────────────────────────────────── */
+.drill-meta-section {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+.drill-meta-label {
+  font-size: 11px; font-weight: 600; letter-spacing: 1px;
+  text-transform: uppercase; color: var(--text-dim);
+}
+.drill-meta-input,
+.drill-meta-textarea {
+  width: 100%;
+  background: var(--bg);
+  border: 1.5px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  padding: 8px 10px;
+  border-radius: 8px;
+  font-family: inherit; font-size: 13px;
+  outline: none; transition: border-color 0.15s;
+}
+.drill-meta-input:focus, .drill-meta-textarea:focus { border-color: var(--accent); }
+/* Error state — used when a required field is missing on save */
+.drill-meta-input.input-error,
+.drill-meta-textarea.input-error {
+  border-color: #ef4444;
+  background: rgba(239, 68, 68, 0.06);
+}
+.drill-meta-input.input-error::placeholder { color: rgba(239, 68, 68, 0.7); }
+.drill-meta-input.input-error:focus,
+.drill-meta-textarea.input-error:focus { border-color: #ef4444; }
+/* Highlight the section label too so it's obvious which field is required */
+.drill-meta-section:has(.input-error) .drill-meta-label { color: #ef4444; }
+.drill-meta-textarea { resize: vertical; min-height: 80px; line-height: 1.5; }
+
+.drill-tag-group {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 0;
+  border-top: 1px solid rgba(255,255,255,0.05);
+}
+.drill-tag-group:first-of-type { border-top: none; padding-top: 0; }
+.drill-tag-group-label {
+  font-size: 11px; font-weight: 600;
+  color: var(--text-muted); text-transform: capitalize;
+}
+.drill-tag-chips { display: flex; flex-wrap: wrap; gap: 5px; }
+.drill-tag-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  background: var(--accent-subtle); color: var(--accent);
+  border: 1px solid rgba(52,211,153,0.25);
+  padding: 3px 4px 3px 9px;
+  border-radius: 12px; font-size: 11px; font-weight: 600;
+}
+.drill-tag-remove {
+  background: transparent; border: none;
+  color: var(--accent); cursor: pointer;
+  font-size: 14px; line-height: 1;
+  padding: 0 4px; opacity: 0.7;
+}
+.drill-tag-remove:hover { opacity: 1; }
+.drill-tag-input {
+  background: var(--bg);
+  border: 1px solid rgba(255,255,255,0.08);
+  color: var(--text);
+  padding: 6px 10px; border-radius: 8px;
+  font-family: inherit; font-size: 12px;
+  outline: none; transition: border-color 0.15s;
+}
+.drill-tag-input:focus { border-color: var(--accent); }
+.drill-tag-input::placeholder { color: var(--text-dim); }
+
+/* ── Insert tab ─────────────────────────────────────────────────────────────
+   Mirrors the existing Analysis .tool-group / .tool-btn pattern so the two
+   panels feel like the same product. */
+.drill-insert-group {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  gap: 4px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.drill-insert-group:last-of-type { border-bottom: none; padding-bottom: 0; }
+.drill-insert-title {
+  grid-column: 1 / -1;
+  font-size: 9px; font-weight: 700; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--text-dim);
+  margin: 0 0 2px;
+}
+.drill-insert-btn {
+  width: 100%; height: 48px;
+  border-radius: var(--radius-sm, 6px);
+  border: 1px solid transparent;
+  background: transparent;
+  cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 3px;
+  color: var(--text-muted);
+  font-family: inherit; font-size: 9px; font-weight: 600;
+  letter-spacing: 0.02em; line-height: 1;
+  transition: all 0.15s;
+  position: relative;
+}
+.drill-insert-btn:hover {
+  background: var(--surface-hover, rgba(255,255,255,0.04));
+  color: var(--text);
+}
+.drill-insert-btn-danger { color: #F87171; }
+.drill-insert-btn-danger .drill-insert-icon { color: #F87171; }
+.drill-insert-btn-danger:hover { background: rgba(248,113,113,0.1); color: #F87171; }
+.drill-insert-icon {
+  display: flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px;
+  flex-shrink: 0;
+  color: #ffffff;
+}
+
+/* "Clear pitch" full-width action button at the bottom */
+.drill-insert-action-btn {
+  display: flex; align-items: center; gap: 8px;
+  padding: 9px 12px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 8px;
+  color: var(--text-muted);
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  width: 100%;
+  justify-content: center;
+}
+.drill-insert-action-btn:hover { color: var(--text); border-color: var(--accent); }
+.drill-insert-action-danger { color: #ef4444; border-color: rgba(239,68,68,0.2); }
+.drill-insert-action-danger:hover { color: #f87171; border-color: #ef4444; }
+
+/* ── Canvas slot ───────────────────────────────────────────────────────── */
+.drill-canvas-slot {
+  position: relative;
+  background: var(--bg);
+  padding: 24px;
+  display: flex;
+  flex-direction: column;   /* pitch on top, motion controls below */
+  align-items: center;
+  justify-content: flex-start;
+  gap: 12px;
+  overflow: auto; /* scroll if content overflows */
+}
+
+/* ── Topbar Save button (drill mode) ───────────────────────────────────── */
+.topbar-drill-save-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 13px;
+  background: var(--accent);
+  color: #0a0a0a;
+  border: none; border-radius: 8px;
+  font-family: inherit; font-size: 12px; font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s;
+}
+.topbar-drill-save-btn:hover { background: var(--accent-hover); }
+
+.topbar-drill-back-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 13px;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.topbar-drill-back-btn:hover { color: var(--text); border-color: rgba(255,255,255,0.25); }
+
+/* ── Library cards ─────────────────────────────────────────────────────── */
+.drill-card-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: 12px;
+}
+.drill-card {
+  position: relative;
+  background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 10px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.drill-card:hover { border-color: var(--accent); background: var(--panel2); }
+.drill-card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; padding-right: 22px; }
+.drill-card-meta { font-size: 11px; color: var(--text-muted); }
+.drill-card-delete {
+  position: absolute; top: 8px; right: 8px;
+  width: 20px; height: 20px;
+  background: transparent;
+  border: none;
+  color: var(--text-dim);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.15s;
+}
+.drill-card-delete:hover { color: #ef4444; background: rgba(239,68,68,0.08); }
+
+/* ═══ SESSION EDITOR ═══════════════════════════════════════════════════════ */
+/* Visible when in the session editor view. Hides the side panel (sessions
+   don't use the pitch) and gives the editor full width. */
+body.training-session-mode #training-shell {
+  padding: 0;
+  inset: 56px 0 0 0;
+}
+body.training-session-mode #side-panel { display: none !important; }
+body.training-session-mode #mobile-panel-toggle { display: none !important; }
+body.training-session-mode #toolbar { display: none !important; }
+body.training-session-mode #toolbar-toggle { display: none !important; }
+body.training-session-mode #current-analysis-bar { display: none !important; }
+body.training-session-mode #topbar-share-btn { display: none !important; }
+body.training-session-mode #topbar-export-btn { display: none !important; }
+body.training-session-mode #topbar-drill-save-btn { display: none !important; }
+body.training-session-mode #topbar-session-save-btn { display: inline-flex !important; }
+
+.training-session-editor {
+  display: grid;
+  grid-template-columns: 280px 1fr;
+  width: 100%;
+  height: 100%;
+}
+
+.session-canvas {
+  background: var(--bg);
+  padding: 32px 40px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.session-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.session-headline {
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: var(--text);
+  margin: 0;
+}
+
+.session-add-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  border-radius: 8px;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  border: 1px solid rgba(52, 211, 153, 0.3);
+  font-family: inherit;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.session-add-btn:hover {
+  background: rgba(52, 211, 153, 0.18);
+  border-color: var(--accent);
+}
+
+.session-drill-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-width: 760px;
+}
+
+.session-drill-card {
+  display: grid;
+  grid-template-columns: 38px 1fr auto;
+  align-items: center;
+  gap: 14px;
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+}
+
+.session-drill-num {
+  display: flex; align-items: center; justify-content: center;
+  width: 30px; height: 30px;
+  border-radius: 50%;
+  background: var(--accent-subtle);
+  color: var(--accent);
+  font-weight: 700;
+  font-size: 13px;
+}
+
+.session-drill-body { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.session-drill-title { font-size: 14px; font-weight: 700; color: var(--text); }
+.session-drill-missing { color: var(--text-dim); font-style: italic; }
+.session-drill-meta { font-size: 12px; color: var(--text-muted); }
+
+.session-drill-actions { display: flex; gap: 4px; }
+.session-drill-iconbtn {
+  width: 28px; height: 28px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 6px;
+  color: var(--text-muted);
+  font-family: inherit; font-size: 13px;
+  cursor: pointer;
+  transition: all 0.15s;
+}
+.session-drill-iconbtn:hover:not(:disabled) {
+  color: var(--text);
+  border-color: var(--accent);
+}
+.session-drill-iconbtn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+.session-empty {
+  background: var(--panel);
+  border: 1px dashed rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 28px;
+  color: var(--text-dim);
+  font-size: 13px;
+  line-height: 1.5;
+  max-width: 760px;
+}
+.session-empty p { margin: 0; }
+
+/* ── Drill picker modal ──────────────────────────────────────────────────── */
+.drill-picker-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  z-index: 200;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+.drill-picker-card {
+  background: var(--panel);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px;
+  width: 100%;
+  max-width: 520px;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+.drill-picker-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 16px 20px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+.drill-picker-header h3 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+.drill-picker-close {
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 22px;
+  line-height: 1;
+  cursor: pointer;
+  padding: 4px 8px;
+}
+.drill-picker-close:hover { color: var(--text); }
+.drill-picker-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 16px;
+  overflow-y: auto;
+}
+.drill-picker-item {
+  text-align: left;
+  background: var(--bg);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  padding: 12px 14px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.15s;
+}
+.drill-picker-item:hover {
+  border-color: var(--accent);
+  background: rgba(52, 211, 153, 0.05);
+}
+.drill-picker-item-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.drill-picker-item-meta { font-size: 11px; color: var(--text-muted); }
+.drill-picker-empty { padding: 18px; color: var(--text-muted); font-size: 13px; text-align: center; }
+
+/* ── Responsive ────────────────────────────────────────────────────────── */
+@media (max-width: 900px) {
+  .training-drill-editor { grid-template-columns: 220px 1fr; }
+}
+@media (max-width: 720px) {
+  #training-shell { padding: 28px 18px 60px; }
+  .training-hero-title { font-size: 26px; }
+  .training-actions { grid-template-columns: 1fr; }
+  .training-drill-editor { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
+  .drill-left-panel { max-height: 38vh; }
+}

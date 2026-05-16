@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addArrow, addShadow, addMarker, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel} from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel} from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -35,10 +35,12 @@ import { updateAuthUI, openAuthModal, closeAuthModal } from './features/auth-ui.
 import { registerMode, activateMode, getActiveModeId, switchTabForMode } from './core/mode-registry.js';
 import { pitchMode } from './modes/pitch/config.js';
 import { imageMode } from './modes/image/config.js';
+import { trainingMode } from './modes/training/config.js';
 
 // ─── Register Modes & activate default ─────────────────────────────────────
 registerMode('pitch', pitchMode);
 registerMode('image', imageMode);
+registerMode('training', trainingMode);
 activateMode('pitch');  // set initial toolbar + side panel state
 
 // ─── Wire up cross-module callbacks ─────────────────────────────────────────
@@ -948,7 +950,7 @@ const _zonePurposes = {
   press:  { color: '#D8FF3C', label: 'Pressing zone', fillStyle: 'soft', border: 'dashed' },
   possession: { color: '#ffffff', label: '4v3', fillStyle: 'faded', border: 'dashed', textColor: '#ffffff', labelSize: 23, labelPos: 'bottom-left' },
   space:  { color: '#4ade80', label: 'Space',          fillStyle: 'soft', border: 'dashed' },
-  danger: { color: '#f87171', label: 'Danger zone',    fillStyle: 'strong', border: 'solid', textColor: '#f87171', borderColor: '#f87171' },
+  square: { color: '#1a1a1a', label: '2v2', fillStyle: 'drawn', border: 'solid', textColor: '#1a1a1a', borderColor: '#1a1a1a', wobble: true },
 };
 
 const _fillStyles = {
@@ -956,6 +958,7 @@ const _fillStyles = {
   soft:    { fillAlpha: 0.15, strokeAlpha: 0.55, strokeWidth: 2 },
   strong:  { fillAlpha: 0.30, strokeAlpha: 0.80, strokeWidth: 2.5 },
   outline: { fillAlpha: 0,    strokeAlpha: 0.65, strokeWidth: 2 },
+  drawn:   { fillAlpha: 0,    strokeAlpha: 1.0, strokeWidth: 3.5 },  // hand-drawn training square
 };
 
 function _hexToRgba(hex, alpha) {
@@ -984,6 +987,34 @@ function _applyZoneColorAndStyle(el, hex, styleName) {
   _syncZonePanelState(el);
 }
 
+// ── Disc cone color picker ──────────────────────────────────────────────────
+window.applyDiscConeColor = function(swatchEl) {
+  const color = swatchEl?.dataset?.discColor;
+  if (!color || !S.selectedEl || S.selectedEl.dataset.type !== 'disc-cone') return;
+  const COLORS = {
+    yellow: { fill: '#FFD43B', stroke: '#C8A21E' },
+    red:    { fill: '#E63946', stroke: '#A8222E' },
+    blue:   { fill: '#3D6FE5', stroke: '#2A4FA3' },
+    orange: { fill: '#F58A1E', stroke: '#B85F11' },
+  };
+  const c = COLORS[color] || COLORS.yellow;
+  const targets = S.selectedEls.size > 0 ? [...S.selectedEls] : [S.selectedEl];
+  for (const el of targets) {
+    if (el.dataset.type !== 'disc-cone') continue;
+    el.dataset.discColor = color;
+    const ellipses = el.querySelectorAll('ellipse');
+    // Order in addDiscCone: [shadow, disc body, cap]; index 1 is the colored body.
+    if (ellipses[1]) {
+      ellipses[1].setAttribute('fill', c.fill);
+      ellipses[1].setAttribute('stroke', c.stroke);
+    }
+  }
+  // Mark active swatch (only swatches inside the edit panel, not the SVG elements)
+  document.querySelectorAll('#disc-cone-edit-section [data-disc-color]').forEach(b =>
+    b.classList.toggle('active', b.dataset.discColor === color)
+  );
+};
+
 window.applyZonePurpose = function(purpose) {
   const el = S.selectedEl;
   if (!el || !el.dataset.type?.startsWith('shadow') && el.dataset.type !== 'freeform') return;
@@ -994,6 +1025,17 @@ window.applyZonePurpose = function(purpose) {
   el.dataset.zoneLabel = p.label;
   _applyZoneColorAndStyle(el, p.color, p.fillStyle);
   applyZoneBorderStyle(p.border);
+  // Hand-drawn wobble (only certain purposes opt in)
+  const shape = el.querySelector('rect,ellipse,.freeform-shape,.pair-ellipse');
+  if (shape) {
+    if (p.wobble) {
+      shape.setAttribute('filter', 'url(#zone-wobble)');
+      el.dataset.zoneWobble = '1';
+    } else {
+      shape.removeAttribute('filter');
+      delete el.dataset.zoneWobble;
+    }
+  }
   // Apply preset text color (if specified, otherwise auto)
   if (p.textColor) {
     el.dataset.zoneTextColor = p.textColor;
@@ -1669,6 +1711,27 @@ function hideImageUploadPane() {
 }
 
 function switchMode(mode) {
+  // Leaving training: if there's unsaved drill work, confirm before discarding.
+  if (getActiveModeId() === 'training' && mode !== 'training') {
+    if (window.hasUnsavedDrillWork?.()) {
+      showModeSwitchModal('You have unsaved drill work. Switching modes will discard it. Continue?', () => {
+        _continueModeSwitch(mode);
+      });
+      return;
+    }
+  }
+  _continueModeSwitch(mode);
+}
+
+function _continueModeSwitch(mode) {
+  if (mode === 'training') {
+    // If currently in image mode, exit it first (clean up image-specific state)
+    if (S.appMode === 'image') {
+      exitImageMode();
+    }
+    activateMode('training');
+    return;
+  }
   if (mode === 'image') {
     if (S.appMode === 'image') return;
     // If there's work on the tactical board, confirm before switching
@@ -1938,11 +2001,15 @@ S.svg.addEventListener('click', e => {
   const pt = S.getSVGPoint(e);
   let placed = null;
   if (S.tool !== 'select' && S.tool !== 'arrow') S.pushUndo();
-  if (S.tool === 'player-a') placed = addPlayer(pt.x, pt.y, 'a');
-  else if (S.tool === 'player-b') placed = addPlayer(pt.x, pt.y, 'b');
-  else if (S.tool === 'player-joker') placed = addPlayer(pt.x, pt.y, 'joker');
+  // Training drill mode: spawn players without numbers (drills don't use jersey #s)
+  const _noNum = document.body.classList.contains('training-drill-mode') ? '' : undefined;
+  if (S.tool === 'player-a') placed = addPlayer(pt.x, pt.y, 'a', _noNum);
+  else if (S.tool === 'player-b') placed = addPlayer(pt.x, pt.y, 'b', _noNum);
+  else if (S.tool === 'player-joker') placed = addPlayer(pt.x, pt.y, 'joker', _noNum);
   else if (S.tool === 'ball') placed = addBall(pt.x, pt.y);
   else if (S.tool === 'cone') placed = addCone(pt.x, pt.y);
+  else if (S.tool === 'disc-cone') placed = addDiscCone(pt.x, pt.y);
+  else if (S.tool === 'small-goal') placed = addSmallGoal(pt.x, pt.y);
   else if (S.tool === 'referee') placed = addReferee(pt.x, pt.y);
   else if (S.tool === 'shadow-circle') placed = addShadow(pt.x, pt.y, 'shadow-circle');
   else if (S.tool === 'shadow-rect') placed = addShadow(pt.x, pt.y, 'shadow-rect');
@@ -2292,6 +2359,24 @@ window._getFramesForSave = () => frames.map(f => ({
   elementIds: Array.from(f.elementIds),
 }));
 window._getCurrentFrame = () => currentFrame;
+
+// Restore frames when loading a saved drill / analysis.
+window._setFramesFromLoad = (savedFrames, savedCurrent) => {
+  frames = (savedFrames || []).map(f => ({
+    positions: f.positions || {},
+    elementIds: new Set(Array.isArray(f.elementIds) ? f.elementIds : []),
+  }));
+  currentFrame = typeof savedCurrent === 'number'
+    ? Math.max(0, Math.min(savedCurrent, frames.length - 1))
+    : 0;
+  if (frames.length > 0) {
+    renderStepBar();
+    applyFrame(currentFrame);
+  } else {
+    const container = document.getElementById('motion-controls');
+    if (container) container.style.display = 'none';
+  }
+};
 
 // Gather all annotatable elements (players + objects)
 function getAllElements() {
@@ -4388,6 +4473,9 @@ async function loadAnalysisFromCard(id) {
 }
 window.loadAnalysisFromCard = loadAnalysisFromCard;
 
+// Exposed so non-storage callers (e.g. the Training drill editor) can re-wire
+// interactivity after restoring boardState via innerHTML.
+window.rewireRestoredElements = function() { reattachListeners(); };
 function reattachListeners() {
   // Re-attach drag + click listeners to all restored elements
   [S.objectsLayer, S.playersLayer].forEach(layer => {

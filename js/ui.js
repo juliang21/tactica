@@ -25,8 +25,11 @@ export function setTool(t) {
     if (arrowBtn) arrowBtn.classList.add('active');
   }
   const toolClass = 'tool-' + (t.startsWith('player') ? 'player' : t.startsWith('shadow') ? 'shadow' : t === 'textbox' ? 'textbox' : t === 'vision' ? 'vision' : t);
-  const keepImageMode = document.body.classList.contains('image-mode');
-  document.body.className = toolClass + (keepImageMode ? ' image-mode' : '');
+  // Preserve mode-specific classes (image-mode, training-mode, training-drill-mode)
+  // so setTool() doesn't wipe the active mode's CSS state.
+  const preserved = ['image-mode', 'training-mode', 'training-drill-mode', 'training-session-mode']
+    .filter(c => document.body.classList.contains(c));
+  document.body.className = [toolClass, ...preserved].join(' ');
   if (!t.startsWith('player')) deselect();
 }
 
@@ -1268,7 +1271,7 @@ export function applySize(val) {
     trackElementEdited(el.dataset.type, 'scale');
     el.dataset.scale = val/100;
     const t = el.dataset.type;
-    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'vision' || t === 'marker' || t.startsWith('shadow')) applyTransform(el);
+    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'vision' || t === 'marker' || t.startsWith('shadow')) applyTransform(el);
     else if (t === 'arrow') updateArrowVisual(el);
     // Keep resize handles in sync with the slider
     if (S.selectedEl === el) updateHandlePositions(el);
@@ -1290,7 +1293,7 @@ export function applyRotation(val) {
   trackElementEdited(S.selectedEl.dataset.type, 'rotation');
   S.selectedEl.dataset.rotation = val;
   const t = S.selectedEl.dataset.type;
-  if (t.startsWith('shadow') || t === 'vision' || t === 'freeform' || t === 'pair') applyTransform(S.selectedEl);
+  if (t.startsWith('shadow') || t === 'vision' || t === 'freeform' || t === 'pair' || t === 'small-goal') applyTransform(S.selectedEl);
   else if (t === 'arrow') updateArrowVisual(S.selectedEl);
   else if (t === 'player' && S.selectedEl.dataset.arms === '1') updatePlayerArms(S.selectedEl);
 }

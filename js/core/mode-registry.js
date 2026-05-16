@@ -52,7 +52,7 @@ function applySidePanelForMode(modeConfig) {
   const tabs = modeConfig.sidePanel?.tabs;
   if (!tabs) return;
 
-  const allTabIds = ['players', 'pitch', 'element'];
+  const allTabIds = ['players', 'pitch', 'element', 'drill'];
   const modeTabIds = new Set(tabs.map(t => t.id));
 
   // Show/hide tab buttons and update labels
@@ -95,7 +95,7 @@ export function switchTabForMode(name, modeConfigOverride) {
   // e.g. when in image mode, pane-pitch must be hidden even though the tab
   // says "pitch".
   const activePaneIds = new Set(tabs.map(t => t.paneId));
-  const allPaneIds = ['pane-players', 'pane-pitch', 'pane-element', 'image-mode-info'];
+  const allPaneIds = ['pane-players', 'pane-pitch', 'pane-element', 'pane-drill', 'image-mode-info'];
   allPaneIds.forEach(id => {
     if (!activePaneIds.has(id)) {
       const el = document.getElementById(id);

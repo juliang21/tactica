@@ -44,6 +44,7 @@
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@800;900&family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="js/modes/training/training.css?v=1">
 <!-- Hotjar Tracking Code for Táctica -->
 <script>
     (function(h,o,t,j,a,r){
@@ -145,6 +146,18 @@
 <!-- ── Top-right: Sign-in link (when logged out) + Share + Export CTA ── -->
 <div class="topbar-right" id="topbar-right">
   <a id="topbar-signin-link" class="topbar-signin-link" onclick="openAuthModal()">Sign in</a>
+  <button class="topbar-drill-back-btn" id="topbar-drill-back-btn" onclick="exitDrillEditor()" style="display:none" title="Back to library">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M10 4l-4 4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    <span>Back</span>
+  </button>
+  <button class="topbar-drill-save-btn" id="topbar-drill-save-btn" onclick="saveDrill()" style="display:none" title="Save drill">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h8l4 4v8H2V2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 2v4h5V2" stroke="currentColor" stroke-width="1.2"/><rect x="4" y="9" width="8" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/></svg>
+    <span>Save Drill</span>
+  </button>
+  <button class="topbar-drill-save-btn" id="topbar-session-save-btn" onclick="saveSession()" style="display:none" title="Save session">
+    <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><path d="M2 2h8l4 4v8H2V2z" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"/><path d="M5 2v4h5V2" stroke="currentColor" stroke-width="1.2"/><rect x="4" y="9" width="8" height="4" rx="0.5" stroke="currentColor" stroke-width="1.2"/></svg>
+    <span>Save Session</span>
+  </button>
   <button class="topbar-share-btn" id="topbar-share-btn" onclick="shareAnalysis()" title="Share">
     <svg width="14" height="14" viewBox="0 0 16 16" fill="none"><circle cx="12" cy="4" r="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="4" cy="8" r="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><circle cx="12" cy="12" r="2.5" stroke="currentColor" stroke-width="1.3" fill="none"/><line x1="6.2" y1="6.9" x2="9.8" y2="5.1" stroke="currentColor" stroke-width="1.3"/><line x1="6.2" y1="9.1" x2="9.8" y2="10.9" stroke="currentColor" stroke-width="1.3"/></svg>
     <span>Share</span>
@@ -222,6 +235,14 @@
     <button class="tool-btn" data-tool="cone" onclick="setTool('cone')">
       <svg width="18" height="18" viewBox="0 0 20 20"><polygon points="10,4 15,16 5,16" fill="#ff8c00" stroke="#cc6600" stroke-width="1"/><line x1="5" y1="16" x2="15" y2="16" stroke="#cc6600" stroke-width="1.2"/></svg>
       <span class="tool-label">Cone</span>
+    </button>
+    <button class="tool-btn" data-tool="disc-cone" onclick="setTool('disc-cone')">
+      <svg width="18" height="14" viewBox="0 0 20 14"><ellipse cx="10" cy="10" rx="2.5" ry="0.7" fill="rgba(0,0,0,0.3)"/><ellipse cx="10" cy="8" rx="8" ry="3" fill="#FFD43B" stroke="#C8A21E" stroke-width="0.9"/><ellipse cx="10" cy="7" rx="2.5" ry="0.8" fill="rgba(0,0,0,0.4)"/></svg>
+      <span class="tool-label">Disc</span>
+    </button>
+    <button class="tool-btn" data-tool="small-goal" onclick="setTool('small-goal')">
+      <svg width="20" height="14" viewBox="0 0 22 14" fill="none"><rect x="2" y="2" width="18" height="10" stroke="currentColor" stroke-width="1.4" fill="none"/><line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="0.7"/><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="0.7"/><line x1="11" y1="2" x2="11" y2="12" stroke="currentColor" stroke-width="0.7"/><line x1="15" y1="2" x2="15" y2="12" stroke="currentColor" stroke-width="0.7"/></svg>
+      <span class="tool-label">Goal</span>
     </button>
     <button class="tool-btn" data-tool="referee" onclick="setTool('referee')">
       <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#1a1a1a" stroke="#FBBF24" stroke-width="1.5"/><text x="9" y="9.5" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="7" font-weight="700" fill="white">R</text></svg>
@@ -440,6 +461,14 @@
         </svg>
         Image Analysis
       </button>
+      <button class="mode-tab" id="mode-training-btn" onclick="switchMode('training')">
+        <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
+          <path d="M2 4h12M2 8h12M2 12h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
+          <circle cx="13" cy="12" r="1.5" fill="currentColor"/>
+        </svg>
+        Training
+        <span class="mode-tab-beta">Beta</span>
+      </button>
     </div>
   </div>
   <!-- Mode Selector Dropdown (mobile) -->
@@ -451,6 +480,7 @@
     <div id="mode-dropdown-menu" style="display:none">
       <button class="mode-dropdown-option active" data-mode="pitch" onclick="selectModeDropdown('pitch')">Tactical Board</button>
       <button class="mode-dropdown-option" data-mode="image" onclick="selectModeDropdown('image')">Image Analysis</button>
+      <button class="mode-dropdown-option" data-mode="training" onclick="selectModeDropdown('training')">Training</button>
     </div>
   </div>
   <div id="pitch-wrap">
@@ -475,6 +505,214 @@
       </button>
     </div>
   </div>
+  <!-- ══ TRAINING SHELL (shown when in Training mode) ══ -->
+  <div id="training-shell">
+    <!-- ── DRILL EDITOR VIEW ── -->
+    <div class="training-drill-editor" data-training-view="drill-editor" style="display:none">
+      <!-- Left panel: Insert toolbox + back link to library -->
+      <aside class="drill-left-panel">
+        <div class="drill-left-pane drill-left-pane-insert" style="display:flex">
+          <button class="drill-back-link" onclick="exitDrillEditor()">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M10 4l-4 4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Back to library
+          </button>
+          <div class="drill-insert-group">
+            <h4 class="drill-insert-title">Actions</h4>
+            <button class="drill-insert-btn" onclick="window.setTool('select')" title="Select / move">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M4 2l10 7-5.5 1.5L6 14z" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round"/></svg></span>
+              Select
+            </button>
+            <button class="drill-insert-btn" onclick="window.undo?.()" title="Undo last action">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M5 8l-3-3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M2 5h9a5 5 0 0 1 0 10H7" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg></span>
+              Undo
+            </button>
+            <button class="drill-insert-btn drill-insert-btn-danger" onclick="window.clearAll?.()" title="Clear all elements">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M3 4h12M7 4V3h4v1M14 4l-1 11H5L4 4" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/></svg></span>
+              Clear All
+            </button>
+          </div>
+
+          <div class="drill-insert-group">
+            <h4 class="drill-insert-title">Players</h4>
+            <button class="drill-insert-btn" onclick="window.selectTeamContext('a'); window.setTool('player-a')" title="Team A player">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#8B5CF6"/></svg></span>
+              Team A
+            </button>
+            <button class="drill-insert-btn" onclick="window.selectTeamContext('b'); window.setTool('player-b')" title="Team B player">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#FBBF24"/></svg></span>
+              Team B
+            </button>
+            <button class="drill-insert-btn" onclick="window.setTool('player-joker')" title="Joker (neutral)">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#EF4444"/></svg></span>
+              Joker
+            </button>
+          </div>
+
+          <div class="drill-insert-group">
+            <h4 class="drill-insert-title">Equipment</h4>
+            <button class="drill-insert-btn" onclick="window.setTool('cone')" title="Cone">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 20 20"><polygon points="10,4 15,16 5,16" fill="#ff8c00" stroke="#cc6600" stroke-width="1"/><line x1="5" y1="16" x2="15" y2="16" stroke="#cc6600" stroke-width="1.2"/></svg></span>
+              Cone
+            </button>
+            <button class="drill-insert-btn" onclick="window.setTool('disc-cone')" title="Disc cone (flat training marker)">
+              <span class="drill-insert-icon"><svg width="20" height="14" viewBox="0 0 20 14"><ellipse cx="10" cy="10" rx="2.5" ry="0.7" fill="rgba(0,0,0,0.3)"/><ellipse cx="10" cy="8" rx="8" ry="3" fill="#FFD43B" stroke="#C8A21E" stroke-width="0.9"/><ellipse cx="10" cy="7" rx="2.5" ry="0.8" fill="rgba(0,0,0,0.4)"/></svg></span>
+              Disc
+            </button>
+            <button class="drill-insert-btn" onclick="window.setTool('small-goal')" title="Small goal">
+              <span class="drill-insert-icon"><svg width="22" height="14" viewBox="0 0 22 14" fill="none"><rect x="2" y="2" width="18" height="10" stroke="currentColor" stroke-width="1.4" fill="none"/><line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="0.7"/><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="0.7"/><line x1="11" y1="2" x2="11" y2="12" stroke="currentColor" stroke-width="0.7"/><line x1="15" y1="2" x2="15" y2="12" stroke="currentColor" stroke-width="0.7"/></svg></span>
+              Goal
+            </button>
+            <button class="drill-insert-btn" onclick="window.setTool('ball')" title="Ball">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 20 20"><circle cx="10" cy="10" r="7" fill="white" stroke="#444" stroke-width="1.3"/><polygon points="10,4.5 11.8,8.1 15.8,8.4 12.9,11.1 13.8,15 10,12.8 6.2,15 7.1,11.1 4.2,8.4 8.2,8.1" fill="none" stroke="#333" stroke-width="0.8" stroke-linejoin="round"/></svg></span>
+              Ball
+            </button>
+          </div>
+
+          <div class="drill-insert-group">
+            <h4 class="drill-insert-title">Movement & Zones</h4>
+            <button class="drill-insert-btn" onclick="window.setTool('arrow')" title="Arrow">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><line x1="3" y1="9" x2="13" y2="9" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-dasharray="4,2.5"/><polygon points="13,9 9,6.5 9,11.5" fill="currentColor"/></svg></span>
+              Arrow
+            </button>
+            <button class="drill-insert-btn" onclick="window.setTool('shadow-rect')" title="Zone">
+              <span class="drill-insert-icon"><svg width="18" height="18" viewBox="0 0 22 22"><rect x="3" y="5" width="16" height="12" rx="2" fill="rgba(216,255,60,0.2)" stroke="rgba(216,255,60,0.6)" stroke-width="1.2" stroke-dasharray="3,2"/></svg></span>
+              Zone
+            </button>
+          </div>
+
+          <div class="drill-insert-group">
+            <h4 class="drill-insert-title">Animation</h4>
+            <button class="drill-insert-btn" onclick="window.addStep?.()" title="Add a step to animate movement">
+              <span class="drill-insert-icon"><svg width="20" height="18" viewBox="0 0 20 18" fill="none"><circle cx="5" cy="9" r="3" fill="#8B5CF6"/><circle cx="15" cy="9" r="3" fill="#8B5CF6" opacity="0.55"/><path d="M8 9h4" stroke="#34D399" stroke-width="1.6" stroke-linecap="round" stroke-dasharray="2,1.5"/></svg></span>
+              Add step
+            </button>
+          </div>
+
+        </div>
+      </aside>
+
+      <!-- Pitch slot -->
+      <main class="drill-canvas-slot"></main>
+    </div>
+
+    <!-- ── SESSION EDITOR VIEW ── -->
+    <div class="training-session-editor" data-training-view="session-editor" style="display:none">
+      <aside class="drill-left-panel">
+        <div class="drill-left-pane" style="display:flex">
+          <button class="drill-back-link" onclick="exitSessionEditor()">
+            <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M10 4l-4 4 4 4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            Back to library
+          </button>
+
+          <div class="drill-meta-section">
+            <label class="drill-meta-label">Session name</label>
+            <input type="text" id="session-name-input" class="drill-meta-input" placeholder="Untitled session" maxlength="80">
+          </div>
+
+          <div class="drill-meta-section">
+            <label class="drill-meta-label">Number of players</label>
+            <input type="number" id="session-num-players" class="drill-meta-input" min="1" max="40" value="14">
+          </div>
+
+          <div class="drill-meta-section">
+            <label class="drill-meta-label">Objectives</label>
+            <div class="drill-tag-group">
+              <span class="drill-tag-group-label">General</span>
+              <div class="drill-tag-chips" data-session-tag-group="general"></div>
+              <input type="text" class="drill-tag-input" data-session-tag-input="general" placeholder="Type and press Enter…">
+            </div>
+            <div class="drill-tag-group">
+              <span class="drill-tag-group-label">Offensive</span>
+              <div class="drill-tag-chips" data-session-tag-group="offensive"></div>
+              <input type="text" class="drill-tag-input" data-session-tag-input="offensive" placeholder="Type and press Enter…">
+            </div>
+            <div class="drill-tag-group">
+              <span class="drill-tag-group-label">Defensive</span>
+              <div class="drill-tag-chips" data-session-tag-group="defensive"></div>
+              <input type="text" class="drill-tag-input" data-session-tag-input="defensive" placeholder="Type and press Enter…">
+            </div>
+          </div>
+        </div>
+      </aside>
+
+      <main class="session-canvas">
+        <div class="session-header">
+          <h2 class="session-headline">Session drills</h2>
+          <button class="session-add-btn" onclick="openDrillPicker()">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+            Add drill
+          </button>
+        </div>
+        <div id="session-drill-list" class="session-drill-list">
+          <!-- Drills appear here -->
+        </div>
+        <div id="session-empty" class="session-empty">
+          <p>No drills yet. Click <strong>Add drill</strong> above to compose your session.</p>
+        </div>
+      </main>
+    </div>
+
+    <!-- Drill picker modal (for adding drills to a session) -->
+    <div id="drill-picker-modal" class="drill-picker-overlay" style="display:none">
+      <div class="drill-picker-card">
+        <header class="drill-picker-header">
+          <h3>Add a drill to this session</h3>
+          <button class="drill-picker-close" onclick="closeDrillPicker()" aria-label="Close">&times;</button>
+        </header>
+        <div id="drill-picker-list" class="drill-picker-list"></div>
+      </div>
+    </div>
+
+    <!-- ── LANDING VIEW ── -->
+    <div class="training-container" data-training-view="landing">
+      <div class="training-hero">
+        <span class="training-hero-eyebrow">Training Builder</span>
+        <h1 class="training-hero-title">Plan your sessions, design your drills.</h1>
+        <p class="training-hero-sub">Build a full training session composed of drills, or save individual drills to your library.</p>
+      </div>
+
+      <div class="training-actions">
+        <button class="training-action-card" onclick="startNewDrill()">
+          <span class="training-action-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <circle cx="12" cy="12" r="9"/>
+              <path d="M12 8v8M8 12h8"/>
+            </svg>
+          </span>
+          <h3 class="training-action-title">New Drill</h3>
+          <p class="training-action-desc">Design a single drill with players, equipment, arrows, and zones. Add objectives, variants, and animation.</p>
+        </button>
+
+        <button class="training-action-card" onclick="startNewSession()">
+          <span class="training-action-icon">
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <rect x="3" y="4" width="18" height="16" rx="2"/>
+              <path d="M7 9h10M7 13h10M7 17h6"/>
+            </svg>
+          </span>
+          <h3 class="training-action-title">New Session</h3>
+          <p class="training-action-desc">Build a full training session by combining multiple drills in sequence. Set overall objectives and player counts.</p>
+        </button>
+      </div>
+
+      <div class="training-library">
+        <div class="training-library-section">
+          <div class="training-library-header">
+            <h2 class="training-library-title">My Drills</h2>
+          </div>
+          <div class="training-empty">No drills yet. Click <strong>New Drill</strong> above to create your first one.</div>
+        </div>
+
+        <div class="training-library-section">
+          <div class="training-library-header">
+            <h2 class="training-library-title">My Sessions</h2>
+          </div>
+          <div class="training-empty">No sessions yet. Click <strong>New Session</strong> above to plan your first session.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div id="pitch-container" style="position:relative;">
     <div class="shared-watermark">Powered by tactica.football</div>
     <svg id="pitch-svg" width="700" height="480" xmlns="http://www.w3.org/2000/svg">
@@ -563,6 +801,11 @@
         <!-- Player drop shadow: offset further down so blur doesn't overlap border -->
         <filter id="player-shadow" x="-30%" y="-20%" width="160%" height="200%">
           <feDropShadow dx="0" dy="7" stdDeviation="3.5" flood-color="rgba(0,0,0,0.38)"/>
+        </filter>
+        <!-- Hand-drawn / wobbly border effect used for the "Square" training zone -->
+        <filter id="zone-wobble" x="-5%" y="-5%" width="110%" height="110%">
+          <feTurbulence type="fractalNoise" baseFrequency="0.018" numOctaves="2" seed="3" result="noise"/>
+          <feDisplacementMap in="SourceGraphic" in2="noise" scale="2.5"/>
         </filter>
         <!-- Spotlight filters -->
         <filter id="spotlight-cone-blur" x="-30%" y="-10%" width="160%" height="120%">
@@ -708,6 +951,10 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
       Edit Team
     </button>
+    <button class="panel-tab" id="tab-drill" onclick="switchTab('drill')" style="display:none">
+      <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="4" width="16" height="16" rx="2"/><path d="M8 9h8M8 13h8M8 17h5"/></svg>
+      Drill
+    </button>
     <button class="panel-tab" id="tab-pitch" onclick="switchTab('pitch')">
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/></svg>
       Pitch
@@ -716,6 +963,42 @@
       <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 4l7 18 3-7 7-3z"/></svg>
       Selection
     </button>
+  </div>
+
+  <!-- ══ TAB: DRILL (Training drill metadata) ══ -->
+  <div id="pane-drill" class="tab-pane" style="display:none">
+    <div class="panel-section">
+      <div class="drill-meta-section">
+        <label class="drill-meta-label">Drill name</label>
+        <input type="text" id="drill-name-input-panel" class="drill-meta-input" placeholder="Untitled drill" maxlength="80">
+      </div>
+      <div class="drill-meta-section" style="margin-top:14px">
+        <label class="drill-meta-label">Number of players</label>
+        <input type="number" id="drill-num-players" class="drill-meta-input" min="1" max="22" value="10">
+      </div>
+      <div class="drill-meta-section" style="margin-top:14px">
+        <label class="drill-meta-label">Objectives</label>
+        <div class="drill-tag-group">
+          <span class="drill-tag-group-label">General</span>
+          <div class="drill-tag-chips" data-tag-group="general"></div>
+          <input type="text" class="drill-tag-input" data-tag-input="general" placeholder="Type and press Enter…">
+        </div>
+        <div class="drill-tag-group">
+          <span class="drill-tag-group-label">Offensive</span>
+          <div class="drill-tag-chips" data-tag-group="offensive"></div>
+          <input type="text" class="drill-tag-input" data-tag-input="offensive" placeholder="Type and press Enter…">
+        </div>
+        <div class="drill-tag-group">
+          <span class="drill-tag-group-label">Defensive</span>
+          <div class="drill-tag-chips" data-tag-group="defensive"></div>
+          <input type="text" class="drill-tag-input" data-tag-input="defensive" placeholder="Type and press Enter…">
+        </div>
+      </div>
+      <div class="drill-meta-section" style="margin-top:14px">
+        <label class="drill-meta-label">Variants</label>
+        <textarea id="drill-variants" class="drill-meta-textarea" rows="4" placeholder="Describe variants or progressions…"></textarea>
+      </div>
+    </div>
   </div>
 
   <!-- ══ TAB: PLAYERS ══ -->
@@ -900,6 +1183,7 @@
       <button class="pitch-opt" data-opt="size" data-val="3q" style="display:none"></button>
       <button class="pitch-opt" data-opt="size" data-val="middle" style="display:none"></button>
       <button class="pitch-opt" data-opt="size" data-val="half" style="display:none"></button>
+      <button class="pitch-opt" data-opt="size" data-val="plain" style="display:none"></button>
 
       <div class="pitch-visual-grid">
         <!-- Row 1: Horizontal -->
@@ -949,6 +1233,11 @@
             <path d="M31,14 A6,6 0 0,0 31,26" fill="none" stroke="currentColor" stroke-width="0.6"/>
           </svg>
         </button>
+        <button class="pitch-visual-btn" data-pv-orient="horizontal" data-pv-size="plain" onclick="setPitchVisual(this)" title="Plain (free-form training area) · Horizontal">
+          <svg viewBox="0 0 36 28" class="pitch-thumb">
+            <rect x="1" y="1" width="34" height="26" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/>
+          </svg>
+        </button>
 
         <!-- Row 2: Vertical -->
         <button class="pitch-visual-btn" data-pv-orient="vertical" data-pv-size="full" onclick="setPitchVisual(this)" title="Full · Vertical">
@@ -995,6 +1284,11 @@
             <rect x="15" y="1" width="10" height="4" fill="none" stroke="currentColor" stroke-width="0.6"/>
             <!-- Arc at halfway -->
             <path d="M14,31 A6,6 0 0,1 26,31" fill="none" stroke="currentColor" stroke-width="0.6"/>
+          </svg>
+        </button>
+        <button class="pitch-visual-btn" data-pv-orient="vertical" data-pv-size="plain" onclick="setPitchVisual(this)" title="Plain (free-form training area) · Vertical">
+          <svg viewBox="0 0 28 36" class="pitch-thumb">
+            <rect x="1" y="1" width="26" height="34" rx="1" fill="none" stroke="currentColor" stroke-width="1.2"/>
           </svg>
         </button>
       </div>
@@ -1514,10 +1808,10 @@
         <div class="field-group">
           <div class="field-label">Purpose</div>
           <div class="purpose-row">
-            <button class="purpose-btn" data-purpose="press" onclick="applyZonePurpose('press')">Press</button>
             <button class="purpose-btn" data-purpose="possession" onclick="applyZonePurpose('possession')">Rondo</button>
             <button class="purpose-btn" data-purpose="space" onclick="applyZonePurpose('space')">Space</button>
-            <button class="purpose-btn" data-purpose="danger" onclick="applyZonePurpose('danger')">Danger</button>
+            <button class="purpose-btn" data-purpose="square" onclick="applyZonePurpose('square')">Square</button>
+            <button class="purpose-btn" data-purpose="press" onclick="applyZonePurpose('press')">Press</button>
           </div>
         </div>
       </div>
@@ -1704,6 +1998,20 @@
           <div class="color-swatch mini" style="background:rgba(201,169,98,0.7)" data-color="rgba(201,169,98,0.7)" onclick="applySpotNameBg(this)" title="Gold"></div>
           <div class="color-swatch mini" style="background:rgba(248,113,113,0.7)" data-color="rgba(248,113,113,0.7)" onclick="applySpotNameBg(this)" title="Red"></div>
           <div class="color-swatch mini" style="background:rgba(96,165,250,0.7)" data-color="rgba(96,165,250,0.7)" onclick="applySpotNameBg(this)" title="Blue"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Disc cone properties -->
+    <div class="panel-section" id="disc-cone-edit-section" style="display:none">
+      <h3>Disc cone</h3>
+      <div class="field-group">
+        <div class="field-label">Colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini" style="background:#FFD43B" data-disc-color="yellow" onclick="applyDiscConeColor(this)" title="Yellow"></div>
+          <div class="color-swatch mini" style="background:#E63946" data-disc-color="red" onclick="applyDiscConeColor(this)" title="Red"></div>
+          <div class="color-swatch mini" style="background:#3D6FE5" data-disc-color="blue" onclick="applyDiscConeColor(this)" title="Blue"></div>
+          <div class="color-swatch mini" style="background:#F58A1E" data-disc-color="orange" onclick="applyDiscConeColor(this)" title="Orange"></div>
         </div>
       </div>
     </div>

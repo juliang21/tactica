@@ -6,8 +6,13 @@ import { canAccess, showUpgradePrompt } from './subscription.js';
 // coordinates and downstream calculations don't shift.
 export function fitPitchToViewport() {
   const svgEl = S.svg;
-  const wrap = document.getElementById('canvas-wrap');
-  if (!svgEl || !wrap) return;
+  if (!svgEl) return;
+  // In Training drill mode the pitch is relocated into `.drill-canvas-slot`;
+  // measure that slot instead of the analysis-mode `#canvas-wrap`.
+  const wrap = document.body.classList.contains('training-drill-mode')
+    ? document.querySelector('.drill-canvas-slot')
+    : document.getElementById('canvas-wrap');
+  if (!wrap) return;
   const W = parseFloat(svgEl.getAttribute('width'));
   const H = parseFloat(svgEl.getAttribute('height'));
   if (!W || !H) return;
@@ -44,7 +49,9 @@ function getToggledLayout() {
   const goals = document.getElementById('pitch-toggle-goals')?.checked ?? true;
 
   let layout;
-  if (size === 'half') {
+  if (size === 'plain') {
+    layout = orient === 'vertical' ? 'plain-v' : 'plain-h';
+  } else if (size === 'half') {
     layout = orient === 'vertical' ? 'half-v' : 'half-h';
   } else if (size === 'middle') {
     layout = orient === 'vertical' ? 'middle-v' : 'middle-h';
@@ -108,7 +115,7 @@ export function setPitch(layout, flipped) {
   S.setPitchFlipped(!!flipped);
 
   // Sync toggles to match the loaded layout
-  const isVertical = (/full-v|half-v|middle-v|3q-v/).test(layout);
+  const isVertical = (/full-v|half-v|middle-v|3q-v|plain-v/).test(layout);
   const isHalf = layout.startsWith('half');
   const isMiddle = layout.startsWith('middle');
   const is3Q = layout.startsWith('3q');
@@ -122,7 +129,8 @@ export function setPitch(layout, flipped) {
     b.classList.toggle('active', b.dataset.val === (isVertical ? 'vertical' : 'horizontal'));
   });
   // Size
-  const sizeVal = isMiddle ? 'middle' : is3Q ? '3q' : isHalf ? 'half' : 'full';
+  const isPlainLay = layout.startsWith('plain');
+  const sizeVal = isPlainLay ? 'plain' : isMiddle ? 'middle' : is3Q ? '3q' : isHalf ? 'half' : 'full';
   document.querySelectorAll('.pitch-opt[data-opt="size"]').forEach(b => {
     b.classList.toggle('active', b.dataset.val === sizeVal);
   });
@@ -200,10 +208,11 @@ export function rebuildPitch() {
 
   const svgEl = S.svg;
   const lay = S.currentPitchLayout;
-  const isVertical = (/full-v|half-v|middle-v|3q-v/).test(lay);
+  const isVertical = (/full-v|half-v|middle-v|3q-v|plain-v/).test(lay);
   const isHalf = lay.startsWith('half');
   const isMiddle = lay.startsWith('middle');
   const is3Q = lay.startsWith('3q');
+  const isPlain = lay.startsWith('plain');
   const hasGoals = !lay.includes('-ng');
   const hasGridBoth = lay.includes('-grid') && !lay.includes('-gridh') && !lay.includes('-gridv');
   const hasGridH = hasGridBoth || lay.includes('-gridh');
@@ -213,7 +222,11 @@ export function rebuildPitch() {
   const gaHW = 60;   // goal area half-width
 
   let W, H;
-  if (isMiddle && !isVertical) {
+  if (isPlain && !isVertical) {
+    W = 420; H = 280;   // zoomed-in plain training area (no markings)
+  } else if (isPlain && isVertical) {
+    W = 280; H = 420;
+  } else if (isMiddle && !isVertical) {
     W = 350; H = 480;
   } else if (isMiddle && isVertical) {
     W = 480; H = 350;
@@ -315,6 +328,9 @@ export function rebuildPitch() {
     markingsG.appendChild(el);
     return el;
   }
+
+  // Plain training pitch: no field markings at all (free-form area)
+  if (isPlain) return;
 
   if (isMiddle && !isVertical) {
     // ── Horizontal middle third (center zone only) ──

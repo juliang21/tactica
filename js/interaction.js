@@ -108,7 +108,10 @@ export function applyTransform(el) {
   const rot = parseFloat(el.dataset.rotation || '0');
   const t = el.dataset.type;
 
-  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'marker') {
+  if (t === 'small-goal') {
+    // Small goal supports rotation so coaches can flip the goal direction.
+    el.setAttribute('transform', `translate(${cx},${cy}) rotate(${rot}) scale(${scale})`);
+  } else if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'marker') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
     // If marker has its highlight beam on, redraw the beam path so it always
     // extends from the top of the SVG down to the marker's ring. Length is
@@ -227,7 +230,7 @@ export function arrowControlPoint(p1, p2, k) {
 function moveElement(el, nx, ny) {
   el.dataset.cx = nx; el.dataset.cy = ny;
   const t = el.dataset.type;
-  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'vision') applyTransform(el);
+  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'vision') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'headline') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
@@ -306,6 +309,35 @@ export function select(el, opts = {}) {
     ring.setAttribute('pointer-events', 'none');
     el.appendChild(ring);
   }
+  // Same dashed lime indicator for non-player objects so selection is obvious.
+  if ((type === 'cone' || type === 'ball' || type === 'disc-cone' || type === 'small-goal' || type === 'referee')
+      && !el.querySelector('.select-ring')) {
+    const ns = 'http://www.w3.org/2000/svg';
+    let ring;
+    if (type === 'small-goal') {
+      // Rect around the goal's natural bounds (-13,-6 to 13,6) with a bit of padding
+      ring = document.createElementNS(ns, 'rect');
+      ring.setAttribute('x', '-17'); ring.setAttribute('y', '-10');
+      ring.setAttribute('width', '34'); ring.setAttribute('height', '20');
+      ring.setAttribute('rx', '2');
+    } else if (type === 'disc-cone') {
+      ring = document.createElementNS(ns, 'ellipse');
+      ring.setAttribute('cx', '0'); ring.setAttribute('cy', '0');
+      ring.setAttribute('rx', '11'); ring.setAttribute('ry', '6');
+    } else {
+      // cone / ball / referee — simple circle
+      ring = document.createElementNS(ns, 'circle');
+      ring.setAttribute('cx', '0'); ring.setAttribute('cy', '0');
+      ring.setAttribute('r', type === 'cone' ? '14' : '13');
+    }
+    ring.setAttribute('class', 'select-ring');
+    ring.setAttribute('fill', 'none');
+    ring.setAttribute('stroke', '#d8ff3c');
+    ring.setAttribute('stroke-width', '1.8');
+    ring.setAttribute('stroke-dasharray', '3,2.5');
+    ring.setAttribute('pointer-events', 'none');
+    el.appendChild(ring);
+  }
   if (type === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
     if (bg) { bg.setAttribute('stroke', 'rgba(79,156,249,0.8)'); bg.setAttribute('stroke-width', '1.5'); }
@@ -337,6 +369,9 @@ export function select(el, opts = {}) {
       ring.setAttribute('stroke', 'rgba(79,156,249,0.9)');
     }
     showSpotlightHandles(el);
+  }
+  if (type === 'small-goal') {
+    showSmallGoalHandles(el);
   }
   if (type === 'vision') {
     const shape = el.querySelector('.vision-shape');
@@ -414,6 +449,8 @@ export function select(el, opts = {}) {
     : type === 'referee' ? 'Referee ' + el.dataset.label
     : type === 'ball' ? 'Ball'
     : type === 'cone' ? 'Cone'
+    : type === 'disc-cone' ? 'Disc Cone'
+    : type === 'small-goal' ? 'Small Goal'
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
     : type === 'textbox' ? 'Text'
     : type === 'spotlight' ? 'Spotlight'
@@ -450,6 +487,7 @@ export function select(el, opts = {}) {
   const textboxSec = document.getElementById('textbox-edit-section');
   const headlineSec = document.getElementById('headline-edit-section');
   const spotlightSec = document.getElementById('spotlight-edit-section');
+  const discConeSec = document.getElementById('disc-cone-edit-section');
   const visionSec = document.getElementById('vision-edit-section');
   const tagSec = document.getElementById('tag-edit-section');
   const linkSec = document.getElementById('link-edit-section');
@@ -466,6 +504,7 @@ export function select(el, opts = {}) {
   textboxSec.style.display = 'none';
   if (headlineSec) headlineSec.style.display = 'none';
   spotlightSec.style.display = 'none';
+  if (discConeSec) discConeSec.style.display = 'none';
   visionSec.style.display = 'none';
   if (tagSec) tagSec.style.display = 'none';
   if (linkSec) linkSec.style.display = 'none';
@@ -489,8 +528,14 @@ export function select(el, opts = {}) {
   // Pair rotation is driven by player positions, not editable
   // Net-zone has no rotation (vertices are players)
   // Zones have rotation/layer inside their Advanced panel, so hide standalone sections
-  const showStandaloneRot = type === 'vision' && !isZone;
+  const showStandaloneRot = (type === 'vision' || type === 'small-goal') && !isZone;
   document.getElementById('rotation-section').style.display = showStandaloneRot ? '' : 'none';
+  // Sync the rotation slider value for small-goal (vision is already handled below)
+  if (type === 'small-goal') {
+    const rv = el.dataset.rotation || '0';
+    document.getElementById('rot-slider').value = rv;
+    document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
+  }
   // Layer section: zones have it inside their Advanced panel, so hide standalone
   if (isZone) document.getElementById('layer-section').style.display = 'none';
   if (isZone) {
@@ -595,6 +640,15 @@ export function select(el, opts = {}) {
       document.getElementById('headline-body-size-slider').value = bSize;
       document.getElementById('headline-body-size-val').textContent = bSize + 'px';
     }
+  } else if (type === 'disc-cone') {
+    if (discConeSec) {
+      discConeSec.style.display = '';
+      // Mark the active swatch
+      const cur = el.dataset.discColor || 'yellow';
+      discConeSec.querySelectorAll('.color-swatch[data-disc-color]').forEach(b =>
+        b.classList.toggle('active', b.dataset.discColor === cur)
+      );
+    }
   } else if (type === 'spotlight') {
     spotlightSec.style.display = '';
     document.getElementById('spot-name-input').value = el.dataset.spotName || '';
@@ -686,8 +740,9 @@ export function deselectVisual(el) {
   if (!el) return;
   removeHandles();
   const t = el.dataset.type;
+  // Always remove the dashed select ring (added in select() for many types)
+  el.querySelector('.select-ring')?.remove();
   if (t === 'player') {
-    el.querySelector('.select-ring')?.remove();
     const circ = el.querySelector('circle:not(.hit-area):not(.player-shadow)');
     if (circ) {
       const customBorder = el.dataset.borderColor;
@@ -828,6 +883,8 @@ export function deselect() {
   document.getElementById('zone-edit-section').style.display = 'none';
   document.getElementById('textbox-edit-section').style.display = 'none';
   document.getElementById('spotlight-edit-section').style.display = 'none';
+  const _discCSec = document.getElementById('disc-cone-edit-section');
+  if (_discCSec) _discCSec.style.display = 'none';
   document.getElementById('vision-edit-section').style.display = 'none';
   const tagSec = document.getElementById('tag-edit-section');
   if (tagSec) tagSec.style.display = 'none';
@@ -865,6 +922,8 @@ export function deleteSelected() {
   document.getElementById('zone-edit-section').style.display = 'none';
   document.getElementById('textbox-edit-section').style.display = 'none';
   document.getElementById('spotlight-edit-section').style.display = 'none';
+  const _discCSec = document.getElementById('disc-cone-edit-section');
+  if (_discCSec) _discCSec.style.display = 'none';
   document.getElementById('vision-edit-section').style.display = 'none';
   const tagDelSec = document.getElementById('tag-edit-section');
   if (tagDelSec) tagDelSec.style.display = 'none';
@@ -1023,6 +1082,65 @@ export function showZoneHandles(el) {
   handleGroup.appendChild(createHandle(ns, sb.x, sb.y, 'side-b', 'ns-resize'));
 
   S.svg.appendChild(handleGroup);
+}
+
+// ── Small-goal handles (4 corners for uniform scale + rotate) ──────────────
+// Small-goal native bounds: (-13,-6) to (13,6) in local coords; rendered at
+// scale*size, rotated by dataset.rotation, translated to (cx, cy).
+const SGOAL_W = 13, SGOAL_H = 6;  // half-width / half-height in native coords
+export function showSmallGoalHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'small-goal';
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const scale = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const hw = SGOAL_W * scale, hh = SGOAL_H * scale;
+
+  const tl = rotatedPoint(cx, cy, -hw, -hh, rot);
+  const tr = rotatedPoint(cx, cy, hw, -hh, rot);
+  const br = rotatedPoint(cx, cy, hw, hh, rot);
+  const bl = rotatedPoint(cx, cy, -hw, hh, rot);
+  // Rotate handle sits above the top edge
+  const rotateAt = rotatedPoint(cx, cy, 0, -hh - 18, rot);
+
+  // 0..3: corners (uniform scale), 4: rotate
+  handleGroup.appendChild(createHandle(ns, tl.x, tl.y, 'sgoal-corner-tl', 'nwse-resize'));
+  handleGroup.appendChild(createHandle(ns, tr.x, tr.y, 'sgoal-corner-tr', 'nesw-resize'));
+  handleGroup.appendChild(createHandle(ns, br.x, br.y, 'sgoal-corner-br', 'nwse-resize'));
+  handleGroup.appendChild(createHandle(ns, bl.x, bl.y, 'sgoal-corner-bl', 'nesw-resize'));
+  handleGroup.appendChild(createRotateHandle(ns, rotateAt.x, rotateAt.y));
+
+  S.svg.appendChild(handleGroup);
+}
+
+function onSmallGoalHandleDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const handle = S.endpointDragging; // e.g. 'sgoal-corner-tl' or 'rotate'
+  if (handle === 'rotate') {
+    const dx = pt.x - cx, dy = pt.y - cy;
+    // Rotate handle is above the top edge; subtract 90° so pointing up = 0°
+    let deg = (Math.atan2(dy, dx) * 180 / Math.PI) + 90;
+    if (deg < 0) deg += 360;
+    el.dataset.rotation = deg;
+    applyTransform(el);
+    return;
+  }
+  // Corner handles: scale uniformly based on distance from center along the
+  // goal's local x-axis (un-rotate the cursor first).
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const r = -rot * Math.PI / 180;
+  const lx = (pt.x - cx) * Math.cos(r) - (pt.y - cy) * Math.sin(r);
+  const ly = (pt.x - cx) * Math.sin(r) + (pt.y - cy) * Math.cos(r);
+  // Compute scale that would put the dragged corner at (lx, ly)
+  // Use the larger axis to decide scale, clamped to a reasonable range.
+  const targetHw = Math.abs(lx);
+  const newScale = Math.max(0.4, Math.min(4, targetHw / SGOAL_W));
+  el.dataset.scale = newScale;
+  applyTransform(el);
 }
 
 // ── Spotlight handles (left/right resize) ──
@@ -1268,6 +1386,28 @@ export function updateHandlePositions(el) {
     moveHandleTo(children[5], sr.x, sr.y);
     moveHandleTo(children[6], st.x, st.y);
     moveHandleTo(children[7], sb.x, sb.y);
+  } else if (type === 'small-goal') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const scale = parseFloat(el.dataset.scale || '1');
+    const rot = parseFloat(el.dataset.rotation || '0');
+    const hw = SGOAL_W * scale, hh = SGOAL_H * scale;
+    const tl = rotatedPoint(cx, cy, -hw, -hh, rot);
+    const tr = rotatedPoint(cx, cy, hw, -hh, rot);
+    const br = rotatedPoint(cx, cy, hw, hh, rot);
+    const bl = rotatedPoint(cx, cy, -hw, hh, rot);
+    const rotateAt = rotatedPoint(cx, cy, 0, -hh - 18, rot);
+    const children = handleGroup.children;
+    moveHandleTo(children[0], tl.x, tl.y);
+    moveHandleTo(children[1], tr.x, tr.y);
+    moveHandleTo(children[2], br.x, br.y);
+    moveHandleTo(children[3], bl.x, bl.y);
+    const rotG = children[4];
+    if (rotG) {
+      const rc = rotG.querySelector('circle');
+      if (rc) { rc.setAttribute('cx', rotateAt.x); rc.setAttribute('cy', rotateAt.y); }
+      const rp = rotG.querySelector('path');
+      if (rp) rp.setAttribute('d', `M${rotateAt.x-3},${rotateAt.y-2} A4,4 0 1,1 ${rotateAt.x+2},${rotateAt.y-3}`);
+    }
   } else if (type === 'spotlight') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const rx = parseFloat(el.dataset.rx || '28') * parseFloat(el.dataset.scale || '1');
@@ -1349,6 +1489,8 @@ function onEndpointDrag(e) {
     onTagHandleDrag(el, pt);
   } else if (t.startsWith('shadow') || t === 'textbox' || t === 'headline' || t === 'pair') {
     onZoneHandleDrag(el, pt);
+  } else if (t === 'small-goal') {
+    onSmallGoalHandleDrag(el, pt);
   }
 }
 
