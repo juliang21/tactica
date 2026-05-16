@@ -34,6 +34,8 @@ function getShell() {
 }
 
 // ─── Shell show/hide (called by mode registry) ──────────────────────────────
+const WELCOME_KEY = 'tactica_training_welcome_seen_v1';
+
 export function showTrainingShell() {
   const shell = getShell();
   if (!shell) return;
@@ -48,7 +50,26 @@ export function showTrainingShell() {
   document.body.classList.add('training-mode');
   showView('landing');
   renderLibrary();
+  // Show the welcome overlay on first entry
+  maybeShowWelcome();
 }
+
+function maybeShowWelcome() {
+  try {
+    if (localStorage.getItem(WELCOME_KEY)) return;
+  } catch (e) {}
+  const overlay = document.getElementById('training-welcome-overlay');
+  if (overlay) overlay.style.display = 'flex';
+  track('training_welcome_shown');
+}
+
+export function dismissTrainingWelcome() {
+  const overlay = document.getElementById('training-welcome-overlay');
+  if (overlay) overlay.style.display = 'none';
+  try { localStorage.setItem(WELCOME_KEY, '1'); } catch (e) {}
+  track('training_welcome_dismissed');
+}
+window.dismissTrainingWelcome = dismissTrainingWelcome;
 
 export function hideTrainingShell() {
   const shell = getShell();

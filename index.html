@@ -507,6 +507,49 @@
   </div>
   <!-- ══ TRAINING SHELL (shown when in Training mode) ══ -->
   <div id="training-shell">
+    <!-- ── WELCOME MODAL (shown once on first Training entry) ── -->
+    <div id="training-welcome-overlay" class="training-welcome-overlay" style="display:none">
+      <div class="training-welcome-card">
+        <button class="training-welcome-close" onclick="dismissTrainingWelcome()" aria-label="Close">&times;</button>
+        <div class="training-welcome-eyebrow">Welcome to Training</div>
+        <h2 class="training-welcome-title">Plan your sessions and design drills.</h2>
+        <p class="training-welcome-sub">A new way to use Táctica: build individual drills or compose them into a full training session.</p>
+
+        <ul class="training-welcome-list">
+          <li>
+            <span class="training-welcome-li-ico">+</span>
+            <div>
+              <strong>Create a drill</strong>
+              <span>Drop players, jokers, cones, small goals, arrows and zones on the pitch. Add objectives, variants and step-by-step animation.</span>
+            </div>
+          </li>
+          <li>
+            <span class="training-welcome-li-ico">≡</span>
+            <div>
+              <strong>Build a session</strong>
+              <span>Combine multiple saved drills into an ordered training session with overall objectives.</span>
+            </div>
+          </li>
+          <li>
+            <span class="training-welcome-li-ico">★</span>
+            <div>
+              <strong>Save to the cloud</strong>
+              <span>Sign in to keep your drills and sessions in your library and access them from anywhere.</span>
+            </div>
+          </li>
+        </ul>
+
+        <div class="training-welcome-feedback">
+          <strong>This is a beta — your feedback shapes what comes next.</strong>
+          <span>Tell me what works, what's missing, and what would make this useful for your coaching. Click the <em>Feedback</em> button in the bottom-right anytime.</span>
+        </div>
+
+        <div class="training-welcome-actions">
+          <button class="training-welcome-btn" onclick="dismissTrainingWelcome()">Let's go</button>
+        </div>
+      </div>
+    </div>
+
     <!-- ── DRILL EDITOR VIEW ── -->
     <div class="training-drill-editor" data-training-view="drill-editor" style="display:none">
       <!-- Left panel: Insert toolbox + back link to library -->
