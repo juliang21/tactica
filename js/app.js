@@ -26,7 +26,7 @@ import { onAuthChange, getCurrentUser } from './auth.js';
 // access-check.js kept for future reactivation (Turkey/email blocking disabled)
 // import { shouldBlockUser, shouldBlockAnonymous, showMaintenanceOverlay, isBlockedEmail } from './access-check.js';
 import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed } from './firestore.js?v=5';
-import { hideUpgradePrompt, setUserTier, updateLockedUI } from './subscription.js';
+import { hideUpgradePrompt, setUserTier, updateLockedUI, initSubscriptionListener, stopSubscriptionListener, startCheckout, openManageSubscription, isPro } from './subscription.js';
 import './features/feedback.js';
 import './features/bundles.js';
 import './features/zoom.js';
@@ -384,7 +384,9 @@ window.switchKitTab = function(tab, btn) {
   document.getElementById('kit-grid-clubs').style.display = tab === 'clubs' ? '' : 'none';
   document.getElementById('kit-grid-national').style.display = tab === 'national' ? '' : 'none';
   const search = document.getElementById('kit-search');
+  const searchNat = document.getElementById('kit-search-national');
   if (search) search.style.display = tab === 'clubs' ? '' : 'none';
+  if (searchNat) searchNat.style.display = tab === 'national' ? '' : 'none';
   document.querySelectorAll('.kit-tab').forEach(t => t.classList.remove('active'));
   btn.classList.add('active');
 };
@@ -506,6 +508,32 @@ window.searchKits = function(query) {
     t.league.toLowerCase().includes(q)
   );
   renderKitGrid(results.slice(0, 30)); // Cap at 30 results
+};
+
+window.searchNationalKits = function(query) {
+  const grid = document.getElementById('kit-grid-national');
+  if (!grid) return;
+  const q = query.trim().toLowerCase();
+  const buttons = grid.querySelectorAll('.kit-btn');
+  const groupLabels = grid.querySelectorAll('.kit-group-label');
+
+  if (!q) {
+    // Show everything when search is empty
+    buttons.forEach(b => b.style.display = '');
+    groupLabels.forEach(l => l.style.display = '');
+    return;
+  }
+
+  // Hide all group labels during search
+  groupLabels.forEach(l => l.style.display = 'none');
+
+  // Filter buttons by name or code
+  buttons.forEach(btn => {
+    const name = (btn.dataset.trackName || btn.title || '').toLowerCase();
+    const code = (btn.querySelector('.kit-label')?.textContent || '').toLowerCase();
+    const match = name.includes(q) || code.includes(q);
+    btn.style.display = match ? '' : 'none';
+  });
 };
 
 // Load teams DB on startup
@@ -839,7 +867,9 @@ window.toggleStripes = function() {
   if (u) logAction(u.uid, u.email, 'feature_pitch_change', { stripes }).catch(() => {});
 };
 window.hideUpgradePrompt = hideUpgradePrompt;
-window.setUserTier = setUserTier;
+// setUserTier no longer exposed on window for security — tier is set by Firestore listener
+window.startCheckout = startCheckout;
+window.openManageSubscription = openManageSubscription;
 window.exportImage = exportImage;
 window.selectFmt = selectFmt;
 window.closeExport = closeExport;
@@ -4926,6 +4956,24 @@ let _authInitialized = false;
 onAuthChange(async (user) => {
   updateAuthUI(user);
   closeAuthModal();
+
+  // ─── Subscription listener ─────────────────────────────────────────────────
+  if (user) {
+    initSubscriptionListener(user.uid);
+  } else {
+    stopSubscriptionListener();
+    setUserTier('free');
+  }
+
+  // ─── Subscription success notification ─────────────────────────────────────
+  if (user && !_authInitialized) {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('subscription') === 'success') {
+      window.showNotification?.('Welcome to Analyst! Your subscription is now active.', 'success', 6000);
+      window.history.replaceState({}, '', window.location.pathname);
+    }
+  }
+
   const gate = document.getElementById('landing-gate');
 
   // ─── Shared View Branch ────────────────────────────────────────────────────

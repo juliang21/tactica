@@ -379,6 +379,16 @@
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3h5l1 1.5H14v9H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
           My Analyses
         </button>
+        <!-- Upgrade (shown when free + signed in) -->
+        <button id="app-menu-upgrade" class="app-menu-item app-menu-upgrade" onclick="toggleAppMenu(); startCheckout('month')" style="display:none">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+          Upgrade to Analyst
+        </button>
+        <!-- Manage Subscription (shown when pro + signed in) -->
+        <button id="app-menu-manage-sub" class="app-menu-item" onclick="toggleAppMenu(); openManageSubscription()" style="display:none">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+          Manage Subscription
+        </button>
         <!-- Sign Out (hidden when not signed in) -->
         <div id="app-menu-signout-divider" class="app-menu-divider" style="display:none"></div>
         <button id="app-menu-signout" class="app-menu-item app-menu-signout" onclick="toggleAppMenu(); doSignOut()" style="display:none">
@@ -808,6 +818,7 @@
         <button class="kit-tab" onclick="switchKitTab('national',this)">National</button>
       </div>
       <input type="text" id="kit-search" class="text-input" placeholder="Search 160+ clubs..." oninput="searchKits(this.value)" style="margin-bottom:8px;display:none">
+      <input type="text" id="kit-search-national" class="text-input" placeholder="Search national teams..." oninput="searchNationalKits(this.value)" style="margin-bottom:8px;display:none">
       <div class="kit-grid" id="kit-grid-clubs"></div>
       <div class="kit-grid" id="kit-grid-national" style="display:none">
         <div class="kit-group-label">Group A</div>
@@ -2282,13 +2293,23 @@
 <!-- ══ UPGRADE OVERLAY ══ -->
 <div id="upgrade-overlay" class="upgrade-overlay">
   <div class="upgrade-card">
+    <button class="upgrade-close" onclick="hideUpgradePrompt()">&times;</button>
     <div class="upgrade-icon">
       <svg viewBox="0 0 24 24" width="40" height="40" fill="none" stroke="#F59E0B" stroke-width="1.5"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
     </div>
-    <h3 class="upgrade-title">Pro Feature</h3>
-    <p class="upgrade-desc"><span class="upgrade-feature-name">This feature</span> is available with a Pro subscription.</p>
-    <button class="upgrade-btn" onclick="hideUpgradePrompt()">Got it</button>
-    <button class="upgrade-close" onclick="hideUpgradePrompt()">&times;</button>
+    <h3 class="upgrade-title">Upgrade to Analyst</h3>
+    <p class="upgrade-desc"><span class="upgrade-feature-name">This feature</span> is available with the Analyst plan.</p>
+    <div class="upgrade-pricing">
+      <button class="upgrade-plan-btn upgrade-plan-primary" onclick="startCheckout('month')">
+        <span class="upgrade-plan-label">Monthly</span>
+        <span class="upgrade-plan-price upgrade-price-month">€8.99/mo</span>
+      </button>
+      <button class="upgrade-plan-btn upgrade-plan-secondary" onclick="startCheckout('year')">
+        <span class="upgrade-plan-label">Yearly <span class="upgrade-save-badge">Save 17%</span></span>
+        <span class="upgrade-plan-price upgrade-price-year">€89/yr</span>
+      </button>
+    </div>
+    <p class="upgrade-fine-print">Cancel anytime. Secure payment via Stripe.</p>
   </div>
 </div>
 
