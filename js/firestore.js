@@ -184,12 +184,19 @@ export function getSessionId() { return _sessionId; }
 export async function logAction(uid, email, action, meta) {
   const now = Date.now();
   const today = new Date(now).toISOString().slice(0, 10);
+  // Auto-tag every event with the active mode (pitch / image / training) so the
+  // admin can break activity down by tab. Caller can override via meta.mode.
+  const fullMeta = meta || {};
+  if (!fullMeta.mode) {
+    try { fullMeta.mode = (typeof window !== 'undefined' && window.getActiveModeId?.()) || 'pitch'; }
+    catch (e) { fullMeta.mode = 'pitch'; }
+  }
   const ref = doc(collection(db, 'tactica_actions'));
   await setDoc(ref, {
     uid,
     email: email || '',
-    action,       // 'save' | 'export' | 'feature_*'
-    meta: meta || {},
+    action,       // 'save' | 'export' | 'feature_*' | 'training_*'
+    meta: fullMeta,
     sessionId: _sessionId || null,
     timestamp: now,
     date: today,

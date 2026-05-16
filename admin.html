@@ -276,7 +276,9 @@
 <div id="dashboard" style="display:none">
   <div class="admin-tabs">
     <button class="admin-tab active" onclick="switchAdminTab('overview')">Overview</button>
-    <button class="admin-tab" onclick="switchAdminTab('features')">Features</button>
+    <button class="admin-tab" onclick="switchAdminTab('tactical')">⚽ Tactical Board</button>
+    <button class="admin-tab" onclick="switchAdminTab('image')">🖼️ Image Analysis</button>
+    <button class="admin-tab" onclick="switchAdminTab('training')">🏋️ Training</button>
     <button class="admin-tab" onclick="switchAdminTab('reviews')">Reviews</button>
   </div>
 
@@ -328,9 +330,19 @@
     </div>
   </div>
 
-  <!-- ═══ FEATURES TAB ═══ -->
-  <div class="tab-content" id="tab-features">
-    <div id="features-breakdown"></div>
+  <!-- ═══ TACTICAL BOARD TAB ═══ -->
+  <div class="tab-content" id="tab-tactical">
+    <div id="features-tactical"></div>
+  </div>
+
+  <!-- ═══ IMAGE ANALYSIS TAB ═══ -->
+  <div class="tab-content" id="tab-image">
+    <div id="features-image"></div>
+  </div>
+
+  <!-- ═══ TRAINING TAB ═══ -->
+  <div class="tab-content" id="tab-training">
+    <div id="features-training"></div>
   </div>
 
   <!-- ═══ REVIEWS TAB ═══ -->
@@ -640,18 +652,22 @@ function renderFeatureStats(actions, activeUsers) {
 }
 
 // ─── Features Tab (detailed breakdowns) ─────────────────────────────────────
-const FEATURE_CONFIGS = [
+// ─── Mode-aware filter helpers ──────────────────────────────────────────────
+const inMode = mode => a => (a.meta?.mode || 'pitch') === mode;
+const notInMode = mode => a => (a.meta?.mode || 'pitch') !== mode;
+
+const FEATURE_CONFIGS_TACTICAL = [
   { label: 'Export, Save & Share', isGroup: true, children: [
-    { label: 'Export PNG', action: 'export', metaKey: null, filterFn: a => !a.meta || !a.meta.format || a.meta.format === 'png' },
-    { label: 'Export JPG', action: 'export', metaKey: null, filterFn: a => a.meta && a.meta.format === 'jpg' },
-    { label: 'Save', action: 'save', metaKey: null },
-    { label: 'Export GIF Animation', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export') },
-    { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_video' },
-    { label: 'Share', action: 'share_created', metaKey: null },
+    { label: 'Export PNG', action: 'export', metaKey: null, filterFn: a => inMode('pitch')(a) && (!a.meta || !a.meta.format || a.meta.format === 'png') },
+    { label: 'Export JPG', action: 'export', metaKey: null, filterFn: a => inMode('pitch')(a) && (a.meta && a.meta.format === 'jpg') },
+    { label: 'Save', action: 'save', metaKey: null, filterFn: inMode('pitch') },
+    { label: 'Export GIF Animation', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && (a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export')) },
+    { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && (a.meta && a.meta.trigger === 'export_video') },
+    { label: 'Share', action: 'share_created', metaKey: null, filterFn: inMode('pitch') },
   ]},
-  { label: 'Pitch Type', action: 'feature_pitch_change', metaKey: 'type', filterFn: a => a.meta && a.meta.type },
-  { label: 'Pitch Color', action: 'feature_pitch_color', metaKey: 'color', filterFn: a => a.meta && a.meta.color,
-    legacyAction: 'feature_pitch_change', legacyFilterFn: a => a.meta && a.meta.color,
+  { label: 'Pitch Type', action: 'feature_pitch_change', metaKey: 'type', filterFn: a => inMode('pitch')(a) && a.meta && a.meta.type },
+  { label: 'Pitch Color', action: 'feature_pitch_color', metaKey: 'color', filterFn: a => inMode('pitch')(a) && a.meta && a.meta.color,
+    legacyAction: 'feature_pitch_change', legacyFilterFn: a => inMode('pitch')(a) && a.meta && a.meta.color,
     normalizeFn: (counts, sessionSets, userSets) => {
       // Normalize custom/unknown color names into a single "Custom" bucket
       const defaultColors = ['Classic Green', 'White', 'Neon Green', 'Navy Blue', 'Black', 'Light Green'];
@@ -669,32 +685,68 @@ const FEATURE_CONFIGS = [
       }
     }
   },
-  { label: 'Formation', action: 'feature_formation', metaKey: 'formation' },
-  { label: 'Club Team', action: 'feature_club_team', metaKey: 'team' },
-  { label: 'National Team', action: 'feature_national_team', metaKey: 'team' },
-  { label: 'Custom Color', action: 'feature_custom_color', metaKey: 'color' },
-  { label: 'Element Inserted', action: 'element_inserted', metaKey: 'element' },
-  { label: 'Element Selected', action: 'element_selected', metaKey: 'element' },
-  { label: 'Animation', isGroup: true, children: [
-    { label: 'Add Step', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'add_step' },
-    { label: 'Delete Step', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'delete_step' },
-    { label: 'Play', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'play' },
-    { label: 'Reset', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'reset' },
-    { label: 'Clear All', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'clear_all' },
-    { label: 'Export GIF', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export') },
-    { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => a.meta && a.meta.trigger === 'export_video' },
+  { label: 'Formation', action: 'feature_formation', metaKey: 'formation', filterFn: inMode('pitch') },
+  { label: 'Club Team', action: 'feature_club_team', metaKey: 'team', filterFn: inMode('pitch') },
+  { label: 'National Team', action: 'feature_national_team', metaKey: 'team', filterFn: inMode('pitch') },
+  { label: 'Custom Color', action: 'feature_custom_color', metaKey: 'color', filterFn: inMode('pitch') },
+  { label: 'Element Inserted (Tactical Board)', action: 'element_inserted', metaKey: 'element', filterFn: inMode('pitch') },
+  { label: 'Element Selected (Tactical Board)', action: 'element_selected', metaKey: 'element', filterFn: inMode('pitch') },
+  { label: 'Animation (Tactical Board)', isGroup: true, children: [
+    { label: 'Add Step', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && a.meta && a.meta.trigger === 'add_step' },
+    { label: 'Delete Step', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && a.meta && a.meta.trigger === 'delete_step' },
+    { label: 'Play', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && a.meta && a.meta.trigger === 'play' },
+    { label: 'Reset', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && a.meta && a.meta.trigger === 'reset' },
+    { label: 'Clear All', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && a.meta && a.meta.trigger === 'clear_all' },
+    { label: 'Export GIF', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export') },
+    { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && a.meta && a.meta.trigger === 'export_video' },
   ]},
   { label: 'Sharing', isGroup: true, children: [
-    { label: 'Share Created', action: 'share_created', metaKey: null },
-    { label: 'Share Viewed', action: 'share_viewed', metaKey: null },
-    { label: 'Share Forked (Copy)', action: 'share_forked', metaKey: null },
-    { label: 'Share → Sign Up', action: 'share_signup', metaKey: null },
+    { label: 'Share Created', action: 'share_created', metaKey: null, filterFn: inMode('pitch') },
+    { label: 'Share Viewed', action: 'share_viewed', metaKey: null, filterFn: inMode('pitch') },
+    { label: 'Share Forked (Copy)', action: 'share_forked', metaKey: null, filterFn: inMode('pitch') },
+    { label: 'Share → Sign Up', action: 'share_signup', metaKey: null, filterFn: inMode('pitch') },
   ]},
   { label: 'Notes', isGroup: true, children: [
-    { label: 'Notes Opened', action: 'feature_notes_open', metaKey: null },
-    { label: 'Notes Saved', action: 'feature_notes_save', metaKey: null },
+    { label: 'Notes Opened', action: 'feature_notes_open', metaKey: null, filterFn: inMode('pitch') },
+    { label: 'Notes Saved', action: 'feature_notes_save', metaKey: null, filterFn: inMode('pitch') },
   ]},
-  { label: 'Toolbar Toggle', action: 'feature_toolbar_toggle', metaKey: 'type' },
+  { label: 'Toolbar Toggle', action: 'feature_toolbar_toggle', metaKey: 'type', filterFn: inMode('pitch') },
+];
+
+const FEATURE_CONFIGS_IMAGE = [
+  { label: 'Image Upload', action: 'feature_image_upload', metaKey: null },
+  { label: 'Export (Image)', isGroup: true, children: [
+    { label: 'Export PNG', action: 'export', metaKey: null, filterFn: a => inMode('image')(a) && (!a.meta || !a.meta.format || a.meta.format === 'png') },
+    { label: 'Export JPG', action: 'export', metaKey: null, filterFn: a => inMode('image')(a) && a.meta && a.meta.format === 'jpg' },
+    { label: 'Save', action: 'save', metaKey: null, filterFn: inMode('image') },
+    { label: 'Share', action: 'share_created', metaKey: null, filterFn: inMode('image') },
+  ]},
+  { label: 'Element Inserted', action: 'element_inserted', metaKey: 'element', filterFn: inMode('image') },
+  { label: 'Element Selected', action: 'element_selected', metaKey: 'element', filterFn: inMode('image') },
+];
+
+const FEATURE_CONFIGS_TRAINING = [
+  { label: 'Drills', isGroup: true, children: [
+    { label: 'Drill Started', action: 'training_drill_started', metaKey: null },
+    { label: 'Drill Saved', action: 'training_drill_saved', metaKey: null },
+    { label: 'Drill Opened', action: 'training_drill_opened', metaKey: null },
+    { label: 'Drill Deleted', action: 'training_drill_deleted', metaKey: null },
+  ]},
+  { label: 'Sessions', isGroup: true, children: [
+    { label: 'Session Started', action: 'training_session_started', metaKey: null },
+    { label: 'Session Saved', action: 'training_session_saved', metaKey: null },
+    { label: 'Session Opened', action: 'training_session_opened', metaKey: null },
+    { label: 'Session Deleted', action: 'training_session_deleted', metaKey: null },
+    { label: 'Drill Added to Session', action: 'training_session_drill_added', metaKey: null },
+    { label: 'Drill Removed from Session', action: 'training_session_drill_removed', metaKey: null },
+    { label: 'Drill Reordered', action: 'training_session_drill_reordered', metaKey: null },
+  ]},
+  { label: 'Element Inserted', action: 'element_inserted', metaKey: 'element', filterFn: inMode('training') },
+  { label: 'Animation', isGroup: true, children: [
+    { label: 'Add Step', action: 'feature_animation', metaKey: null, filterFn: a => inMode('training')(a) && a.meta && a.meta.trigger === 'add_step' },
+    { label: 'Play', action: 'feature_animation', metaKey: null, filterFn: a => inMode('training')(a) && a.meta && a.meta.trigger === 'play' },
+    { label: 'Export GIF', action: 'feature_animation', metaKey: null, filterFn: a => inMode('training')(a) && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export') },
+  ]},
 ];
 
 function renderFeatureCard(cfg, actions, html) {
@@ -858,13 +910,22 @@ function renderPitchAnalytics(items, isSnapshot) {
 
 
 function renderFeaturesTab(actions, activeUsers) {
+  // Render all three mode-specific tabs
+  renderModeFeatures(FEATURE_CONFIGS_TACTICAL, actions, 'features-tactical', { includePitchAnalytics: true });
+  renderModeFeatures(FEATURE_CONFIGS_IMAGE, actions, 'features-image');
+  renderModeFeatures(FEATURE_CONFIGS_TRAINING, actions, 'features-training');
+}
+
+function renderModeFeatures(configs, actions, targetId, opts = {}) {
   let html = '';
 
-  // Pitch analytics section — prefer snapshot data (actual usage), fall back to click data
-  const snapshots = (actions || []).filter(a => a.action === 'pitch_state_snapshot' && a.meta);
-  html += renderPitchAnalytics(snapshots.length > 0 ? snapshots : actions, snapshots.length > 0);
+  // Pitch analytics section — Tactical Board only
+  if (opts.includePitchAnalytics) {
+    const snapshots = (actions || []).filter(a => a.action === 'pitch_state_snapshot' && a.meta);
+    html += renderPitchAnalytics(snapshots.length > 0 ? snapshots : actions, snapshots.length > 0);
+  }
 
-  FEATURE_CONFIGS.forEach(cfg => {
+  configs.forEach(cfg => {
     if (cfg.isGroup) {
       // Render group header
       const allGroupItems = cfg.children.flatMap(child => {
@@ -997,9 +1058,10 @@ function renderFeaturesTab(actions, activeUsers) {
   html += renderZoneAnalytics(actions);
 
   // Maintenance Analytics section
-  html += renderMaintenanceAnalytics(actions);
+  if (opts.includePitchAnalytics) html += renderMaintenanceAnalytics(actions);
 
-  document.getElementById('features-breakdown').innerHTML = html;
+  const target = document.getElementById(targetId);
+  if (target) target.innerHTML = html || '<div style="padding:24px;color:#666;text-align:center">No data for this period.</div>';
 }
 
 // ─── Maintenance Analytics ──────────────────────────────────────────────────
