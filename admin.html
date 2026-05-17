@@ -1054,11 +1054,13 @@ function renderModeFeatures(configs, actions, targetId, opts = {}) {
     html += `</div>`;
   });
 
-  // Zone Analytics section
-  html += renderZoneAnalytics(actions);
-
-  // Maintenance Analytics section
-  if (opts.includePitchAnalytics) html += renderMaintenanceAnalytics(actions);
+  // Zone Analytics + Maintenance Analytics — Tactical Board only,
+  // filtered to pitch-mode events so Training/Image zones don't pollute them.
+  if (opts.includePitchAnalytics) {
+    const pitchActions = (actions || []).filter(inMode('pitch'));
+    html += renderZoneAnalytics(pitchActions);
+    html += renderMaintenanceAnalytics(actions);
+  }
 
   const target = document.getElementById(targetId);
   if (target) target.innerHTML = html || '<div style="padding:24px;color:#666;text-align:center">No data for this period.</div>';
