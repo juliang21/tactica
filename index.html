@@ -2387,13 +2387,18 @@
 
 <!-- Color picker modal -->
 <div class="modal-backdrop" id="color-picker-modal">
-  <div class="modal-box" style="width:240px">
+  <div class="modal-box" style="width:260px">
     <div class="modal-title">Pick colour</div>
     <input type="color" id="color-picker-input" value="#ffffff" style="width:100%;height:40px;border:none;border-radius:6px;cursor:pointer;background:transparent">
     <div class="field-row" style="gap:6px">
       <span style="font-size:12px;color:var(--text-muted)">#</span>
       <input type="text" id="color-picker-hex" maxlength="6" placeholder="ffffff" style="flex:1;padding:7px 9px;border-radius:8px;border:1.5px solid var(--border);background:var(--panel2);font-family:'Poppins',sans-serif;font-size:12px;font-weight:500;color:var(--text);outline:none">
     </div>
+    <label class="color-picker-save-row">
+      <input type="checkbox" id="color-picker-save">
+      <span>Save this colour</span>
+      <span class="color-picker-save-hint">Adds it to your swatches</span>
+    </label>
     <div class="modal-row">
       <button class="modal-btn cancel" onclick="closeColorPicker()">Cancel</button>
       <button class="modal-btn confirm" onclick="confirmColorPicker()">Apply</button>

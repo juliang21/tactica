@@ -550,21 +550,20 @@ export function applyRefBorder(swatchEl) {
 // ─── Color Picker ─────────────────────────────────────────────────────────────
 let colorPickerTarget = 'fill'; // 'fill', 'border', or 'arrow'
 
-// ─── Recently picked custom colors per target ───────────────────────────────
-// Persist the last few user-picked colors per picker-row so they reappear as
-// quick-pick swatches next time. Suggested by user feedback (Jeff Lightfoot).
-const CUSTOM_COLORS_KEY = 'tactica_custom_colors_v1';
-const MAX_CUSTOM_PER_TARGET = 6;
+// ─── Saved custom color per target ──────────────────────────────────────────
+// When the user ticks "Save this colour" in the picker, we REPLACE the first
+// swatch in the matching picker-row with the new color (no row growth) and
+// remember it across reloads via localStorage. Per-target.
+const CUSTOM_COLORS_KEY = 'tactica_saved_colors_v2';
 
-function readCustomColors() {
+function readSavedColors() {
   try { return JSON.parse(localStorage.getItem(CUSTOM_COLORS_KEY) || '{}'); }
   catch { return {}; }
 }
-function writeCustomColors(map) {
+function writeSavedColors(map) {
   try { localStorage.setItem(CUSTOM_COLORS_KEY, JSON.stringify(map)); } catch (e) {}
 }
 
-// Find the picker-row whose `+` button calls openColorPicker(target)
 function findRowForTarget(target) {
   for (const btn of document.querySelectorAll('.color-picker-btn')) {
     const onclick = btn.getAttribute('onclick') || '';
@@ -575,27 +574,6 @@ function findRowForTarget(target) {
   return null;
 }
 
-// Build a swatch element matching the row's existing style + click handler.
-function buildSwatchForRow(row, color) {
-  // Find a swatch to clone for shape/class/handler consistency
-  const sample = row.querySelector('.color-swatch, .custom-swatch');
-  if (!sample) return null;
-  const div = document.createElement(sample.tagName.toLowerCase());
-  div.className = sample.className.replace('selected', '').replace('active', '').trim();
-  div.dataset.color = color;
-  // Carry over any extra style hooks (border for dark swatches etc.)
-  // For dark colors, mimic the existing border treatment
-  let style = `background:${color}`;
-  if (isHexDark(color)) style += ';border:2px solid rgba(255,255,255,0.2)';
-  div.setAttribute('style', style);
-  // Copy onclick from sample (so behavior matches the rest of the row)
-  const sampleClick = sample.getAttribute('onclick');
-  if (sampleClick) div.setAttribute('onclick', sampleClick);
-  div.title = 'Custom color';
-  div.classList.add('custom-recent-swatch');
-  return div;
-}
-
 function isHexDark(hex) {
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return false;
   const r = parseInt(hex.slice(1,3), 16);
@@ -604,54 +582,46 @@ function isHexDark(hex) {
   return (r*0.299 + g*0.587 + b*0.114) < 60;
 }
 
-// Insert a single color into the row (before the `+` button), deduped.
-function insertColorIntoRow(target, color) {
+// Replace the FIRST swatch in the row with the user's custom color.
+function replaceFirstSwatch(target, color) {
   const row = findRowForTarget(target);
   if (!row) return;
-  // De-dupe: don't add if already present in row
-  const existing = [...row.querySelectorAll('[data-color]')].map(el => (el.dataset.color || '').toLowerCase());
-  if (existing.includes(color.toLowerCase())) return;
-  const swatch = buildSwatchForRow(row, color);
-  if (!swatch) return;
-  const plusBtn = row.querySelector('.color-picker-btn');
-  if (plusBtn) row.insertBefore(swatch, plusBtn);
-  else row.appendChild(swatch);
-  // Enforce cap: remove the OLDEST .custom-recent-swatch beyond MAX
-  const recents = row.querySelectorAll('.custom-recent-swatch');
-  if (recents.length > MAX_CUSTOM_PER_TARGET) {
-    recents[0].remove();
-  }
+  const firstSwatch = row.querySelector('.color-swatch, .custom-swatch');
+  if (!firstSwatch) return;
+  firstSwatch.dataset.color = color;
+  let style = `background:${color}`;
+  if (isHexDark(color)) style += ';border:2px solid rgba(255,255,255,0.2)';
+  firstSwatch.setAttribute('style', style);
+  firstSwatch.classList.add('saved-custom-swatch');
+  firstSwatch.title = 'Your saved colour';
 }
 
-// Save a new custom color (called from confirmColorPicker).
-function rememberCustomColor(target, color) {
+function saveCustomColor(target, color) {
   if (!/^#[0-9a-fA-F]{6}$/.test(color)) return;
-  const map = readCustomColors();
-  const list = (map[target] || []).filter(c => c.toLowerCase() !== color.toLowerCase());
-  list.push(color);
-  while (list.length > MAX_CUSTOM_PER_TARGET) list.shift();
-  map[target] = list;
-  writeCustomColors(map);
-  insertColorIntoRow(target, color);
+  const map = readSavedColors();
+  map[target] = color;
+  writeSavedColors(map);
+  replaceFirstSwatch(target, color);
 }
 
-// On startup, inject saved colors into each picker-row.
-function hydrateCustomColorRows() {
-  const map = readCustomColors();
-  for (const target of Object.keys(map)) {
-    for (const c of map[target]) insertColorIntoRow(target, c);
-  }
+// On startup, apply each saved color back into its picker-row's first slot.
+function hydrateSavedColors() {
+  const map = readSavedColors();
+  for (const target of Object.keys(map)) replaceFirstSwatch(target, map[target]);
 }
 if (document.readyState === 'loading') {
-  document.addEventListener('DOMContentLoaded', hydrateCustomColorRows);
+  document.addEventListener('DOMContentLoaded', hydrateSavedColors);
 } else {
-  hydrateCustomColorRows();
+  hydrateSavedColors();
 }
 
 export function openColorPicker(target) {
   colorPickerTarget = target;
   const modal = document.getElementById('color-picker-modal');
   modal.style.display = 'flex';
+  // Reset the "Save this colour" checkbox on each open
+  const saveBox = document.getElementById('color-picker-save');
+  if (saveBox) saveBox.checked = false;
   let current = '#ffffff';
   if (target === 'kit-custom') {
     current = S.teamColors[S.teamContext] || '#ffffff';
@@ -703,9 +673,10 @@ export function closeColorPicker() {
 export function confirmColorPicker() {
   const hex = '#' + document.getElementById('color-picker-hex').value;
   if (!/^#[0-9a-fA-F]{6}$/.test(hex)) return;
+  // Only persist + replace first swatch if user opted in via the checkbox
+  const saveBox = document.getElementById('color-picker-save');
+  if (saveBox?.checked) saveCustomColor(colorPickerTarget, hex);
   closeColorPicker();
-  // Remember this color so it shows up as a quick-pick swatch next time
-  rememberCustomColor(colorPickerTarget, hex);
   if (colorPickerTarget === 'pitch-pitch') {
     const stripes = document.getElementById('pitch-toggle-stripes')?.checked;
     S.pitchColors.s1 = hex;
