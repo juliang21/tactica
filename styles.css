@@ -782,7 +782,7 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 
 /* Swatches */
 .name-color-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.picker-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.picker-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 2px 3px; }
 .color-swatch.mini { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
 .no-bg-swatch {
   background: transparent !important;
