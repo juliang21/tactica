@@ -2175,6 +2175,10 @@
         <div class="slider-label"><span>Scale</span><span id="size-val">1.0×</span></div>
         <input type="range" id="size-slider" min="50" max="220" value="100" oninput="applySize(this.value)">
       </div>
+      <label id="size-apply-all-row" class="size-apply-all-row" style="display:none">
+        <input type="checkbox" id="size-apply-all-check" onchange="setDefaultScaleFromSlider(this)">
+        <span>Use this size for new <span id="size-apply-all-type">elements</span></span>
+      </label>
     </div>
 
     <div class="panel-section" id="rotation-section" style="display:none">

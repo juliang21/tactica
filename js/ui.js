@@ -1334,6 +1334,70 @@ export function applyTagLineAngle(val) {
 }
 
 // ─── Sliders ──────────────────────────────────────────────────────────────────
+// ─── Per-type default scale (persisted) ────────────────────────────────────
+// When the user resizes an element via the slider, they can tick a checkbox
+// to remember that size as the default for newly-spawned elements of that
+// type. Suggested by Jeff Lightfoot.
+const DEFAULT_SCALES_KEY = 'tactica_default_scales_v1';
+function _readDefaultScales() {
+  try { return JSON.parse(localStorage.getItem(DEFAULT_SCALES_KEY) || '{}'); }
+  catch { return {}; }
+}
+function _writeDefaultScales(map) {
+  try { localStorage.setItem(DEFAULT_SCALES_KEY, JSON.stringify(map)); } catch (e) {}
+}
+// Exposed for elements.js to read at spawn time.
+window.getPreferredScale = function(type) {
+  return _readDefaultScales()[type];
+};
+
+const TYPE_LABELS = {
+  player: 'players', cone: 'cones', 'disc-cone': 'disc cones',
+  'small-goal': 'small goals', ball: 'balls', referee: 'referees',
+  marker: 'markers', spotlight: 'spotlights', vision: 'visions',
+};
+
+function _updateSizeApplyAllRow(el, scale) {
+  const row = document.getElementById('size-apply-all-row');
+  const check = document.getElementById('size-apply-all-check');
+  const typeSpan = document.getElementById('size-apply-all-type');
+  if (!row || !el) return;
+  const type = el.dataset.type;
+  const label = TYPE_LABELS[type];
+  // Only offer for element types that have a meaningful spawn-default
+  if (!label) { row.style.display = 'none'; return; }
+  const saved = _readDefaultScales()[type];
+  // Show the row whenever the slider value differs from 100% (the visual
+  // "1.0×") so the user can opt to make this the new default.
+  const sliderVal = parseFloat(document.getElementById('size-slider').value);
+  const differsFromUnit = Math.abs(sliderVal - 100) > 0.5;
+  if (!differsFromUnit && saved == null) {
+    row.style.display = 'none';
+    return;
+  }
+  row.style.display = 'flex';
+  typeSpan.textContent = label;
+  // Tick the box if this scale matches what's already saved
+  if (check) check.checked = (saved != null && Math.abs(saved - scale) < 0.001);
+}
+
+// Exposed so the selection path in interaction.js can refresh the row.
+window._refreshSizeApplyAllRow = _updateSizeApplyAllRow;
+
+window.setDefaultScaleFromSlider = function(checkbox) {
+  const el = S.selectedEl;
+  if (!el) return;
+  const type = el.dataset.type;
+  const scale = parseFloat(document.getElementById('size-slider').value) / 100;
+  const map = _readDefaultScales();
+  if (checkbox.checked) {
+    map[type] = scale;
+  } else {
+    delete map[type];
+  }
+  _writeDefaultScales(map);
+};
+
 export function applySize(val) {
   document.getElementById('size-val').textContent = (val/100).toFixed(1) + '×';
   // Apply to all selected elements (multi-select support)
@@ -1347,6 +1411,8 @@ export function applySize(val) {
     // Keep resize handles in sync with the slider
     if (S.selectedEl === el) updateHandlePositions(el);
   }
+  // Reveal the "use as default for new X" row when scale differs from 100%
+  if (S.selectedEl) _updateSizeApplyAllRow(S.selectedEl, val/100);
 }
 
 export function applyRotation(val) {

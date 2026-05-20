@@ -723,6 +723,8 @@ export function select(el, opts = {}) {
   const s = parseFloat(el.dataset.scale || '1') * 100;
   document.getElementById('size-slider').value = s;
   document.getElementById('size-val').textContent = (s/100).toFixed(1) + '×';
+  // Reveal "use as default" row on selection too (not only on slider drag)
+  if (typeof window._refreshSizeApplyAllRow === 'function') window._refreshSizeApplyAllRow(el, s/100);
   const rotVisible = document.getElementById('rotation-section').style.display !== 'none';
   if (rotVisible) {
     const r = parseFloat(el.dataset.rotation || '0');

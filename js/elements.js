@@ -21,7 +21,8 @@ export function addPlayer(x, y, team, num, isGK) {
   g.setAttribute('id', id);
   g.dataset.type = 'player'; g.dataset.team = team;
   g.dataset.label = String(num); g.dataset.isGK = isGK ? '1' : '0';
-  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.8';
+  const _playerScale = window.getPreferredScale?.('player') ?? 0.8;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_playerScale);
 
   // Shadow circle: fill only, no stroke — shadow applies to body only
   const shadowCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
@@ -77,7 +78,7 @@ export function addPlayer(x, y, team, num, isGK) {
   if (teamStyle && teamStyle !== 'plain' && !isGK) {
     applyJerseyStyle(g, teamStyle, teamColor2);
   }
-  g.setAttribute('transform', `translate(${x},${y}) scale(0.8)`);
+  g.setAttribute('transform', `translate(${x},${y}) scale(${_playerScale})`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   g.addEventListener('dblclick', e => { e.stopPropagation(); openPlayerEdit(g); });
@@ -187,7 +188,8 @@ export function addBall(x, y) {
   const id = 'ball-' + S.nextObjectId();
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.setAttribute('id', id); g.dataset.type = 'ball';
-  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.8';
+  const _ballScale = window.getPreferredScale?.('ball') ?? 0.8;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_ballScale);
   const ns = 'http://www.w3.org/2000/svg';
 
   // Invisible hit area for easier touch tapping
@@ -201,7 +203,7 @@ export function addBall(x, y) {
   c.setAttribute('fill','white'); c.setAttribute('stroke','#333'); c.setAttribute('stroke-width','1.5');
 
   g.appendChild(hitArea); g.appendChild(c);
-  g.setAttribute('transform', `translate(${x},${y}) scale(0.8)`);
+  g.setAttribute('transform', `translate(${x},${y}) scale(${_ballScale})`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.playersLayer.appendChild(g);
@@ -221,7 +223,8 @@ export function addReferee(x, y, label, fillColor, borderColor) {
   g.setAttribute('id', id);
   g.dataset.type = 'referee';
   g.dataset.label = String(label);
-  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '0.9';
+  const _refScale = window.getPreferredScale?.('referee') ?? 0.9;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_refScale);
   g.dataset.fillColor = fillColor;
   g.dataset.borderColor = borderColor;
 
@@ -254,7 +257,7 @@ export function addReferee(x, y, label, fillColor, borderColor) {
   hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
 
   g.appendChild(hitArea); g.appendChild(circle); g.appendChild(numText); g.appendChild(nameLabel);
-  g.setAttribute('transform', `translate(${x},${y}) scale(0.9)`);
+  g.setAttribute('transform', `translate(${x},${y}) scale(${_refScale})`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   g.addEventListener('dblclick', e => { e.stopPropagation(); select(g); });
@@ -278,7 +281,8 @@ export function addDiscCone(x, y, color = 'yellow') {
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.setAttribute('id', id);
   g.dataset.type = 'disc-cone';
-  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '1';
+  const _discScale = window.getPreferredScale?.('disc-cone') ?? 1;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_discScale);
   g.dataset.discColor = color;
   const ns = 'http://www.w3.org/2000/svg';
 
@@ -314,7 +318,7 @@ export function addDiscCone(x, y, color = 'yellow') {
   g.appendChild(sh);
   g.appendChild(disc);
   g.appendChild(cap);
-  g.setAttribute('transform', `translate(${x},${y})`);
+  g.setAttribute('transform', `translate(${x},${y}) scale(${_discScale})`);
   makeDraggable(g);
   g.addEventListener('click', e => {
     if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
@@ -331,7 +335,8 @@ export function addSmallGoal(x, y) {
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.setAttribute('id', id);
   g.dataset.type = 'small-goal';
-  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '1';
+  const _goalScale = window.getPreferredScale?.('small-goal') ?? 1;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_goalScale);
   const ns = 'http://www.w3.org/2000/svg';
 
   // Drop shadow (subtle ellipse below)
@@ -393,7 +398,7 @@ export function addSmallGoal(x, y) {
   g.appendChild(linesGroup);
   g.appendChild(postL);
   g.appendChild(postR);
-  g.setAttribute('transform', `translate(${x},${y})`);
+  g.setAttribute('transform', `translate(${x},${y}) scale(${_goalScale})`);
   makeDraggable(g);
   g.addEventListener('click', e => {
     if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
@@ -406,7 +411,8 @@ export function addCone(x, y) {
   const id = 'cone-' + S.nextObjectId();
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
   g.setAttribute('id', id); g.dataset.type = 'cone';
-  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = '1';
+  const _coneScale = window.getPreferredScale?.('cone') ?? 1;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_coneScale);
   const ns = 'http://www.w3.org/2000/svg';
 
   const sh = document.createElementNS(ns, 'ellipse');
@@ -430,7 +436,7 @@ export function addCone(x, y) {
   hitArea.setAttribute('fill','transparent'); hitArea.setAttribute('stroke','none');
 
   g.appendChild(hitArea); g.appendChild(sh); g.appendChild(tri); g.appendChild(stripe);
-  g.setAttribute('transform', `translate(${x},${y})`);
+  g.setAttribute('transform', `translate(${x},${y}) scale(${_coneScale})`);
   makeDraggable(g);
   g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
   S.playersLayer.appendChild(g);
