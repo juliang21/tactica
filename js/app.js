@@ -5188,6 +5188,8 @@ onAuthChange(async (user) => {
 // ─── Collapsible panel sections ─────────────────────────────────────────────
 (function initCollapsibleSections() {
   const STORAGE_KEY = 'tactica_collapsed';
+  // Sections that should start collapsed unless the user has explicitly opened them.
+  const DEFAULT_COLLAPSED = new Set(['appearance', 'add']);
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch {}
 
@@ -5196,8 +5198,10 @@ onAuthChange(async (user) => {
     const body = document.querySelector(`[data-collapse-body="${key}"]`);
     if (!body) return;
 
-    // Restore saved state (default: expanded)
-    if (saved[key]) {
+    // Restore saved state; fall back to per-section default if unset.
+    const userPref = saved[key];
+    const startCollapsed = (userPref === true) || (userPref === undefined && DEFAULT_COLLAPSED.has(key));
+    if (startCollapsed) {
       h3.classList.add('collapsed');
       body.classList.add('collapsed');
     }
@@ -5206,10 +5210,10 @@ onAuthChange(async (user) => {
       const isCollapsed = h3.classList.toggle('collapsed');
       body.classList.toggle('collapsed', isCollapsed);
 
-      // Persist
+      // Persist explicit boolean so we can distinguish "user opened" from "default".
       try {
         const state = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}');
-        if (isCollapsed) state[key] = true; else delete state[key];
+        state[key] = isCollapsed;
         localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
       } catch {}
     });
