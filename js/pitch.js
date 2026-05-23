@@ -531,35 +531,36 @@ export function rebuildPitch() {
         for (let i=1; i<=2; i++) mk('line',{x1:pad+pw*i/3,y1:py,x2:pad+pw*i/3,y2:py+ph,...ga});
       }
     } else if (is3Q && !isVertical) {
-      // Horizontal three-quarter
+      // Horizontal three-quarter (goal on right)
       const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
       if (gH) {
+        // Skip the right penalty box
         [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => {
-          mk('line',{x1:pad,y1:y,x2:pad+pw,y2:y,...ga});
+          mk('line',{x1:pad,y1:y,x2:pad+pw-105,y2:y,...ga});
         });
       }
       if (gV) {
         for (let i=1; i<=2; i++) mk('line',{x1:pad+pw*i/3,y1:py,x2:pad+pw*i/3,y2:py+ph,...ga});
       }
     } else if (is3Q && isVertical) {
-      // Vertical three-quarter
+      // Vertical three-quarter (goal at bottom)
       const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2;
       if (gH) {
         for (let i=1; i<=2; i++) mk('line',{x1:pad,y1:py+ph*i/3,x2:pad+pw,y2:py+ph*i/3,...ga});
       }
       if (gV) {
+        // Skip the bottom penalty box
         [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => {
-          mk('line',{x1:x,y1:py,x2:x,y2:py+ph,...ga});
+          mk('line',{x1:x,y1:py,x2:x,y2:py+ph-105,...ga});
         });
       }
     } else if (isHalf && !isVertical) {
       // Horizontal half pitch — goal on the right
-      // gV mirrors full-horizontal's near-goal third line so it sits the same
-      // absolute distance from the goal line, avoiding the penalty-box "D".
       const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2, R=pad+pw;
       if (gH) {
+        // Skip the right penalty box
         [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => {
-          mk('line',{x1:pad,y1:y,x2:pad+pw,y2:y,...ga});
+          mk('line',{x1:pad,y1:y,x2:R-105,y2:y,...ga});
         });
       }
       if (gV) {
@@ -567,15 +568,14 @@ export function rebuildPitch() {
       }
     } else if (isHalf && isVertical) {
       // Vertical half pitch — goal at the bottom
-      // gH mirrors full-vertical's near-goal third line so it sits the same
-      // absolute distance from the goal line, avoiding the penalty-box "D".
       const pad=20, py=20, pw=W-pad*2, ph=H-py*2, cx=W/2, B=py+ph;
       if (gH) {
         mk('line',{x1:pad,y1:B-213,x2:pad+pw,y2:B-213,...ga});
       }
       if (gV) {
+        // Skip the bottom penalty box
         [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => {
-          mk('line',{x1:x,y1:py,x2:x,y2:py+ph,...ga});
+          mk('line',{x1:x,y1:py,x2:x,y2:B-105,...ga});
         });
       }
     } else if (isVertical) {
@@ -587,16 +587,18 @@ export function rebuildPitch() {
         }
       }
       if (gV) {
+        // Skip the parts that cross over either penalty box (top + bottom)
         [cx-pbHW, cx-gaHW, cx+gaHW, cx+pbHW].forEach(x => {
-          mk('line',{x1:x,y1:px,x2:x,y2:px+ph,...ga});
+          mk('line',{x1:x,y1:px+105,x2:x,y2:px+ph-105,...ga});
         });
       }
     } else {
       // Full horizontal
       const pad=30, py=20, pw=W-pad*2, ph=H-py*2, cy=H/2;
       if (gH) {
+        // Skip the parts that cross over either penalty box
         [cy-pbHW, cy-gaHW, cy+gaHW, cy+pbHW].forEach(y => {
-          mk('line',{x1:pad,y1:y,x2:pad+pw,y2:y,...ga});
+          mk('line',{x1:pad+105,y1:y,x2:pad+pw-105,y2:y,...ga});
         });
       }
       if (gV) {
