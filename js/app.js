@@ -407,9 +407,11 @@ async function loadTeamsDB() {
     _popularOrder = data.popular; // preserve display order
     const byName = Object.fromEntries(_teamsDB.map(t => [t.name, t]));
     renderKitGrid(_popularOrder.map(n => byName[n]).filter(Boolean));
-    // Show search input now that data is loaded
+    // Show the club search input only if the Clubs tab is the active one
+    // (National is now the default tab, so it should stay hidden until switched).
     const search = document.getElementById('kit-search');
-    if (search) search.style.display = '';
+    const clubsTabActive = document.querySelector('.kit-tab.active')?.getAttribute('onclick')?.includes("'clubs'");
+    if (search) search.style.display = clubsTabActive ? '' : 'none';
   } catch (e) {
     console.warn('[teams] Failed to load teams.json:', e);
   }
