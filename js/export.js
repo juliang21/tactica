@@ -36,8 +36,15 @@ export function drawWatermark(ctx, W, H, logoImg) {
 
   ctx.font = `700 ${fontSize}px Manrope, Inter, system-ui, sans-serif`;
   // Native letter-spacing (Chrome/Safari/Firefox 2024+). Falls back to 0 if unsupported.
-  try { ctx.letterSpacing = letterSpacing + 'px'; } catch (e) { /* older browsers */ }
-  const textW = ctx.measureText(text).width + letterSpacing * (text.length - 1);
+  // We use a flag because measureText() already accounts for ctx.letterSpacing when
+  // it's supported — adding it again would over-pad the pill on the right side.
+  let nativeLetterSpacing = false;
+  try {
+    ctx.letterSpacing = letterSpacing + 'px';
+    nativeLetterSpacing = (ctx.letterSpacing === letterSpacing + 'px');
+  } catch (e) { /* older browsers */ }
+  const baseTextW = ctx.measureText(text).width;
+  const textW = nativeLetterSpacing ? baseTextW : baseTextW + letterSpacing * (text.length - 1);
 
   const blockW = textW + padH * 2;
   const blockH = fontSize + padV * 2 + 4; // a touch more vertical breathing room
