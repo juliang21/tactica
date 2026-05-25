@@ -21,25 +21,30 @@ function wrapCanvasText(ctx, content, maxW) {
   return lines.length ? lines : [''];
 }
 
-// ─── Free-tier watermark ─────────────────────────────────────────────────────
-// Exported so GIF/video exports in app.js can draw the same watermark on each frame.
+// ─── Watermark ───────────────────────────────────────────────────────────────
+// Matches the on-board .shared-watermark style: uppercase Manrope at weight 700,
+// tracked letter-spacing, soft black pill background. Exported so GIF/video
+// exports in app.js can draw the same watermark on each frame.
 export function drawWatermark(ctx, W, H, logoImg) {
   ctx.save();
 
-  const padding = 8;
-  const logoSize = 16;
-  const gap = 5;
-  const text = 'Built with tactica.football';
+  const padH = 14;       // horizontal padding (matches CSS padding: 6px 14px)
+  const padV = 6;        // vertical padding
+  const text = 'TACTICA.FOOTBALL';
+  const fontSize = 10;
+  const letterSpacing = 0.8;
 
-  ctx.font = '600 11px Inter, system-ui, sans-serif';
-  const textW = ctx.measureText(text).width;
+  ctx.font = `700 ${fontSize}px Manrope, Inter, system-ui, sans-serif`;
+  // Native letter-spacing (Chrome/Safari/Firefox 2024+). Falls back to 0 if unsupported.
+  try { ctx.letterSpacing = letterSpacing + 'px'; } catch (e) { /* older browsers */ }
+  const textW = ctx.measureText(text).width + letterSpacing * (text.length - 1);
 
-  const blockW = (logoImg ? logoSize + gap : 0) + textW + padding * 2;
-  const blockH = 24;
+  const blockW = textW + padH * 2;
+  const blockH = fontSize + padV * 2 + 4; // a touch more vertical breathing room
   const x = W - blockW - 10;
   const y = H - blockH - 10;
 
-  // Semi-transparent pill background
+  // Pill background (matches CSS background: rgba(0,0,0,0.35))
   ctx.fillStyle = 'rgba(0,0,0,0.55)';
   const r = 6;
   ctx.beginPath();
@@ -54,16 +59,17 @@ export function drawWatermark(ctx, W, H, logoImg) {
   ctx.closePath();
   ctx.fill();
 
-  // Logo
-  let textX = x + padding;
+  // Optional logo (kept for future use; currently called with null)
+  let textX = x + padH;
   if (logoImg) {
+    const logoSize = 14;
     const ly = y + (blockH - logoSize) / 2;
     ctx.drawImage(logoImg, textX, ly, logoSize, logoSize);
-    textX += logoSize + gap;
+    textX += logoSize + 6;
   }
 
-  // Text
-  ctx.fillStyle = 'rgba(255,255,255,0.8)';
+  // Text (matches CSS color rgba(255,255,255,0.55) but slightly brighter for contrast)
+  ctx.fillStyle = 'rgba(255,255,255,0.75)';
   ctx.textAlign = 'left';
   ctx.textBaseline = 'middle';
   ctx.fillText(text, textX, y + blockH / 2);
