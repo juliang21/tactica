@@ -986,7 +986,21 @@ input[type=range]::-webkit-slider-thumb {
 .action-btn.danger { border-color: #3A1520; color: #F87171; }
 .action-btn.danger:hover { background: #3A1520; }
 
-/* Layer order buttons */
+/* Layer order buttons (inline compact) */
+#layer-controls-inline {
+  display: flex; gap: 3px; margin-top: 8px;
+}
+.layer-inline-btn {
+  display: flex; align-items: center; justify-content: center;
+  width: 28px; height: 24px;
+  border: 1px solid var(--border); background: var(--panel2);
+  border-radius: 5px; cursor: pointer; transition: all 0.15s;
+  color: var(--text-muted); padding: 0;
+}
+.layer-inline-btn:hover { border-color: #444; color: var(--text); background: #1a1a1a; }
+.layer-inline-btn:active { background: #222; }
+
+/* Legacy layer buttons (zone Advanced panel) */
 .layer-btn-row {
   display: flex; gap: 4px;
 }
@@ -2193,25 +2207,26 @@ body.shared-view #canvas-wrap {
   position: relative;
 }
 .shared-watermark {
-  display: none;
+  display: block;
   position: absolute;
-  bottom: 10px;
-  right: 12px;
+  bottom: 12px;
+  right: 14px;
   z-index: 50;
   font-family: 'Manrope', sans-serif;
-  font-size: 12px;
-  font-weight: 600;
-  color: rgba(255,255,255,0.7);
-  letter-spacing: 0.3px;
+  font-size: 10px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.55);
+  letter-spacing: 0.8px;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
-  background: rgba(0,0,0,0.45);
-  padding: 4px 10px;
-  border-radius: 4px;
-}
-body.shared-view .shared-watermark {
-  display: block;
+  background: rgba(0,0,0,0.35);
+  padding: 6px 14px;
+  border-radius: 6px;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255,255,255,0.06);
+  text-transform: uppercase;
 }
 
 #share-banner {

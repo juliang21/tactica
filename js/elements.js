@@ -533,6 +533,76 @@ export function addTextBox(x, y, text) {
   return g;
 }
 
+// ─── Image element (uploaded photo / logo placed on the pitch) ──────────────
+// Uses an SVG <image href="data:..."> with absolute coords (matching the
+// shadow-rect pattern) so existing showZoneHandles + onZoneHandleDrag work for
+// resize without modification. Rotation is applied to the parent g so all
+// children (image + hit rect + clip ellipse) rotate together. Circle crop is
+// a per-instance clipPath toggled via dataset.imgCrop.
+export function addImage(x, y, dataUrl, naturalW, naturalH) {
+  const id = 'img-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'image';
+  g.dataset.cx = String(x); g.dataset.cy = String(y);
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+
+  // Base half-dimensions preserve the source aspect ratio
+  const srcW = Number.isFinite(naturalW) && naturalW > 0 ? naturalW : 200;
+  const srcH = Number.isFinite(naturalH) && naturalH > 0 ? naturalH : 200;
+  const aspect = srcW / srcH;
+  // Scale so the longer side is ~120px (60 half-units); preserve aspect
+  let hw, hh;
+  if (aspect >= 1) { hw = 60; hh = 60 / aspect; }
+  else             { hh = 60; hw = 60 * aspect; }
+  g.dataset.hw = String(hw); g.dataset.hh = String(hh);
+  g.dataset.imgCrop = '0';
+  g.dataset.imgAspect = String(aspect);
+  g.dataset.imgHref = dataUrl;             // mirrored on the <image> for round-trip
+
+  // Per-instance clipPath using userSpaceOnUse so its coords match the image
+  const defs = document.createElementNS(ns, 'defs');
+  const clipId = 'imgclip-' + id;
+  const clip = document.createElementNS(ns, 'clipPath');
+  clip.setAttribute('id', clipId);
+  clip.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  const clipEllipse = document.createElementNS(ns, 'ellipse');
+  clipEllipse.setAttribute('cx', String(x)); clipEllipse.setAttribute('cy', String(y));
+  clipEllipse.setAttribute('rx', String(hw)); clipEllipse.setAttribute('ry', String(hh));
+  clip.appendChild(clipEllipse);
+  defs.appendChild(clip);
+  g.appendChild(defs);
+  // Stash the clip id so applyImageCrop can toggle it on/off
+  g.dataset.imgClipId = clipId;
+
+  const img = document.createElementNS(ns, 'image');
+  img.setAttribute('href', dataUrl);
+  img.setAttribute('x', String(x - hw)); img.setAttribute('y', String(y - hh));
+  img.setAttribute('width', String(hw * 2)); img.setAttribute('height', String(hh * 2));
+  img.setAttribute('preserveAspectRatio', 'xMidYMid meet');
+  img.classList.add('image-bitmap');
+  g.appendChild(img);
+
+  // Invisible hit rect so the whole rectangle is grabbable even when cropped
+  const hit = document.createElementNS(ns, 'rect');
+  hit.setAttribute('x', String(x - hw)); hit.setAttribute('y', String(y - hh));
+  hit.setAttribute('width', String(hw * 2)); hit.setAttribute('height', String(hh * 2));
+  hit.setAttribute('fill', 'transparent');
+  hit.classList.add('image-hit');
+  g.appendChild(hit);
+
+  S.objectsLayer.appendChild(g);
+  makeDraggable(g);
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') {
+      e.stopPropagation();
+      select(g, { additive: e.ctrlKey || e.metaKey });
+    }
+  });
+  return g;
+}
+
 function openTextBoxEdit(g) {
   select(g);
   // Also update sidebar textarea
@@ -1296,11 +1366,10 @@ export function addMarker(x, y) {
   g.addEventListener('click', e => {
     if (S.tool === 'select') {
       e.stopPropagation();
-      // Single click = single marker, like every other element. The connecting
-      // link line still triggers chain selection when clicked, so users can
-      // grab the whole group from there. Auto-chaining on plain marker click
-      // was confusing — typing a name only updated one of the two selected.
-      select(g, { additive: e.ctrlKey || e.metaKey });
+      // Selection is already handled by startDrag on mousedown (via makeDraggable).
+      // We only need stopPropagation here to prevent the SVG background click
+      // handler from triggering deselect. Calling select() again here caused a
+      // double-toggle bug: mousedown selected, then click toggled it back off.
     }
   });
   S.objectsLayer.appendChild(g);
@@ -1977,10 +2046,13 @@ export function repositionTag(g) {
   const len = parseFloat(g.dataset.tagLineLen || '80');
   const angleDeg = parseFloat(g.dataset.tagLineAngle || '-35');
   const angleRad = angleDeg * Math.PI / 180;
+  const scale = parseFloat(g.dataset.scale || '1');
+  const dotR = 5 * scale;
+  const lineW = 1.5 * scale;
 
   // Circle dot is at (cx, cy) — the anchor point
   const circle = g.querySelector('.tag-dot');
-  if (circle) { circle.setAttribute('cx', cx); circle.setAttribute('cy', cy); }
+  if (circle) { circle.setAttribute('cx', cx); circle.setAttribute('cy', cy); circle.setAttribute('r', dotR); }
 
   // Hit area centered on the dot
   const hitDot = g.querySelector('.hit-area:not(.tag-hit-text):not(.tag-hit-line)');
@@ -1997,6 +2069,7 @@ export function repositionTag(g) {
     const dash = g.dataset.tagLineDash || '6,4';
     if (dash === 'none') line.removeAttribute('stroke-dasharray');
     else line.setAttribute('stroke-dasharray', dash);
+    line.setAttribute('stroke-width', lineW);
   }
 
   // Hit area along the line
@@ -2013,7 +2086,7 @@ export function repositionTag(g) {
   // "right"  → line connects at right-center; text extends left
   const gap = 6;
   const anchor = g.dataset.tagTextAnchor || 'bottom';
-  const fontSize = 12;
+  const fontSize = 12 * scale;
   const lineH = fontSize * 1.4;
   const textBlockH = lineH * 2;  // two lines (label + value)
 
@@ -2204,12 +2277,14 @@ export function updateLink(linkEl) {
   let x1 = cx1, y1 = cy1, x2 = cx2, y2 = cy2;
   if (p1?.dataset.type === 'marker') {
     const s = parseFloat(p1.dataset.scale || '1');
-    const bp = ellipseBorderPoint(cx1, cy1, 17, 9, s, cx2, cy2);
+    const sy1 = parseFloat(p1.dataset.markerScaleY || '1');
+    const bp = ellipseBorderPoint(cx1, cy1, 17, 9 * sy1, s, cx2, cy2);
     x1 = bp.x; y1 = bp.y;
   }
   if (p2?.dataset.type === 'marker') {
     const s = parseFloat(p2.dataset.scale || '1');
-    const bp = ellipseBorderPoint(cx2, cy2, 17, 9, s, cx1, cy1);
+    const sy2 = parseFloat(p2.dataset.markerScaleY || '1');
+    const bp = ellipseBorderPoint(cx2, cy2, 17, 9 * sy2, s, cx1, cy1);
     x2 = bp.x; y2 = bp.y;
   }
 

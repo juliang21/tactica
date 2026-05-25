@@ -1271,7 +1271,7 @@ export function applySize(val) {
     trackElementEdited(el.dataset.type, 'scale');
     el.dataset.scale = val/100;
     const t = el.dataset.type;
-    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'vision' || t === 'marker' || t.startsWith('shadow')) applyTransform(el);
+    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'vision' || t === 'marker' || t.startsWith('shadow') || t === 'tag') applyTransform(el);
     else if (t === 'arrow') updateArrowVisual(el);
     // Keep resize handles in sync with the slider
     if (S.selectedEl === el) updateHandlePositions(el);
@@ -1373,6 +1373,29 @@ export function liveUpdateMarkerName(val) {
 
 export function confirmMarkerName() {
   // Push undo state if needed
+}
+
+// ─── Image element editing ─────────────────────────────────────────────────
+export function applyImageCrop(on) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'image') return;
+  S.pushUndo();
+  trackElementEdited('image', 'crop');
+  el.dataset.imgCrop = on ? '1' : '0';
+  const img = el.querySelector('.image-bitmap');
+  if (img) {
+    if (on) img.setAttribute('clip-path', `url(#${el.dataset.imgClipId})`);
+    else img.removeAttribute('clip-path');
+  }
+}
+
+export function applyImageOpacity(val) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'image') return;
+  trackElementEdited('image', 'opacity');
+  el.dataset.imgOpacity = val;
+  const img = el.querySelector('.image-bitmap');
+  if (img) img.setAttribute('opacity', val);
 }
 
 export function applyMarkerHighlight(on) {

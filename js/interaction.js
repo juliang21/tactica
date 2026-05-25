@@ -113,16 +113,32 @@ export function applyTransform(el) {
     el.setAttribute('transform', `translate(${cx},${cy}) rotate(${rot}) scale(${scale})`);
   } else if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'marker') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
-    // If marker has its highlight beam on, redraw the beam path so it always
-    // extends from the top of the SVG down to the marker's ring. Length is
-    // expressed in local coords (post-scale), hence the divide by scale.
-    if (t === 'marker' && el.dataset.markerHighlight === '1') {
-      const beam = el.querySelector('.marker-highlight .mh-beam');
-      if (beam) {
-        const sourceW = 6;
-        const beamW = 17 * 2; // base ring rx * 2
-        const topY = -cy / Math.max(0.01, scale);
-        beam.setAttribute('d', `M ${-sourceW} ${topY} L ${-beamW/2} 0 L ${beamW/2} 0 L ${sourceW} ${topY} Z`);
+    // Marker vertical scale: adjust ry of each ellipse to flatten/stretch
+    if (t === 'marker') {
+      const sy = parseFloat(el.dataset.markerScaleY || '1');
+      // Base ry values: ring=9, glow=13, shine=4, hlGlow=14, hlRing=9
+      const ring = el.querySelector('.marker-ellipse');
+      if (ring) ring.setAttribute('ry', 9 * sy);
+      const glow = el.querySelector('.marker-glow');
+      if (glow) { glow.setAttribute('ry', 13 * sy); glow.setAttribute('cy', 2 * sy); }
+      const shine = el.querySelector('.marker-shine');
+      if (shine) { shine.setAttribute('ry', 4 * sy); shine.setAttribute('cy', -2 * sy); }
+      const hlGlow = el.querySelector('.mh-glow');
+      if (hlGlow) hlGlow.setAttribute('ry', 14 * sy);
+      const hlRing = el.querySelector('.mh-ring');
+      if (hlRing) hlRing.setAttribute('ry', 9 * sy);
+      // Adjust label position
+      const label = el.querySelector('.marker-label');
+      if (label) label.setAttribute('y', 18 * sy);
+      // Redraw highlight beam if on
+      if (el.dataset.markerHighlight === '1') {
+        const beam = el.querySelector('.marker-highlight .mh-beam');
+        if (beam) {
+          const sourceW = 6;
+          const beamW = 17 * 2;
+          const topY = -cy / Math.max(0.01, scale);
+          beam.setAttribute('d', `M ${-sourceW} ${topY} L ${-beamW/2} 0 L ${beamW/2} 0 L ${sourceW} ${topY} Z`);
+        }
       }
     }
   } else if (t === 'tag') {
@@ -142,7 +158,11 @@ export function applyTransform(el) {
     const hh = parseFloat(el.dataset.hh || '20') * scale;
     sh.setAttribute('cx', cx); sh.setAttribute('cy', cy);
     sh.setAttribute('rx', hw); sh.setAttribute('ry', hh);
-    sh.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+    const sx1 = parseFloat(el.dataset.zoneSkewX || '0');
+    const sy1 = parseFloat(el.dataset.zoneSkewY || '0');
+    sh.setAttribute('transform', (sx1 || sy1)
+      ? `rotate(${rot},${cx},${cy}) translate(${cx},${cy}) skewX(${sx1}) skewY(${sy1}) translate(${-cx},${-cy})`
+      : `rotate(${rot},${cx},${cy})`);
     if (t === 'shadow-circle' && _updateShadowLabelFn) _updateShadowLabelFn(el);
   } else if (t === 'freeform') {
     if (_updateFreeformFn) _updateFreeformFn(el);
@@ -154,8 +174,33 @@ export function applyTransform(el) {
     const hh = parseFloat(el.dataset.hh || '20') * scale;
     sh.setAttribute('x', cx-hw); sh.setAttribute('y', cy-hh);
     sh.setAttribute('width', hw*2); sh.setAttribute('height', hh*2);
-    sh.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+    const sx2 = parseFloat(el.dataset.zoneSkewX || '0');
+    const sy2 = parseFloat(el.dataset.zoneSkewY || '0');
+    sh.setAttribute('transform', (sx2 || sy2)
+      ? `rotate(${rot},${cx},${cy}) translate(${cx},${cy}) skewX(${sx2}) skewY(${sy2}) translate(${-cx},${-cy})`
+      : `rotate(${rot},${cx},${cy})`);
     if (_updateShadowLabelFn) _updateShadowLabelFn(el);
+  } else if (t === 'image') {
+    const hw = parseFloat(el.dataset.hw || '60') * scale;
+    const hh = parseFloat(el.dataset.hh || '60') * scale;
+    const img = el.querySelector('.image-bitmap');
+    const hit = el.querySelector('.image-hit');
+    if (img) {
+      img.setAttribute('x', cx - hw); img.setAttribute('y', cy - hh);
+      img.setAttribute('width', hw * 2); img.setAttribute('height', hh * 2);
+      img.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+    }
+    if (hit) {
+      hit.setAttribute('x', cx - hw); hit.setAttribute('y', cy - hh);
+      hit.setAttribute('width', hw * 2); hit.setAttribute('height', hh * 2);
+      hit.setAttribute('transform', `rotate(${rot},${cx},${cy})`);
+    }
+    // Keep the circle-crop ellipse aligned (clipPath uses userSpaceOnUse)
+    const clipEllipse = el.querySelector('clipPath ellipse');
+    if (clipEllipse) {
+      clipEllipse.setAttribute('cx', cx); clipEllipse.setAttribute('cy', cy);
+      clipEllipse.setAttribute('rx', hw); clipEllipse.setAttribute('ry', hh);
+    }
   } else if (t === 'spotlight') {
     const rx = parseFloat(el.dataset.rx || '28') * scale;
     const ry = parseFloat(el.dataset.ry || '5') * scale;
@@ -343,6 +388,9 @@ export function select(el, opts = {}) {
     if (bg) { bg.setAttribute('stroke', 'rgba(79,156,249,0.8)'); bg.setAttribute('stroke-width', '1.5'); }
     showZoneHandles(el);
   }
+  if (type === 'image') {
+    showZoneHandles(el);
+  }
   if (type === 'headline') {
     const bg = el.querySelector('.headline-bg');
     if (bg) { bg.setAttribute('stroke', 'rgba(79,156,249,0.8)'); bg.setAttribute('stroke-width', '1.5'); }
@@ -461,7 +509,7 @@ export function select(el, opts = {}) {
     : type === 'tag' ? 'Callout'
     : type === 'link' ? 'Player Link'
     : type === 'pair' ? 'Pair'
-    : type === 'marker' ? 'Marker'
+    : type === 'marker' ? 'Connect Players'
     : type === 'net-zone' ? 'Player Zone'
     : 'Zone';
   const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : (type === 'textbox' || type === 'headline' || type === 'tag') ? ' · double-click to edit' : type?.startsWith('shadow') || type === 'freeform' ? ' · double-click to edit label' : '';
@@ -493,7 +541,7 @@ export function select(el, opts = {}) {
   const linkSec = document.getElementById('link-edit-section');
   const markerSecInit = document.getElementById('marker-edit-section');
   const delSec = document.getElementById('del-section');
-  const layerSec = document.getElementById('layer-section');
+  const layerInline = document.getElementById('layer-controls-inline');
 
   // Always switch to element tab
   switchTab('element');
@@ -512,7 +560,7 @@ export function select(el, opts = {}) {
   const nzSec = document.getElementById('nz-edit-section');
   if (nzSec) nzSec.style.display = 'none';
   delSec.style.display = '';
-  layerSec.style.display = '';
+  layerInline.style.display = '';
 
   const isArrow = type === 'arrow';
   const isZone = type?.startsWith('shadow') || type === 'pair' || type === 'freeform';
@@ -522,7 +570,8 @@ export function select(el, opts = {}) {
   const isTag = type === 'tag';
   const isLink = type === 'link';
   const isMarker = type === 'marker';
-  const showSize = !isArrow && !isZone && !isNetZone && !isText && !isHeadline && !isTag && !isLink;
+  const isImage = type === 'image';
+  const showSize = !isArrow && !isZone && !isNetZone && !isText && !isHeadline && !isLink && !isImage;
   document.getElementById('size-section').style.display = showSize ? '' : 'none';
   // Vision and zones use the standalone rotation-section; players use inline arm-rotation-group
   // Pair rotation is driven by player positions, not editable
@@ -537,7 +586,7 @@ export function select(el, opts = {}) {
     document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
   }
   // Layer section: zones have it inside their Advanced panel, so hide standalone
-  if (isZone) document.getElementById('layer-section').style.display = 'none';
+  if (isZone) document.getElementById('layer-controls-inline').style.display = 'none';
   if (isZone) {
     const rv = el.dataset.rotation || '0';
     // Sync standalone slider (for compat) and in-panel slider
@@ -695,6 +744,21 @@ export function select(el, opts = {}) {
       document.getElementById('marker-opacity-val').textContent = Math.round((el.dataset.markerOpacity || 1) * 100) + '%';
       const hl = document.getElementById('marker-highlight-toggle');
       if (hl) hl.checked = el.dataset.markerHighlight === '1';
+      const syVal = parseFloat(el.dataset.markerScaleY || '1');
+      document.getElementById('marker-scaley-slider').value = Math.round(syVal * 100);
+      document.getElementById('marker-scaley-val').textContent = syVal.toFixed(1) + '×';
+    }
+  } else if (isImage) {
+    const imgSec = document.getElementById('image-edit-section');
+    if (imgSec) {
+      imgSec.style.display = '';
+      const cropToggle = document.getElementById('image-crop-toggle');
+      if (cropToggle) cropToggle.checked = el.dataset.imgCrop === '1';
+      const opSlider = document.getElementById('image-opacity-slider');
+      const opLabel = document.getElementById('image-opacity-val');
+      const op = el.dataset.imgOpacity || '1';
+      if (opSlider) opSlider.value = op;
+      if (opLabel) opLabel.textContent = Math.round(parseFloat(op) * 100) + '%';
     }
   } else if (isNetZone) {
     if (nzSec) {
@@ -877,7 +941,7 @@ export function deselect() {
   // Hide mobile context bar & restore feedback
   hideMobileContext();
   document.getElementById('del-section').style.display = 'none';
-  document.getElementById('layer-section').style.display = 'none';
+  document.getElementById('layer-controls-inline').style.display = 'none';
   document.getElementById('player-edit-section').style.display = 'none';
   document.getElementById('arrow-edit-section').style.display = 'none';
   document.getElementById('zone-edit-section').style.display = 'none';
@@ -890,6 +954,8 @@ export function deselect() {
   if (tagSec) tagSec.style.display = 'none';
   const markerSec = document.getElementById('marker-edit-section');
   if (markerSec) markerSec.style.display = 'none';
+  const imageSec = document.getElementById('image-edit-section');
+  if (imageSec) imageSec.style.display = 'none';
   document.getElementById('rotation-section').style.display = 'none';
   document.getElementById('size-section').style.display = 'none';
 }
@@ -916,7 +982,7 @@ export function deleteSelected() {
   S.selInfo.innerHTML = 'Nothing selected.';
   hideMobileContext();
   document.getElementById('del-section').style.display = 'none';
-  document.getElementById('layer-section').style.display = 'none';
+  document.getElementById('layer-controls-inline').style.display = 'none';
   document.getElementById('player-edit-section').style.display = 'none';
   document.getElementById('arrow-edit-section').style.display = 'none';
   document.getElementById('zone-edit-section').style.display = 'none';
@@ -1487,7 +1553,7 @@ function onEndpointDrag(e) {
     onMotionEndpointDrag(el, pt);
   } else if (t === 'tag') {
     onTagHandleDrag(el, pt);
-  } else if (t.startsWith('shadow') || t === 'textbox' || t === 'headline' || t === 'pair') {
+  } else if (t.startsWith('shadow') || t === 'textbox' || t === 'headline' || t === 'pair' || t === 'image') {
     onZoneHandleDrag(el, pt);
   } else if (t === 'small-goal') {
     onSmallGoalHandleDrag(el, pt);
@@ -1867,7 +1933,7 @@ function _updateMultiSelectUI() {
 
   // Hide all individual edit sections
   const sections = ['player-edit-section', 'referee-edit-section', 'arrow-edit-section',
-    'zone-edit-section', 'textbox-edit-section', 'headline-edit-section',
+    'zone-edit-section', 'textbox-edit-section', 'headline-edit-section', 'image-edit-section',
     'spotlight-edit-section', 'vision-edit-section', 'tag-edit-section', 'link-edit-section', 'marker-edit-section', 'nz-edit-section'];
   for (const id of sections) {
     const sec = document.getElementById(id);
@@ -1877,7 +1943,7 @@ function _updateMultiSelectUI() {
 
   switchTab('element');
   document.getElementById('del-section').style.display = '';
-  document.getElementById('layer-section').style.display = 'none';
+  document.getElementById('layer-controls-inline').style.display = 'none';
 
   // Remove handles (no individual element handles in multi-select)
   removeHandles();

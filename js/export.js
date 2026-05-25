@@ -361,7 +361,10 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const sStroke = g.dataset.savedStroke || shape?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
     const sDash = shape?.getAttribute('stroke-dasharray') || '';
 
+    const skewX = parseFloat(g.dataset.zoneSkewX || '0') * Math.PI / 180;
+    const skewY = parseFloat(g.dataset.zoneSkewY || '0') * Math.PI / 180;
     ctx.save(); ctx.translate(cx,cy); ctx.rotate(rot);
+    if (skewX || skewY) ctx.transform(1, Math.tan(skewY), Math.tan(skewX), 1, 0, 0);
     if (type === 'shadow-circle') {
       ctx.beginPath(); ctx.ellipse(0,0,hw,hh,0,0,Math.PI*2);
     } else {
@@ -685,6 +688,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const borderColor = g.dataset.borderColor || 'rgba(255,255,255,0.85)';
     const bgColor = g.dataset.bgColor || 'rgba(255,255,255,0.10)';
     const opacity = parseFloat(g.dataset.markerOpacity || '1');
+    const sy = parseFloat(g.dataset.markerScaleY || '1');
 
     ctx.save();
     ctx.globalAlpha = opacity;
@@ -716,8 +720,8 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     // Ground glow
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(cx, cy + 2, 24 * sc, 13 * sc, 0, 0, Math.PI * 2);
-    const glowGrad = ctx.createRadialGradient(cx, cy + 2, 0, cx, cy + 2, 24 * sc);
+    ctx.ellipse(cx, cy + 2 * sy, 24 * sc, 13 * sc * sy, 0, 0, Math.PI * 2);
+    const glowGrad = ctx.createRadialGradient(cx, cy + 2 * sy, 0, cx, cy + 2 * sy, 24 * sc);
     glowGrad.addColorStop(0, 'rgba(255,255,255,0.18)');
     glowGrad.addColorStop(0.7, 'rgba(255,255,255,0.05)');
     glowGrad.addColorStop(1, 'rgba(255,255,255,0)');
@@ -727,7 +731,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
 
     // Main ellipse ring
     ctx.beginPath();
-    ctx.ellipse(cx, cy, 17 * sc, 9 * sc, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, 17 * sc, 9 * sc * sy, 0, 0, Math.PI * 2);
     ctx.fillStyle = bgColor;
     ctx.fill();
     ctx.strokeStyle = borderColor;
@@ -736,7 +740,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
 
     // Inner shine
     ctx.beginPath();
-    ctx.ellipse(cx, cy - 2 * sc, 10 * sc, 4 * sc, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy - 2 * sc * sy, 10 * sc, 4 * sc * sy, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.fill();
 
@@ -750,9 +754,9 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(0,0,0,0.55)';
       ctx.lineJoin = 'round';
-      ctx.strokeText(name, cx, cy + 18 * sc);
+      ctx.strokeText(name, cx, cy + 18 * sc * sy);
       ctx.fillStyle = 'white';
-      ctx.fillText(name, cx, cy + 18 * sc);
+      ctx.fillText(name, cx, cy + 18 * sc * sy);
     }
 
     ctx.restore();
