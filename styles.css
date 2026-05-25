@@ -991,6 +991,7 @@ input[type=range]::-webkit-slider-thumb {
   display: flex; gap: 3px; margin-top: 8px;
 }
 .layer-inline-btn {
+  position: relative;
   display: flex; align-items: center; justify-content: center;
   width: 28px; height: 24px;
   border: 1px solid var(--border); background: var(--panel2);
@@ -999,6 +1000,25 @@ input[type=range]::-webkit-slider-thumb {
 }
 .layer-inline-btn:hover { border-color: #444; color: var(--text); background: #1a1a1a; }
 .layer-inline-btn:active { background: #222; }
+.layer-inline-btn-danger { margin-left: auto; color: #F87171; border-color: #3A1520; }
+.layer-inline-btn-danger:hover { background: #3A1520; color: #FCA5A5; border-color: #5A1F2F; }
+
+/* Custom tooltip for inline buttons (data-tooltip) */
+.layer-inline-btn[data-tooltip]::after {
+  content: attr(data-tooltip);
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%);
+  background: #0b0b0b; color: var(--text);
+  border: 1px solid #2a2a2a;
+  padding: 5px 8px; border-radius: 5px;
+  font-size: 11px; font-weight: 500; white-space: nowrap;
+  pointer-events: none; opacity: 0;
+  transition: opacity 0.12s ease 0.4s;
+  z-index: 100;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
+}
+.layer-inline-btn[data-tooltip]:hover::after { opacity: 1; }
+/* Anchor right-aligned tooltip for the danger button so it doesn't clip */
+.layer-inline-btn-danger[data-tooltip]::after { left: auto; right: 0; transform: none; }
 
 /* Legacy layer buttons (zone Advanced panel) */
 .layer-btn-row {

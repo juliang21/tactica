@@ -1500,17 +1500,20 @@
         <span style="font-size:10px;color:var(--text-muted)">Click any element on the pitch to edit it.</span>
       </div>
       <div id="layer-controls-inline" style="display:none">
-        <button class="layer-inline-btn" onclick="layerSendToBack()" title="Send to Back">
+        <button class="layer-inline-btn" onclick="layerSendToBack()" data-tooltip="Send to back — place behind all other elements">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5" fill="var(--panel2)"/></svg>
         </button>
-        <button class="layer-inline-btn" onclick="layerSendBackward()" title="Send Backward">
+        <button class="layer-inline-btn" onclick="layerSendBackward()" data-tooltip="Send backward — move one layer down">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><rect x="5" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5" fill="var(--panel2)"/><path d="M4 10l-2 2m0 0l2 2m-2-2h4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <button class="layer-inline-btn" onclick="layerBringForward()" title="Bring Forward">
+        <button class="layer-inline-btn" onclick="layerBringForward()" data-tooltip="Bring forward — move one layer up">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5" fill="var(--panel2)"/><rect x="1" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/><path d="M12 6l2-2m0 0l-2-2m2 2h-4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <button class="layer-inline-btn" onclick="layerBringToFront()" title="Bring to Front">
+        <button class="layer-inline-btn" onclick="layerBringToFront()" data-tooltip="Bring to front — place above all other elements">
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5" fill="var(--panel2)"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.5"/></svg>
+        </button>
+        <button class="layer-inline-btn layer-inline-btn-danger" onclick="deleteSelected()" data-tooltip="Remove element from the board">
+          <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M6 4V2.5A.5.5 0 016.5 2h3a.5.5 0 01.5.5V4M5 4l.5 9a1 1 0 001 1h3a1 1 0 001-1L11 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
     </div>
@@ -2399,9 +2402,8 @@
       </div>
     </div>
 
-    <div class="panel-section" id="del-section" style="display:none">
-      <button class="action-btn danger" onclick="deleteSelected()">Remove element</button>
-    </div>
+    <!-- Removed: standalone Remove element button. Delete is now in #layer-controls-inline. -->
+    <div class="panel-section" id="del-section" style="display:none"></div>
 
   </div><!-- /pane-element -->
 
