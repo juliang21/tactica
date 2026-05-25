@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel} from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -16,6 +16,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateHeadline, applyHeadlineBarColor, applyHeadlineTitleSize, applyHeadlineBodySize, applyHeadlineTextColor, applyHeadlineBg,
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
          applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, applyMarkerHighlight, liveUpdateMarkerName, confirmMarkerName,
+         applyImageCrop, applyImageOpacity,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=5';
@@ -265,6 +266,10 @@ window.setTool = function(t) {
   if (S.tool === 'marker' && t !== 'marker') {
     _lastChainMarker = null;
   }
+  // Clean up image placement state if leaving image mode
+  if (S.tool === 'image' && t !== 'image') {
+    _pendingImagePoint = null;
+  }
   // Clean up net-zone tool state if leaving net-zone mode
   if (S.tool === 'net-zone' && t !== 'net-zone') {
     cancelNetZone();
@@ -290,6 +295,7 @@ window.setTool = function(t) {
     'player-joker': { panel: null, label: 'Joker', hint: 'Click on the pitch to place' },
     'ball':         { panel: null, label: 'Ball',  hint: 'Click on the pitch to place' },
     'cone':         { panel: null, label: 'Cone',  hint: 'Click on the pitch to place' },
+    'image':        { panel: null, label: 'Image', hint: 'Click on the pitch — a file picker will open' },
     'net-zone':     null, // handled separately below
     'link':         null,
     'pair':         null,
@@ -301,7 +307,7 @@ window.setTool = function(t) {
     // Hide all edit sections first
     document.querySelectorAll('.panel-section[id$="-edit-section"]').forEach(s => s.style.display = 'none');
     document.getElementById('del-section').style.display = 'none';
-    document.getElementById('layer-section').style.display = 'none';
+    document.getElementById('layer-controls-inline').style.display = 'none';
     document.getElementById('size-section').style.display = 'none';
     document.getElementById('rotation-section').style.display = 'none';
     // Show the relevant panel (if one is defined)
@@ -1455,6 +1461,20 @@ window.applyZoneCorners = function(style) {
     b.classList.toggle('active', b.dataset.corners === style));
 };
 
+window.applyZonePerspective = function(axis, val) {
+  const el = S.selectedEl;
+  if (!el || (!el.dataset.type?.startsWith('shadow') && el.dataset.type !== 'freeform')) return;
+  S.pushUndo();
+  if (axis === 'x') {
+    el.dataset.zoneSkewX = val;
+    document.getElementById('zone-skewx-val').textContent = val + '°';
+  } else {
+    el.dataset.zoneSkewY = val;
+    document.getElementById('zone-skewy-val').textContent = val + '°';
+  }
+  applyTransform(el);
+};
+
 window.toggleZoneLabelVisibility = function(show) {
   const el = S.selectedEl;
   if (!el) return;
@@ -1538,6 +1558,13 @@ function _syncZonePanelState(el) {
   const labelPos = el.dataset.zoneLabelPos || 'top-left';
   document.querySelectorAll('#zone-edit-section [data-labelpos]').forEach(b =>
     b.classList.toggle('active', b.dataset.labelpos === labelPos));
+  // Perspective sliders
+  const skX = el.dataset.zoneSkewX || '0';
+  const skY = el.dataset.zoneSkewY || '0';
+  const sxSlider = document.getElementById('zone-skewx-slider');
+  const sySlider = document.getElementById('zone-skewy-slider');
+  if (sxSlider) { sxSlider.value = skX; document.getElementById('zone-skewx-val').textContent = Math.round(parseFloat(skX)) + '°'; }
+  if (sySlider) { sySlider.value = skY; document.getElementById('zone-skewy-val').textContent = Math.round(parseFloat(skY)) + '°'; }
 }
 
 window.liveUpdateTextBox = liveUpdateTextBox;
@@ -1569,6 +1596,24 @@ window.applyMarkerOpacity = applyMarkerOpacity;
 window.liveUpdateMarkerName = liveUpdateMarkerName;
 window.confirmMarkerName = confirmMarkerName;
 window.applyMarkerHighlight = applyMarkerHighlight;
+window.applyMarkerScaleY = function(val) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'marker') return;
+  S.pushUndo();
+  el.dataset.markerScaleY = (val / 100).toFixed(2);
+  document.getElementById('marker-scaley-val').textContent = (val / 100).toFixed(1) + '×';
+  applyTransform(el);
+};
+window.applyImageCrop = applyImageCrop;
+window.applyImageOpacity = applyImageOpacity;
+// Replace the source on the currently selected image. Clears any stale
+// pending placement point so the file picker change handler routes through
+// the replace branch.
+window.replaceSelectedImage = function() {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'image') return;
+  _pendingImagePoint = null;
+  document.getElementById('image-tool-file-input').click();
+};
 // Continue the marker chain from the currently selected marker. Switches to
 // the marker tool with this marker pre-armed as the chain origin, so the
 // next click on the pitch places a NEW marker that auto-links to it. Useful
@@ -1827,6 +1872,114 @@ let _lastChainMarker = null;
 // ─── Pair Tool State ────────────────────────────────────────────────────────
 let _pairStartPlayer = null;
 
+// ─── Image Tool State ──────────────────────────────────────────────────────
+// Where on the pitch the user clicked when arming the image tool. The actual
+// placement happens after the file picker resolves, so we stash the point.
+let _pendingImagePoint = null;
+
+// Process an image file: downscale to keep saves lean, then convert to a
+// data URL. Returns { dataUrl, width, height } or { error }. Files >5MB are
+// rejected outright; everything else is canvas-resized to ~400px max edge.
+async function _processImageFile(file) {
+  if (!file || !file.type || !file.type.startsWith('image/')) {
+    return { error: 'Please pick an image file (PNG, JPG, etc).' };
+  }
+  if (file.size > 8 * 1024 * 1024) {
+    return { error: 'That file is over 8MB. Try a smaller image.' };
+  }
+  const dataUrl = await new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result);
+    r.onerror = () => reject(new Error('Could not read file'));
+    r.readAsDataURL(file);
+  });
+  const img = await new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error('Could not decode image'));
+    i.src = dataUrl;
+  });
+  const MAX = 400;
+  let W = img.naturalWidth, H = img.naturalHeight;
+  const origW = W, origH = H;
+  if (W > MAX || H > MAX) {
+    if (W >= H) { H = Math.round(H * (MAX / W)); W = MAX; }
+    else        { W = Math.round(W * (MAX / H)); H = MAX; }
+  }
+  const canvas = document.createElement('canvas');
+  canvas.width = W; canvas.height = H;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img, 0, 0, W, H);
+  // PNG to keep transparency for logos with alpha; JPEG otherwise to save space.
+  const usePng = file.type === 'image/png';
+  const out = canvas.toDataURL(usePng ? 'image/png' : 'image/jpeg', 0.85);
+  // Hard cap on the encoded size — bigger than this and the saved analysis
+  // is going to bloat fast.
+  if (out.length > 600 * 1024) {
+    return { error: 'Image too large after compression. Try a smaller or simpler image.' };
+  }
+  return { dataUrl: out, width: origW, height: origH };
+}
+
+async function _placeImageFromFile(file, x, y) {
+  const result = await _processImageFile(file);
+  if (!result || result.error) {
+    showNotification(result?.error || 'Could not load image', 'error', 4000);
+    return;
+  }
+  S.pushUndo();
+  const el = addImage(x, y, result.dataUrl, result.width, result.height);
+  if (el) {
+    setTool('select');
+    select(el);
+    trackElementInserted('image');
+    const u = getCurrentUser();
+    if (u) logAction(u.uid, u.email, 'element_inserted', { element: 'image' }).catch(() => {});
+  }
+}
+
+// Wire the hidden file input and drag-drop on the canvas
+(function setupImageHandlers() {
+  const tryWire = () => {
+    const input = document.getElementById('image-tool-file-input');
+    if (!input || !S.svg) { setTimeout(tryWire, 100); return; }
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (!file) { _pendingImagePoint = null; return; }
+      // If the user used the panel's "Replace image" button, swap the source
+      // on the currently selected image. Otherwise place a new one.
+      if (S.selectedEl && S.selectedEl.dataset.type === 'image' && !_pendingImagePoint) {
+        const result = await _processImageFile(file);
+        if (result.error) { showNotification(result.error, 'error', 4000); return; }
+        S.pushUndo();
+        const img = S.selectedEl.querySelector('.image-bitmap');
+        if (img) img.setAttribute('href', result.dataUrl);
+        S.selectedEl.dataset.imgHref = result.dataUrl;
+        return;
+      }
+      const pt = _pendingImagePoint || { x: 350, y: 240 };
+      _pendingImagePoint = null;
+      await _placeImageFromFile(file, pt.x, pt.y);
+    });
+    // Drag-drop image files anywhere on the SVG canvas
+    S.svg.addEventListener('dragover', (e) => {
+      if (e.dataTransfer && Array.from(e.dataTransfer.types || []).includes('Files')) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'copy';
+      }
+    });
+    S.svg.addEventListener('drop', async (e) => {
+      const file = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+      if (!file || !file.type || !file.type.startsWith('image/')) return;
+      e.preventDefault();
+      const pt = S.getSVGPoint(e);
+      await _placeImageFromFile(file, pt.x, pt.y);
+    });
+  };
+  tryWire();
+})();
+
 // ─── Net-Zone Tool State ──────────────────────────────────────────────────
 let _netZonePlayers = [];       // accumulated player IDs (Tactical Board mode)
 let _netZoneHighlights = [];    // highlight ring SVG elements
@@ -2020,6 +2173,16 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
   else if (S.tool === 'headline') placed = addHeadline(pt.x, pt.y);
   else if (S.tool === 'tag') placed = addTag(pt.x, pt.y);
+  else if (S.tool === 'image') {
+    // Image tool doesn't place synchronously — it opens the file picker.
+    // _pendingImagePoint stores where the user clicked so we can drop the
+    // image there once the file finishes processing.
+    _pendingImagePoint = { x: pt.x, y: pt.y };
+    document.getElementById('image-tool-file-input').click();
+    // Bail out of the rest of this click handler — placement happens in the
+    // file input's change handler.
+    return;
+  }
   else if (S.tool === 'marker') {
     // ── Chain-connect: place marker + auto-link to previous ─────────────
     placed = addMarker(pt.x, pt.y);
@@ -2267,10 +2430,11 @@ function _showNetZoneHint() {
   ['player-edit-section','referee-edit-section','arrow-edit-section','zone-edit-section',
    'textbox-edit-section','headline-edit-section','spotlight-edit-section','vision-edit-section',
    'tag-edit-section','link-edit-section','marker-edit-section','nz-edit-section',
-   'size-section','rotation-section','del-section','layer-section'].forEach(id => {
+   'size-section','rotation-section','del-section'].forEach(id => {
     const el = document.getElementById(id);
     if (el) el.style.display = 'none';
   });
+  document.getElementById('layer-controls-inline').style.display = 'none';
 }
 
 function updateNetZonePreview() {
@@ -3521,6 +3685,15 @@ function _copyElementData(el) {
     data.scale = el.dataset.scale || '0.7';
   } else if (t === 'cone') {
     data.scale = el.dataset.scale || '1';
+  } else if (t === 'marker') {
+    data.scale = el.dataset.scale || '1';
+    data.markerScaleY = el.dataset.markerScaleY || '1';
+    data.markerName = el.dataset.markerName || '';
+    data.markerOpacity = el.dataset.markerOpacity || '1';
+    data.markerHighlight = el.dataset.markerHighlight || '0';
+    data.borderColor = el.dataset.borderColor || 'rgba(255,255,255,0.85)';
+    data.bgColor = el.dataset.bgColor || 'rgba(255,255,255,0.10)';
+    data.lineColor = el.dataset.lineColor || 'rgba(255,255,255,0.5)';
   } else if (t === 'arrow') {
     const line = el.querySelector('.arrow-line');
     data.arrowType = el.dataset.arrowType;
@@ -3564,6 +3737,8 @@ function _copyElementData(el) {
     data.fill = shape?.getAttribute('fill');
     data.stroke = el.dataset.savedStroke || shape?.getAttribute('stroke');
     data.dash = shape?.getAttribute('stroke-dasharray') || '';
+    data.zoneSkewX = el.dataset.zoneSkewX || '0';
+    data.zoneSkewY = el.dataset.zoneSkewY || '0';
   }
   return data;
 }
@@ -3775,6 +3950,18 @@ function _pasteOne(d, x, y) {
   } else if (d.type === 'cone') {
     placed = addCone(x, y);
     if (placed) placed.dataset.scale = d.scale;
+  } else if (d.type === 'marker') {
+    placed = addMarker(x, y);
+    if (placed) {
+      placed.dataset.scale = d.scale;
+      if (d.markerScaleY && d.markerScaleY !== '1') placed.dataset.markerScaleY = d.markerScaleY;
+      if (d.markerName) { placed.dataset.markerName = d.markerName; const lbl = placed.querySelector('.marker-label'); if (lbl) lbl.textContent = d.markerName; }
+      if (d.markerOpacity) placed.dataset.markerOpacity = d.markerOpacity;
+      if (d.markerHighlight === '1') placed.dataset.markerHighlight = '1';
+      if (d.borderColor) placed.dataset.borderColor = d.borderColor;
+      if (d.bgColor) placed.dataset.bgColor = d.bgColor;
+      if (d.lineColor) placed.dataset.lineColor = d.lineColor;
+    }
   } else if (d.type === 'arrow') {
     const dx = parseFloat(d.dx2) - parseFloat(d.dx1);
     const dy = parseFloat(d.dy2) - parseFloat(d.dy1);
@@ -3890,6 +4077,8 @@ function _pasteOne(d, x, y) {
     if (placed) {
       placed.dataset.hw = d.hw; placed.dataset.hh = d.hh;
       placed.dataset.rotation = d.rotation;
+      if (d.zoneSkewX) placed.dataset.zoneSkewX = d.zoneSkewX;
+      if (d.zoneSkewY) placed.dataset.zoneSkewY = d.zoneSkewY;
       const shape = placed.querySelector('rect,ellipse');
       if (shape) {
         if (d.fill) shape.setAttribute('fill', d.fill);
