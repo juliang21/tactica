@@ -57,6 +57,7 @@ export function captureState() {
     frames: typeof window._getFramesForSave === 'function' ? window._getFramesForSave() : [],
     currentFrame: typeof window._getCurrentFrame === 'function' ? window._getCurrentFrame() : 0,
     notes: typeof window._getNotesText === 'function' ? window._getNotesText() : '',
+    watermarkVisible: S.watermarkVisible !== false,
   };
 }
 
@@ -198,6 +199,10 @@ export async function loadAnalysis(id, onReady) {
 
   if (d.teamColors) { S.teamColors.a = d.teamColors.a; S.teamColors.b = d.teamColors.b; }
   if (d.gkColors) { S.gkColors.a = d.gkColors.a; S.gkColors.b = d.gkColors.b; }
+
+  // Restore watermark visibility (defaults to ON if missing from saved data)
+  S.setWatermarkVisible(d.watermarkVisible !== false);
+  if (typeof window._syncWatermarkUI === 'function') window._syncWatermarkUI();
 
   // Normalize url() references that browsers may serialize as absolute URLs
   const fixUrls = html => html.replace(/url\(["']?[^)]*?(#[\w-]+)["']?\)/g, 'url($1)');

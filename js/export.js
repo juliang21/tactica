@@ -22,7 +22,8 @@ function wrapCanvasText(ctx, content, maxW) {
 }
 
 // ─── Free-tier watermark ─────────────────────────────────────────────────────
-function drawWatermark(ctx, W, H, logoImg) {
+// Exported so GIF/video exports in app.js can draw the same watermark on each frame.
+export function drawWatermark(ctx, W, H, logoImg) {
   ctx.save();
 
   const padding = 8;
@@ -1324,8 +1325,10 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     else if (type === 'tag') renderTag(g);
   });
 
-  // ── Draw watermark for free users ───────────────────────────────────────────
-  if (!canAccess('export:no-watermark')) {
+  // ── Draw watermark ──────────────────────────────────────────────────────────
+  // Controlled by the Pitch panel toggle. Free for everyone for now — to gate
+  // it to a paid tier later, also check `!canAccess('export:no-watermark')`.
+  if (S.watermarkVisible) {
     drawWatermark(ctx, W * SCALE, H * SCALE, null);
   }
 

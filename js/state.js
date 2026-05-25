@@ -26,6 +26,12 @@ export let pitchFlipped = false;
 export let pitchColors = { s1: '#3a7a38', s2: '#367035', line: 'rgba(255,255,255,0.55)' };
 export let exportFmt = 'png';
 
+// Watermark visibility (user-controlled per file). Default is ON for every
+// fresh session — the OFF state only persists if the user saves the file.
+// Free toggle for now; may be gated to a paid tier in the future.
+export let watermarkVisible = true;
+export function setWatermarkVisible(v) { watermarkVisible = !!v; }
+
 // ─── Image Analysis Mode ─────────────────────────────────────────────────────
 export let appMode = 'pitch';           // 'pitch' | 'image'
 export let imageData = null;            // base64 data URL of uploaded image

@@ -19,7 +19,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyImageCrop, applyImageOpacity,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport } from './export.js?v=5';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=5';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=6';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
@@ -876,6 +876,26 @@ window.toggleStripes = function() {
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_pitch_change', { stripes }).catch(() => {});
 };
+// Watermark visibility toggle (free for now — will be gated later).
+// Updates the on-board watermark and persists the preference in localStorage
+// so the choice survives reloads and exports.
+// Watermark visibility is per-file (no localStorage). Default is ON for every
+// fresh session; the OFF state only persists if the user saves the file.
+window.toggleWatermark = function(visible) {
+  S.setWatermarkVisible(!!visible);
+  const wm = document.querySelector('.shared-watermark');
+  if (wm) wm.style.display = visible ? '' : 'none';
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_watermark_toggle', { visible: !!visible }).catch(() => {});
+};
+// Helper used by load/new-file flows to sync the toggle UI to state.
+window._syncWatermarkUI = function() {
+  const wm = document.querySelector('.shared-watermark');
+  const toggle = document.getElementById('watermark-toggle');
+  if (wm) wm.style.display = S.watermarkVisible ? '' : 'none';
+  if (toggle) toggle.checked = S.watermarkVisible;
+};
+window._syncWatermarkUI();
 window.hideUpgradePrompt = hideUpgradePrompt;
 // setUserTier no longer exposed on window for security — tier is set by Firestore listener
 window.startCheckout = startCheckout;
@@ -3096,6 +3116,8 @@ function exportAnimation() {
     img.onload = () => {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      // Stamp the watermark on every frame so it matches the on-board toggle
+      if (S.watermarkVisible) drawWatermark(ctx, canvas.width, canvas.height, null);
       URL.revokeObjectURL(url);
 
       // Copy the canvas pixels
@@ -3444,6 +3466,8 @@ async function exportVideo() {
       img.onload = () => {
         ctx.clearRect(0, 0, cw, ch);
         ctx.drawImage(img, 0, 0, cw, ch);
+        // Stamp watermark on every frame so it matches the on-board toggle
+        if (S.watermarkVisible) drawWatermark(ctx, cw, ch, null);
         URL.revokeObjectURL(blobUrl);
         resolve();
       };
@@ -4763,6 +4787,9 @@ function newAnalysisFromDashboard() {
   S.playerCounts.joker = 0;
   S.setObjectCounter(0);
   S.undoStack.length = 0;
+  // Fresh file: watermark defaults back to ON
+  S.setWatermarkVisible(true);
+  if (typeof window._syncWatermarkUI === 'function') window._syncWatermarkUI();
   closeMyAnalyses();
   updateCurrentBar();
   showNotification('New analysis', 'info', 3000);
