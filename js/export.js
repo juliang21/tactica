@@ -1328,8 +1328,10 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
   // ── Draw watermark ──────────────────────────────────────────────────────────
   // Controlled by the Pitch panel toggle. Free for everyone for now — to gate
   // it to a paid tier later, also check `!canAccess('export:no-watermark')`.
+  // The ctx is already scaled by SCALE (see doExport), so pass logical W/H —
+  // passing W*SCALE put the watermark off the visible canvas.
   if (S.watermarkVisible) {
-    drawWatermark(ctx, W * SCALE, H * SCALE, null);
+    drawWatermark(ctx, W, H, null);
   }
 
   function finalizeExport() {
