@@ -2903,23 +2903,47 @@ body.shared-view #canvas-wrap {
 
 /* ── Trust signals section (below the fold) ── */
 .landing-trust {
-  width: 100%; max-width: 1200px;
-  padding: 0 64px 96px; box-sizing: border-box;
-  flex-shrink: 0;
+  position: relative; width: 100%; box-sizing: border-box;
+  padding: 64px 64px 96px; flex-shrink: 0;
+  border-top: 1px solid rgba(255,255,255,0.06);
+  background:
+    radial-gradient(800px 320px at 50% 0%, rgba(30,215,96,0.10), transparent 70%),
+    linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0) 45%);
+  overflow: hidden;
+}
+/* Faint dot-grid texture, masked to fade out toward the edges */
+.landing-trust::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
+  background-size: 24px 24px; opacity: 0.6;
+  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 28%, #000, transparent 78%);
+          mask-image: radial-gradient(ellipse 60% 70% at 50% 28%, #000, transparent 78%);
 }
 .trust-eyebrow {
+  position: relative; z-index: 1;
+  max-width: 1200px; margin: 0 auto 36px;
   text-align: center;
   font-family: 'Manrope', sans-serif;
   font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
   text-transform: uppercase; color: var(--text-muted);
-  margin: 0 0 32px;
 }
 .trust-inner {
+  position: relative; z-index: 1;
+  max-width: 1200px; margin: 0 auto;
   display: grid;
   grid-template-columns: 1fr 1fr 1.5fr;
   gap: 40px; align-items: center;
-  border-top: 1px solid rgba(255,255,255,0.08);
-  padding-top: 48px;
+}
+
+/* Reveal-on-scroll motion */
+.reveal {
+  opacity: 0; transform: translateY(26px);
+  transition: opacity 0.7s cubic-bezier(0.22,0.61,0.36,1),
+              transform 0.7s cubic-bezier(0.22,0.61,0.36,1);
+}
+.reveal.in { opacity: 1; transform: none; }
+@media (prefers-reduced-motion: reduce) {
+  .reveal { opacity: 1; transform: none; transition: none; }
 }
 .trust-stat { text-align: center; }
 .trust-number {
@@ -3076,7 +3100,7 @@ body.shared-view #canvas-wrap {
   .landing-sub { max-width: 100%; }
   .landing-actions { justify-content: center; }
   .landing-mockup { max-width: 400px; }
-  .landing-trust { padding: 0 24px 64px; }
+  .landing-trust { padding: 48px 24px 64px; }
   .trust-inner { grid-template-columns: 1fr; gap: 32px; text-align: center; }
   .trust-number { font-size: 52px; }
 }
