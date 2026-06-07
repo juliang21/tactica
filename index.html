@@ -127,7 +127,62 @@
       </div>
     </div>
   </div>
+
+  <!-- ── Trust signals (below the fold) ── -->
+  <section class="landing-trust">
+    <p class="trust-eyebrow">Trusted by coaches worldwide</p>
+    <div class="trust-inner">
+      <!-- Col 1: coaches -->
+      <div class="trust-stat">
+        <div class="trust-number">+600</div>
+        <div class="trust-label">Coaches trust Táctica</div>
+      </div>
+      <!-- Col 2: rating -->
+      <div class="trust-stat">
+        <div class="trust-rating-top">
+          <span class="trust-number">4.9</span>
+          <span class="trust-stars" aria-label="4.9 out of 5 stars">★★★★★</span>
+        </div>
+        <div class="trust-label">Average rating · 24 reviews</div>
+      </div>
+      <!-- Col 3: scrolling testimonials -->
+      <div class="trust-testimonials">
+        <div class="trust-marquee">
+          <!-- Edit testimonials here; the script below duplicates them for a seamless loop. -->
+          <div class="trust-track" id="trust-track">
+            <figure class="t-card">
+              <div class="t-stars">★★★★☆</div>
+              <blockquote>"I use Táctica to analyse teams and share my analysis on social media — very visual, with loads of teams and national sides."</blockquote>
+              <figcaption>Aitor V.</figcaption>
+            </figure>
+            <figure class="t-card">
+              <div class="t-stars">★★★★★</div>
+              <blockquote>"Excellent — thank you so much."</blockquote>
+              <figcaption>Roberto P.</figcaption>
+            </figure>
+            <figure class="t-card">
+              <div class="t-stars">★★★★★</div>
+              <blockquote>"Really useful for designing tactics."</blockquote>
+              <figcaption>Oscar</figcaption>
+            </figure>
+            <figure class="t-card">
+              <div class="t-stars">★★★★★</div>
+              <blockquote>"Amazing!"</blockquote>
+              <figcaption>Django L.</figcaption>
+            </figure>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
 </div>
+<script>
+  // Duplicate testimonial cards once so the vertical marquee loops seamlessly.
+  (function () {
+    var track = document.getElementById('trust-track');
+    if (track) track.innerHTML += track.innerHTML;
+  })();
+</script>
 
 <!-- ── Top Notification Bar ── -->
 <div id="notif-bar" class="notif-bar">

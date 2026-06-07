@@ -143,6 +143,10 @@ export async function openManageSubscription() {
 
 // ─── Upgrade prompt ──────────────────────────────────────────────────────────
 export function showUpgradePrompt(featureName) {
+  // TEMP: subscription isn't live yet — suppress the "Upgrade to Analyst" overlay.
+  // Remove this early return to re-enable upsells when the Analyst plan launches.
+  return;
+  /* eslint-disable no-unreachable */
   const overlay = document.getElementById('upgrade-overlay');
   if (!overlay) return;
   const label = overlay.querySelector('.upgrade-feature-name');
@@ -183,7 +187,9 @@ export function updateLockedUI() {
   const menuManageSub = document.getElementById('app-menu-manage-sub');
   // Only toggle if user is signed in (labelSecondary visible)
   if (labelSecondary && labelSecondary.style.display !== 'none') {
-    if (menuUpgrade) menuUpgrade.style.display = pro ? 'none' : 'flex';
+    // TEMP: subscription isn't live yet — keep the "Upgrade to Analyst" CTA hidden.
+    // Restore `pro ? 'none' : 'flex'` to re-enable it when the Analyst plan launches.
+    if (menuUpgrade) menuUpgrade.style.display = 'none';
     if (menuManageSub) menuManageSub.style.display = pro ? 'flex' : 'none';
   }
 }
