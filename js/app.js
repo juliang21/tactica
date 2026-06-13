@@ -26,7 +26,7 @@ import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAn
 import { onAuthChange, getCurrentUser } from './auth.js';
 // access-check.js kept for future reactivation (Turkey/email blocking disabled)
 // import { shouldBlockUser, shouldBlockAnonymous, showMaintenanceOverlay, isBlockedEmail } from './access-check.js';
-import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed } from './firestore.js?v=5';
+import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed, getLandingStats } from './firestore.js?v=6';
 import { hideUpgradePrompt, setUserTier, updateLockedUI, initSubscriptionListener, stopSubscriptionListener, startCheckout, openManageSubscription, isPro } from './subscription.js';
 import './features/feedback.js';
 import './features/bundles.js';
@@ -5437,4 +5437,18 @@ onAuthChange(async (user) => {
       } catch {}
     });
   });
+})();
+
+// ─── Live landing trust stats ───────────────────────────────────────────────
+// Override the static data/trust.json fallback with the real, self-updating
+// numbers written by the refreshLandingStats Cloud Function. Runs for everyone
+// (logged out included) since the stats doc is publicly readable. Silent no-op
+// if the doc isn't there yet or the read fails.
+(async function hydrateLiveTrustStats() {
+  try {
+    const stats = await getLandingStats();
+    if (stats && typeof window.__applyTrustStats === 'function') {
+      window.__applyTrustStats(stats);
+    }
+  } catch (e) { /* fall back to static values */ }
 })();

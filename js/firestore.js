@@ -203,6 +203,19 @@ export async function logAction(uid, email, action, meta) {
   });
 }
 
+// ─── Public landing stats (no auth required) ─────────────────────────────────
+// Reads the single public doc written by the refreshLandingStats Cloud Function.
+// Returns null if it doesn't exist yet or on any error, so the caller can fall
+// back to the static data/trust.json values.
+export async function getLandingStats() {
+  try {
+    const snap = await getDoc(doc(db, 'tactica_public', 'stats'));
+    return snap.exists() ? snap.data() : null;
+  } catch (e) {
+    return null;
+  }
+}
+
 // ─── Admin: Get all users ───────────────────────────────────────────────────
 export async function getAllUsers() {
   const q = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));

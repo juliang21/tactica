@@ -177,32 +177,34 @@
   </section>
 </div>
 <script>
-  // Hydrate the trust-band numbers from data/trust.json so they can be refreshed
-  // without editing markup (a weekly job rewrites that file). The hardcoded
-  // values above act as a fallback if the fetch fails. Cache-busted so a fresh
-  // deploy's numbers show immediately.
+  // Hydrate the trust-band numbers. Two layers, both optional and safe:
+  //   1) Static data/trust.json (this script) — instant, always present.
+  //   2) Live Firestore public stats (app.js) — overrides with the real numbers
+  //      written by the refreshLandingStats Cloud Function.
+  // The hardcoded HTML values are the final fallback. Shared applier so both
+  // layers update the DOM identically.
+  window.__applyTrustStats = function (d) {
+    if (!d) return;
+    var coaches = document.getElementById('trust-coaches');
+    if (coaches && d.coaches != null) {
+      var s = String(d.coaches);
+      var m = s.match(/[\d.]+/);
+      coaches.setAttribute('data-count', m ? m[0] : s);
+      coaches.setAttribute('data-prefix', m ? s.slice(0, m.index) : '');
+      coaches.textContent = s;
+    }
+    var rating = document.getElementById('trust-rating');
+    if (rating && d.rating != null) {
+      rating.setAttribute('data-count', String(d.rating));
+      rating.textContent = String(d.rating);
+    }
+    var rc = document.getElementById('trust-review-count');
+    if (rc && d.reviews != null) rc.textContent = String(d.reviews);
+  };
   (function () {
     fetch('data/trust.json?ts=' + Date.now())
       .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (!d) return;
-        var coaches = document.getElementById('trust-coaches');
-        if (coaches && d.coaches != null) {
-          var s = String(d.coaches);
-          var m = s.match(/[\d.]+/);
-          var num = m ? m[0] : s;
-          coaches.setAttribute('data-count', num);
-          coaches.setAttribute('data-prefix', m ? s.slice(0, m.index) : '');
-          coaches.textContent = s;
-        }
-        var rating = document.getElementById('trust-rating');
-        if (rating && d.rating != null) {
-          rating.setAttribute('data-count', String(d.rating));
-          rating.textContent = String(d.rating);
-        }
-        var rc = document.getElementById('trust-review-count');
-        if (rc && d.reviews != null) rc.textContent = String(d.reviews);
-      })
+      .then(function (d) { window.__applyTrustStats(d); })
       .catch(function () {});
   })();
 
