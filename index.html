@@ -134,16 +134,16 @@
     <div class="trust-inner">
       <!-- Col 1: coaches -->
       <div class="trust-stat reveal">
-        <div class="trust-number" data-count="600" data-prefix="+">+600</div>
+        <div class="trust-number" id="trust-coaches" data-count="600" data-prefix="+">+600</div>
         <div class="trust-label">Coaches are trusting Táctica</div>
       </div>
-      <!-- Col 2: rating -->
+      <!-- Col 2: rating. Numbers are hydrated from data/trust.json on load. -->
       <div class="trust-stat reveal">
         <div class="trust-rating-top">
-          <span class="trust-number" data-count="4.9" data-decimals="1">4.9</span>
+          <span class="trust-number" id="trust-rating" data-count="4.9" data-decimals="1">4.9</span>
           <span class="trust-stars" aria-label="4.9 out of 5 stars">★★★★★</span>
         </div>
-        <div class="trust-label">Average rating · 24 reviews</div>
+        <div class="trust-label">Average rating · <span id="trust-review-count">26</span> reviews</div>
       </div>
       <!-- Col 3: scrolling testimonials -->
       <div class="trust-testimonials reveal">
@@ -177,6 +177,35 @@
   </section>
 </div>
 <script>
+  // Hydrate the trust-band numbers from data/trust.json so they can be refreshed
+  // without editing markup (a weekly job rewrites that file). The hardcoded
+  // values above act as a fallback if the fetch fails. Cache-busted so a fresh
+  // deploy's numbers show immediately.
+  (function () {
+    fetch('data/trust.json?ts=' + Date.now())
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d) return;
+        var coaches = document.getElementById('trust-coaches');
+        if (coaches && d.coaches != null) {
+          var s = String(d.coaches);
+          var m = s.match(/[\d.]+/);
+          var num = m ? m[0] : s;
+          coaches.setAttribute('data-count', num);
+          coaches.setAttribute('data-prefix', m ? s.slice(0, m.index) : '');
+          coaches.textContent = s;
+        }
+        var rating = document.getElementById('trust-rating');
+        if (rating && d.rating != null) {
+          rating.setAttribute('data-count', String(d.rating));
+          rating.textContent = String(d.rating);
+        }
+        var rc = document.getElementById('trust-review-count');
+        if (rc && d.reviews != null) rc.textContent = String(d.reviews);
+      })
+      .catch(function () {});
+  })();
+
   // Duplicate testimonial cards once so the vertical marquee loops seamlessly.
   (function () {
     var track = document.getElementById('trust-track');
