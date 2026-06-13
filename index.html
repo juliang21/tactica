@@ -140,7 +140,7 @@
       <!-- Col 2: rating. Numbers are hydrated from data/trust.json on load. -->
       <div class="trust-stat reveal">
         <div class="trust-rating-top">
-          <span class="trust-number" id="trust-rating" data-count="4.9" data-decimals="1">4.9</span>
+          <span class="trust-number" id="trust-rating" data-count="4.96" data-decimals="2">4.96</span>
           <span class="trust-stars" aria-label="4.9 out of 5 stars">★★★★★</span>
         </div>
         <div class="trust-label">Average rating · <span id="trust-review-count">26</span> reviews</div>
@@ -195,8 +195,11 @@
     }
     var rating = document.getElementById('trust-rating');
     if (rating && d.rating != null) {
-      rating.setAttribute('data-count', String(d.rating));
-      rating.textContent = String(d.rating);
+      var rv = String(d.rating);
+      var dot = rv.indexOf('.');
+      rating.setAttribute('data-count', rv);
+      rating.setAttribute('data-decimals', dot >= 0 ? String(rv.length - dot - 1) : '0');
+      rating.textContent = rv;
     }
     var rc = document.getElementById('trust-review-count');
     if (rc && d.reviews != null) rc.textContent = String(d.reviews);
