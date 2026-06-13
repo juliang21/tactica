@@ -5404,8 +5404,11 @@ onAuthChange(async (user) => {
 // ─── Collapsible panel sections ─────────────────────────────────────────────
 (function initCollapsibleSections() {
   const STORAGE_KEY = 'tactica_collapsed';
-  // Sections that should start collapsed unless the user has explicitly opened them.
-  const DEFAULT_COLLAPSED = new Set(['appearance', 'add']);
+  // Team sections start EXPANDED by default so every user can see the available
+  // properties at a glance (they were previously collapsed, which hid them from
+  // anyone who hadn't already explored the app). Users can still collapse them,
+  // and any saved preference is respected. Add a key here to default-collapse it.
+  const DEFAULT_COLLAPSED = new Set();
   let saved = {};
   try { saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || '{}'); } catch {}
 
