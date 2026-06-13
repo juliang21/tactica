@@ -585,8 +585,9 @@ export function select(el, opts = {}) {
     document.getElementById('rot-slider').value = rv;
     document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
   }
-  // Layer section: zones have it inside their Advanced panel, so hide standalone
-  if (isZone) document.getElementById('layer-controls-inline').style.display = 'none';
+  // Zones now use the same inline layer-order + delete row as every other
+  // element (the duplicate buttons were removed from the zone Advanced panel),
+  // so it stays visible here — this also gives zones a visible delete button.
   if (isZone) {
     const rv = el.dataset.rotation || '0';
     // Sync standalone slider (for compat) and in-panel slider

@@ -2152,27 +2152,8 @@
               <span id="zone-rot-val" style="font-size:10px;color:var(--text-muted);min-width:28px;text-align:right">0°</span>
             </div>
           </div>
-          <div class="field-group">
-            <div class="field-label">Layer order</div>
-            <div class="layer-btn-row">
-              <button class="layer-btn" onclick="layerSendToBack()" title="Send to Back">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/></svg>
-                <span>To back</span>
-              </button>
-              <button class="layer-btn" onclick="layerSendBackward()" title="Send Backward">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/><rect x="5" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/></svg>
-                <span>Backward</span>
-              </button>
-              <button class="layer-btn" onclick="layerBringForward()" title="Bring Forward">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="5" y="7" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="1" y="3" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
-                <span>Forward</span>
-              </button>
-              <button class="layer-btn" onclick="layerBringToFront()" title="Bring to Front">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><rect x="1" y="9" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="5" y="5" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3" fill="var(--panel2)"/><rect x="9" y="1" width="6" height="6" rx="1" stroke="currentColor" stroke-width="1.3"/></svg>
-                <span>To front</span>
-              </button>
-            </div>
-          </div>
+          <!-- Layer order moved to the inline row at the top of the panel
+               (#layer-controls-inline), shared with all other element types. -->
         </div>
       </div>
     </div>
