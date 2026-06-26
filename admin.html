@@ -632,7 +632,7 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
   }
 
   document.getElementById('usecase-breakdown').innerHTML =
-    group('By Coach', '(distinct coaches who used each)', coachKey, activeCoaches, 'of active') +
+    group('By Coach', '(distinct coaches who used each)', coachKey, activeCoaches, 'of coaches') +
     group('By Session', '(distinct sessions)', sessKey, totalSessions, 'of sessions') +
     `<div class="uc-foot">"Active" = opened the app. "Browsed only" = opened it but never started an analysis (needs 3+ interactions) or a training session. The three use cases can overlap, so they may sum to more than the engaged total.</div>`;
 }
