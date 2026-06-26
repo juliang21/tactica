@@ -247,6 +247,7 @@
   .uc-group-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; }
   .uc-sub { font-weight: 400; color: #777; font-size: 11px; }
   .uc-label { font-size: 13px; color: #ccc; min-width: 120px; }
+  .uc-foot { font-size: 11px; color: #777; line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
 
   .review-item {
     background: #1a1a1a; border-radius: 12px; padding: 16px 20px;
@@ -612,6 +613,11 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
 
   function group(title, sub, keyFn, denom, denomLabel) {
     const items = cases.map(c => ({ label: c.label, color: c.color, value: distinct(c.fn, keyFn) }));
+    // Reconcile to the active/session total: "active" just means the app was
+    // opened. These are coaches/sessions that opened it but never crossed the
+    // analysis threshold (3+ interactions) or started training — i.e. browsed.
+    const engaged = new Set(acts.filter(a => cases.some(c => c.fn(a))).map(keyFn).filter(Boolean)).size;
+    items.push({ label: 'Browsed only', color: '#6b7280', value: Math.max(0, denom - engaged) });
     const max = Math.max(1, ...items.map(i => i.value));
     const rows = items.map(i => {
       const w = i.value > 0 ? Math.max(6, Math.round(i.value / max * 100)) : 0;
@@ -627,7 +633,8 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
 
   document.getElementById('usecase-breakdown').innerHTML =
     group('By Coach', '(distinct coaches who used each)', coachKey, activeCoaches, 'of active') +
-    group('By Session', '(distinct sessions)', sessKey, totalSessions, 'of sessions');
+    group('By Session', '(distinct sessions)', sessKey, totalSessions, 'of sessions') +
+    `<div class="uc-foot">"Active" = opened the app. "Browsed only" = opened it but never started an analysis (needs 3+ interactions) or a training session. The three use cases can overlap, so they may sum to more than the engaged total.</div>`;
 }
 
 // ─── Key Features (overview cards) ──────────────────────────────────────────
