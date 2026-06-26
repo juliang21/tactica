@@ -502,7 +502,7 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   border-left: 1px solid var(--border);
   border-radius: 0;
   display: flex; flex-direction: column;
-  padding: 0; gap: 0; z-index: 10; overflow-y: auto;
+  padding: 0; gap: 0; z-index: 10; overflow-y: auto; overflow-x: hidden;
   box-shadow: none;
   margin: 52px 0 0 0;
   height: calc(100vh - 52px);
@@ -1003,26 +1003,10 @@ input[type=range]::-webkit-slider-thumb {
 .layer-inline-btn-danger { color: #F87171; border-color: #3A1520; }
 .layer-inline-btn-danger:hover { background: #3A1520; color: #FCA5A5; border-color: #5A1F2F; }
 
-/* Custom tooltip for inline buttons (data-tooltip).
-   Position BELOW the button to avoid clipping when the panel scrolls,
-   and anchor to the left edge of the button so it extends rightward
-   into the panel (never off the left edge). */
-.layer-inline-btn[data-tooltip]::after {
-  content: attr(data-tooltip);
-  position: absolute; top: calc(100% + 6px); left: 0; transform: none;
-  background: #0b0b0b; color: var(--text);
-  border: 1px solid #2a2a2a;
-  padding: 5px 8px; border-radius: 5px;
-  font-size: 11px; font-weight: 500; white-space: nowrap;
-  pointer-events: none; opacity: 0;
-  transition: opacity 0.12s ease 0.3s;
-  z-index: 100;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.5);
-}
-.layer-inline-btn[data-tooltip]:hover::after { opacity: 1; }
-/* Anchor the danger button's tooltip to its right edge so it extends
-   leftward (avoids overflowing past the panel's right edge). */
-.layer-inline-btn-danger[data-tooltip]::after { left: auto; right: 0; }
+/* Hover hints use native title= attributes (see index.html). The previous
+   CSS ::after tooltips were absolutely positioned and wider than the panel,
+   which inflated the panel's scrollWidth and caused a horizontal scrollbar
+   that cut/distorted the whole properties panel. */
 
 /* Legacy layer buttons (zone Advanced panel) */
 .layer-btn-row {
