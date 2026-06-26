@@ -242,12 +242,20 @@
   .rating-count { font-size: 12px; color: #888; min-width: 50px; }
 
   /* Use Case Breakdown */
-  .uc-group { margin-bottom: 18px; }
-  .uc-group:last-child { margin-bottom: 0; }
-  .uc-group-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .uc-group-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
   .uc-sub { font-weight: 400; color: #777; font-size: 11px; }
-  .uc-label { font-size: 13px; color: #ccc; min-width: 120px; }
-  .uc-foot { font-size: 11px; color: #777; line-height: 1.5; margin-top: 14px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+  .uc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+  .uc-col { min-width: 0; }
+  .uc-vchart { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
+  .uc-vbar { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
+  .uc-vbar-track { width: 100%; height: 132px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
+  .uc-vbar-val { font-size: 12px; font-weight: 700; color: #fff; margin-bottom: 5px; }
+  .uc-vbar-fill { width: 100%; max-width: 58px; min-height: 4px; border-radius: 6px 6px 0 0; transition: height 0.3s; }
+  .uc-vbar-cap { margin-top: 9px; text-align: center; }
+  .uc-vbar-label { font-size: 11px; color: #ccc; }
+  .uc-vbar-pct { font-size: 11px; color: #777; margin-top: 2px; }
+  .uc-foot { font-size: 11px; color: #777; line-height: 1.5; margin-top: 18px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
+  @media (max-width: 720px) { .uc-cols { grid-template-columns: 1fr; gap: 26px; } }
 
   .review-item {
     background: #1a1a1a; border-radius: 12px; padding: 16px 20px;
@@ -601,40 +609,43 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
   const acts = actions || [];
   const TRAIN_START = new Set(['training_drill_started', 'training_session_started']);
   const cases = [
-    { label: 'Board Analysis', color: '#8B5CF6', fn: a => a.action === 'analysis_started' && (!a.meta || !a.meta.mode || a.meta.mode === 'pitch') },
-    { label: 'Image Analysis', color: '#F59E0B', fn: a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image' },
-    { label: 'Training',       color: '#34D399', fn: a => TRAIN_START.has(a.action) },
+    { label: 'Board',    color: '#8B5CF6', fn: a => a.action === 'analysis_started' && (!a.meta || !a.meta.mode || a.meta.mode === 'pitch') },
+    { label: 'Image',    color: '#F59E0B', fn: a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image' },
+    { label: 'Training', color: '#34D399', fn: a => TRAIN_START.has(a.action) },
   ];
   const distinct = (fn, keyFn) => new Set(acts.filter(fn).map(keyFn).filter(Boolean)).size;
   const coachKey = a => a.uid;
   // Fall back to uid+day when a session id is missing (older training events were
   // logged without one due to a since-fixed module bug), so counts stay sensible.
   const sessKey = a => a.sessionId || (a.uid && a.date ? a.uid + ':' + a.date : null);
+  const MAXH = 110; // px height of the tallest bar
 
-  function group(title, sub, keyFn, denom, denomLabel) {
+  // One column = a vertical bar chart (Board / Image / Training / Browsed only).
+  function col(title, sub, keyFn, denom) {
     const items = cases.map(c => ({ label: c.label, color: c.color, value: distinct(c.fn, keyFn) }));
     // Reconcile to the active/session total: "active" just means the app was
-    // opened. These are coaches/sessions that opened it but never crossed the
-    // analysis threshold (3+ interactions) or started training — i.e. browsed.
+    // opened. These opened it but never crossed the analysis threshold (3+
+    // interactions) or started training — i.e. browsed.
     const engaged = new Set(acts.filter(a => cases.some(c => c.fn(a))).map(keyFn).filter(Boolean)).size;
-    items.push({ label: 'Browsed only', color: '#6b7280', value: Math.max(0, denom - engaged) });
+    items.push({ label: 'Browsed', color: '#6b7280', value: Math.max(0, denom - engaged) });
     const max = Math.max(1, ...items.map(i => i.value));
-    const rows = items.map(i => {
-      const w = i.value > 0 ? Math.max(6, Math.round(i.value / max * 100)) : 0;
-      const pctTxt = denom > 0 ? Math.round(i.value / denom * 100) + '% ' + denomLabel : '';
-      return `<div class="rating-bar-row">
-        <span class="uc-label">${i.label}</span>
-        <div class="rating-track"><div class="rating-fill" style="width:${w}%;background:${i.color}"><span>${i.value}</span></div></div>
-        <span class="rating-count">${pctTxt}</span>
+    const bars = items.map(i => {
+      const h = Math.max(4, Math.round(i.value / max * MAXH));
+      const pct = denom > 0 ? Math.round(i.value / denom * 100) + '%' : '';
+      return `<div class="uc-vbar">
+        <div class="uc-vbar-track"><div class="uc-vbar-val">${i.value}</div><div class="uc-vbar-fill" style="height:${h}px;background:${i.color}"></div></div>
+        <div class="uc-vbar-cap"><div class="uc-vbar-label">${i.label}</div><div class="uc-vbar-pct">${pct}</div></div>
       </div>`;
     }).join('');
-    return `<div class="uc-group"><div class="uc-group-title">${title} <span class="uc-sub">${sub}</span></div>${rows}</div>`;
+    return `<div class="uc-col"><div class="uc-group-title">${title} <span class="uc-sub">${sub}</span></div><div class="uc-vchart">${bars}</div></div>`;
   }
 
   document.getElementById('usecase-breakdown').innerHTML =
-    group('By Coach', '(distinct coaches who used each)', coachKey, activeCoaches, 'of coaches') +
-    group('By Session', '(distinct sessions)', sessKey, totalSessions, 'of sessions') +
-    `<div class="uc-foot">"Active" = opened the app. "Browsed only" = opened it but never started an analysis (needs 3+ interactions) or a training session. The three use cases can overlap, so they may sum to more than the engaged total.</div>`;
+    `<div class="uc-cols">` +
+      col('By Coach', '(% of active coaches)', coachKey, activeCoaches) +
+      col('By Session', '(% of sessions)', sessKey, totalSessions) +
+    `</div>` +
+    `<div class="uc-foot">"Active" = opened the app. "Browsed" = opened it but never started an analysis (needs 3+ interactions) or a training session. The three use cases can overlap, so they may sum to more than the engaged total.</div>`;
 }
 
 // ─── Key Features (overview cards) ──────────────────────────────────────────
