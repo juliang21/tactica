@@ -572,7 +572,7 @@ function renderSessionStats(sessions, actions) {
   const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started').length;
   const boardAnalysis = (actions || []).filter(a => a.action === 'analysis_started' && (!a.meta || !a.meta.mode || a.meta.mode === 'pitch')).length;
   const imageAnalysis = (actions || []).filter(a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image').length;
-  const trainingSessions = new Set((actions || []).filter(a => a.action === 'training_drill_started' || a.action === 'training_session_started').map(a => a.sessionId).filter(Boolean)).size;
+  const trainingSessions = new Set((actions || []).filter(a => a.action === 'training_drill_started' || a.action === 'training_session_started').map(a => a.sessionId || (a.uid && a.date ? a.uid + ':' + a.date : null)).filter(Boolean)).size;
   const exportAndSave = (actions || []).filter(a => a.action === 'save' || a.action === 'export' || a.action === 'share_created' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).length;
   const desktopSessions = sessions.filter(s => s.device === 'desktop').length;
   const mobileSessions = sessions.filter(s => s.device === 'mobile').length;
@@ -604,10 +604,14 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
     { label: 'Image Analysis', color: '#F59E0B', fn: a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image' },
     { label: 'Training',       color: '#34D399', fn: a => TRAIN_START.has(a.action) },
   ];
-  const distinct = (fn, key) => new Set(acts.filter(fn).map(a => a[key]).filter(Boolean)).size;
+  const distinct = (fn, keyFn) => new Set(acts.filter(fn).map(keyFn).filter(Boolean)).size;
+  const coachKey = a => a.uid;
+  // Fall back to uid+day when a session id is missing (older training events were
+  // logged without one due to a since-fixed module bug), so counts stay sensible.
+  const sessKey = a => a.sessionId || (a.uid && a.date ? a.uid + ':' + a.date : null);
 
-  function group(title, sub, key, denom, denomLabel) {
-    const items = cases.map(c => ({ label: c.label, color: c.color, value: distinct(c.fn, key) }));
+  function group(title, sub, keyFn, denom, denomLabel) {
+    const items = cases.map(c => ({ label: c.label, color: c.color, value: distinct(c.fn, keyFn) }));
     const max = Math.max(1, ...items.map(i => i.value));
     const rows = items.map(i => {
       const w = i.value > 0 ? Math.max(6, Math.round(i.value / max * 100)) : 0;
@@ -622,8 +626,8 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
   }
 
   document.getElementById('usecase-breakdown').innerHTML =
-    group('By Coach', '(distinct coaches who used each)', 'uid', activeCoaches, 'of active') +
-    group('By Session', '(distinct sessions)', 'sessionId', totalSessions, 'of sessions');
+    group('By Coach', '(distinct coaches who used each)', coachKey, activeCoaches, 'of active') +
+    group('By Session', '(distinct sessions)', sessKey, totalSessions, 'of sessions');
 }
 
 // ─── Key Features (overview cards) ──────────────────────────────────────────

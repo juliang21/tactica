@@ -2,7 +2,8 @@
 // Extracted from app.js — toggle, auto-save indicator, and analytics for the notes panel.
 
 import { getCurrentUser } from '../auth.js';
-import { logAction } from '../firestore.js?v=5';
+// Share app.js's firestore.js instance (?v=7) so notes events carry the session id.
+import { logAction } from '../firestore.js?v=7';
 
 let _notesOpenTracked = false;
 
