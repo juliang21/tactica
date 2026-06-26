@@ -241,6 +241,13 @@
   .rating-fill span { font-size: 11px; font-weight: 600; color: #000; }
   .rating-count { font-size: 12px; color: #888; min-width: 50px; }
 
+  /* Use Case Breakdown */
+  .uc-group { margin-bottom: 18px; }
+  .uc-group:last-child { margin-bottom: 0; }
+  .uc-group-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 8px; }
+  .uc-sub { font-weight: 400; color: #777; font-size: 11px; }
+  .uc-label { font-size: 13px; color: #ccc; min-width: 120px; }
+
   .review-item {
     background: #1a1a1a; border-radius: 12px; padding: 16px 20px;
     border: 1px solid rgba(255,255,255,0.06); margin-bottom: 10px;
@@ -297,6 +304,10 @@
 
   <!-- ═══ OVERVIEW TAB ═══ -->
   <div class="tab-content active" id="tab-overview">
+    <div class="section">
+      <div class="section-header"><span class="icon">&#127919;</span> Use Case Breakdown &mdash; how coaches use Táctica</div>
+      <div id="usecase-breakdown"></div>
+    </div>
     <div class="section">
       <div class="section-header"><span class="icon">&#128100;</span> Coach-Level Data</div>
       <div class="stats-grid" id="user-stats"></div>
@@ -495,6 +506,7 @@ window.applyDateFilter = function() {
   const allUsersFiltered = excludeMe ? _allUsers.filter(u => !excludeUids.has(u.uid)) : _allUsers;
   const signUps = allUsersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
 
+  renderUseCaseBreakdown(filteredActions, activeUids.size, filteredSessions.length);
   renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids, signUps);
   renderSessionStats(filteredSessions, filteredActions);
   renderFeatureStats(filteredActions, activeUids.size);
@@ -512,6 +524,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
   const analysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started').map(a => a.uid)).size;
   const boardAnalysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started' && (!a.meta || !a.meta.mode || a.meta.mode === 'pitch')).map(a => a.uid)).size;
   const imageAnalysisCoaches = new Set((actions || []).filter(a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image').map(a => a.uid)).size;
+  const trainingCoaches = new Set((actions || []).filter(a => a.action === 'training_drill_started' || a.action === 'training_session_started').map(a => a.uid)).size;
   const exportOrSaveCoaches = new Set((actions || []).filter(a => a.action === 'save' || a.action === 'export' || a.action === 'share_created' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).map(a => a.uid)).size;
   const pct = (n) => activeCoaches > 0 ? Math.round(n / activeCoaches * 100) : 0;
 
@@ -548,6 +561,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
     <div class="stat-card"><div class="label">Coaches w/ an Analysis</div><div class="value">${pct(analysisCoaches)}%</div><div class="sub">${analysisCoaches} of ${activeCoaches} active</div></div>
     <div class="stat-card"><div class="label">Board Analysis</div><div class="value">${boardAnalysisCoaches}</div><div class="sub">${pct(boardAnalysisCoaches)}% of active coaches</div></div>
     <div class="stat-card"><div class="label">Image Analysis</div><div class="value">${imageAnalysisCoaches}</div><div class="sub">${pct(imageAnalysisCoaches)}% of active coaches</div></div>
+    <div class="stat-card"><div class="label">Training</div><div class="value">${trainingCoaches}</div><div class="sub">${pct(trainingCoaches)}% of active coaches</div></div>
     <div class="stat-card"><div class="label">Coaches w/ Export, Save or Share</div><div class="value">${pct(exportOrSaveCoaches)}%</div><div class="sub">${exportOrSaveCoaches} of ${activeCoaches} active</div></div>
   `;
 }
@@ -558,6 +572,7 @@ function renderSessionStats(sessions, actions) {
   const analysisStarted = (actions || []).filter(a => a.action === 'analysis_started').length;
   const boardAnalysis = (actions || []).filter(a => a.action === 'analysis_started' && (!a.meta || !a.meta.mode || a.meta.mode === 'pitch')).length;
   const imageAnalysis = (actions || []).filter(a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image').length;
+  const trainingSessions = new Set((actions || []).filter(a => a.action === 'training_drill_started' || a.action === 'training_session_started').map(a => a.sessionId).filter(Boolean)).size;
   const exportAndSave = (actions || []).filter(a => a.action === 'save' || a.action === 'export' || a.action === 'share_created' || (a.action === 'feature_animation' && a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export' || a.meta.trigger === 'export_video'))).length;
   const desktopSessions = sessions.filter(s => s.device === 'desktop').length;
   const mobileSessions = sessions.filter(s => s.device === 'mobile').length;
@@ -572,8 +587,43 @@ function renderSessionStats(sessions, actions) {
     <div class="stat-card"><div class="label">Sessions w/ an Analysis</div><div class="value">${analysisStarted}</div><div class="sub">${pct(analysisStarted)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Board Analysis</div><div class="value">${boardAnalysis}</div><div class="sub">${aPct(boardAnalysis)}% of analyses &middot; ${pct(boardAnalysis)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Image Analysis</div><div class="value">${imageAnalysis}</div><div class="sub">${aPct(imageAnalysis)}% of analyses &middot; ${pct(imageAnalysis)}% of sessions</div></div>
+    <div class="stat-card"><div class="label">Training Sessions</div><div class="value">${trainingSessions}</div><div class="sub">${pct(trainingSessions)}% of sessions</div></div>
     <div class="stat-card"><div class="label">Total Exports, Saves &amp; Shares</div><div class="value">${exportAndSave}</div><div class="sub">${pct(exportAndSave)}% of sessions</div></div>
   `;
+}
+
+// ─── Use Case Breakdown (Board / Image / Training) ──────────────────────────
+// Distinct coaches and distinct sessions that meaningfully engaged each use
+// case. Board/Image = an analysis started in that mode; Training = a drill or
+// session started. Bar widths are relative to the largest of the three.
+function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
+  const acts = actions || [];
+  const TRAIN_START = new Set(['training_drill_started', 'training_session_started']);
+  const cases = [
+    { label: 'Board Analysis', color: '#8B5CF6', fn: a => a.action === 'analysis_started' && (!a.meta || !a.meta.mode || a.meta.mode === 'pitch') },
+    { label: 'Image Analysis', color: '#F59E0B', fn: a => a.action === 'analysis_started' && a.meta && a.meta.mode === 'image' },
+    { label: 'Training',       color: '#34D399', fn: a => TRAIN_START.has(a.action) },
+  ];
+  const distinct = (fn, key) => new Set(acts.filter(fn).map(a => a[key]).filter(Boolean)).size;
+
+  function group(title, sub, key, denom, denomLabel) {
+    const items = cases.map(c => ({ label: c.label, color: c.color, value: distinct(c.fn, key) }));
+    const max = Math.max(1, ...items.map(i => i.value));
+    const rows = items.map(i => {
+      const w = i.value > 0 ? Math.max(6, Math.round(i.value / max * 100)) : 0;
+      const pctTxt = denom > 0 ? Math.round(i.value / denom * 100) + '% ' + denomLabel : '';
+      return `<div class="rating-bar-row">
+        <span class="uc-label">${i.label}</span>
+        <div class="rating-track"><div class="rating-fill" style="width:${w}%;background:${i.color}"><span>${i.value}</span></div></div>
+        <span class="rating-count">${pctTxt}</span>
+      </div>`;
+    }).join('');
+    return `<div class="uc-group"><div class="uc-group-title">${title} <span class="uc-sub">${sub}</span></div>${rows}</div>`;
+  }
+
+  document.getElementById('usecase-breakdown').innerHTML =
+    group('By Coach', '(distinct coaches who used each)', 'uid', activeCoaches, 'of active') +
+    group('By Session', '(distinct sessions)', 'sessionId', totalSessions, 'of sessions');
 }
 
 // ─── Key Features (overview cards) ──────────────────────────────────────────
