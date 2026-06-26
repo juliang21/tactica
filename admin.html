@@ -244,8 +244,12 @@
   /* Use Case Breakdown */
   .uc-group-title { font-size: 13px; font-weight: 700; color: #fff; margin-bottom: 4px; }
   .uc-sub { font-weight: 400; color: #777; font-size: 11px; }
-  .uc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 36px; }
+  .uc-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
   .uc-col { min-width: 0; }
+  .uc-col:first-child { padding-right: 34px; }
+  /* Subtle vertical divider between By Coach and By Session. */
+  .uc-col:last-child { padding-left: 34px; border-left: 1px solid rgba(255,255,255,0.07); }
+  #milestone-top:not(:empty) { margin-bottom: 22px; }
   .uc-vchart { display: flex; align-items: flex-end; gap: 12px; margin-top: 16px; }
   .uc-vbar { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: center; }
   .uc-vbar-track { width: 100%; height: 132px; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; }
@@ -255,7 +259,11 @@
   .uc-vbar-label { font-size: 11px; color: #ccc; }
   .uc-vbar-pct { font-size: 11px; color: #777; margin-top: 2px; }
   .uc-foot { font-size: 11px; color: #777; line-height: 1.5; margin-top: 18px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.06); }
-  @media (max-width: 720px) { .uc-cols { grid-template-columns: 1fr; gap: 26px; } }
+  @media (max-width: 720px) {
+    .uc-cols { grid-template-columns: 1fr; }
+    .uc-col:first-child { padding-right: 0; }
+    .uc-col:last-child { padding-left: 0; border-left: none; border-top: 1px solid rgba(255,255,255,0.07); padding-top: 22px; margin-top: 8px; }
+  }
 
   .review-item {
     background: #1a1a1a; border-radius: 12px; padding: 16px 20px;
@@ -313,6 +321,7 @@
 
   <!-- ═══ OVERVIEW TAB ═══ -->
   <div class="tab-content active" id="tab-overview">
+    <div id="milestone-top"></div>
     <div class="section">
       <div class="section-header"><span class="icon">&#127919;</span> Use Case Breakdown &mdash; how coaches use Táctica</div>
       <div id="usecase-breakdown"></div>
@@ -563,7 +572,11 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
     </div>
   </div>`;
 
-  document.getElementById('user-stats').innerHTML = milestoneHTML + `
+  // Milestone bar lives at the very top of the Overview (its own container).
+  const mTop = document.getElementById('milestone-top');
+  if (mTop) mTop.innerHTML = milestoneHTML;
+
+  document.getElementById('user-stats').innerHTML = `
     <div class="stat-card"><div class="label">Sign Ups in Period</div><div class="value">${signUps}</div></div>
     <div class="stat-card"><div class="label">Active Coaches in Period</div><div class="value">${activeCoaches}</div></div>
     <div class="stat-card"><div class="label">Returning Coaches</div><div class="value">${returningCoaches}</div><div class="sub">${pct(returningCoaches)}% of active</div></div>
