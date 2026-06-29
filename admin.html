@@ -643,7 +643,7 @@ function renderRetention() {
     const uids = cohorts.get(cw);
     const size = uids.length;
     const cells = [];
-    for (let n = 1; n <= RET_WEEKS; n++) {
+    for (let n = 0; n <= RET_WEEKS; n++) {   // n=0 is the sign-up week (~100%)
       const tw = addWeeks(cw, n);
       if (tw > nowMonday) { cells.push(null); continue; } // week hasn't started
       let retained = 0;
@@ -662,7 +662,7 @@ function retColor(rate) {
 }
 function renderRetentionTable(rows) {
   const head = `<tr><th>Cohort (week of)</th><th>Sign-ups</th>` +
-    Array.from({ length: RET_WEEKS }, (_, i) => `<th>W${i + 1}</th>`).join('') + `</tr>`;
+    Array.from({ length: RET_WEEKS + 1 }, (_, i) => `<th>W${i}</th>`).join('') + `</tr>`;
   const body = rows.map(r => {
     const cells = r.cells.map(v => v === null
       ? `<td class="ret-empty">&middot;</td>`
@@ -677,7 +677,7 @@ const RET_PALETTE = ['#34D399', '#8B5CF6', '#F59E0B', '#60A5FA', '#F472B6', '#FB
 function renderRetentionChart(rows) {
   const W = 720, H = 280, padL = 38, padR = 14, padT = 14, padB = 30;
   const plotW = W - padL - padR, plotH = H - padT - padB;
-  const xFor = n => padL + (RET_WEEKS > 1 ? plotW * (n - 1) / (RET_WEEKS - 1) : 0);
+  const xFor = n => padL + plotW * n / RET_WEEKS;   // n = 0 (sign-up) .. RET_WEEKS
   const yFor = r => padT + plotH * (1 - r);
 
   // gridlines + y labels (0,25,50,75,100%)
@@ -687,16 +687,16 @@ function renderRetentionChart(rows) {
     grid += `<line class="ret-grid" x1="${padL}" y1="${y}" x2="${W - padR}" y2="${y}"/>` +
             `<text class="ret-axis" x="${padL - 6}" y="${y + 3}" text-anchor="end">${p}%</text>`;
   }
-  // x labels W1..W8
+  // x labels W0..W8
   let xlabels = '';
-  for (let n = 1; n <= RET_WEEKS; n++) {
+  for (let n = 0; n <= RET_WEEKS; n++) {
     xlabels += `<text class="ret-axis" x="${xFor(n)}" y="${H - 10}" text-anchor="middle">W${n}</text>`;
   }
   // cohort lines
   const lines = rows.map((r, idx) => {
     const col = RET_PALETTE[idx % RET_PALETTE.length];
     const pts = [];
-    r.cells.forEach((v, i) => { if (v !== null) pts.push([xFor(i + 1), yFor(v)]); });
+    r.cells.forEach((v, i) => { if (v !== null) pts.push([xFor(i), yFor(v)]); }); // i = week number (0..N)
     if (!pts.length) return '';
     const path = pts.map((p, i) => (i ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' ');
     const dots = pts.map(p => `<circle cx="${p[0].toFixed(1)}" cy="${p[1].toFixed(1)}" r="2.6" fill="${col}"/>`).join('');
