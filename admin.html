@@ -816,7 +816,7 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
     // opened. These opened it but never crossed the analysis threshold (3+
     // interactions) or started training — i.e. browsed.
     const engaged = new Set(acts.filter(a => cases.some(c => c.fn(a))).map(keyFn).filter(Boolean)).size;
-    items.push({ label: 'Browsed', color: '#6b7280', value: Math.max(0, denom - engaged) });
+    items.push({ label: 'Browsed with no usage', color: '#6b7280', value: Math.max(0, denom - engaged) });
     const max = Math.max(1, ...items.map(i => i.value));
     const bars = items.map(i => {
       const h = Math.max(4, Math.round(i.value / max * MAXH));
@@ -834,7 +834,7 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
       col('By Coach', '(% of active coaches)', coachKey, activeCoaches) +
       col('By Session', '(% of sessions)', sessKey, totalSessions) +
     `</div>` +
-    `<div class="uc-foot">"Active" = opened the app. "Browsed" = opened it but never started an analysis (needs 3+ interactions) or a training session. The three use cases can overlap, so they may sum to more than the engaged total.</div>`;
+    `<div class="uc-foot">"Active" = opened the app. "Browsed with no usage" = opened it but never started an analysis (needs 3+ interactions) or a training session. The three use cases can overlap, so they may sum to more than the engaged total.</div>`;
 }
 
 // ─── Key Features (overview cards) ──────────────────────────────────────────
