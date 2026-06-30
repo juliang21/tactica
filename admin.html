@@ -467,7 +467,7 @@ const auth = getAuth(app);
 setPersistence(auth, browserLocalPersistence);
 const db = getFirestore(app);
 
-const ADMIN_EMAILS = ['juliangenoud@gmail.com'];
+const ADMIN_EMAILS = ['juliangenoud@gmail.com', 'carolina.pan.c@gmail.com'];
 
 window.doSignIn = async function() {
   try { await signInWithPopup(auth, new GoogleAuthProvider()); } catch (e) { alert('Sign in failed: ' + e.message); }
