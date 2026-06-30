@@ -49,16 +49,16 @@
 
   /* Stats cards */
   .stats-grid {
-    display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 16px; margin-bottom: 16px;
+    display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 18px; margin-bottom: 16px;
   }
   .stat-card {
-    background: #1a1a1a; border-radius: 12px; padding: 20px;
+    background: #1a1a1a; border-radius: 14px; padding: 24px 26px;
     border: 1px solid rgba(255,255,255,0.06);
   }
-  .stat-card .label { font-size: 10px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 8px; }
-  .stat-card .value { font-size: 28px; font-weight: 700; color: #e0e0e0; }
-  .stat-card .sub { font-size: 11px; color: #666; margin-top: 4px; }
+  .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; color: #888; margin-bottom: 10px; }
+  .stat-card .value { font-size: 34px; font-weight: 700; color: #e0e0e0; line-height: 1.1; }
+  .stat-card .sub { font-size: 12px; color: #777; margin-top: 6px; }
 
   /* Section */
   .section { margin-bottom: 32px; }
@@ -338,9 +338,9 @@
 <div id="dashboard" style="display:none">
   <div class="admin-tabs">
     <button class="admin-tab active" onclick="switchAdminTab('overview')">Overview</button>
-    <button class="admin-tab" onclick="switchAdminTab('tactical')">⚽ Tactical Board</button>
-    <button class="admin-tab" onclick="switchAdminTab('image')">🖼️ Image Analysis</button>
-    <button class="admin-tab" onclick="switchAdminTab('training')">🏋️ Training</button>
+    <button class="admin-tab" onclick="switchAdminTab('tactical')">⚽&ensp;Tactical Board</button>
+    <button class="admin-tab" onclick="switchAdminTab('image')">🖼️&ensp;Image Analysis</button>
+    <button class="admin-tab" onclick="switchAdminTab('training')">🏋️&ensp;Training</button>
     <button class="admin-tab" onclick="switchAdminTab('retention')">Retention</button>
     <button class="admin-tab" onclick="switchAdminTab('reviews')">Reviews</button>
   </div>
