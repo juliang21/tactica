@@ -896,6 +896,72 @@ window._syncWatermarkUI = function() {
   if (toggle) toggle.checked = S.watermarkVisible;
 };
 window._syncWatermarkUI();
+
+// ─── Unsaved-work indicator ──────────────────────────────────────────────────
+// A quiet amber dot on the Export button whenever the board has changes that
+// aren't persisted yet. Set by pushUndo (every mutation), cleared by
+// save/quick-save/load/new flows.
+S.onDirtyChange((dirty) => {
+  const btn = document.getElementById('topbar-export-btn');
+  if (!btn) return;
+  btn.classList.toggle('has-unsaved', dirty);
+  btn.title = dirty ? 'You have unsaved changes' : '';
+});
+
+// ─── First-visit starter board ───────────────────────────────────────────────
+// A blank pitch gives new coaches nothing to react to — preload a classic
+// 4-3-3 vs 4-4-2 on their very first session so the board looks alive and the
+// first action is a drag, not a blank stare. Guarded so it never fires for
+// returning users, shared views, or non-pitch modes.
+function maybePreloadStarterBoard(sessionCount) {
+  try {
+    const forced = new URLSearchParams(window.location.search).get('starter') === '1';
+    if (!forced) {
+      if (sessionCount !== 1) return;
+      if (localStorage.getItem('tactica_starter_done')) return;
+    }
+    if (S.appMode !== 'pitch') return;
+    if (document.body.classList.contains('shared-view')) return;
+    if (S.playersLayer.children.length || S.objectsLayer.children.length) return;
+    localStorage.setItem('tactica_starter_done', '1');
+
+    const prevTeam = S.teamContext;
+    S.setTeamContext('a'); placeFormation('4-3-3');
+    S.setTeamContext('b'); placeFormation('4-4-2');
+    S.setTeamContext(prevTeam || 'a');
+
+    // The preload is scenery, not user work: no undo entries, nothing to save.
+    S.undoStack.length = 0;
+    S.setDirty(false);
+    showStarterHint();
+  } catch (e) { console.warn('Starter board skipped:', e); }
+}
+
+function showStarterHint() {
+  const pc = document.getElementById('pitch-container');
+  if (!pc || document.getElementById('starter-hint')) return;
+  const hint = document.createElement('div');
+  hint.id = 'starter-hint';
+  hint.innerHTML = `<span>👋 Your board is ready — <strong>drag a player</strong> or pick a tool on the left</span><button aria-label="Dismiss">&times;</button>`;
+  pc.appendChild(hint);
+  let gone = false;
+  const dismiss = () => {
+    if (gone) return; gone = true;
+    hint.classList.add('out');
+    setTimeout(() => hint.remove(), 350);
+    S.svg.removeEventListener('pointerdown', dismiss);
+  };
+  hint.querySelector('button').addEventListener('click', dismiss);
+  S.svg.addEventListener('pointerdown', dismiss);   // first touch of the board = they got it
+  setTimeout(dismiss, 30000);
+}
+
+// Demo/test override: ?starter=1 forces the starter board even without a
+// fresh account (handy for reviewing the first-run experience on localhost).
+if (new URLSearchParams(window.location.search).get('starter') === '1') {
+  setTimeout(() => maybePreloadStarterBoard(1), 400);
+}
+
 window.hideUpgradePrompt = hideUpgradePrompt;
 // setUserTier no longer exposed on window for security — tier is set by Firestore listener
 window.startCheckout = startCheckout;
@@ -4787,6 +4853,7 @@ function newAnalysisFromDashboard() {
   S.playerCounts.joker = 0;
   S.setObjectCounter(0);
   S.undoStack.length = 0;
+  S.setDirty(false);   // empty fresh board = nothing to save yet
   // Fresh file: watermark defaults back to ON
   S.setWatermarkVisible(true);
   if (typeof window._syncWatermarkUI === 'function') window._syncWatermarkUI();
@@ -5330,6 +5397,9 @@ onAuthChange(async (user) => {
     clearCurrentId();
     const nameInput = document.getElementById('analysis-name-input');
     if (nameInput) nameInput.value = 'New analysis';
+
+    // First session ever → preload a starter board so it isn't a blank pitch
+    maybePreloadStarterBoard(_sc);
 
     // Show welcome notification only on sign-up (first session ever)
     if (_authInitialized && _sc === 1) {

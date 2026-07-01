@@ -40,6 +40,19 @@ export function setAppMode(v) { appMode = v; }
 export function setImageData(v) { imageData = v; }
 export function setImageDimensions(v) { imageDimensions = v; }
 
+// ─── Unsaved-work flag ───────────────────────────────────────────────────────
+// Set on every mutating action (via pushUndo); cleared by save/load/new flows.
+// The UI subscribes via onDirtyChange to show an "unsaved changes" dot.
+export let dirty = false;
+let _dirtyListener = null;
+export function onDirtyChange(fn) { _dirtyListener = fn; }
+export function setDirty(v) {
+  const nv = !!v;
+  if (nv === dirty) return;
+  dirty = nv;
+  if (_dirtyListener) { try { _dirtyListener(dirty); } catch (e) {} }
+}
+
 // ─── Undo Stack ──────────────────────────────────────────────────────────────
 export const undoStack = [];
 const MAX_UNDO = 40;
@@ -47,6 +60,7 @@ const MAX_UNDO = 40;
 export function pushUndo() {
   const objLayer = document.getElementById('objects-layer');
   const plLayer = document.getElementById('players-layer');
+  setDirty(true);   // every mutating action goes through here
   undoStack.push({
     objects: objLayer.innerHTML,
     players: plLayer.innerHTML,

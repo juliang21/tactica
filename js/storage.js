@@ -164,6 +164,7 @@ export async function saveAnalysis(name) {
     try { await saveAnalysisToCloud(getUid(), analysisObj); }
     catch (e) { console.warn('Cloud save failed, saved locally:', e); }
   }
+  S.setDirty(false);   // work is persisted — clear the unsaved indicator
   return true;
 }
 
@@ -242,6 +243,7 @@ export async function loadAnalysis(id, onReady) {
   S.playerCounts.joker = d.playerCounts?.joker || 0;
   S.setObjectCounter(d.objectCounter || 0);
   S.undoStack.length = 0;
+  S.setDirty(false);   // freshly loaded board matches its saved state
 
   // Restore notes
   if (typeof window._setNotesText === 'function') window._setNotesText(d.notes || '');
@@ -347,6 +349,7 @@ export async function quickSave() {
     try { await saveAnalysisToCloud(getUid(), existing); }
     catch (e) { console.warn('Cloud quick-save failed:', e); }
   }
+  S.setDirty(false);   // work is persisted — clear the unsaved indicator
   return true;
 }
 
