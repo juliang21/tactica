@@ -434,7 +434,7 @@
     <div class="section">
       <div class="section-header"><span class="icon">&#128202;</span> Weekly Cohort Retention</div>
       <div class="ret-note">
-        Each coach belongs to one cohort, set by their sign-up week (Mon&ndash;Sun). A cohort is "retained" in week&nbsp;N if anyone from it opened Táctica again during the N-th week after sign-up. Showing the last 8 cohorts; the most recent week of each may still be in progress.
+        Each coach belongs to one cohort, set by their sign-up week (Mon&ndash;Sun). <strong>W0&nbsp;&middot;&nbsp;Aha</strong> = % of the cohort that hit the aha moment during their sign-up week: started a Board or Image analysis (3+ interactions) or a Training drill/session. <strong>W1&ndash;W8</strong> = % that opened Táctica again during the N-th week after sign-up. Showing the last 8 cohorts; the most recent week of each may still be in progress.
       </div>
       <div class="table-wrap" id="retention-table"></div>
     </div>
@@ -519,6 +519,7 @@ window.loadDashboard = async function() {
     _allSessions = (await getDocs(sessionsQ)).docs.map(d => d.data());
 
     await reloadActions();
+    await reloadAhaActions();   // W0 aha rate for the Retention tab
 
     applyDateFilter();
   } catch (e) { console.error('Dashboard error:', e); }
@@ -557,6 +558,47 @@ async function reloadActions() {
     }
     _allActions = collected;
   } catch (e) { console.warn('Actions fetch failed:', e); _allActions = []; }
+}
+
+// ─── Aha-moment actions for the Retention tab ────────────────────────────────
+// W0 of the cohort table shows the "aha" rate: did the coach perform a core
+// action (started a board/image analysis, or a training drill/session) during
+// their sign-up week? That needs core actions across all shown cohorts'
+// sign-up weeks, independent of the date filter above — so it gets its own
+// slim fetch (only the 3 action types are kept; the rest is discarded).
+const AHA_ACTIONS = new Set(['analysis_started', 'training_drill_started', 'training_session_started']);
+let _ahaActions = [];
+async function reloadAhaActions() {
+  // Window: from the oldest of the last RET_COHORTS sign-up weeks (per the
+  // loaded users) to now, capped at 26 weeks as a sanity guard.
+  const cohortSet = new Set();
+  _allUsers.forEach(u => { if (u.firstSeen) cohortSet.add(mondayOf(u.firstSeen)); });
+  const recent = [...cohortSet].sort((a, b) => b - a).slice(0, RET_COHORTS);
+  if (!recent.length) { _ahaActions = []; return; }
+  const cap = mondayOf(Date.now()) - 26 * 7 * 86400000;
+  const startMs = Math.max(recent[recent.length - 1], cap);
+  const PAGE_SIZE = 10000;
+  const MAX_PAGES = 10;
+  const collected = [];
+  let lastDoc = null;
+  try {
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const constraints = [
+        where('timestamp', '>=', startMs),
+        orderBy('timestamp', 'desc'),
+        limit(PAGE_SIZE),
+      ];
+      if (lastDoc) constraints.push(startAfter(lastDoc));
+      const snap = await getDocs(query(collection(db, 'tactica_actions'), ...constraints));
+      for (const d of snap.docs) {
+        const a = d.data();
+        if (AHA_ACTIONS.has(a.action)) collected.push({ uid: a.uid, timestamp: a.timestamp });
+      }
+      if (snap.docs.length < PAGE_SIZE) break;
+      lastDoc = snap.docs[snap.docs.length - 1];
+    }
+    _ahaActions = collected;
+  } catch (e) { console.warn('Aha actions fetch failed:', e); _ahaActions = []; }
 }
 
 window.applyDateFilter = function() {
@@ -636,6 +678,15 @@ function renderRetention() {
     set.add(mondayOf(s.timestamp));
   });
 
+  // Sign-up weeks in which each user hit the aha moment (core action)
+  const ahaWeeks = new Map(); // uid -> Set(weekMs of the aha action)
+  _ahaActions.forEach(a => {
+    if (!a.uid || !a.timestamp || !cohortOf.has(a.uid)) return;
+    let set = ahaWeeks.get(a.uid);
+    if (!set) { set = new Set(); ahaWeeks.set(a.uid, set); }
+    set.add(mondayOf(a.timestamp));
+  });
+
   const nowMonday = mondayOf(Date.now());
   const cohortWeeks = [...cohorts.keys()].sort((a, b) => b - a).slice(0, RET_COHORTS);
 
@@ -643,11 +694,18 @@ function renderRetention() {
     const uids = cohorts.get(cw);
     const size = uids.length;
     const cells = [];
-    for (let n = 0; n <= RET_WEEKS; n++) {   // n=0 is the sign-up week (~100%)
+    for (let n = 0; n <= RET_WEEKS; n++) {
       const tw = addWeeks(cw, n);
       if (tw > nowMonday) { cells.push(null); continue; } // week hasn't started
       let retained = 0;
-      uids.forEach(uid => { const set = activeWeeks.get(uid); if (set && set.has(tw)) retained++; });
+      if (n === 0) {
+        // W0 = aha rate: performed a core action (board/image analysis started,
+        // or training drill/session started) during the sign-up week itself.
+        uids.forEach(uid => { const set = ahaWeeks.get(uid); if (set && set.has(tw)) retained++; });
+      } else {
+        // W1..W8 = opened Táctica again that week (any session)
+        uids.forEach(uid => { const set = activeWeeks.get(uid); if (set && set.has(tw)) retained++; });
+      }
       cells.push(size > 0 ? retained / size : 0);
     }
     return { cw, size, cells };
@@ -662,7 +720,7 @@ function retColor(rate) {
 }
 function renderRetentionTable(rows) {
   const head = `<tr><th>Cohort (week of)</th><th>Sign-ups</th>` +
-    Array.from({ length: RET_WEEKS + 1 }, (_, i) => `<th>W${i}</th>`).join('') + `</tr>`;
+    Array.from({ length: RET_WEEKS + 1 }, (_, i) => i === 0 ? `<th>W0 &middot; Aha</th>` : `<th>W${i}</th>`).join('') + `</tr>`;
   const body = rows.map(r => {
     const cells = r.cells.map(v => v === null
       ? `<td class="ret-empty">&middot;</td>`
