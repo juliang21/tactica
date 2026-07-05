@@ -873,6 +873,7 @@ function renderFeatureStats(actions, activeUsers) {
   const exportSaveItems = [
     { label: 'Export PNG', ...featureDataFiltered(actions, 'export', a => !a.meta || !a.meta.format || a.meta.format === 'png') },
     { label: 'Export JPG', ...featureDataFiltered(actions, 'export', a => a.meta && a.meta.format === 'jpg') },
+    { label: 'Copy Image', ...featureData(actions, 'export_copy') },
     { label: 'Save', ...featureData(actions, 'save') },
     { label: 'Export GIF Animation', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export')) },
     { label: 'Export Video', ...featureDataFiltered(actions, 'feature_animation', a => a.meta && a.meta.trigger === 'export_video') },
@@ -921,6 +922,7 @@ const FEATURE_CONFIGS_TACTICAL = [
   { label: 'Export, Save & Share', isGroup: true, children: [
     { label: 'Export PNG', action: 'export', metaKey: null, filterFn: a => inMode('pitch')(a) && (!a.meta || !a.meta.format || a.meta.format === 'png') },
     { label: 'Export JPG', action: 'export', metaKey: null, filterFn: a => inMode('pitch')(a) && (a.meta && a.meta.format === 'jpg') },
+    { label: 'Copy Image', action: 'export_copy', metaKey: null, filterFn: inMode('pitch') },
     { label: 'Save', action: 'save', metaKey: null, filterFn: inMode('pitch') },
     { label: 'Export GIF Animation', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && (a.meta && (a.meta.trigger === 'export_gif' || a.meta.trigger === 'export')) },
     { label: 'Export Video', action: 'feature_animation', metaKey: null, filterFn: a => inMode('pitch')(a) && (a.meta && a.meta.trigger === 'export_video') },
@@ -979,6 +981,7 @@ const FEATURE_CONFIGS_IMAGE = [
   { label: 'Export (Image)', isGroup: true, children: [
     { label: 'Export PNG', action: 'export', metaKey: null, filterFn: a => inMode('image')(a) && (!a.meta || !a.meta.format || a.meta.format === 'png') },
     { label: 'Export JPG', action: 'export', metaKey: null, filterFn: a => inMode('image')(a) && a.meta && a.meta.format === 'jpg' },
+    { label: 'Copy Image', action: 'export_copy', metaKey: null, filterFn: inMode('image') },
     { label: 'Save', action: 'save', metaKey: null, filterFn: inMode('image') },
     { label: 'Share', action: 'share_created', metaKey: null, filterFn: inMode('image') },
   ]},

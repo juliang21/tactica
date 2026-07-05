@@ -84,6 +84,97 @@ export function drawWatermark(ctx, W, H, logoImg) {
   ctx.restore();
 }
 
+// ─── Post-export toast ───────────────────────────────────────────────────────
+// Exporting used to end in a silent download. Show a small card with the
+// rendered image + one-click "Copy image" / "Share…" so posting the analysis
+// (social media, WhatsApp, team chat) doesn't require digging through the
+// Downloads folder. Share only appears where the Web Share API supports files.
+async function _dataUrlToPngBlob(dataUrl) {
+  const blob = await (await fetch(dataUrl)).blob();
+  if (blob.type === 'image/png') return blob;
+  // Clipboard requires PNG — re-encode JPG exports
+  const img = new Image();
+  await new Promise((res, rej) => { img.onload = res; img.onerror = rej; img.src = dataUrl; });
+  const c = document.createElement('canvas');
+  c.width = img.naturalWidth; c.height = img.naturalHeight;
+  c.getContext('2d').drawImage(img, 0, 0);
+  return await new Promise(res => c.toBlob(res, 'image/png'));
+}
+
+function showExportToast(dataUrl, filename, mode = 'downloaded') {
+  const copied = mode === 'copied';
+  document.getElementById('export-toast')?.remove();
+  const t = document.createElement('div');
+  t.id = 'export-toast';
+  // WhatsApp-first paste hint, platform-aware (mobile users long-press → paste)
+  const isTouch = window.matchMedia && window.matchMedia('(pointer: coarse)').matches;
+  const pasteKey = /Mac|iPhone|iPad/.test(navigator.platform || '') ? '⌘V' : 'Ctrl+V';
+  const copiedSub = isTouch
+    ? 'Open WhatsApp and paste it into a chat'
+    : `Open WhatsApp and press ${pasteKey} to share it`;
+  const primaryBtn = copied
+    ? `<button class="et-btn" data-act="download">
+         <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M8 2v8M5 7l3 3 3-3" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"/><path d="M3 12v1a1 1 0 001 1h8a1 1 0 001-1v-1" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/></svg>
+         Save file too
+       </button>`
+    : `<button class="et-btn" data-act="copy">
+         <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><rect x="5" y="5" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="1.4"/><path d="M11 5V3.5A1.5 1.5 0 009.5 2h-6A1.5 1.5 0 002 3.5v6A1.5 1.5 0 003.5 11H5" stroke="currentColor" stroke-width="1.4"/></svg>
+         Copy image
+       </button>`;
+  t.innerHTML = `
+    <img class="et-thumb" src="${dataUrl}" alt="Exported image">
+    <div class="et-body">
+      <div class="et-title">${copied ? 'Copied to clipboard ✓' : 'Exported ✓'}</div>
+      <div class="et-sub">${copied ? copiedSub : 'Saved to your downloads'}</div>
+      <div class="et-actions">
+        ${primaryBtn}
+      </div>
+    </div>
+    <button class="et-close" aria-label="Close">&times;</button>`;
+  document.body.appendChild(t);
+
+  let gone = false;
+  const dismiss = () => {
+    if (gone) return; gone = true;
+    t.classList.add('out');
+    setTimeout(() => t.remove(), 300);
+  };
+  t.querySelector('.et-close').addEventListener('click', dismiss);
+  // Auto-dismiss, paused while the coach is hovering the card
+  let timer = setTimeout(dismiss, 15000);
+  t.addEventListener('mouseenter', () => clearTimeout(timer));
+  t.addEventListener('mouseleave', () => { timer = setTimeout(dismiss, 8000); });
+
+  // Copy image → clipboard (as PNG; falls back to a helpful label on failure)
+  const copyBtn = t.querySelector('[data-act="copy"]');
+  if (copyBtn) copyBtn.addEventListener('click', async () => {
+    try {
+      const blob = await _dataUrlToPngBlob(dataUrl);
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      copyBtn.innerHTML = '✓ Copied!';
+      copyBtn.classList.add('done');
+      if (typeof window.gtag === 'function') window.gtag('event', 'export_copy_image', { tool_name: 'tactica', source: 'toast' });
+      if (typeof window._trackExportEvent === 'function') window._trackExportEvent('export_copy', { source: 'toast' });
+      setTimeout(dismiss, 2200);
+    } catch (e) {
+      copyBtn.textContent = 'Copy not supported here';
+      copyBtn.disabled = true;
+    }
+  });
+
+  // "Save file too" (copied mode) → trigger the download after the fact
+  const dlBtn = t.querySelector('[data-act="download"]');
+  if (dlBtn) dlBtn.addEventListener('click', () => {
+    const a = document.createElement('a');
+    a.href = dataUrl; a.download = filename;
+    document.body.appendChild(a); a.click(); document.body.removeChild(a);
+    dlBtn.innerHTML = '✓ Saved!';
+    dlBtn.classList.add('done');
+    setTimeout(dismiss, 2000);
+  });
+
+}
+
 export function exportImage() {
   trackExportClicked();
   // Show/hide mini-pitch toggle depending on whether it's visible in image mode
@@ -105,7 +196,13 @@ export function closeExport() {
   document.getElementById('export-modal').style.display = 'none';
 }
 
-export function doExport() {
+// 'download' (default) saves a file; 'copy' puts the rendered image straight
+// on the clipboard — no file touches the Downloads folder. Module-level because
+// finalizeExport lives inside renderOverlays, not inside doExport's closure.
+let _exportAction = 'download';
+
+export function doExport(action) {
+  _exportAction = action === 'copy' ? 'copy' : 'download';
   trackExportCompleted(S.exportFmt || 'png');
   closeExport();
   const prevSelected = S.selectedEl;
@@ -1364,10 +1461,33 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
         dataUrl = canvas.toDataURL('image/png');
       }
       document.body.removeChild(canvas);
-      const a = document.createElement('a');
       const prefix = S.appMode === 'image' ? 'tactica-analysis' : 'tactica-pitch';
-      a.href = dataUrl; a.download = prefix + '.' + S.exportFmt;
-      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      const filename = prefix + '.' + S.exportFmt;
+      const triggerDownload = () => {
+        const a = document.createElement('a');
+        a.href = dataUrl; a.download = filename;
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      };
+      if (_exportAction === 'copy' && navigator.clipboard && window.ClipboardItem) {
+        // Blob passed as a promise so Safari keeps the user-activation alive
+        const item = new ClipboardItem({ 'image/png': _dataUrlToPngBlob(dataUrl) });
+        navigator.clipboard.write([item]).then(() => {
+          showExportToast(dataUrl, filename, 'copied');
+          if (typeof window.gtag === 'function') window.gtag('event', 'export_copy_image', { tool_name: 'tactica', source: 'modal' });
+          if (typeof window._trackExportEvent === 'function') window._trackExportEvent('export_copy', { source: 'modal' });
+        }).catch(() => {
+          // Never leave the coach empty-handed — fall back to a download
+          triggerDownload();
+          showExportToast(dataUrl, filename, 'downloaded');
+          if (typeof showNotification === 'function') showNotification("Copying isn't available in this browser — downloaded the image instead.", 'info', 4500);
+        });
+      } else {
+        triggerDownload();
+        showExportToast(dataUrl, filename, 'downloaded');
+        if (_exportAction === 'copy' && typeof showNotification === 'function') {
+          showNotification("Copying isn't available in this browser — downloaded the image instead.", 'info', 4500);
+        }
+      }
     } catch(err) {
       if (document.body.contains(canvas)) document.body.removeChild(canvas);
       if (typeof showNotification === 'function') showNotification('Export error: ' + err.message, 'error', 5000);

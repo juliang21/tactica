@@ -19,7 +19,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyImageCrop, applyImageOpacity,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=8';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=9';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=6';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
@@ -898,14 +898,14 @@ window._syncWatermarkUI = function() {
 window._syncWatermarkUI();
 
 // ─── Unsaved-work indicator ──────────────────────────────────────────────────
-// A quiet amber dot on the Export button whenever the board has changes that
-// aren't persisted yet. Set by pushUndo (every mutation), cleared by
+// A quiet amber dot on the topbar Save button whenever the board has changes
+// that aren't persisted yet. Set by pushUndo (every mutation), cleared by
 // save/quick-save/load/new flows.
 S.onDirtyChange((dirty) => {
-  const btn = document.getElementById('topbar-export-btn');
+  const btn = document.getElementById('topbar-save-btn');
   if (!btn) return;
   btn.classList.toggle('has-unsaved', dirty);
-  btn.title = dirty ? 'You have unsaved changes' : '';
+  btn.title = dirty ? 'You have unsaved changes — click to save' : 'Save analysis';
 });
 
 // ─── First-visit starter board ───────────────────────────────────────────────
@@ -969,10 +969,20 @@ window.openManageSubscription = openManageSubscription;
 window.exportImage = exportImage;
 window.selectFmt = selectFmt;
 window.closeExport = closeExport;
-window.doExport = function() {
-  doExport();
+window.doExport = function(action) {
+  doExport(action);
   const u = getCurrentUser();
-  if (u) logAction(u.uid, u.email, 'export', { format: document.querySelector('.fmt-btn.active')?.dataset?.fmt || 'png' }).catch(() => {});
+  if (u) logAction(u.uid, u.email, 'export', {
+    format: document.querySelector('.fmt-btn.active')?.dataset?.fmt || 'png',
+    method: action === 'copy' ? 'copy' : 'download',
+  }).catch(() => {});
+};
+// Firestore hook for export.js (which doesn't import auth/firestore itself).
+// Logs SUCCESSFUL copy-to-clipboard events so the admin dashboard can track
+// Copy Image adoption separately from plain exports.
+window._trackExportEvent = function(action, meta) {
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, action, meta || {}).catch(() => {});
 };
 window.applyNameSize = applyNameSize;
 window.applyNameColor = applyNameColor;
