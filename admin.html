@@ -569,7 +569,11 @@ async function reloadActions() {
 const AHA_ACTION_LIST = ['analysis_started', 'training_drill_started', 'training_session_started'];
 const AHA_ACTIONS = new Set(AHA_ACTION_LIST);
 let _ahaActions = [];
+let _ahaFetchedAt = 0;
 async function reloadAhaActions() {
+  // Independent of the date filter, so don't refetch on every date change —
+  // cache for 5 minutes (the Refresh button after that forces a new fetch).
+  if (Date.now() - _ahaFetchedAt < 5 * 60 * 1000) return;
   // Window: from the oldest of the last RET_COHORTS sign-up weeks (per the
   // loaded users) to now, capped at 26 weeks as a sanity guard.
   const cohortSet = new Set();
@@ -602,15 +606,16 @@ async function reloadAhaActions() {
       lastDoc = snap.docs[snap.docs.length - 1];
     }
     _ahaActions = collected;
+    _ahaFetchedAt = Date.now();
     return;
   } catch (e) {
     console.warn('Aha indexed query unavailable (deploy firestore.indexes.json for full W0 coverage). Falling back to range scan:', e?.message || e);
   }
 
-  // Fallback: newest-first range scan. NOTE: on high action volume the page
-  // cap can truncate the oldest weeks — old cohorts may show 0% W0 until the
-  // composite index is deployed.
-  const MAX_PAGES = 10;
+  // Fallback: newest-first range scan, kept SMALL so a missing/building index
+  // can't stall the dashboard. On high action volume this truncates the oldest
+  // weeks — old cohorts may show 0% W0 until the composite index is live.
+  const MAX_PAGES = 2;
   const collected = [];
   let lastDoc = null;
   try {
@@ -630,6 +635,7 @@ async function reloadAhaActions() {
       lastDoc = snap.docs[snap.docs.length - 1];
     }
     _ahaActions = collected;
+    _ahaFetchedAt = Date.now();
   } catch (e) { console.warn('Aha actions fetch failed:', e); _ahaActions = []; }
 }
 
