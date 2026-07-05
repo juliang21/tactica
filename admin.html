@@ -566,7 +566,8 @@ async function reloadActions() {
 // their sign-up week? That needs core actions across all shown cohorts'
 // sign-up weeks, independent of the date filter above — so it gets its own
 // slim fetch (only the 3 action types are kept; the rest is discarded).
-const AHA_ACTIONS = new Set(['analysis_started', 'training_drill_started', 'training_session_started']);
+const AHA_ACTION_LIST = ['analysis_started', 'training_drill_started', 'training_session_started'];
+const AHA_ACTIONS = new Set(AHA_ACTION_LIST);
 let _ahaActions = [];
 async function reloadAhaActions() {
   // Window: from the oldest of the last RET_COHORTS sign-up weeks (per the
@@ -578,6 +579,37 @@ async function reloadAhaActions() {
   const cap = mondayOf(Date.now()) - 26 * 7 * 86400000;
   const startMs = Math.max(recent[recent.length - 1], cap);
   const PAGE_SIZE = 10000;
+
+  // Fast path: composite index (action, timestamp) lets Firestore return ONLY
+  // the 3 aha action types — a few hundred docs instead of scanning everything.
+  try {
+    const collected = [];
+    let lastDoc = null;
+    for (let i = 0; i < 5; i++) {
+      const constraints = [
+        where('action', 'in', AHA_ACTION_LIST),
+        where('timestamp', '>=', startMs),
+        orderBy('timestamp', 'desc'),
+        limit(PAGE_SIZE),
+      ];
+      if (lastDoc) constraints.push(startAfter(lastDoc));
+      const snap = await getDocs(query(collection(db, 'tactica_actions'), ...constraints));
+      for (const d of snap.docs) {
+        const a = d.data();
+        collected.push({ uid: a.uid, timestamp: a.timestamp });
+      }
+      if (snap.docs.length < PAGE_SIZE) break;
+      lastDoc = snap.docs[snap.docs.length - 1];
+    }
+    _ahaActions = collected;
+    return;
+  } catch (e) {
+    console.warn('Aha indexed query unavailable (deploy firestore.indexes.json for full W0 coverage). Falling back to range scan:', e?.message || e);
+  }
+
+  // Fallback: newest-first range scan. NOTE: on high action volume the page
+  // cap can truncate the oldest weeks — old cohorts may show 0% W0 until the
+  // composite index is deployed.
   const MAX_PAGES = 10;
   const collected = [];
   let lastDoc = null;
