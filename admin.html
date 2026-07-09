@@ -389,7 +389,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Total Sessions</th><th>Sessions Today</th><th>Status</th></tr>
+            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Total Sessions</th><th>Sessions (24h)</th><th>Status</th></tr>
           </thead>
           <tbody id="users-table"></tbody>
         </table>
@@ -1822,13 +1822,13 @@ let _sessionsTodayByUid = new Map();
 function renderUsersTable(users) {
   _tableUsers = users;
   _tableShown = 0;
-  // Sessions since local midnight, per coach \u2014 from the full sessions load,
-  // so it's independent of the date filter.
-  const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
-  const midnightMs = midnight.getTime();
+  // Sessions in the last 24 hours (rolling window, not calendar day \u2014 a
+  // midnight cutoff read as "all zeros" when checked late at night), per
+  // coach, from the full sessions load \u2014 independent of the date filter.
+  const cutoffMs = Date.now() - 24 * 60 * 60 * 1000;
   _sessionsTodayByUid = new Map();
   _allSessions.forEach(s => {
-    if (!s.uid || !s.timestamp || s.timestamp < midnightMs) return;
+    if (!s.uid || !s.timestamp || s.timestamp < cutoffMs) return;
     _sessionsTodayByUid.set(s.uid, (_sessionsTodayByUid.get(s.uid) || 0) + 1);
   });
   document.getElementById('users-table').innerHTML = '';
