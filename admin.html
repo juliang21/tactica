@@ -694,7 +694,7 @@ window.applyDateFilter = function() {
   const allUsersFiltered = excludeMe ? _allUsers.filter(u => !excludeUids.has(u.uid)) : _allUsers;
   const signUps = allUsersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
 
-  renderUseCaseBreakdown(filteredActions, activeUids.size, filteredSessions.length);
+  renderUseCaseBreakdown(filteredActions, activeUids.size, filteredSessions);
   renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids, signUps);
   renderSessionStats(filteredSessions, filteredActions);
   renderFeatureStats(filteredActions, activeUids.size);
@@ -926,7 +926,7 @@ function renderSessionStats(sessions, actions) {
 // Distinct coaches and distinct sessions that meaningfully engaged each use
 // case. Board/Image = an analysis started in that mode; Training = a drill or
 // session started. Bar widths are relative to the largest of the three.
-function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
+function renderUseCaseBreakdown(actions, activeCoaches, sessions) {
   const acts = actions || [];
   const TRAIN_START = new Set(['training_drill_started', 'training_session_started']);
   const cases = [
@@ -941,14 +941,22 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
   const sessKey = a => a.sessionId || (a.uid && a.date ? a.uid + ':' + a.date : null);
   const MAXH = 110; // px height of the tallest bar
 
+  // Engaged = hit any of the three use cases in the window. The By-Session
+  // denominator is built from the SAME key-space as the numerators (session
+  // keys referenced by actions), because session docs are stamped at page load
+  // — a session spanning midnight leaves its actions in a window where the
+  // session doc isn't, which once produced "Board 100%, Browsed 0" while a
+  // browsing coach's session was visibly in the window.
+  const engagedActs = acts.filter(a => cases.some(c => c.fn(a)));
+  const engagedCoaches = new Set(engagedActs.map(coachKey).filter(Boolean));
+  const engagedSessKeys = new Set(engagedActs.map(sessKey).filter(Boolean));
+  // Browsed sessions = window session docs from coaches with no aha in window.
+  const browsedSessions = (sessions || []).filter(s => s.uid && !engagedCoaches.has(s.uid)).length;
+
   // One column = a vertical bar chart (Board / Image / Training / Browsed only).
-  function col(title, sub, keyFn, denom) {
+  function col(title, sub, keyFn, browsedValue, denom) {
     const items = cases.map(c => ({ label: c.label, color: c.color, value: distinct(c.fn, keyFn) }));
-    // Reconcile to the active/session total: "active" just means the app was
-    // opened. These opened it but never crossed the analysis threshold (3+
-    // interactions) or started training — i.e. browsed.
-    const engaged = new Set(acts.filter(a => cases.some(c => c.fn(a))).map(keyFn).filter(Boolean)).size;
-    items.push({ label: 'Browsed with no usage', color: '#6b7280', value: Math.max(0, denom - engaged) });
+    items.push({ label: 'Browsed with no usage', color: '#6b7280', value: browsedValue });
     const max = Math.max(1, ...items.map(i => i.value));
     const bars = items.map(i => {
       const h = Math.max(4, Math.round(i.value / max * MAXH));
@@ -963,8 +971,10 @@ function renderUseCaseBreakdown(actions, activeCoaches, totalSessions) {
 
   document.getElementById('usecase-breakdown').innerHTML =
     `<div class="uc-cols">` +
-      col('By Coach', '(% of active coaches)', coachKey, activeCoaches) +
-      col('By Session', '(% of sessions)', sessKey, totalSessions) +
+      col('By Coach', '(% of active coaches)', coachKey,
+          Math.max(0, activeCoaches - engagedCoaches.size), activeCoaches) +
+      col('By Session', '(% of sessions)', sessKey,
+          browsedSessions, engagedSessKeys.size + browsedSessions) +
     `</div>` +
     `<div class="uc-foot">"Active" = opened the app. "Browsed with no usage" = opened it but never started an analysis (needs 3+ interactions) or a training session. The three use cases can overlap, so they may sum to more than the engaged total.</div>`;
 }
