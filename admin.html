@@ -684,7 +684,11 @@ window.applyDateFilter = function() {
 
   const filteredSessions = _allSessions.filter(s => s.timestamp >= startMs && s.timestamp <= endMs && !excludeUids.has(s.uid));
   const filteredActions = _allActions.filter(a => a.timestamp >= startMs && a.timestamp <= endMs && !excludeUids.has(a.uid));
-  const activeUids = new Set(filteredSessions.map(s => s.uid));
+  // Active = any recorded activity in the window (sessions OR actions).
+  // Session docs are stamped once at page load, so a session spanning midnight
+  // leaves its actions in a window where the session-start isn't — counting
+  // action uids too keeps every "% of active" numerator a subset (never >100%).
+  const activeUids = new Set([...filteredSessions.map(s => s.uid), ...filteredActions.map(a => a.uid)]);
   const filteredUsers = _allUsers.filter(u => activeUids.has(u.uid) && !excludeUids.has(u.uid));
 
   const allUsersFiltered = excludeMe ? _allUsers.filter(u => !excludeUids.has(u.uid)) : _allUsers;
