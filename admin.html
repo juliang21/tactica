@@ -389,7 +389,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Total Sessions</th><th>Sessions (24h)</th><th>Status</th></tr>
+            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Total Sessions</th><th>Sessions (24h)</th><th>Rating</th><th>Status</th></tr>
           </thead>
           <tbody id="users-table"></tbody>
         </table>
@@ -519,7 +519,8 @@ window.loadDashboard = async function() {
     _allSessions = (await getDocs(sessionsQ)).docs.map(d => d.data());
 
     await reloadActions();
-    await reloadAhaActions();   // W0 aha rate for the Retention tab
+    await reloadAhaActions();     // W0 aha rate for the Retention tab
+    await reloadReviewStates();   // Rating column in All Coaches
 
     applyDateFilter();
   } catch (e) { console.error('Dashboard error:', e); }
@@ -637,6 +638,37 @@ async function reloadAhaActions() {
     _ahaActions = collected;
     _ahaFetchedAt = Date.now();
   } catch (e) { console.warn('Aha actions fetch failed:', e); _ahaActions = []; }
+}
+
+// ─── Review state per coach (for the All Coaches "Rating" column) ───────────
+// Three states: gave a rating (last one wins), was prompted but skipped/closed,
+// or never saw the modal. All-time, tiny volume (~dozens of docs), served by
+// the same (action, timestamp) composite index. Cached per page load.
+let _reviewByUid = new Map();   // uid -> { rating: number|null, prompted: true }
+let _reviewsFetchedAt = 0;
+async function reloadReviewStates() {
+  if (Date.now() - _reviewsFetchedAt < 5 * 60 * 1000) return;
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'tactica_actions'),
+      where('action', 'in', ['review_submitted', 'review_modal_shown', 'review_modal_closed']),
+      orderBy('timestamp', 'desc'),
+      limit(10000)
+    ));
+    const map = new Map();
+    snap.docs.forEach(d => {
+      const a = d.data();
+      if (!a.uid) return;
+      let st = map.get(a.uid);
+      if (!st) { st = { rating: null, prompted: true }; map.set(a.uid, st); }
+      // Docs arrive newest-first, so the first submitted we see is the LAST rating
+      if (a.action === 'review_submitted' && st.rating === null && a.meta && a.meta.rating) {
+        st.rating = a.meta.rating;
+      }
+    });
+    _reviewByUid = map;
+    _reviewsFetchedAt = Date.now();
+  } catch (e) { console.warn('Review states fetch failed (index needed?):', e); _reviewByUid = new Map(); }
 }
 
 window.applyDateFilter = function() {
@@ -1844,6 +1876,12 @@ window.showMoreUsers = function() {
     const lastSeen = u.lastSeen ? timeAgo(u.lastSeen) : '\u2014';
     const isReturning = u.sessionCount > 1;
     const today = _sessionsTodayByUid.get(u.uid) || 0;
+    const rev = _reviewByUid.get(u.uid);
+    const ratingCell = rev
+      ? (rev.rating !== null
+          ? `<span style="color:#FBBF24;font-weight:600">\u2605 ${rev.rating}</span>`
+          : `<span style="color:#777">Skipped</span>`)
+      : '<span style="color:#555">\u2014</span>';
     return `<tr>
       <td class="email">${u.email || '\u2014'}</td>
       <td>${u.displayName || '\u2014'}</td>
@@ -1851,6 +1889,7 @@ window.showMoreUsers = function() {
       <td>${lastSeen}</td>
       <td>${u.sessionCount || 0}</td>
       <td>${today > 0 ? `<strong>${today}</strong>` : '<span style="color:#555">0</span>'}</td>
+      <td>${ratingCell}</td>
       <td><span class="${isReturning ? 'returning' : 'new'}">${isReturning ? 'Returning' : 'New'}</span></td>
     </tr>`;
   }).join('');
