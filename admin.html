@@ -389,7 +389,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Sessions</th><th>Status</th></tr>
+            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Total Sessions</th><th>Sessions Today</th><th>Status</th></tr>
           </thead>
           <tbody id="users-table"></tbody>
         </table>
@@ -1818,9 +1818,19 @@ let _tableUsers = [];
 let _tableShown = 0;
 const PAGE_SIZE = 50;
 
+let _sessionsTodayByUid = new Map();
 function renderUsersTable(users) {
   _tableUsers = users;
   _tableShown = 0;
+  // Sessions since local midnight, per coach \u2014 from the full sessions load,
+  // so it's independent of the date filter.
+  const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
+  const midnightMs = midnight.getTime();
+  _sessionsTodayByUid = new Map();
+  _allSessions.forEach(s => {
+    if (!s.uid || !s.timestamp || s.timestamp < midnightMs) return;
+    _sessionsTodayByUid.set(s.uid, (_sessionsTodayByUid.get(s.uid) || 0) + 1);
+  });
   document.getElementById('users-table').innerHTML = '';
   document.getElementById('users-table-title').textContent = `All Coaches (${users.length})`;
   showMoreUsers();
@@ -1833,12 +1843,14 @@ window.showMoreUsers = function() {
     const firstSeen = u.firstSeen ? new Date(u.firstSeen).toLocaleDateString('en', { month: 'short', day: 'numeric', year: 'numeric' }) : '\u2014';
     const lastSeen = u.lastSeen ? timeAgo(u.lastSeen) : '\u2014';
     const isReturning = u.sessionCount > 1;
+    const today = _sessionsTodayByUid.get(u.uid) || 0;
     return `<tr>
       <td class="email">${u.email || '\u2014'}</td>
       <td>${u.displayName || '\u2014'}</td>
       <td>${firstSeen}</td>
       <td>${lastSeen}</td>
       <td>${u.sessionCount || 0}</td>
+      <td>${today > 0 ? `<strong>${today}</strong>` : '<span style="color:#555">0</span>'}</td>
       <td><span class="${isReturning ? 'returning' : 'new'}">${isReturning ? 'Returning' : 'New'}</span></td>
     </tr>`;
   }).join('');
