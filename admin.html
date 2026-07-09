@@ -950,8 +950,28 @@ function renderUseCaseBreakdown(actions, activeCoaches, sessions) {
   const engagedActs = acts.filter(a => cases.some(c => c.fn(a)));
   const engagedCoaches = new Set(engagedActs.map(coachKey).filter(Boolean));
   const engagedSessKeys = new Set(engagedActs.map(sessKey).filter(Boolean));
-  // Browsed sessions = window session docs from coaches with no aha in window.
-  const browsedSessions = (sessions || []).filter(s => s.uid && !engagedCoaches.has(s.uid)).length;
+  // Browsed session-units, counted in the SAME key-space as engaged ones:
+  // per non-engaged coach, the max of (distinct session keys on their actions,
+  // their session docs in the window). The max avoids double-counting one
+  // session seen both ways, while still catching a coach whose session doc is
+  // outside the window but whose actions leaked in (session spanning midnight)
+  // — so any coach counted as browsed on the left contributes a unit here.
+  const browsedActKeys = new Map();   // uid -> Set(sessKey)
+  acts.forEach(a => {
+    if (!a.uid || engagedCoaches.has(a.uid)) return;
+    const k = sessKey(a); if (!k) return;
+    if (!browsedActKeys.has(a.uid)) browsedActKeys.set(a.uid, new Set());
+    browsedActKeys.get(a.uid).add(k);
+  });
+  const browsedDocCounts = new Map(); // uid -> session docs in window
+  (sessions || []).forEach(s => {
+    if (!s.uid || engagedCoaches.has(s.uid)) return;
+    browsedDocCounts.set(s.uid, (browsedDocCounts.get(s.uid) || 0) + 1);
+  });
+  let browsedSessions = 0;
+  new Set([...browsedActKeys.keys(), ...browsedDocCounts.keys()]).forEach(uid => {
+    browsedSessions += Math.max(browsedActKeys.get(uid)?.size || 0, browsedDocCounts.get(uid) || 0);
+  });
 
   // One column = a vertical bar chart (Board / Image / Training / Browsed only).
   function col(title, sub, keyFn, browsedValue, denom) {
