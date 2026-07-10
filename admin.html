@@ -133,6 +133,15 @@
 
   /* Activity chart */
   .chart-container { background: #1a1a1a; border-radius: 12px; padding: 20px; border: 1px solid rgba(255,255,255,0.06); }
+  .ke-header { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+  .ke-select {
+    background: #1a1a1a; color: #e0e0e0;
+    border: 1px solid rgba(255,255,255,0.1); border-radius: 8px;
+    padding: 7px 10px; font-family: 'Manrope', sans-serif; font-size: 12px;
+    cursor: pointer; outline: none;
+  }
+  .ke-select:focus { border-color: #34D399; }
+  .ke-total { font-size: 12px; color: #888; margin-left: auto; }
   .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 120px; margin-top: 12px; }
   .chart-bar { flex: 1; background: #34D399; border-radius: 3px 3px 0 0; min-width: 8px; position: relative; transition: all 0.2s; cursor: default; }
   .chart-bar:hover { opacity: 0.8; }
@@ -385,6 +394,34 @@
       </div>
     </div>
     <div class="section">
+      <div class="ke-header">
+        <h2 style="margin:0">Key Event Trend</h2>
+        <select id="ke-event" class="ke-select" onchange="loadKeyEventChart()">
+          <option value="save">Save</option>
+          <option value="export" selected>Export Image</option>
+          <option value="export_copy">Copy Image</option>
+          <option value="share_created">Share Link</option>
+          <option value="analysis_started">Analysis Started</option>
+          <option value="training_drill_started">Drill Started</option>
+          <option value="training_session_started">Training Session</option>
+          <option value="feature_image_upload">Image Upload</option>
+          <option value="feature_animation">Animation</option>
+          <option value="review_submitted">Review Submitted</option>
+          <option value="element_inserted">Element Inserted</option>
+        </select>
+        <select id="ke-range" class="ke-select" onchange="loadKeyEventChart()">
+          <option value="7">Last 7 days</option>
+          <option value="14" selected>Last 14 days</option>
+          <option value="28">Last 28 days</option>
+        </select>
+        <span id="ke-total" class="ke-total"></span>
+      </div>
+      <div class="chart-container" style="margin-top:12px">
+        <div class="chart-bars" id="ke-bars"></div>
+        <div class="chart-labels" id="ke-labels"></div>
+      </div>
+    </div>
+    <div class="section">
       <h2 id="users-table-title">All Coaches</h2>
       <div class="table-wrap">
         <table>
@@ -523,6 +560,7 @@ window.loadDashboard = async function() {
     await reloadReviewStates();   // Rating column in All Coaches
 
     applyDateFilter();
+    loadKeyEventChart();          // independent of the date filter; cached
   } catch (e) { console.error('Dashboard error:', e); }
   finally {
     if (btn) btn.classList.remove('loading');
@@ -1877,6 +1915,85 @@ function renderChart(sessions, startStr, endStr) {
     barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%"><div class="tooltip">${weekday} ${dayLabel}: ${b.count} sessions, ${b.uniqueUsers.size} coaches</div></div>`;
     labelsEl.innerHTML += `<span>${i % showEvery === 0 ? dayLabel.slice(3) : ''}</span>`;
   });
+}
+
+// ─── Key Event Trend ─────────────────────────────────────────────────────────
+// Daily counts of one selected action over the last 7/14/28 days. Independent
+// of the date filter. Served by the (action, timestamp) composite index —
+// equality + range, so only the matching docs are read. Cached per
+// (event, range) for 5 minutes so re-renders and date-filter changes are free.
+const _keCache = new Map();   // `${action}:${days}` -> { timestamps, truncated, fetchedAt }
+window.loadKeyEventChart = async function() {
+  const action = document.getElementById('ke-event').value;
+  const days = parseInt(document.getElementById('ke-range').value, 10);
+  const cacheKey = `${action}:${days}`;
+  const cached = _keCache.get(cacheKey);
+  if (cached && Date.now() - cached.fetchedAt < 5 * 60 * 1000) {
+    renderKeyEventChart(action, days, cached.timestamps, cached.truncated);
+    return;
+  }
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (days - 1));   // window includes today
+  const startMs = start.getTime();
+  const PAGE_SIZE = 10000, MAX_PAGES = 3;        // 30k cap guards element_inserted-scale events
+  const timestamps = [];
+  let truncated = false, lastDoc = null;
+  try {
+    for (let i = 0; i < MAX_PAGES; i++) {
+      const constraints = [
+        where('action', '==', action),
+        where('timestamp', '>=', startMs),
+        orderBy('timestamp', 'desc'),
+        limit(PAGE_SIZE),
+      ];
+      if (lastDoc) constraints.push(startAfter(lastDoc));
+      const snap = await getDocs(query(collection(db, 'tactica_actions'), ...constraints));
+      snap.docs.forEach(d => { const a = d.data(); if (a.timestamp) timestamps.push(a.timestamp); });
+      if (snap.docs.length < PAGE_SIZE) break;
+      lastDoc = snap.docs[snap.docs.length - 1];
+      if (i === MAX_PAGES - 1) truncated = true;
+    }
+    _keCache.set(cacheKey, { timestamps, truncated, fetchedAt: Date.now() });
+    renderKeyEventChart(action, days, timestamps, truncated);
+  } catch (e) {
+    console.warn('Key event fetch failed:', e);
+    document.getElementById('ke-bars').innerHTML =
+      '<div style="align-self:center;margin:auto;font-size:12px;color:#777">Could not load — see console</div>';
+    document.getElementById('ke-labels').innerHTML = '';
+    document.getElementById('ke-total').textContent = '';
+  }
+};
+
+function renderKeyEventChart(action, days, timestamps, truncated) {
+  const label = document.querySelector(`#ke-event option[value="${action}"]`)?.textContent || action;
+  const start = new Date(); start.setHours(0, 0, 0, 0);
+  start.setDate(start.getDate() - (days - 1));
+  const buckets = {};
+  for (let i = 0; i < days; i++) {
+    const d = new Date(start); d.setDate(d.getDate() + i);
+    buckets[localDateStr(d)] = 0;   // zero-days stay on the axis
+  }
+  let total = 0;
+  timestamps.forEach(ts => {
+    const key = localDateStr(new Date(ts));
+    if (key in buckets) { buckets[key]++; total++; }
+  });
+  const keys = Object.keys(buckets);
+  const maxCount = Math.max(1, ...keys.map(k => buckets[k]));
+  const barsEl = document.getElementById('ke-bars');
+  const labelsEl = document.getElementById('ke-labels');
+  barsEl.innerHTML = ''; labelsEl.innerHTML = '';
+  const showEvery = days > 14 ? 2 : 1;
+  keys.forEach((key, i) => {
+    const count = buckets[key];
+    const pct = (count / maxCount) * 100;
+    const dayLabel = key.slice(5);
+    const weekday = new Date(key + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
+    barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%${count === 0 ? ';background:rgba(52,211,153,0.18)' : ''}"><div class="tooltip">${weekday} ${dayLabel}: ${count} × ${label}</div></div>`;
+    labelsEl.innerHTML += `<span>${i % showEvery === 0 ? dayLabel.slice(3) : ''}</span>`;
+  });
+  document.getElementById('ke-total').textContent =
+    `${total} in ${days} days${truncated ? ' (truncated at 30k — narrow the range)' : ''}`;
 }
 
 // ─── Users Table (paginated) ────────────────────────────────────────────────
