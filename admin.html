@@ -145,12 +145,26 @@
   .chart-bars { display: flex; align-items: flex-end; gap: 4px; height: 120px; margin-top: 12px; }
   .chart-bar { flex: 1; background: #34D399; border-radius: 3px 3px 0 0; min-width: 8px; position: relative; transition: all 0.2s; cursor: default; }
   .chart-bar:hover { opacity: 0.8; }
-  .chart-bar .tooltip {
+  .chart-bar .tooltip, .ke-slot .tooltip {
     display: none; position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%);
     background: #333; color: #fff; padding: 4px 8px; border-radius: 4px; font-size: 10px;
-    white-space: nowrap; margin-bottom: 4px;
+    white-space: nowrap; margin-bottom: 4px; z-index: 5;
   }
-  .chart-bar:hover .tooltip { display: block; }
+  .chart-bar:hover .tooltip, .ke-slot:hover .tooltip { display: block; }
+
+  /* Key Event Trend line chart */
+  .ke-plot { position: relative; height: 120px; margin-top: 12px; }
+  .ke-svg { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+  .ke-slots { position: absolute; inset: 0; display: flex; }
+  .ke-slot { flex: 1; position: relative; }
+  .ke-slot:hover { background: rgba(255,255,255,0.03); }
+  .ke-dot {
+    position: absolute; left: 50%; transform: translate(-50%, -50%);
+    width: 7px; height: 7px; border-radius: 50%;
+    background: #34D399; border: 2px solid #1a1a1a;   /* surface ring */
+    transition: transform 0.1s;
+  }
+  .ke-slot:hover .ke-dot { transform: translate(-50%, -50%) scale(1.45); }
   .chart-labels { display: flex; gap: 4px; margin-top: 6px; }
   .chart-labels span { flex: 1; text-align: center; font-size: 8px; color: #555; }
 
@@ -417,7 +431,7 @@
         <span id="ke-total" class="ke-total"></span>
       </div>
       <div class="chart-container" style="margin-top:12px">
-        <div class="chart-bars" id="ke-bars"></div>
+        <div class="ke-plot" id="ke-plot"></div>
         <div class="chart-labels" id="ke-labels"></div>
       </div>
     </div>
@@ -1957,12 +1971,40 @@ window.loadKeyEventChart = async function() {
     renderKeyEventChart(action, days, timestamps, truncated);
   } catch (e) {
     console.warn('Key event fetch failed:', e);
-    document.getElementById('ke-bars').innerHTML =
-      '<div style="align-self:center;margin:auto;font-size:12px;color:#777">Could not load — see console</div>';
+    document.getElementById('ke-plot').innerHTML =
+      '<div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;color:#777">Could not load — see console</div>';
     document.getElementById('ke-labels').innerHTML = '';
     document.getElementById('ke-total').textContent = '';
   }
 };
+
+// Monotone cubic interpolation (Fritsch–Carlson): smooth, but the curve never
+// over/undershoots the data — a naive spline would draw fake dips below zero
+// between low-count days, which lies about counts.
+function monotonePath(pts) {
+  const n = pts.length;
+  if (n === 0) return '';
+  if (n === 1) return `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  const dx = [], m = [], t = new Array(n);
+  for (let i = 0; i < n - 1; i++) {
+    dx.push(pts[i + 1][0] - pts[i][0]);
+    m.push((pts[i + 1][1] - pts[i][1]) / dx[i]);
+  }
+  t[0] = m[0]; t[n - 1] = m[n - 2];
+  for (let i = 1; i < n - 1; i++) t[i] = m[i - 1] * m[i] <= 0 ? 0 : (m[i - 1] + m[i]) / 2;
+  for (let i = 0; i < n - 1; i++) {
+    if (m[i] === 0) { t[i] = 0; t[i + 1] = 0; continue; }
+    const a = t[i] / m[i], b = t[i + 1] / m[i], s = a * a + b * b;
+    if (s > 9) { const tau = 3 / Math.sqrt(s); t[i] = tau * a * m[i]; t[i + 1] = tau * b * m[i]; }
+  }
+  let d = `M ${pts[0][0].toFixed(1)} ${pts[0][1].toFixed(1)}`;
+  for (let i = 0; i < n - 1; i++) {
+    const c1x = pts[i][0] + dx[i] / 3,     c1y = pts[i][1] + t[i] * dx[i] / 3;
+    const c2x = pts[i + 1][0] - dx[i] / 3, c2y = pts[i + 1][1] - t[i + 1] * dx[i] / 3;
+    d += ` C ${c1x.toFixed(1)} ${c1y.toFixed(1)}, ${c2x.toFixed(1)} ${c2y.toFixed(1)}, ${pts[i + 1][0].toFixed(1)} ${pts[i + 1][1].toFixed(1)}`;
+  }
+  return d;
+}
 
 function renderKeyEventChart(action, days, timestamps, truncated) {
   const label = document.querySelector(`#ke-event option[value="${action}"]`)?.textContent || action;
@@ -1980,18 +2022,36 @@ function renderKeyEventChart(action, days, timestamps, truncated) {
   });
   const keys = Object.keys(buckets);
   const maxCount = Math.max(1, ...keys.map(k => buckets[k]));
-  const barsEl = document.getElementById('ke-bars');
-  const labelsEl = document.getElementById('ke-labels');
-  barsEl.innerHTML = ''; labelsEl.innerHTML = '';
+
+  // Geometry in a fixed viewBox; the line svg stretches to the container
+  // (non-scaling stroke keeps it 2px). Dots + tooltips are HTML in per-day
+  // slots so they don't distort and hit-targets stay bigger than the marks.
+  const W = 720, H = 120, PAD_T = 12;
+  const n = keys.length;
+  const xFor = i => (i + 0.5) * (W / n);          // slot centers — matches labels
+  const yFor = c => H - (c / maxCount) * (H - PAD_T);
+  const pts = keys.map((k, i) => [xFor(i), yFor(buckets[k])]);
+  const line = monotonePath(pts);
+  const area = `${line} L ${pts[n - 1][0].toFixed(1)} ${H} L ${pts[0][0].toFixed(1)} ${H} Z`;
+
   const showEvery = days > 14 ? 2 : 1;
+  let slots = '', labels = '';
   keys.forEach((key, i) => {
     const count = buckets[key];
-    const pct = (count / maxCount) * 100;
     const dayLabel = key.slice(5);
     const weekday = new Date(key + 'T12:00:00').toLocaleDateString('en', { weekday: 'short' });
-    barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%${count === 0 ? ';background:rgba(52,211,153,0.18)' : ''}"><div class="tooltip">${weekday} ${dayLabel}: ${count} × ${label}</div></div>`;
-    labelsEl.innerHTML += `<span>${i % showEvery === 0 ? dayLabel.slice(3) : ''}</span>`;
+    const topPct = (yFor(count) / H) * 100;
+    slots += `<div class="ke-slot"><span class="ke-dot" style="top:${topPct.toFixed(2)}%"></span><div class="tooltip">${weekday} ${dayLabel}: ${count} × ${label}</div></div>`;
+    labels += `<span>${i % showEvery === 0 ? dayLabel.slice(3) : ''}</span>`;
   });
+
+  document.getElementById('ke-plot').innerHTML = `
+    <svg class="ke-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      <path d="${area}" fill="rgba(52,211,153,0.10)"/>
+      <path d="${line}" fill="none" stroke="#34D399" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+    </svg>
+    <div class="ke-slots">${slots}</div>`;
+  document.getElementById('ke-labels').innerHTML = labels;
   document.getElementById('ke-total').textContent =
     `${total} in ${days} days${truncated ? ' (truncated at 30k — narrow the range)' : ''}`;
 }
