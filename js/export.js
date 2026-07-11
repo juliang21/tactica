@@ -831,8 +831,8 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     // Ground glow
     ctx.save();
     ctx.beginPath();
-    ctx.ellipse(cx, cy + 2 * sy, 24 * sc, 13 * sc * sy, 0, 0, Math.PI * 2);
-    const glowGrad = ctx.createRadialGradient(cx, cy + 2 * sy, 0, cx, cy + 2 * sy, 24 * sc);
+    ctx.ellipse(cx, cy + 1.2 * sy, 24 * sc, 7.8 * sc * sy, 0, 0, Math.PI * 2);
+    const glowGrad = ctx.createRadialGradient(cx, cy + 1.2 * sy, 0, cx, cy + 1.2 * sy, 24 * sc);
     glowGrad.addColorStop(0, 'rgba(255,255,255,0.18)');
     glowGrad.addColorStop(0.7, 'rgba(255,255,255,0.05)');
     glowGrad.addColorStop(1, 'rgba(255,255,255,0)');
@@ -840,18 +840,24 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.fill();
     ctx.restore();
 
-    // Main ellipse ring
+    // Main ellipse fill
     ctx.beginPath();
-    ctx.ellipse(cx, cy, 17 * sc, 9 * sc * sy, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy, 17 * sc, 5.4 * sc * sy, 0, 0, Math.PI * 2);
     ctx.fillStyle = bgColor;
     ctx.fill();
-    ctx.strokeStyle = borderColor;
-    ctx.lineWidth = 1.6;
-    ctx.stroke();
+
+    // Perspective rim: evenodd fill between outer and offset inner ellipse —
+    // thick at the bottom, thin at the top (must match updateMarkerRim in
+    // elements.js: T=0.3, B=3.0, SIDE=1.2 in local units, scaled by sc)
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, 17 * sc, 5.4 * sc * sy, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy - 1.35 * sc, 15.8 * sc, Math.max(0.5, 5.4 * sy - 1.65) * sc, 0, 0, Math.PI * 2);
+    ctx.fillStyle = borderColor;
+    ctx.fill('evenodd');
 
     // Inner shine
     ctx.beginPath();
-    ctx.ellipse(cx, cy - 2 * sc * sy, 10 * sc, 4 * sc * sy, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy - 1.2 * sc * sy, 10 * sc, 2.4 * sc * sy, 0, 0, Math.PI * 2);
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.fill();
 
@@ -865,9 +871,9 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
       ctx.lineWidth = 3;
       ctx.strokeStyle = 'rgba(0,0,0,0.55)';
       ctx.lineJoin = 'round';
-      ctx.strokeText(name, cx, cy + 18 * sc * sy);
+      ctx.strokeText(name, cx, cy + 14 * sc * sy);
       ctx.fillStyle = 'white';
-      ctx.fillText(name, cx, cy + 18 * sc * sy);
+      ctx.fillText(name, cx, cy + 14 * sc * sy);
     }
 
     ctx.restore();

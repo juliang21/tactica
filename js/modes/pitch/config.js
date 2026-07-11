@@ -21,8 +21,8 @@ export const pitchMode = {
       'arrow',
       // Text & annotations
       'textbox', 'headline', 'tag',
-      // Connections
-      'link', 'pair', 'net-zone',
+      // Connections (Unit / net-zone is Image Analysis-only)
+      'link', 'pair',
     ],
     // IDs of non-data-tool buttons to hide (empty = show all)
     hiddenIds: [],

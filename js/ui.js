@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg, updateHandlePositions } from './interaction.js';
-import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag, applyJerseyStyle } from './elements.js';
+import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag, applyJerseyStyle, updateAllLinks } from './elements.js';
 import { trackElementEdited } from './analytics.js';
 import { rebuildPitch } from './pitch.js';
 
@@ -1411,6 +1411,8 @@ export function applySize(val) {
     // Keep resize handles in sync with the slider
     if (S.selectedEl === el) updateHandlePositions(el);
   }
+  // Resized markers need their link lines re-trimmed to the new rim
+  if (targets.some(el => el.dataset.type === 'marker')) updateAllLinks();
   // Reveal the "use as default for new X" row when scale differs from 100%
   if (S.selectedEl) _updateSizeApplyAllRow(S.selectedEl, val/100);
 }
@@ -1443,8 +1445,13 @@ export function applyMarkerBorderColor(el) {
   for (const m of S.selectedEls) {
     if (m.dataset.type !== 'marker') continue;
     m.dataset.borderColor = color;
-    const ring = m.querySelector('.marker-ellipse');
-    if (ring) ring.setAttribute('stroke', color);
+    const rim = m.querySelector('.marker-rim');
+    if (rim) rim.setAttribute('fill', color);
+    else {
+      // Legacy marker (pre-rim markup): border is still the ellipse stroke
+      const ring = m.querySelector('.marker-ellipse');
+      if (ring) ring.setAttribute('stroke', color);
+    }
   }
 }
 

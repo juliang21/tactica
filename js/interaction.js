@@ -30,6 +30,9 @@ export function registerRewrap(fn) { _rewrapFn = fn; }
 let _updateVisionFn = null;
 export function registerVisionUpdate(fn) { _updateVisionFn = fn; }
 
+let _updateMarkerRimFn = null;
+export function registerMarkerRimUpdate(fn) { _updateMarkerRimFn = fn; }
+
 // ─── Link update callback ──────────────────────────────────────────────────
 let _updateAllLinksFn = null;
 export function registerLinkUpdate(fn) { _updateAllLinksFn = fn; }
@@ -116,20 +119,21 @@ export function applyTransform(el) {
     // Marker vertical scale: adjust ry of each ellipse to flatten/stretch
     if (t === 'marker') {
       const sy = parseFloat(el.dataset.markerScaleY || '1');
-      // Base ry values: ring=9, glow=13, shine=4, hlGlow=14, hlRing=9
+      // Base ry values: ring=5.4, glow=7.8, shine=2.4, hlGlow=8.4, hlRing=5.4
       const ring = el.querySelector('.marker-ellipse');
-      if (ring) ring.setAttribute('ry', 9 * sy);
+      if (ring) ring.setAttribute('ry', 5.4 * sy);
+      if (_updateMarkerRimFn) _updateMarkerRimFn(el);
       const glow = el.querySelector('.marker-glow');
-      if (glow) { glow.setAttribute('ry', 13 * sy); glow.setAttribute('cy', 2 * sy); }
+      if (glow) { glow.setAttribute('ry', 7.8 * sy); glow.setAttribute('cy', 1.2 * sy); }
       const shine = el.querySelector('.marker-shine');
-      if (shine) { shine.setAttribute('ry', 4 * sy); shine.setAttribute('cy', -2 * sy); }
+      if (shine) { shine.setAttribute('ry', 2.4 * sy); shine.setAttribute('cy', -1.2 * sy); }
       const hlGlow = el.querySelector('.mh-glow');
-      if (hlGlow) hlGlow.setAttribute('ry', 14 * sy);
+      if (hlGlow) hlGlow.setAttribute('ry', 8.4 * sy);
       const hlRing = el.querySelector('.mh-ring');
-      if (hlRing) hlRing.setAttribute('ry', 9 * sy);
+      if (hlRing) hlRing.setAttribute('ry', 5.4 * sy);
       // Adjust label position
       const label = el.querySelector('.marker-label');
-      if (label) label.setAttribute('y', 18 * sy);
+      if (label) label.setAttribute('y', 14 * sy);
       // Redraw highlight beam if on
       if (el.dataset.markerHighlight === '1') {
         const beam = el.querySelector('.marker-highlight .mh-beam');
@@ -510,7 +514,7 @@ export function select(el, opts = {}) {
     : type === 'link' ? 'Player Link'
     : type === 'pair' ? 'Pair'
     : type === 'marker' ? 'Connect Players'
-    : type === 'net-zone' ? 'Player Zone'
+    : type === 'net-zone' ? 'Unit'
     : 'Zone';
   const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : (type === 'textbox' || type === 'headline' || type === 'tag') ? ' · double-click to edit' : type?.startsWith('shadow') || type === 'freeform' ? ' · double-click to edit label' : '';
   const icon = _getElementIcon(type, el);
@@ -970,17 +974,41 @@ function hideMobileContext() {
   if (fb) fb.style.display = '';
 }
 
+// When an anchor element (player/marker/referee) is deleted, everything that
+// references it by id must go too: links and pairs die with it, anchored
+// net-zones drop the vertex (and dissolve entirely below 3 anchors).
+function removeDependents(el) {
+  const id = el.id;
+  const type = el.dataset?.type;
+  if (!id || (type !== 'player' && type !== 'marker' && type !== 'referee')) return;
+  document.querySelectorAll('g[data-type="link"], g[data-type="pair"]').forEach(l => {
+    if (l.dataset.player1 === id || l.dataset.player2 === id) l.remove();
+  });
+  document.querySelectorAll('g[data-type="net-zone"]').forEach(nz => {
+    if (nz.dataset.freeZone === 'true') return;
+    const pids = (nz.dataset.players || '').split(',').filter(Boolean);
+    if (!pids.includes(id)) return;
+    const rest = pids.filter(p => p !== id);
+    if (rest.length < 3) { nz.remove(); return; }
+    nz.dataset.players = rest.join(',');
+    nz.querySelector(`.nz-vertex[data-pid="${id}"]`)?.remove();
+  });
+}
+
 export function deleteSelected() {
   if (!S.selectedEl && S.selectedEls.size === 0) return;
   S.pushUndo();
   removeHandles();
   // Delete all selected elements
   if (S.selectedEls.size > 0) {
-    for (const el of S.selectedEls) el.remove();
+    for (const el of S.selectedEls) { removeDependents(el); el.remove(); }
     S.clearSelectedEls();
   } else if (S.selectedEl) {
+    removeDependents(S.selectedEl);
     S.selectedEl.remove();
   }
+  // Re-fit surviving links, pairs and zones to the new anchor set
+  if (_updateAllLinksFn) _updateAllLinksFn();
   S.setSelectedEl(null);
   S.selInfo.innerHTML = 'Nothing selected.';
   hideMobileContext();

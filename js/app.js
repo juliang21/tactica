@@ -1,6 +1,6 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage } from './elements.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
+import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -19,7 +19,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyImageCrop, applyImageOpacity,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=9';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=10';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=6';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
@@ -49,6 +49,7 @@ registerRewrap(rewrapTextBox);
 registerHeadlineRewrap(rewrapHeadline);
 registerSelectTeamContext(selectTeamContext);
 registerVisionUpdate(updateVisionPolygon);
+registerMarkerRimUpdate(updateMarkerRim);
 registerFreeformUpdate(updateFreeformPath);
 registerMotionUpdate(updateMotionVisual);
 registerShadowLabelUpdate(updateShadowLabel);
@@ -98,6 +99,7 @@ function undo() {
   S.objectsLayer.querySelectorAll('[data-type]').forEach(g => {
     const isFreeNz = g.dataset.type === 'net-zone' && g.dataset.freeZone === 'true';
     if (g.dataset.type !== 'link' && (g.dataset.type !== 'net-zone' || isFreeNz)) makeDraggable(g);
+    if (g.dataset.type === 'marker') updateMarkerRim(g);
     g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
     // Shadow zones: dblclick to edit label
     if (g.dataset.type?.startsWith('shadow')) {
@@ -270,9 +272,12 @@ window.setTool = function(t) {
   if (S.tool === 'image' && t !== 'image') {
     _pendingImagePoint = null;
   }
-  // Clean up net-zone tool state if leaving net-zone mode
+  // Leaving the Unit tool: a draft with 3+ anchors is finished work — commit
+  // it as a unit instead of silently discarding circles the coach just placed.
+  // (Below 3 anchors there is no valid polygon; discard as before.)
   if (S.tool === 'net-zone' && t !== 'net-zone') {
-    cancelNetZone();
+    if (_netZonePlayers.length >= 3) closeNetZone();
+    else cancelNetZone();
   }
   _baseSetTool(t);
 
@@ -1699,6 +1704,7 @@ window.applyMarkerScaleY = function(val) {
   el.dataset.markerScaleY = (val / 100).toFixed(2);
   document.getElementById('marker-scaley-val').textContent = (val / 100).toFixed(1) + '×';
   applyTransform(el);
+  updateAllLinks(); // flattening the ellipse moves the rim → re-trim link lines
 };
 window.applyImageCrop = applyImageCrop;
 window.applyImageOpacity = applyImageOpacity;
@@ -2080,8 +2086,9 @@ async function _placeImageFromFile(file, x, y) {
 let _netZonePlayers = [];       // accumulated player IDs (Tactical Board mode)
 let _netZoneHighlights = [];    // highlight ring SVG elements
 let _netZonePreview = null;     // live preview polygon
-let _netZoneCoords = [];        // accumulated {x,y} points (Image Analysis mode)
+let _netZoneCoords = [];        // accumulated {x,y} points (legacy free zones)
 let _netZoneVertexDots = [];    // small vertex marker SVGs for image mode
+let _netZoneDraftMarkers = [];  // circles minted DURING unit drafting (removed on cancel)
 
 function clearLinkHighlight() {
   if (_linkHighlight) {
@@ -2194,21 +2201,35 @@ S.svg.addEventListener('click', e => {
     return;
   }
 
-  // ── Net-Zone tool handling ─────────────────────────────────────────────
+  // ── Net-Zone (Unit) tool handling ────────────────────────────────────────
   if (S.tool === 'net-zone') {
-    // ── Image Analysis mode: click anywhere to place polygon vertices ────
+    // ── Image Analysis mode: anchor the zone to circles (markers) ─────────
+    // Click an existing circle to add it to the unit; click open grass to
+    // drop a NEW circle there. The zone tracks the circles, so dragging a
+    // circle later reshapes the unit. Close: click the first circle again,
+    // or double-click, or press Enter.
     if (S.appMode === 'image') {
-      const pt = S.getSVGPoint(e);
-      // Add vertex
-      _netZoneCoords.push({ x: pt.x, y: pt.y });
-      _addVertexDot(pt.x, pt.y);
-      updateNetZonePreview();
-      // Update hint
-      const n = _netZoneCoords.length;
-      if (n < 3) {
-        S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${n}/3 points placed · click ${3 - n} more on the image</span>`;
+      const anchor = e.target.closest('[data-type="marker"],[data-type="player"],[data-type="referee"]');
+      if (anchor) {
+        // Clicking the first circle again closes the unit
+        if (_netZonePlayers.length >= 3 && anchor.id === _netZonePlayers[0]) { closeNetZone(); return; }
+        if (_netZonePlayers.includes(anchor.id)) return;
+        if (_netZonePlayers.length === 0) S.pushUndo();
+        _netZonePlayers.push(anchor.id);
       } else {
-        S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${n} points · click more or double-click to close</span>`;
+        const pt = S.getSVGPoint(e);
+        if (_netZonePlayers.length === 0) S.pushUndo();
+        const m = addMarker(pt.x, pt.y);
+        trackElementInserted('marker');
+        _netZoneDraftMarkers.push(m);
+        _netZonePlayers.push(m.id);
+      }
+      updateNetZonePreview();
+      const n = _netZonePlayers.length;
+      if (n < 3) {
+        S.selInfo.innerHTML = `<strong>Unit</strong><br><span style="font-size:10px;color:var(--text-muted)">${n}/3 circles · click players on the image (or existing circles) — ${3 - n} more to go</span>`;
+      } else {
+        S.selInfo.innerHTML = `<strong>Unit</strong><br><span style="font-size:10px;color:var(--text-muted)">${n} circles · add more, or click the first circle / double-click to close</span>`;
       }
       return;
     }
@@ -2242,9 +2263,9 @@ S.svg.addEventListener('click', e => {
     // Update hint
     const n = _netZonePlayers.length;
     if (n < 3) {
-      S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${n}/3 players selected · click ${3 - n} more</span>`;
+      S.selInfo.innerHTML = `<strong>Unit</strong><br><span style="font-size:10px;color:var(--text-muted)">${n}/3 players selected · click ${3 - n} more</span>`;
     } else {
-      S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${n} players · click more or click pitch to close</span>`;
+      S.selInfo.innerHTML = `<strong>Unit</strong><br><span style="font-size:10px;color:var(--text-muted)">${n} players · click more or click pitch to close</span>`;
     }
     return;
   }
@@ -2445,9 +2466,20 @@ S.svg.addEventListener('click', e => {
 S.svg.addEventListener('dblclick', e => {
   if (S.tool === 'freeform') { e.preventDefault(); closeFreeform(); return; }
   if (S.tool === 'net-zone') {
-    // Image mode: close if 3+ coords
-    if (S.appMode === 'image' && _netZoneCoords.length >= 3) { e.preventDefault(); closeNetZone(); return; }
-    // Tactical Board: close if 3+ players
+    // The second click of this dblclick just minted a duplicate circle next
+    // to the previous one — drop it before closing.
+    if (S.appMode === 'image' && _netZonePlayers.length >= 2) {
+      const last = document.getElementById(_netZonePlayers[_netZonePlayers.length - 1]);
+      const prev = document.getElementById(_netZonePlayers[_netZonePlayers.length - 2]);
+      if (last && prev && _netZoneDraftMarkers[_netZoneDraftMarkers.length - 1] === last &&
+          Math.hypot(parseFloat(last.dataset.cx) - parseFloat(prev.dataset.cx),
+                     parseFloat(last.dataset.cy) - parseFloat(prev.dataset.cy)) < 14) {
+        last.remove();
+        _netZonePlayers.pop();
+        _netZoneDraftMarkers.pop();
+      }
+    }
+    // Close if 3+ anchors (players on the board, circles on the image)
     if (_netZonePlayers.length >= 3) { e.preventDefault(); closeNetZone(); return; }
   }
 });
@@ -2460,11 +2492,12 @@ S.svg.addEventListener('mousemove', e => {
 
 // ─── Net-Zone helpers ──────────────────────────────────────────────────────
 function closeNetZone() {
-  // Image mode: create free (non-anchored) polygon from raw coords
+  // Image mode: create a circle-anchored unit. The undo snapshot was taken
+  // when drafting started, so zone + drafted circles undo as one step.
   if (S.appMode === 'image') {
-    if (_netZoneCoords.length < 3) { cancelNetZone(); return; }
-    S.pushUndo();
-    const zone = addFreeNetZone([..._netZoneCoords]);
+    if (_netZonePlayers.length < 3) { cancelNetZone(); return; }
+    const zone = addNetZone([..._netZonePlayers], { vertices: false });
+    _netZoneDraftMarkers = [];  // keep the drafted circles — they belong to the unit now
     cancelNetZone();
     if (zone) {
       trackElementInserted('net-zone');
@@ -2498,6 +2531,9 @@ function cancelNetZone() {
   _netZoneCoords = [];
   _netZoneVertexDots.forEach(d => d.remove());
   _netZoneVertexDots = [];
+  // Circles minted during an abandoned draft leave with it
+  _netZoneDraftMarkers.forEach(m => m.remove());
+  _netZoneDraftMarkers = [];
   if (_netZonePreview) { _netZonePreview.remove(); _netZonePreview = null; }
 }
 
@@ -2519,9 +2555,9 @@ function _addVertexDot(x, y) {
 function _showNetZoneHint() {
   switchTab('element');
   const msg = S.appMode === 'image'
-    ? 'Click on the image to place 3+ points.<br>Double-click to close the zone.'
-    : 'Click 3+ players to create a zone.<br>Place players first, then click each one.';
-  S.selInfo.innerHTML = `<strong>Player Zone</strong><br><span style="font-size:10px;color:var(--text-muted)">${msg}</span>`;
+    ? 'Click 3+ players on the image — a circle appears under each.<br>Click the first circle again (or double-click) to close the unit.'
+    : 'Click 3+ players to form a unit.<br>Place players first, then click each one.';
+  S.selInfo.innerHTML = `<strong>Unit</strong><br><span style="font-size:10px;color:var(--text-muted)">${msg}</span>`;
   // Hide all edit sections so only the hint shows
   ['player-edit-section','referee-edit-section','arrow-edit-section','zone-edit-section',
    'textbox-edit-section','headline-edit-section','spotlight-edit-section','vision-edit-section',
@@ -2534,8 +2570,8 @@ function _showNetZoneHint() {
 }
 
 function updateNetZonePreview() {
-  // Determine point count based on mode
-  const count = S.appMode === 'image' ? _netZoneCoords.length : _netZonePlayers.length;
+  // Both modes anchor to elements now (players on the board, circles on the image)
+  const count = _netZonePlayers.length;
   if (count < 2) {
     if (_netZonePreview) _netZonePreview.setAttribute('points', '');
     return;
@@ -2550,15 +2586,10 @@ function updateNetZonePreview() {
     _netZonePreview.setAttribute('pointer-events', 'none');
     S.objectsLayer.appendChild(_netZonePreview);
   }
-  let pts;
-  if (S.appMode === 'image') {
-    pts = _netZoneCoords.map(c => `${c.x},${c.y}`);
-  } else {
-    pts = _netZonePlayers.map(id => {
-      const el = document.getElementById(id);
-      return el ? `${el.dataset.cx},${el.dataset.cy}` : null;
-    }).filter(Boolean);
-  }
+  const pts = _netZonePlayers.map(id => {
+    const el = document.getElementById(id);
+    return el ? `${el.dataset.cx},${el.dataset.cy}` : null;
+  }).filter(Boolean);
   _netZonePreview.setAttribute('points', pts.join(' '));
 }
 
@@ -4774,6 +4805,7 @@ function reattachListeners() {
       // Free net-zones (image mode) are draggable; player-anchored net-zones are not
       const isFreeZone = g.dataset.type === 'net-zone' && g.dataset.freeZone === 'true';
       if (g.dataset.type !== 'link' && (g.dataset.type !== 'net-zone' || isFreeZone)) makeDraggable(g);
+      if (g.dataset.type === 'marker') updateMarkerRim(g);
       g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
       if (g.dataset.type === 'textbox') {
         g.addEventListener('dblclick', e => {

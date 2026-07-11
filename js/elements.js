@@ -1305,14 +1305,14 @@ export function addMarker(x, y) {
   const hlGlow = document.createElementNS(ns, 'ellipse');
   hlGlow.classList.add('mh-glow');
   hlGlow.setAttribute('cx', 0); hlGlow.setAttribute('cy', 0);
-  hlGlow.setAttribute('rx', 26); hlGlow.setAttribute('ry', 14);
+  hlGlow.setAttribute('rx', 26); hlGlow.setAttribute('ry', 8.4);
   hlGlow.setAttribute('fill', `url(#${spotGlowGradId})`);
   hlGlow.setAttribute('filter', 'url(#spotlight-glow-blur)');
   // Ring fill (overlays the marker's regular ring)
   const hlRing = document.createElementNS(ns, 'ellipse');
   hlRing.classList.add('mh-ring');
   hlRing.setAttribute('cx', 0); hlRing.setAttribute('cy', 0);
-  hlRing.setAttribute('rx', 17); hlRing.setAttribute('ry', 9);
+  hlRing.setAttribute('rx', 17); hlRing.setAttribute('ry', 5.4);
   hlRing.setAttribute('fill', `url(#${spotRingGradId})`);
   hlRing.setAttribute('stroke', 'none');
   hlGroup.appendChild(hlBeam);
@@ -1321,32 +1321,41 @@ export function addMarker(x, y) {
 
   // ── Outer glow (ambient ground projection) ──────────────────────────────
   const glow = document.createElementNS(ns, 'ellipse');
-  glow.setAttribute('cx', 0); glow.setAttribute('cy', 2);
-  glow.setAttribute('rx', 24); glow.setAttribute('ry', 13);
+  glow.setAttribute('cx', 0); glow.setAttribute('cy', 1.2);
+  glow.setAttribute('rx', 24); glow.setAttribute('ry', 7.8);
   glow.setAttribute('fill', `url(#${glowId})`);
   glow.classList.add('marker-glow');
   glow.setAttribute('pointer-events', 'none');
 
   // ── Main ring (ground radar ellipse — wide, flat = perspective) ─────────
+  // Fill only; the border is drawn by the .marker-rim crescent below so it
+  // can be thicker at the bottom than the top (3D perspective ring).
   const ring = document.createElementNS(ns, 'ellipse');
   ring.setAttribute('cx', 0); ring.setAttribute('cy', 0);
-  ring.setAttribute('rx', 17); ring.setAttribute('ry', 9);
+  ring.setAttribute('rx', 17); ring.setAttribute('ry', 5.4);
   ring.setAttribute('fill', 'rgba(255,255,255,0.10)');
-  ring.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+  ring.setAttribute('stroke', 'none');
   ring.setAttribute('stroke-width', '1.6');
   ring.classList.add('marker-ellipse');
 
+  // ── Perspective rim (border) — evenodd fill between two ellipses whose
+  // vertical offset makes the ring read thick at the bottom, thin at top ──
+  const rim = document.createElementNS(ns, 'path');
+  rim.classList.add('marker-rim');
+  rim.setAttribute('fill', 'rgba(255,255,255,0.85)');
+  rim.setAttribute('fill-rule', 'evenodd');
+
   // ── Inner shine (3D highlight — offset slightly up) ─────────────────────
   const shine = document.createElementNS(ns, 'ellipse');
-  shine.setAttribute('cx', 0); shine.setAttribute('cy', -2);
-  shine.setAttribute('rx', 10); shine.setAttribute('ry', 4);
+  shine.setAttribute('cx', 0); shine.setAttribute('cy', -1.2);
+  shine.setAttribute('rx', 10); shine.setAttribute('ry', 2.4);
   shine.setAttribute('fill', 'rgba(255,255,255,0.08)');
   shine.setAttribute('pointer-events', 'none');
   shine.classList.add('marker-shine');
 
   // ── Name label ──────────────────────────────────────────────────────────
   const text = document.createElementNS(ns, 'text');
-  text.setAttribute('x', 0); text.setAttribute('y', 18);
+  text.setAttribute('x', 0); text.setAttribute('y', 14);
   text.setAttribute('text-anchor', 'middle');
   text.setAttribute('fill', 'white');
   text.setAttribute('font-size', '11');
@@ -1363,7 +1372,9 @@ export function addMarker(x, y) {
   g.appendChild(glow);
   g.appendChild(ring);
   g.appendChild(shine);
+  g.appendChild(rim);
   g.appendChild(text);
+  updateMarkerRim(g);
 
   // Position via transform (enables clean drag via applyTransform)
   g.setAttribute('transform', `translate(${x},${y})`);
@@ -1380,6 +1391,34 @@ export function addMarker(x, y) {
   });
   S.objectsLayer.appendChild(g);
   return g;
+}
+
+// Rebuild the marker's perspective rim path from its vertical scale.
+// Rim thickness is constant in local units: T at top, B at bottom, SIDE at the
+// sides — flattening the ellipse (markerScaleY) must not thin the border.
+// Also upgrades legacy markers (saved before the rim existed) in place.
+export function updateMarkerRim(el) {
+  let rim = el.querySelector('.marker-rim');
+  if (!rim) {
+    const ring = el.querySelector('.marker-ellipse');
+    if (!ring) return;
+    rim = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    rim.classList.add('marker-rim');
+    rim.setAttribute('fill', el.dataset.borderColor || ring.getAttribute('stroke') || 'rgba(255,255,255,0.85)');
+    rim.setAttribute('fill-rule', 'evenodd');
+    ring.setAttribute('stroke', 'none');
+    ring.after(rim);
+  }
+  const sy = parseFloat(el.dataset.markerScaleY || '1');
+  const rx = 17, ry = 5.4 * sy;
+  // Keep the fill ellipse in sync (legacy markers carry the old taller ry)
+  const fillRing = el.querySelector('.marker-ellipse');
+  if (fillRing) fillRing.setAttribute('ry', ry);
+  const T = 0.3, B = 3.0, SIDE = 1.2;  // top:bottom = 1:10
+  const irx = rx - SIDE, iry = Math.max(0.5, ry - (T + B) / 2), off = (B - T) / 2;
+  rim.setAttribute('d',
+    `M ${-rx} 0 A ${rx} ${ry} 0 1 0 ${rx} 0 A ${rx} ${ry} 0 1 0 ${-rx} 0 Z ` +
+    `M ${-irx} ${-off} A ${irx} ${iry} 0 1 1 ${irx} ${-off} A ${irx} ${iry} 0 1 1 ${-irx} ${-off} Z`);
 }
 
 // ─── Spotlight ────────────────────────────────────────────────────────────────
@@ -2241,19 +2280,20 @@ export function addLink(player1Id, player2Id, opts = {}) {
 
 // ── Ellipse-border intersection ─────────────────────────────────────────────
 // Given a center (cx,cy), radii (rx,ry), scale, and a target point (tx,ty),
-// return the point on the ellipse border closest to the target direction.
+// return the point where the ray center→target EXITS the ellipse, pushed a few
+// px further out so the link line never touches or enters the circle. The
+// naive parametric form (rx·cosθ, ry·sinθ at the geometric angle) is NOT on
+// the ray for flat ellipses — it made links visibly cut into the marker.
 function ellipseBorderPoint(cx, cy, rx, ry, scale, tx, ty) {
   const dx = tx - cx, dy = ty - cy;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist === 0) return { x: cx + rx * scale, y: cy };
-  // Angle from center to target
-  const angle = Math.atan2(dy, dx);
-  // Point on ellipse at that angle
   const srx = rx * scale, sry = ry * scale;
-  return {
-    x: cx + srx * Math.cos(angle),
-    y: cy + sry * Math.sin(angle),
-  };
+  const dist = Math.sqrt(dx * dx + dy * dy);
+  if (dist === 0) return { x: cx + srx, y: cy };
+  // Exact ray–ellipse intersection: multiplier t of (dx,dy) on the border
+  const t = 1 / Math.sqrt((dx / srx) ** 2 + (dy / sry) ** 2);
+  const GAP = 3; // px of clear air between rim and line end
+  const m = t + GAP / dist;
+  return { x: cx + dx * m, y: cy + dy * m };
 }
 
 export function updateLink(linkEl) {
@@ -2284,14 +2324,22 @@ export function updateLink(linkEl) {
   if (p1?.dataset.type === 'marker') {
     const s = parseFloat(p1.dataset.scale || '1');
     const sy1 = parseFloat(p1.dataset.markerScaleY || '1');
-    const bp = ellipseBorderPoint(cx1, cy1, 17, 9 * sy1, s, cx2, cy2);
+    const bp = ellipseBorderPoint(cx1, cy1, 17, 5.4 * sy1, s, cx2, cy2);
     x1 = bp.x; y1 = bp.y;
   }
   if (p2?.dataset.type === 'marker') {
     const s = parseFloat(p2.dataset.scale || '1');
     const sy2 = parseFloat(p2.dataset.markerScaleY || '1');
-    const bp = ellipseBorderPoint(cx2, cy2, 17, 9 * sy2, s, cx1, cy1);
+    const bp = ellipseBorderPoint(cx2, cy2, 17, 5.4 * sy2, s, cx1, cy1);
     x2 = bp.x; y2 = bp.y;
+  }
+
+  // If the circles are so close that the trimmed endpoints crossed over,
+  // collapse the line to the midpoint (invisible) instead of drawing a
+  // reversed segment through both markers.
+  if ((x2 - x1) * (cx2 - cx1) + (y2 - y1) * (cy2 - cy1) < 0) {
+    x1 = x2 = (cx1 + cx2) / 2;
+    y1 = y2 = (cy1 + cy2) / 2;
   }
 
   line.setAttribute('x1', x1); line.setAttribute('y1', y1);
@@ -2525,17 +2573,21 @@ export function addNetZone(playerIds, opts = {}) {
   g.appendChild(fill);
   g.appendChild(hit);
 
-  // Vertex highlight circles — glow ring behind each player
-  for (const pid of playerIds) {
-    const vc = document.createElementNS(ns, 'circle');
-    vc.classList.add('nz-vertex');
-    vc.dataset.pid = pid;
-    vc.setAttribute('r', '20');
-    vc.setAttribute('fill', 'rgba(79,156,249,0.25)');
-    vc.setAttribute('stroke', 'rgba(79,156,249,0.6)');
-    vc.setAttribute('stroke-width', '2.5');
-    vc.setAttribute('pointer-events', 'none');
-    g.appendChild(vc);
+  // Vertex highlight circles — glow ring behind each player. Skipped when
+  // the anchors are markers (opts.vertices === false): the marker's own
+  // ground ellipse IS the vertex visual, drawn above the zone fill.
+  if (opts.vertices !== false) {
+    for (const pid of playerIds) {
+      const vc = document.createElementNS(ns, 'circle');
+      vc.classList.add('nz-vertex');
+      vc.dataset.pid = pid;
+      vc.setAttribute('r', '20');
+      vc.setAttribute('fill', 'rgba(79,156,249,0.25)');
+      vc.setAttribute('stroke', 'rgba(79,156,249,0.6)');
+      vc.setAttribute('stroke-width', '2.5');
+      vc.setAttribute('pointer-events', 'none');
+      g.appendChild(vc);
+    }
   }
 
   // Insert at beginning of objectsLayer (behind players)
