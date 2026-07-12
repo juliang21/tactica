@@ -926,6 +926,31 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     if (pts.length < 3) return;
 
     ctx.save();
+    ctx.save();   // inner scope: the hole-clip must not affect the vertex circles below
+    // Punch holes at the anchor circles (mirrors the live nz-mask): clip to
+    // everything EXCEPT the anchors' ellipses so neither fill nor border
+    // renders inside the circles.
+    const anchors = (g.dataset.players || '').split(',').filter(Boolean);
+    if (anchors.length && g.dataset.freeZone !== 'true') {
+      const clip = new Path2D();
+      clip.rect(-5000, -5000, 20000, 20000);
+      for (const pid of anchors) {
+        const p = document.getElementById(pid);
+        if (!p) continue;
+        const acx = parseFloat(p.dataset.cx), acy = parseFloat(p.dataset.cy);
+        const s = parseFloat(p.dataset.scale || '1');
+        let hrx, hry;
+        if (p.dataset.type === 'marker') {
+          const msy = parseFloat(p.dataset.markerScaleY || '1');
+          hrx = 17 * s + 3; hry = 5.4 * msy * s + 3;
+        } else {
+          hrx = hry = 18 * s;
+        }
+        clip.moveTo(acx + hrx, acy);   // fresh subpath — no connecting line from the rect
+        clip.ellipse(acx, acy, hrx, hry, 0, 0, Math.PI * 2);
+      }
+      ctx.clip(clip, 'evenodd');
+    }
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
     for (let i = 1; i < pts.length; i++) ctx.lineTo(pts[i].x, pts[i].y);
@@ -938,6 +963,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     if (borderStyle === 'dashed') ctx.setLineDash([4, 3]);
     ctx.stroke();
     ctx.setLineDash([]);
+    ctx.restore();   // lift the hole-clip
 
     // Vertex glow circles
     g.querySelectorAll('.nz-vertex').forEach(vc => {

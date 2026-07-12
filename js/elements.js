@@ -2579,9 +2579,20 @@ export function addNetZone(playerIds, opts = {}) {
   g.dataset.players = playerIds.join(',');
   g.dataset.zoneColor = opts.color || 'rgba(79,156,249,0.15)';
   g.dataset.zoneBorder = opts.border || 'rgba(255,255,255,0.35)';
-  g.dataset.zoneBorderStyle = opts.borderStyle || 'dashed';
+  // Circle-anchored units (image mode) default to a clean solid border —
+  // the broadcast-telestrator look; board zones keep the dashed default.
+  g.dataset.zoneBorderStyle = opts.borderStyle || (opts.vertices === false ? 'solid' : 'dashed');
   g.dataset.cx = '0'; g.dataset.cy = '0';
   g.dataset.scale = '1'; g.dataset.rotation = '0';
+
+  // Mask that punches a hole at every anchor circle so neither the fill nor
+  // the border lines show inside the circles (they sit visually ON the zone).
+  // Holes are (re)computed in updateNetZone.
+  const mask = document.createElementNS(ns, 'mask');
+  mask.setAttribute('id', 'nzmask-' + id);
+  mask.setAttribute('maskUnits', 'userSpaceOnUse');
+  mask.classList.add('nz-mask');
+  g.appendChild(mask);
 
   // Visible polygon fill
   const fill = document.createElementNS(ns, 'polygon');
@@ -2589,6 +2600,7 @@ export function addNetZone(playerIds, opts = {}) {
   fill.setAttribute('stroke-width', '1.5');
   fill.setAttribute('stroke-linejoin', 'round');
   fill.setAttribute('stroke-dasharray', '4,3');
+  fill.setAttribute('mask', `url(#nzmask-${id})`);
 
   // Thick invisible hit polygon for click targeting
   const hit = document.createElementNS(ns, 'polygon');
@@ -2708,6 +2720,34 @@ export function updateNetZone(el) {
   } else {
     fillPoly.setAttribute('stroke-dasharray', '4,3');
   }
+
+  // Rebuild the anchor holes: fill/border must not render inside the anchor
+  // circles. Legacy zones (saved before the mask existed) upgrade in place.
+  let mask = el.querySelector('.nz-mask');
+  if (!mask) {
+    mask = document.createElementNS('http://www.w3.org/2000/svg', 'mask');
+    mask.setAttribute('id', 'nzmask-' + el.id);
+    mask.setAttribute('maskUnits', 'userSpaceOnUse');
+    mask.classList.add('nz-mask');
+    el.insertBefore(mask, el.firstChild);
+    fillPoly.setAttribute('mask', `url(#nzmask-${el.id})`);
+  }
+  let holes = '<rect x="-5000" y="-5000" width="20000" height="20000" fill="white"/>';
+  for (const pid of pids) {
+    const p = document.getElementById(pid);
+    if (!p) continue;
+    const acx = parseFloat(p.dataset.cx), acy = parseFloat(p.dataset.cy);
+    const s = parseFloat(p.dataset.scale || '1');
+    let hrx, hry;
+    if (p.dataset.type === 'marker') {
+      const msy = parseFloat(p.dataset.markerScaleY || '1');
+      hrx = 17 * s + 3; hry = 5.4 * msy * s + 3;   // marker ground ellipse + breathing room
+    } else {
+      hrx = hry = 18 * s;                           // player/referee disc
+    }
+    holes += `<ellipse cx="${acx}" cy="${acy}" rx="${hrx}" ry="${hry}" fill="black"/>`;
+  }
+  mask.innerHTML = holes;
 
   // Reposition vertex highlight circles and match zone border color
   const vcs = el.querySelectorAll('.nz-vertex');
