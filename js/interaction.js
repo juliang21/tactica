@@ -951,10 +951,12 @@ export function deselectVisual(el) {
     }
   }
   if (t === 'marker') {
+    // Restore ONLY when a saved value exists. Deselect can run twice for one
+    // click (mousedown handler + click handler); the old borderColor fallback
+    // made the second pass paint a thick uniform stroke over the rim.
     const ring = el.querySelector('.marker-ellipse');
-    if (ring) {
-      const saved = el.dataset.savedStroke || el.dataset.borderColor || 'rgba(255,255,255,0.85)';
-      ring.setAttribute('stroke', saved);
+    if (ring && el.dataset.savedStroke !== undefined) {
+      ring.setAttribute('stroke', el.dataset.savedStroke);
       delete el.dataset.savedStroke;
     }
   }
