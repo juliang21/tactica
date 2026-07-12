@@ -1607,6 +1607,18 @@
         Change Image
       </button>
     </div>
+    <!-- Watermark (same control as the Tactical Board's Pitch tab) -->
+    <div class="panel-section">
+      <h3>Watermark</h3>
+      <label class="toggle-row">
+        <span class="toggle-label">Show tactica.football watermark</span>
+        <input type="checkbox" id="watermark-toggle-image" checked onchange="toggleWatermark(this.checked)">
+        <span class="toggle-switch toggle-switch-lg"></span>
+      </label>
+      <div style="font-size:10px;color:var(--text-muted);margin-top:6px;line-height:1.4">
+        Hides the watermark from the board and exports. Free for now.
+      </div>
+    </div>
     <div class="panel-section">
       <h3>Side Pitch</h3>
       <div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:10px">
@@ -2862,6 +2874,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=35"></script>
+<script type="module" src="js/app.js?v=36"></script>
 </body>
 </html>

@@ -4,6 +4,7 @@ import { deselect, switchTab, select, makeDraggable, applyTransform } from './in
 import { trackModeSwitch, trackElementInserted } from './analytics.js';
 import { addPlayer, addBall, addCone, addReferee, addArrow, addShadow, addSpotlight, addVision, addTextBox, addHeadline, addTag } from './elements.js';
 import { activateMode } from './core/mode-registry.js';
+import { initPlayerDetection, clearDetections } from './detect.js';
 
 // ─── Trigger file picker ──────────────────────────────────────────────────────
 export function triggerImageUpload() {
@@ -106,6 +107,10 @@ export function enterImageMode(dataUrl, natW, natH) {
   // Enable grab-to-pan on the pitch wrap
   _initPanScroll();
 
+  // Detect players in the background — non-blocking; powers the placement
+  // highlight once results arrive (silently does nothing if the model fails).
+  initPlayerDetection(dataUrl);
+
   // Note: activateMode('image') is already called by _doSwitchToImage() when
   // the user switches modes — before the upload overlay. No need to call again.
 }
@@ -114,6 +119,7 @@ export function enterImageMode(dataUrl, natW, natH) {
 export function exitImageMode() {
   deselect();
   trackModeSwitch('pitch');
+  clearDetections();
 
   S.setAppMode('pitch');
   S.setImageData(null);

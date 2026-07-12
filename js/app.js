@@ -20,7 +20,8 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=10';
-import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=6';
+import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=7';
+import { findPlayerAt } from './detect.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
@@ -888,17 +889,19 @@ window.toggleStripes = function() {
 // fresh session; the OFF state only persists if the user saves the file.
 window.toggleWatermark = function(visible) {
   S.setWatermarkVisible(!!visible);
-  const wm = document.querySelector('.shared-watermark');
-  if (wm) wm.style.display = visible ? '' : 'none';
+  window._syncWatermarkUI();
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_watermark_toggle', { visible: !!visible }).catch(() => {});
 };
 // Helper used by load/new-file flows to sync the toggle UI to state.
+// There are two toggle instances (Pitch tab + Image tab) — keep both in step.
 window._syncWatermarkUI = function() {
   const wm = document.querySelector('.shared-watermark');
-  const toggle = document.getElementById('watermark-toggle');
   if (wm) wm.style.display = S.watermarkVisible ? '' : 'none';
-  if (toggle) toggle.checked = S.watermarkVisible;
+  ['watermark-toggle', 'watermark-toggle-image'].forEach(id => {
+    const toggle = document.getElementById(id);
+    if (toggle) toggle.checked = S.watermarkVisible;
+  });
 };
 window._syncWatermarkUI();
 
@@ -2090,6 +2093,33 @@ let _netZoneCoords = [];        // accumulated {x,y} points (legacy free zones)
 let _netZoneVertexDots = [];    // small vertex marker SVGs for image mode
 let _netZoneDraftMarkers = [];  // circles minted DURING unit drafting (removed on cancel)
 
+// Snap a circle-placement click to a detected player: the circle lands at
+// their feet, sized to their body width (nearer player → bigger circle) and
+// coloured by the player's detected team. Returns null when the click isn't
+// on a detected player, so clicking open grass still places manually —
+// detection mistakes never block the coach.
+function _snapToDetectedPlayer(pt) {
+  if (S.appMode !== 'image') return null;
+  const d = findPlayerAt(pt.x, pt.y);
+  if (!d) return null;
+  return {
+    x: d.cx, y: d.feetY,
+    scale: Math.max(0.7, Math.min(3, (d.w * 0.62) / 17)),
+    color: d.teamColor || null,
+    rgb: d.teamRGB || null
+  };
+}
+
+// Tint a snapped circle with the player's team colour (rim + soft fill).
+function _applyTeamColorToMarker(m, snap) {
+  if (!snap?.color) return;
+  m.dataset.borderColor = snap.color;
+  m.querySelector('.marker-rim')?.setAttribute('fill', snap.color);
+  const bg = `rgba(${snap.rgb.join(',')},0.18)`;
+  m.dataset.bgColor = bg;
+  m.querySelector('.marker-ellipse')?.setAttribute('fill', bg);
+}
+
 function clearLinkHighlight() {
   if (_linkHighlight) {
     _linkHighlight.remove();
@@ -2219,7 +2249,13 @@ S.svg.addEventListener('click', e => {
       } else {
         const pt = S.getSVGPoint(e);
         if (_netZonePlayers.length === 0) S.pushUndo();
-        const m = addMarker(pt.x, pt.y);
+        const snap = _snapToDetectedPlayer(pt);
+        const m = addMarker(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
+        if (snap) {
+          m.dataset.scale = snap.scale.toFixed(2);
+          _applyTeamColorToMarker(m, snap);
+          applyTransform(m);
+        }
         trackElementInserted('marker');
         _netZoneDraftMarkers.push(m);
         _netZonePlayers.push(m.id);
@@ -2285,11 +2321,20 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'referee') placed = addReferee(pt.x, pt.y);
   else if (S.tool === 'shadow-circle') placed = addShadow(pt.x, pt.y, 'shadow-circle');
   else if (S.tool === 'shadow-rect') placed = addShadow(pt.x, pt.y, 'shadow-rect');
-  else if (S.tool === 'spotlight') placed = addSpotlight(pt.x, pt.y);
+  else if (S.tool === 'spotlight') {
+    // Snap the highlight beam to a detected player's feet
+    const snap = _snapToDetectedPlayer(pt);
+    placed = addSpotlight(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
+  }
   else if (S.tool === 'vision') placed = addVision(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
   else if (S.tool === 'headline') placed = addHeadline(pt.x, pt.y);
-  else if (S.tool === 'tag') placed = addTag(pt.x, pt.y);
+  else if (S.tool === 'tag') {
+    // Callout anchors to the detected player's feet so the pointer line
+    // and label stay attached to the right spot on the pitch
+    const snap = _snapToDetectedPlayer(pt);
+    placed = addTag(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
+  }
   else if (S.tool === 'image') {
     // Image tool doesn't place synchronously — it opens the file picker.
     // _pendingImagePoint stores where the user clicked so we can drop the
@@ -2302,7 +2347,13 @@ S.svg.addEventListener('click', e => {
   }
   else if (S.tool === 'marker') {
     // ── Chain-connect: place marker + auto-link to previous ─────────────
-    placed = addMarker(pt.x, pt.y);
+    const snap = _snapToDetectedPlayer(pt);
+    placed = addMarker(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
+    if (snap) {
+      placed.dataset.scale = snap.scale.toFixed(2);
+      _applyTeamColorToMarker(placed, snap);
+      applyTransform(placed);
+    }
     if (placed && _lastChainMarker) {
       const link = addLink(_lastChainMarker.id, placed.id);
       if (link) {
