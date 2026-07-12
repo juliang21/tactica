@@ -532,14 +532,21 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
 
     ctx.save();
     ctx.beginPath(); ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    const rgbMatch = (g.dataset.spotColor || '').match(/rgba?\((\d+),\s*(\d+),\s*(\d+)/);
+    const [cr, cg, cb] = rgbMatch ? [rgbMatch[1], rgbMatch[2], rgbMatch[3]] : [255, 255, 255];
     const ringGrad = ctx.createRadialGradient(cx, cy, 0, cx, cy, rx);
-    ringGrad.addColorStop(0, 'rgba(255,255,255,0.4)');
-    ringGrad.addColorStop(1, 'rgba(255,255,255,0.15)');
+    ringGrad.addColorStop(0, `rgba(${cr},${cg},${cb},0.4)`);
+    ringGrad.addColorStop(1, `rgba(${cr},${cg},${cb},0.15)`);
     ctx.fillStyle = ringGrad;
     ctx.fill();
-    const ring = g.querySelector('.spotlight-ring') || g.querySelector('ellipse:not(.spotlight-glow)');
-    ctx.strokeStyle = g.dataset.savedStroke || ring?.getAttribute('stroke') || 'rgba(255,255,255,0.85)';
-    ctx.lineWidth = 1.5; ctx.stroke();
+    // Perspective rim — marker circle style, thickness scaled to ring size
+    // (must match spotlightRimPath in elements.js: T=0.3f B=3.0f SIDE=1.2f, f=rx/17)
+    const f = rx / 17;
+    ctx.beginPath();
+    ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy - 1.35 * f, rx - 1.2 * f, Math.max(0.5, ry - 1.65 * f), 0, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(${cr},${cg},${cb},0.85)`;
+    ctx.fill('evenodd');
     ctx.restore();
 
     const spotName = g.dataset.spotName;
@@ -861,19 +868,16 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.fillStyle = 'rgba(255,255,255,0.08)';
     ctx.fill();
 
-    // Name label
+    // Name label — Highlight style: plain white 11px, no halo, constant size
+    // regardless of circle scale (matches applyTransform's counter-scaling)
     const label = g.querySelector('.marker-label');
     const name = label ? label.textContent : (g.dataset.markerName || '');
     if (name) {
-      ctx.font = `600 ${11 * sc}px Inter, system-ui, sans-serif`;
+      ctx.font = '400 11px Poppins, sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'top';
-      ctx.lineWidth = 3;
-      ctx.strokeStyle = 'rgba(0,0,0,0.55)';
-      ctx.lineJoin = 'round';
-      ctx.strokeText(name, cx, cy + 14 * sc * sy);
-      ctx.fillStyle = 'white';
-      ctx.fillText(name, cx, cy + 14 * sc * sy);
+      ctx.fillStyle = 'rgba(255,255,255,0.9)';
+      ctx.fillText(name, cx, cy + 5.4 * sc * sy + 4);
     }
 
     ctx.restore();

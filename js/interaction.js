@@ -131,9 +131,15 @@ export function applyTransform(el) {
       if (hlGlow) hlGlow.setAttribute('ry', 8.4 * sy);
       const hlRing = el.querySelector('.mh-ring');
       if (hlRing) hlRing.setAttribute('ry', 5.4 * sy);
-      // Adjust label position
+      // Adjust label position; counter-scale the font so the name renders at
+      // a constant 11px on screen no matter the circle's size, sitting a
+      // constant ~12px below the ellipse edge (matches the Highlight name)
       const label = el.querySelector('.marker-label');
-      if (label) label.setAttribute('y', 14 * sy);
+      if (label) {
+        const sc = Math.max(0.2, scale);
+        label.setAttribute('y', (5.4 * sy + 12 / sc).toFixed(2));
+        label.setAttribute('font-size', (11 / sc).toFixed(2));
+      }
       // Redraw highlight beam if on
       if (el.dataset.markerHighlight === '1') {
         const beam = el.querySelector('.marker-highlight .mh-beam');
@@ -229,6 +235,27 @@ export function applyTransform(el) {
     if (ring) {
       ring.setAttribute('cx', cx); ring.setAttribute('cy', cy);
       ring.setAttribute('rx', rx); ring.setAttribute('ry', ry);
+    }
+
+    // Update perspective rim (marker-style border). Legacy spotlights saved
+    // before the rim existed get upgraded in place on their first transform.
+    // Path formula MUST MATCH spotlightRimPath in elements.js.
+    let rim = el.querySelector('.spotlight-rim');
+    if (!rim && ring) {
+      rim = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+      rim.classList.add('spotlight-rim');
+      rim.setAttribute('fill', el.dataset.spotColor || ring.getAttribute('stroke') || 'rgba(255,255,255,0.85)');
+      rim.setAttribute('fill-rule', 'evenodd');
+      ring.setAttribute('stroke', 'none');
+      ring.after(rim);
+    }
+    if (rim) {
+      const f = rx / 17;
+      const T = 0.3 * f, B = 3.0 * f, SIDE = 1.2 * f;
+      const irx = rx - SIDE, iry = Math.max(0.5, ry - (T + B) / 2), off = (B - T) / 2;
+      rim.setAttribute('d',
+        `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z ` +
+        `M ${cx - irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx + irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx - irx} ${cy - off} Z`);
     }
 
     // Reposition name label

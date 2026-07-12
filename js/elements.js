@@ -1354,17 +1354,16 @@ export function addMarker(x, y) {
   shine.classList.add('marker-shine');
 
   // ── Name label ──────────────────────────────────────────────────────────
+  // Name label — same style as the Highlight (spotlight) name: plain white,
+  // no halo/background, 11px on screen regardless of the circle's scale
+  // (applyTransform counter-scales the font-size).
   const text = document.createElementNS(ns, 'text');
-  text.setAttribute('x', 0); text.setAttribute('y', 14);
+  text.setAttribute('x', 0); text.setAttribute('y', 17.4);
   text.setAttribute('text-anchor', 'middle');
-  text.setAttribute('fill', 'white');
+  text.setAttribute('fill', 'rgba(255,255,255,0.9)');
   text.setAttribute('font-size', '11');
-  text.setAttribute('font-weight', '600');
-  text.setAttribute('font-family', 'Inter, system-ui, sans-serif');
-  text.setAttribute('paint-order', 'stroke');
-  text.setAttribute('stroke', 'rgba(0,0,0,0.55)');
-  text.setAttribute('stroke-width', '3');
-  text.setAttribute('stroke-linejoin', 'round');
+  text.setAttribute('font-weight', '400');
+  text.setAttribute('font-family', 'Poppins, sans-serif');
   text.classList.add('marker-label');
   text.textContent = '';
 
@@ -1414,6 +1413,14 @@ export function updateMarkerRim(el) {
   // Keep the fill ellipse in sync (legacy markers carry the old taller ry)
   const fillRing = el.querySelector('.marker-ellipse');
   if (fillRing) fillRing.setAttribute('ry', ry);
+  // Upgrade legacy labels (bold + dark halo) to the clean Highlight style
+  const lbl = el.querySelector('.marker-label');
+  if (lbl && lbl.getAttribute('paint-order')) {
+    ['paint-order', 'stroke', 'stroke-width', 'stroke-linejoin'].forEach(a => lbl.removeAttribute(a));
+    lbl.setAttribute('fill', 'rgba(255,255,255,0.9)');
+    lbl.setAttribute('font-weight', '400');
+    lbl.setAttribute('font-family', 'Poppins, sans-serif');
+  }
   const T = 0.3, B = 3.0, SIDE = 1.2;  // top:bottom = 1:10
   const irx = rx - SIDE, iry = Math.max(0.5, ry - (T + B) / 2), off = (B - T) / 2;
   rim.setAttribute('d',
@@ -1422,11 +1429,23 @@ export function updateMarkerRim(el) {
 }
 
 // ─── Spotlight ────────────────────────────────────────────────────────────────
+// Perspective rim path for the spotlight ring — same style as the marker
+// circle (thick bottom, hairline top, 1:10), with thickness scaled to the
+// ring size. MUST MATCH the copies in interaction.js (applyTransform) and
+// export.js (renderSpotlight). Spotlight uses absolute coords, no transform.
+export function spotlightRimPath(cx, cy, rx, ry) {
+  const f = rx / 17;                       // marker base rx = 17
+  const T = 0.3 * f, B = 3.0 * f, SIDE = 1.2 * f;
+  const irx = rx - SIDE, iry = Math.max(0.5, ry - (T + B) / 2), off = (B - T) / 2;
+  return `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z ` +
+    `M ${cx - irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx + irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx - irx} ${cy - off} Z`;
+}
+
 export function addSpotlight(x, y) {
   const svgEl = S.svg;
   const topY = 0;
 
-  const rx = 28, ry = 5;      // ellipse radii (flat = floor shadow feel)
+  const rx = 28, ry = 9;      // marker-proportioned ellipse (ry ≈ 0.32·rx)
   const sourceW = 6;           // narrow beam source width at top
 
   const id = 'spot-' + S.nextObjectId();
@@ -1494,14 +1513,22 @@ export function addSpotlight(x, y) {
   glow.setAttribute('filter', 'url(#spotlight-glow-blur)');
   glow.classList.add('spotlight-glow');
 
-  // Ring — the main ellipse ring with gradient fill and thin stroke
+  // Ring — gradient-filled ellipse; the border is drawn by the rim path
+  // below so it reads thick at the bottom, thin at the top (marker style)
   const ellipse = document.createElementNS(ns, 'ellipse');
   ellipse.setAttribute('cx', x); ellipse.setAttribute('cy', y);
   ellipse.setAttribute('rx', rx); ellipse.setAttribute('ry', ry);
   ellipse.setAttribute('fill', `url(#${ringGradId})`);
-  ellipse.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+  ellipse.setAttribute('stroke', 'none');
   ellipse.setAttribute('stroke-width', '1.5');
   ellipse.classList.add('spotlight-ring');
+
+  // Perspective rim — same circle style as Connect Players / Unit
+  const rim = document.createElementNS(ns, 'path');
+  rim.classList.add('spotlight-rim');
+  rim.setAttribute('fill', 'rgba(255,255,255,0.85)');
+  rim.setAttribute('fill-rule', 'evenodd');
+  rim.setAttribute('d', spotlightRimPath(x, y, rx, ry));
 
   // Name label with dark rounded-rect background, positioned below ring
   const nameBgRect = document.createElementNS(ns, 'rect');
@@ -1527,6 +1554,7 @@ export function addSpotlight(x, y) {
   g.appendChild(glow);
   g.appendChild(beam);
   g.appendChild(ellipse);
+  g.appendChild(rim);
   g.appendChild(nameBgRect);
   g.appendChild(nameLabel);
   g.setAttribute('transform', `translate(0,0)`);

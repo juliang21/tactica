@@ -1106,11 +1106,17 @@ export function setSpotlightColor(el, color) {
       <stop offset="1" stop-color="rgba(${r},${g},${b},0.15)"/>`;
   }
 
-  // Update ring ellipse stroke
-  const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
+  // Update the perspective rim (marker-style border); legacy spotlights
+  // without a rim still get their ellipse stroke recoloured. Only the legacy
+  // path touches savedStroke — for rim spotlights the ellipse stroke must
+  // stay 'none' so select/deselect restores it correctly.
   const strokeColor = `rgba(${r},${g},${b},0.85)`;
-  if (ring) {
-    ring.setAttribute('stroke', strokeColor);
+  const rim = el.querySelector('.spotlight-rim');
+  if (rim) {
+    rim.setAttribute('fill', strokeColor);
+  } else {
+    const ring = el.querySelector('.spotlight-ring') || el.querySelector('ellipse:not(.spotlight-glow)');
+    if (ring) ring.setAttribute('stroke', strokeColor);
     el.dataset.savedStroke = strokeColor;
   }
 }
