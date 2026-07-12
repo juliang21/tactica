@@ -539,12 +539,15 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ringGrad.addColorStop(1, `rgba(${cr},${cg},${cb},0.15)`);
     ctx.fillStyle = ringGrad;
     ctx.fill();
-    // Perspective rim — marker circle style, thickness scaled to ring size
-    // (must match spotlightRimPath in elements.js: T=0.3f B=3.0f SIDE=1.2f, f=rx/17)
+    // Perspective rim — marker circle style, thickness scaled to ring size.
+    // Geometry MUST MATCH rimGeom/spotlightRimPath in elements.js.
     const f = rx / 17;
+    let rT = 0.3 * f, rB = 3.0 * f;
+    const rMaxHalf = ry * 0.75;
+    if ((rT + rB) / 2 > rMaxHalf) { const k = rMaxHalf / ((rT + rB) / 2); rT *= k; rB *= k; }
     ctx.beginPath();
     ctx.ellipse(cx, cy, rx, ry, 0, 0, Math.PI * 2);
-    ctx.ellipse(cx, cy - 1.35 * f, rx - 1.2 * f, Math.max(0.5, ry - 1.65 * f), 0, 0, Math.PI * 2);
+    ctx.ellipse(cx, cy - (rB - rT) / 2, rx - 1.2 * f, ry - (rT + rB) / 2, 0, 0, Math.PI * 2);
     ctx.fillStyle = `rgba(${cr},${cg},${cb},0.85)`;
     ctx.fill('evenodd');
     ctx.restore();
@@ -854,13 +857,20 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.fill();
 
     // Perspective rim: evenodd fill between outer and offset inner ellipse —
-    // thick at the bottom, thin at the top (must match updateMarkerRim in
-    // elements.js: T=0.3, B=3.0, SIDE=1.2 in local units, scaled by sc)
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, 17 * sc, 5.4 * sc * sy, 0, 0, Math.PI * 2);
-    ctx.ellipse(cx, cy - 1.35 * sc, 15.8 * sc, Math.max(0.5, 5.4 * sy - 1.65) * sc, 0, 0, Math.PI * 2);
-    ctx.fillStyle = borderColor;
-    ctx.fill('evenodd');
+    // thick at the bottom, thin at the top. Geometry MUST MATCH rimGeom in
+    // elements.js (1:10 ratio, shrunk when the ellipse is too flat).
+    {
+      const ryL = 5.4 * sy;
+      let T = 0.3, B = 3.0;
+      const maxHalf = ryL * 0.75;
+      if ((T + B) / 2 > maxHalf) { const k = maxHalf / ((T + B) / 2); T *= k; B *= k; }
+      const off = (B - T) / 2, iry = ryL - (T + B) / 2;
+      ctx.beginPath();
+      ctx.ellipse(cx, cy, 17 * sc, ryL * sc, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy - off * sc, 15.8 * sc, iry * sc, 0, 0, Math.PI * 2);
+      ctx.fillStyle = borderColor;
+      ctx.fill('evenodd');
+    }
 
     // Inner shine
     ctx.beginPath();
@@ -942,7 +952,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
         let hrx, hry;
         if (p.dataset.type === 'marker') {
           const msy = parseFloat(p.dataset.markerScaleY || '1');
-          hrx = 17 * s + 3; hry = 5.4 * msy * s + 3;
+          hrx = 17 * s + 1.5; hry = 5.4 * msy * s + 1.5;
         } else {
           hrx = hry = 18 * s;
         }

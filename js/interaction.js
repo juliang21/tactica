@@ -250,9 +250,13 @@ export function applyTransform(el) {
       ring.after(rim);
     }
     if (rim) {
+      // Rim geometry MUST MATCH rimGeom in elements.js: 1:10 top:bottom,
+      // shrunk proportionally when the ellipse is too flat to fit it.
       const f = rx / 17;
-      const T = 0.3 * f, B = 3.0 * f, SIDE = 1.2 * f;
-      const irx = rx - SIDE, iry = Math.max(0.5, ry - (T + B) / 2), off = (B - T) / 2;
+      let T = 0.3 * f, B = 3.0 * f;
+      const maxHalf = ry * 0.75;
+      if ((T + B) / 2 > maxHalf) { const k = maxHalf / ((T + B) / 2); T *= k; B *= k; }
+      const irx = rx - 1.2 * f, iry = ry - (T + B) / 2, off = (B - T) / 2;
       rim.setAttribute('d',
         `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z ` +
         `M ${cx - irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx + irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx - irx} ${cy - off} Z`);
@@ -1665,8 +1669,9 @@ function onSpotlightHandleDrag(el, pt) {
   const cx = parseFloat(el.dataset.cx);
   const newRx = Math.max(12, Math.abs(pt.x - cx));   // min radius 12
   el.dataset.rx = newRx;
-  // Keep ry proportional (flat ratio)
-  el.dataset.ry = Math.max(3, newRx * 5 / 28);
+  // Keep ry proportional — marker circle ratio (9/28 ≈ 0.32), so a resized
+  // Highlight keeps the same perspective look as Connect Players / Unit
+  el.dataset.ry = Math.max(3, newRx * 9 / 28);
   applyTransform(el);
   updateHandlePositions(el);
 }

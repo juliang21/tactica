@@ -19,7 +19,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyImageCrop, applyImageOpacity,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=12';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=13';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=7';
 import { findPlayerAt } from './detect.js';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -2624,24 +2624,36 @@ function updateNetZonePreview() {
   // Both modes anchor to elements now (players on the board, circles on the image)
   const count = _netZonePlayers.length;
   if (count < 2) {
-    if (_netZonePreview) _netZonePreview.setAttribute('points', '');
+    if (_netZonePreview) _netZonePreview.querySelector('polygon')?.setAttribute('points', '');
     return;
   }
   if (!_netZonePreview) {
-    _netZonePreview = document.createElementNS('http://www.w3.org/2000/svg', 'polygon');
-    _netZonePreview.setAttribute('fill', 'rgba(79,156,249,0.1)');
-    _netZonePreview.setAttribute('stroke', 'rgba(79,156,249,0.5)');
-    _netZonePreview.setAttribute('stroke-width', '1.5');
-    _netZonePreview.setAttribute('stroke-dasharray', '4,3');
-    _netZonePreview.setAttribute('stroke-linejoin', 'round');
+    // Preview styled exactly like the finished unit (solid border, same
+    // fill, holes under the circles) so nothing changes at closing time.
+    _netZonePreview = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     _netZonePreview.setAttribute('pointer-events', 'none');
+    _netZonePreview.innerHTML =
+      '<mask id="nz-preview-mask" maskUnits="userSpaceOnUse"></mask>' +
+      '<polygon fill="rgba(79,156,249,0.15)" stroke="rgba(255,255,255,0.35)" stroke-width="1.5" stroke-linejoin="round" mask="url(#nz-preview-mask)"/>';
     S.objectsLayer.appendChild(_netZonePreview);
   }
-  const pts = _netZonePlayers.map(id => {
-    const el = document.getElementById(id);
-    return el ? `${el.dataset.cx},${el.dataset.cy}` : null;
-  }).filter(Boolean);
-  _netZonePreview.setAttribute('points', pts.join(' '));
+  const anchors = _netZonePlayers.map(id => document.getElementById(id)).filter(Boolean);
+  const pts = anchors.map(el => `${el.dataset.cx},${el.dataset.cy}`);
+  _netZonePreview.querySelector('polygon').setAttribute('points', pts.join(' '));
+  // Same anchor holes as the finished unit's nz-mask
+  let holes = '<rect x="-5000" y="-5000" width="20000" height="20000" fill="white"/>';
+  for (const el of anchors) {
+    const s = parseFloat(el.dataset.scale || '1');
+    let hrx, hry;
+    if (el.dataset.type === 'marker') {
+      const msy = parseFloat(el.dataset.markerScaleY || '1');
+      hrx = 17 * s + 1.5; hry = 5.4 * msy * s + 1.5;
+    } else {
+      hrx = hry = 18 * s;
+    }
+    holes += `<ellipse cx="${el.dataset.cx}" cy="${el.dataset.cy}" rx="${hrx}" ry="${hry}" fill="black"/>`;
+  }
+  _netZonePreview.querySelector('mask').innerHTML = holes;
 }
 
 function updateFreeformPreview(cursor) {

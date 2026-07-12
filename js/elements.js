@@ -1410,6 +1410,7 @@ export function updateMarkerRim(el) {
   }
   const sy = parseFloat(el.dataset.markerScaleY || '1');
   const rx = 17, ry = 5.4 * sy;
+  const { off, iry } = rimGeom(ry, 1);
   // Keep the fill ellipse in sync (legacy markers carry the old taller ry)
   const fillRing = el.querySelector('.marker-ellipse');
   if (fillRing) fillRing.setAttribute('ry', ry);
@@ -1421,22 +1422,35 @@ export function updateMarkerRim(el) {
     lbl.setAttribute('font-weight', '400');
     lbl.setAttribute('font-family', 'Poppins, sans-serif');
   }
-  const T = 0.3, B = 3.0, SIDE = 1.2;  // top:bottom = 1:10
-  const irx = rx - SIDE, iry = Math.max(0.5, ry - (T + B) / 2), off = (B - T) / 2;
+  const irx = rx - 1.2;   // side thickness; vertical rim comes from rimGeom (1:10)
   rim.setAttribute('d',
     `M ${-rx} 0 A ${rx} ${ry} 0 1 0 ${rx} 0 A ${rx} ${ry} 0 1 0 ${-rx} 0 Z ` +
     `M ${-irx} ${-off} A ${irx} ${iry} 0 1 1 ${irx} ${-off} A ${irx} ${iry} 0 1 1 ${-irx} ${-off} Z`);
 }
 
 // ─── Spotlight ────────────────────────────────────────────────────────────────
+// Perspective rim geometry — thick bottom, hairline top at 1:10, thickness
+// scaled by f. When the ellipse is very flat (small ry) the rim shrinks
+// proportionally so it always fits INSIDE the ellipse: without this, the
+// inner ellipse degenerates and the rim collapses into a uniform band.
+// MUST MATCH the inline copies in interaction.js and export.js.
+export function rimGeom(ry, f) {
+  let T = 0.3 * f, B = 3.0 * f;
+  const maxHalf = ry * 0.75;               // rim consumes at most 75% of ry
+  if ((T + B) / 2 > maxHalf) {
+    const k = maxHalf / ((T + B) / 2);
+    T *= k; B *= k;
+  }
+  return { off: (B - T) / 2, iry: ry - (T + B) / 2 };
+}
+
 // Perspective rim path for the spotlight ring — same style as the marker
-// circle (thick bottom, hairline top, 1:10), with thickness scaled to the
-// ring size. MUST MATCH the copies in interaction.js (applyTransform) and
-// export.js (renderSpotlight). Spotlight uses absolute coords, no transform.
+// circle, with thickness scaled to the ring size (f = rx/17, marker base).
+// Spotlight uses absolute coords, no transform.
 export function spotlightRimPath(cx, cy, rx, ry) {
-  const f = rx / 17;                       // marker base rx = 17
-  const T = 0.3 * f, B = 3.0 * f, SIDE = 1.2 * f;
-  const irx = rx - SIDE, iry = Math.max(0.5, ry - (T + B) / 2), off = (B - T) / 2;
+  const f = rx / 17;
+  const { off, iry } = rimGeom(ry, f);
+  const irx = rx - 1.2 * f;
   return `M ${cx - rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx + rx} ${cy} A ${rx} ${ry} 0 1 0 ${cx - rx} ${cy} Z ` +
     `M ${cx - irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx + irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx - irx} ${cy - off} Z`;
 }
@@ -2741,9 +2755,9 @@ export function updateNetZone(el) {
     let hrx, hry;
     if (p.dataset.type === 'marker') {
       const msy = parseFloat(p.dataset.markerScaleY || '1');
-      hrx = 17 * s + 3; hry = 5.4 * msy * s + 3;   // marker ground ellipse + breathing room
+      hrx = 17 * s + 1.5; hry = 5.4 * msy * s + 1.5;   // marker ground ellipse + a hair of air
     } else {
-      hrx = hry = 18 * s;                           // player/referee disc
+      hrx = hry = 18 * s;                               // player/referee disc
     }
     holes += `<ellipse cx="${acx}" cy="${acy}" rx="${hrx}" ry="${hry}" fill="black"/>`;
   }
