@@ -12,9 +12,9 @@ export const imageMode = {
 
   toolbar: {
     tools: [
-      // Essentials
+      // Essentials (no referee in Image Analysis; Detect Player takes its slot)
       'select', 'player-a', 'player-b', 'player-joker',
-      'ball', 'cone', 'referee',
+      'ball', 'cone', 'detect-player',
       // Zones & highlights
       'shadow-rect',
       'spotlight', 'vision',
@@ -24,7 +24,7 @@ export const imageMode = {
       'textbox', 'headline', 'tag', 'marker',
       // Connections
       'link', 'pair', 'net-zone',
-      // AI assist (Image Analysis only)
+      // Player marker (single circle, snaps to a detected player)
       'mark-player',
     ],
     hiddenIds: ['step-btn'],  // no animation in image mode

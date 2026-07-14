@@ -2521,21 +2521,70 @@ export function addPair(player1Id, player2Id) {
   return g;
 }
 
+// Free pair (Image Analysis): a standalone "duel" ellipse between two fixed
+// points — no anchor circles, draggable as a whole. Used when pairing detected
+// players so only the zone shows.
+export function addFreePair(x1, y1, x2, y2, opts = {}) {
+  const id = 'pair-' + S.nextObjectId();
+  const ns = 'http://www.w3.org/2000/svg';
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'pair';
+  g.dataset.freePair = 'true';
+  g.dataset.player1 = ''; g.dataset.player2 = '';
+  g.dataset.lastX1 = x1; g.dataset.lastY1 = y1;
+  g.dataset.lastX2 = x2; g.dataset.lastY2 = y2;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.pairColor = opts.color || 'rgba(234,179,8,0.4)';
+  g.dataset.pairPadX = '24'; g.dataset.pairPadY = '28';
+
+  const ellipse = document.createElementNS(ns, 'ellipse');
+  ellipse.classList.add('pair-ellipse');
+  ellipse.setAttribute('fill', g.dataset.pairColor);
+  ellipse.setAttribute('stroke', 'rgba(255,255,255,0.5)');
+  ellipse.setAttribute('stroke-width', '1.5');
+  ellipse.setAttribute('stroke-dasharray', '4,3');
+
+  g.appendChild(ellipse);
+  S.objectsLayer.insertBefore(g, S.objectsLayer.firstChild);
+  updatePair(g);
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
+  });
+  makeDraggable(g);
+  return g;
+}
+
 export function updatePair(pairEl) {
   if (!pairEl || pairEl.dataset.type !== 'pair') return;
-  const p1 = document.getElementById(pairEl.dataset.player1);
-  const p2 = document.getElementById(pairEl.dataset.player2);
   const ellipse = pairEl.querySelector('.pair-ellipse');
   if (!ellipse) return;
 
   let x1, y1, x2, y2;
-  if (p1) { x1 = parseFloat(p1.dataset.cx); y1 = parseFloat(p1.dataset.cy); }
-  else { x1 = parseFloat(pairEl.dataset.lastX1 || '0'); y1 = parseFloat(pairEl.dataset.lastY1 || '0'); }
-  if (p2) { x2 = parseFloat(p2.dataset.cx); y2 = parseFloat(p2.dataset.cy); }
-  else { x2 = parseFloat(pairEl.dataset.lastX2 || '0'); y2 = parseFloat(pairEl.dataset.lastY2 || '0'); }
-
-  pairEl.dataset.lastX1 = x1; pairEl.dataset.lastY1 = y1;
-  pairEl.dataset.lastX2 = x2; pairEl.dataset.lastY2 = y2;
+  if (pairEl.dataset.freePair === 'true') {
+    // Static pair (Image Analysis): the two anchors live in lastX/Y. When the
+    // whole zone is dragged, cx/cy drift off the anchor midpoint — shift both
+    // anchors by that delta so the ellipse follows the drag.
+    x1 = parseFloat(pairEl.dataset.lastX1); y1 = parseFloat(pairEl.dataset.lastY1);
+    x2 = parseFloat(pairEl.dataset.lastX2); y2 = parseFloat(pairEl.dataset.lastY2);
+    const midX = (x1 + x2) / 2, midY = (y1 + y2) / 2;
+    const cxD = parseFloat(pairEl.dataset.cx), cyD = parseFloat(pairEl.dataset.cy);
+    if (!isNaN(cxD) && (Math.abs(cxD - midX) > 0.01 || Math.abs(cyD - midY) > 0.01)) {
+      const dx = cxD - midX, dy = cyD - midY;
+      x1 += dx; y1 += dy; x2 += dx; y2 += dy;
+      pairEl.dataset.lastX1 = x1; pairEl.dataset.lastY1 = y1;
+      pairEl.dataset.lastX2 = x2; pairEl.dataset.lastY2 = y2;
+    }
+  } else {
+    const p1 = document.getElementById(pairEl.dataset.player1);
+    const p2 = document.getElementById(pairEl.dataset.player2);
+    if (p1) { x1 = parseFloat(p1.dataset.cx); y1 = parseFloat(p1.dataset.cy); }
+    else { x1 = parseFloat(pairEl.dataset.lastX1 || '0'); y1 = parseFloat(pairEl.dataset.lastY1 || '0'); }
+    if (p2) { x2 = parseFloat(p2.dataset.cx); y2 = parseFloat(p2.dataset.cy); }
+    else { x2 = parseFloat(pairEl.dataset.lastX2 || '0'); y2 = parseFloat(pairEl.dataset.lastY2 || '0'); }
+    pairEl.dataset.lastX1 = x1; pairEl.dataset.lastY1 = y1;
+    pairEl.dataset.lastX2 = x2; pairEl.dataset.lastY2 = y2;
+  }
 
   const cx = (x1 + x2) / 2;
   const cy = (y1 + y2) / 2;

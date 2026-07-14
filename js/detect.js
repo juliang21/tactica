@@ -61,6 +61,7 @@ export function clearDetections() {
   _detections = [];
   _srcCanvas = null;
   _hideHighlight();
+  _hideDetectPreview();
   _hideSweep();
   _hideStatus(true);
   document.getElementById('player-detect-reveal')?.remove();
@@ -257,7 +258,7 @@ function _maybeShowIntroModal() {
       '<div class="modal-title" style="text-align:center">Players recognized automatically</div>' +
       '<div style="font-size:12.5px;color:var(--text-muted);line-height:1.65;text-align:center">' +
         'Táctica now spots the players in your image — and their team colours. With ' +
-        '<strong style="color:var(--text)">Connect Players</strong>, <strong style="color:var(--text)">Unit</strong>, ' +
+        '<strong style="color:var(--text)">Connected Lines</strong>, <strong style="color:var(--text)">Unit</strong>, ' +
         '<strong style="color:var(--text)">Callout</strong> or <strong style="color:var(--text)">Highlight</strong> active, ' +
         'hover a player to see them highlighted — click and the element attaches at their feet, ' +
         'sized and coloured to match. Clicking open grass still places freely.' +
@@ -655,7 +656,7 @@ export function findPlayerAt(x, y) {
 // their feet (where a circle would land). Lives directly on the SVG root —
 // NOT in objects-layer — so it never enters undo snapshots, saves or exports.
 
-const HIGHLIGHT_TOOLS = new Set(['marker', 'net-zone', 'spotlight', 'tag']);
+const HIGHLIGHT_TOOLS = new Set(['marker', 'net-zone', 'spotlight', 'tag', 'pair', 'mark-player', 'detect-player']);
 let _hl = null;
 
 function _bracketPath(d) {
@@ -713,10 +714,11 @@ function _showHighlight(d) {
   brackets.setAttribute('stroke', color);
   const feet = hl.querySelector('.pdh-feet');
   const rx = Math.max(14, Math.min(70, d.w * 0.62));
+  const ry = rx * 0.32;
   feet.setAttribute('cx', d.cx);
-  feet.setAttribute('cy', d.feetY);
+  feet.setAttribute('cy', d.feetY + ry);   // sit the ring below the feet (matches the placed marker)
   feet.setAttribute('rx', rx);
-  feet.setAttribute('ry', rx * 0.32);
+  feet.setAttribute('ry', ry);
   feet.setAttribute('stroke', color);
   feet.setAttribute('fill', fill);
   hl.style.display = '';
@@ -728,15 +730,64 @@ function _hideHighlight() {
   if (_hl) _hl.style.display = 'none';
 }
 
+// ─── Detect-Player preview ────────────────────────────────────────────────────
+// The Detect Player tool works on players the auto-pass missed, so there's no
+// highlight to show on hover. Instead show a ghost reticle sized by perspective
+// (bigger nearer the camera) so the coach sees roughly what will be detected.
+let _detectPreview = null;
+function _ensureDetectPreview() {
+  if (_detectPreview && _detectPreview.isConnected) return _detectPreview;
+  const ns = 'http://www.w3.org/2000/svg';
+  _detectPreview = document.createElementNS(ns, 'g');
+  _detectPreview.setAttribute('id', 'player-detect-preview');
+  _detectPreview.setAttribute('pointer-events', 'none');
+  const br = document.createElementNS(ns, 'path');
+  br.setAttribute('class', 'pdp-brackets');
+  br.setAttribute('fill', 'none'); br.setAttribute('stroke', 'rgba(52,211,153,0.75)');
+  br.setAttribute('stroke-width', '2'); br.setAttribute('stroke-dasharray', '4,3');
+  br.setAttribute('stroke-linecap', 'round'); br.setAttribute('vector-effect', 'non-scaling-stroke');
+  const ft = document.createElementNS(ns, 'ellipse');
+  ft.setAttribute('class', 'pdp-feet'); ft.setAttribute('fill', 'rgba(52,211,153,0.08)');
+  ft.setAttribute('stroke', 'rgba(52,211,153,0.75)'); ft.setAttribute('stroke-width', '1.5');
+  ft.setAttribute('stroke-dasharray', '5,4'); ft.setAttribute('vector-effect', 'non-scaling-stroke');
+  _detectPreview.appendChild(br); _detectPreview.appendChild(ft);
+  S.svg.appendChild(_detectPreview);
+  return _detectPreview;
+}
+function _showDetectPreview(pt) {
+  const H = (S.svg.viewBox && S.svg.viewBox.baseVal.height) || 1000;
+  const bh = H * (0.05 + 0.1 * (pt.y / H));   // perspective player height, feet at cursor
+  const bw = bh * 0.42;
+  const x = pt.x - bw / 2, y = pt.y - bh;
+  const g = _ensureDetectPreview();
+  const L = Math.max(8, Math.min(22, Math.min(bw, bh) * 0.25));
+  g.querySelector('.pdp-brackets').setAttribute('d',
+    `M ${x} ${y + L} L ${x} ${y} L ${x + L} ${y} ` +
+    `M ${x + bw - L} ${y} L ${x + bw} ${y} L ${x + bw} ${y + L} ` +
+    `M ${x + bw} ${y + bh - L} L ${x + bw} ${y + bh} L ${x + bw - L} ${y + bh} ` +
+    `M ${x + L} ${y + bh} L ${x} ${y + bh} L ${x} ${y + bh - L}`);
+  const ft = g.querySelector('.pdp-feet');
+  const rx = Math.max(14, bw * 0.62), ry = rx * 0.32;
+  ft.setAttribute('cx', pt.x); ft.setAttribute('cy', pt.y + ry);
+  ft.setAttribute('rx', rx); ft.setAttribute('ry', ry);
+  g.style.display = '';
+  S.svg.appendChild(g);
+}
+function _hideDetectPreview() { if (_detectPreview) _detectPreview.style.display = 'none'; }
+
 // Wired once at module load: highlight follows the cursor while a placement
-// tool is armed in Image Analysis and detections exist.
+// tool is armed in Image Analysis. Detect Player also shows a size preview.
 S.svg.addEventListener('mousemove', e => {
-  if (S.appMode !== 'image' || !HIGHLIGHT_TOOLS.has(S.tool) || _detections.length === 0) {
-    _hideHighlight();
+  if (S.appMode !== 'image') { _hideHighlight(); _hideDetectPreview(); return; }
+  const pt = S.getSVGPoint(e, S.svg);
+  if (S.tool === 'detect-player') {
+    const d = findPlayerAt(pt.x, pt.y);
+    if (d) { _showHighlight(d); _hideDetectPreview(); }
+    else { _hideHighlight(); _showDetectPreview(pt); }
     return;
   }
-  const pt = S.getSVGPoint(e, S.svg);
+  if (!HIGHLIGHT_TOOLS.has(S.tool) || _detections.length === 0) { _hideHighlight(); _hideDetectPreview(); return; }
   const d = findPlayerAt(pt.x, pt.y);
   if (d) _showHighlight(d); else _hideHighlight();
 });
-S.svg.addEventListener('mouseleave', _hideHighlight);
+S.svg.addEventListener('mouseleave', () => { _hideHighlight(); _hideDetectPreview(); });

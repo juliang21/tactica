@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -20,8 +20,8 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=13';
-import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=9';
-import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=3';
+import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=10';
+import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=4';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
@@ -249,14 +249,6 @@ function finishInsert(el, opts = {}) {
 const _baseSetTool = setTool;
 window.setTool = function(t) {
   // Add-Player tool: crosshair + guidance banner while active, cleared on exit
-  if (t === 'mark-player') {
-    S.svg.style.cursor = 'crosshair';
-    _maybeShowAddPlayerIntro();
-    _showMarkPlayerHint('Tap each player the auto-detector missed. Tap Done when finished.');
-  } else {
-    S.svg.style.cursor = '';
-    _hideMarkPlayerHint();
-  }
   // Clean up freeform if leaving freeform mode
   if (S.tool === 'freeform' && t !== 'freeform') {
     freeformPts = [];
@@ -272,6 +264,8 @@ window.setTool = function(t) {
   // Clean up pair tool state if leaving pair mode
   if (S.tool === 'pair' && t !== 'pair') {
     _pairStartPlayer = null;
+    _pairStartPos = null;
+    _hidePairStartDot();
     clearLinkHighlight();
   }
   // Clean up marker chain state if leaving marker mode
@@ -290,6 +284,13 @@ window.setTool = function(t) {
     else cancelNetZone();
   }
   _baseSetTool(t);
+
+  // Pointing tools in Image Analysis get a crosshair, not the default pointer.
+  S.svg.style.cursor = (t === 'detect-player' || t === 'mark-player') ? 'crosshair' : '';
+
+  // "Done" banner for the continuous Image-Analysis tools.
+  const doneLabel = (S.appMode === 'image') ? _DONE_TOOL_LABELS[t] : null;
+  if (doneLabel) _showToolDoneBanner(doneLabel); else _hideToolDoneBanner();
 
   // ── Show element properties panel when a tool is selected ──────────────
   // Maps tool names to their panel section + hint text so the user can
@@ -311,6 +312,8 @@ window.setTool = function(t) {
     'ball':         { panel: null, label: 'Ball',  hint: 'Click on the pitch to place' },
     'cone':         { panel: null, label: 'Cone',  hint: 'Click on the pitch to place' },
     'image':        { panel: null, label: 'Image', hint: 'Click on the pitch — a file picker will open' },
+    'mark-player':  { panel: 'marker-edit-section', label: 'Marker', hint: 'Click a player to drop a circle' },
+    'detect-player':{ panel: null, label: 'Detect Player', hint: 'Click each player the detector missed — no marker is placed' },
     'net-zone':     null, // handled separately below
     'link':         null,
     'pair':         null,
@@ -1985,6 +1988,26 @@ let _lastChainMarker = null;
 
 // ─── Pair Tool State ────────────────────────────────────────────────────────
 let _pairStartPlayer = null;
+let _pairStartPos = null;      // first anchor position (Image Analysis free pair)
+let _pairStartDot = null;      // temporary marker showing that first anchor
+
+function _showPairStartDot(pos) {
+  _hidePairStartDot();
+  const ns = 'http://www.w3.org/2000/svg';
+  _pairStartDot = document.createElementNS(ns, 'ellipse');
+  _pairStartDot.setAttribute('cx', pos.x); _pairStartDot.setAttribute('cy', pos.y);
+  _pairStartDot.setAttribute('rx', 17); _pairStartDot.setAttribute('ry', 6);
+  _pairStartDot.setAttribute('fill', 'rgba(234,179,8,0.25)');
+  _pairStartDot.setAttribute('stroke', '#FBBF24');
+  _pairStartDot.setAttribute('stroke-width', '2');
+  _pairStartDot.setAttribute('stroke-dasharray', '4,3');
+  _pairStartDot.setAttribute('pointer-events', 'none');
+  _pairStartDot.setAttribute('vector-effect', 'non-scaling-stroke');
+  S.svg.appendChild(_pairStartDot);
+}
+function _hidePairStartDot() {
+  if (_pairStartDot) { _pairStartDot.remove(); _pairStartDot = null; }
+}
 
 // ─── Image Tool State ──────────────────────────────────────────────────────
 // Where on the pitch the user clicked when arming the image tool. The actual
@@ -2101,94 +2124,60 @@ let _netZonePreview = null;     // live preview polygon
 let _netZoneCoords = [];        // accumulated {x,y} points (legacy free zones)
 let _netZoneVertexDots = [];    // small vertex marker SVGs for image mode
 let _netZoneDraftMarkers = [];  // circles minted DURING unit drafting (removed on cancel)
-// "Add Player" is a real tool (data-tool="mark-player", Image Analysis only):
-// each click registers a recognised player at that spot via a tight local
-// detection (synthetic fallback). Entering/leaving the mode is driven by
-// setTool below; this shim keeps external callers working.
+// Player Marker is a normal placement tool; this shim (still called from
+// imagemode.js on exit) just drops back to the select tool.
 window.toggleMarkPlayer = function(on) {
   const turnOn = on === undefined ? S.tool !== 'mark-player' : !!on;
   setTool(turnOn ? 'mark-player' : 'select');
 };
 
-let _mpHintEl = null;
-function _showMarkPlayerHint(msg) {
-  if (!_mpHintEl) {
-    _mpHintEl = document.createElement('div');
-    _mpHintEl.id = 'mark-player-hint';
-    _mpHintEl.style.cssText =
-      'position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:60;' +
-      'display:flex;align-items:center;gap:10px;padding:9px 16px;border-radius:22px;' +
+// ─── "Done" banner for continuous Image-Analysis tools ──────────────────────
+// Detect Player / Unit / Connected Lines keep you clicking; a Done button at
+// the top makes it obvious how to stop (drops back to the select tool).
+const _DONE_TOOL_LABELS = {
+  'detect-player': 'Detecting players — tap the ones the detector missed',
+  'net-zone':      'Building a unit — click players, then the first again to close',
+  'marker':        'Connecting lines — click players to chain them',
+};
+let _doneBannerEl = null;
+function _showToolDoneBanner(label) {
+  if (!_doneBannerEl) {
+    _doneBannerEl = document.createElement('div');
+    _doneBannerEl.id = 'tool-done-banner';
+    _doneBannerEl.style.cssText =
+      'position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:61;' +
+      'display:flex;align-items:center;gap:12px;padding:8px 8px 8px 18px;border-radius:22px;' +
       'background:rgba(16,18,17,0.92);border:1px solid rgba(52,211,153,0.4);' +
       'box-shadow:0 4px 24px rgba(0,0,0,0.45);color:#eef4f0;' +
       'font:600 12.5px Manrope,system-ui,sans-serif;white-space:nowrap;';
-    (document.getElementById('canvas-wrap') || document.body).appendChild(_mpHintEl);
+    (document.getElementById('canvas-wrap') || document.body).appendChild(_doneBannerEl);
   }
-  _mpHintEl.innerHTML = `<span>${msg}</span><button onclick="setTool('select')" style="pointer-events:auto;cursor:pointer;background:#34D399;color:#0d1a12;border:none;border-radius:14px;padding:4px 12px;font:700 11px Manrope,sans-serif">Done</button>`;
-  _mpHintEl.style.display = 'flex';
+  _doneBannerEl.innerHTML = `<span>${label}</span>` +
+    `<button onclick="setTool('select')" style="pointer-events:auto;cursor:pointer;` +
+    `background:#34D399;color:#0d1a12;border:none;border-radius:14px;padding:5px 16px;` +
+    `font:700 11px Manrope,sans-serif">Done</button>`;
+  _doneBannerEl.style.display = 'flex';
 }
-function _hideMarkPlayerHint() {
-  if (_mpHintEl) _mpHintEl.style.display = 'none';
-}
-
-// One-time explainer shown the first time the Add Player tool is picked, so
-// coaches understand it doesn't drop a circle — it points out a player for the
-// detector to recognise. Dismissable with a "don't show anymore" checkbox.
-const _ADDPLAYER_INTRO_KEY = 'tactica_addplayer_intro_dismissed';
-function _maybeShowAddPlayerIntro() {
-  try { if (localStorage.getItem(_ADDPLAYER_INTRO_KEY) === '1') return; } catch (e) {}
-  if (document.getElementById('addplayer-intro')) return;
-  const bd = document.createElement('div');
-  bd.className = 'modal-backdrop';
-  bd.id = 'addplayer-intro';
-  bd.innerHTML =
-    '<div class="modal-box" style="width:370px">' +
-      '<div style="display:flex;justify-content:center;padding:8px 0 2px">' +
-        '<svg width="120" height="80" viewBox="0 0 120 80" fill="none">' +
-          '<circle cx="52" cy="24" r="9" fill="rgba(255,255,255,0.85)"/>' +
-          '<path d="M52 34 C 44 34 41 41 41 49 L 44 64 L 49 64 L 50 53 L 54 53 L 55 64 L 60 64 L 63 49 C 63 41 60 34 52 34 Z" fill="rgba(255,255,255,0.85)"/>' +
-          '<path d="M30 18 L30 8 L40 8 M64 8 L74 8 L74 18 M74 58 L74 68 L64 68 M40 68 L30 68 L30 58" stroke="#34D399" stroke-width="2.5" stroke-linecap="round"/>' +
-          '<ellipse cx="52" cy="66" rx="20" ry="6" fill="rgba(52,211,153,0.15)" stroke="#34D399" stroke-width="2" stroke-dasharray="5,4"/>' +
-        '</svg>' +
-      '</div>' +
-      '<div class="modal-title" style="text-align:center">Add Player — point one out</div>' +
-      '<div style="font-size:12.5px;color:var(--text-muted);line-height:1.65;text-align:center">' +
-        'This doesn’t drop a circle. It tells Táctica <strong style="color:var(--text)">a player is here</strong> — ' +
-        'we run detection on that exact spot and recognise them, with their team colour, just like the automatic ones. ' +
-        'Use it for anyone the detector missed. Then <strong style="color:var(--text)">Connect Players</strong>, ' +
-        '<strong style="color:var(--text)">Unit</strong>, <strong style="color:var(--text)">Callout</strong> or ' +
-        '<strong style="color:var(--text)">Highlight</strong> will attach circles to them.' +
-      '</div>' +
-      '<label style="display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;' +
-        'font-size:12px;color:var(--text-muted);user-select:none;padding-top:2px">' +
-        '<input type="checkbox" id="api-dismiss" style="accent-color:#34D399;width:14px;height:14px;cursor:pointer">' +
-        'Don’t show this anymore' +
-      '</label>' +
-      '<div class="modal-row">' +
-        '<button class="modal-btn confirm" id="api-ok" style="width:100%">Got it</button>' +
-      '</div>' +
-    '</div>';
-  document.body.appendChild(bd);
-  bd.style.display = 'flex';
-  bd.querySelector('#api-ok').onclick = () => {
-    if (bd.querySelector('#api-dismiss').checked) {
-      try { localStorage.setItem(_ADDPLAYER_INTRO_KEY, '1'); } catch (e) {}
-    }
-    bd.remove();
-  };
-}
+function _hideToolDoneBanner() { if (_doneBannerEl) _doneBannerEl.style.display = 'none'; }
 
 // Snap a circle-placement click to a detected player: the circle lands at
 // their feet, sized to their body width (nearer player → bigger circle) and
 // coloured by the player's detected team. Returns null when the click isn't
 // on a detected player, so clicking open grass still places manually —
 // detection mistakes never block the coach.
+// Vertical drop so the circle sits BELOW the player's feet (they stand at the
+// top of the ring) rather than centred on the boots. Equals the ring's ry at
+// the snapped scale, so the player's feet land on the ring's top edge.
+function _markerFeetDrop(scale) { return 5.4 * scale; }
+
 function _snapToDetectedPlayer(pt) {
   if (S.appMode !== 'image') return null;
   const d = findPlayerAt(pt.x, pt.y);
   if (!d) return null;
+  const scale = Math.max(0.7, Math.min(3, (d.w * 0.62) / 17));
   return {
-    x: d.cx, y: d.feetY,
-    scale: Math.max(0.7, Math.min(3, (d.w * 0.62) / 17)),
+    x: d.cx, y: d.feetY + _markerFeetDrop(scale),
+    scale,
     color: d.teamColor || null,
     rgb: d.teamRGB || null
   };
@@ -2212,8 +2201,9 @@ function _smartRefineMarker(el, pt, onDone) {
   if (S.appMode !== 'image' || !isDetectionReady() || !el) return;
   detectAt(pt.x, pt.y, { synthetic: false }).then(d => {
     if (!d || !el.isConnected) return;
-    el.dataset.cx = d.cx; el.dataset.cy = d.feetY;
-    el.dataset.scale = Math.max(0.7, Math.min(3, (d.w * 0.62) / 17)).toFixed(2);
+    const scale = Math.max(0.7, Math.min(3, (d.w * 0.62) / 17));
+    el.dataset.cx = d.cx; el.dataset.cy = d.feetY + _markerFeetDrop(scale);
+    el.dataset.scale = scale.toFixed(2);
     _applyTeamColorToMarker(el, { color: d.teamColor, rgb: d.teamRGB });
     applyTransform(el);
     updateAllLinks(); updateAllNetZones();
@@ -2273,14 +2263,10 @@ S.svg.addEventListener('click', e => {
   if (S.dragMoved) return;
   if (S.tool === 'freeform') return; // handled by freeform click handler
 
-  // ── Add-Player tool: click registers a recognised player at that spot ───────
-  if (S.tool === 'mark-player' && S.appMode === 'image') {
+  // ── Detect Player tool: register a player at the click, no marker placed ────
+  if (S.tool === 'detect-player' && S.appMode === 'image') {
     const pt = S.getSVGPoint(e);
-    detectAt(pt.x, pt.y, { synthetic: true }).then(d => {
-      if (!d) return;
-      flashDetection(d);
-      _showMarkPlayerHint(`Player added — ${getDetections().length} recognised. Keep tapping players, or pick a circle tool.`);
-    });
+    detectAt(pt.x, pt.y, { synthetic: true }).then(d => { if (d) flashDetection(d); });
     return;
   }
 
@@ -2324,6 +2310,31 @@ S.svg.addEventListener('click', e => {
 
   // ── Pair tool handling ───────────────────────────────────────────────────
   if (S.tool === 'pair') {
+    // Image Analysis: pair two players → a "duel" ellipse, no circles shown.
+    // Each click resolves to a POSITION (an existing circle's centre, a
+    // detected player's feet, or the raw click) — the zone is drawn between
+    // the two points and stands alone (free pair).
+    if (S.appMode === 'image') {
+      const pt = S.getSVGPoint(e);
+      const el = e.target.closest('[data-type="marker"],[data-type="player"],[data-type="referee"]');
+      let pos;
+      if (el) pos = { x: parseFloat(el.dataset.cx), y: parseFloat(el.dataset.cy) };
+      else { const snap = _snapToDetectedPlayer(pt); pos = snap ? { x: snap.x, y: snap.y } : { x: pt.x, y: pt.y }; }
+      if (!_pairStartPos) { _pairStartPos = pos; _showPairStartDot(pos); return; }
+      _hidePairStartDot();
+      S.pushUndo();
+      const pair = addFreePair(_pairStartPos.x, _pairStartPos.y, pos.x, pos.y);
+      if (pair) {
+        trackElementInserted('pair');
+        maybeSendPitchSnapshot();
+        const u = getCurrentUser();
+        if (u) logAction(u.uid, u.email, 'element_inserted', { element: 'pair' }).catch(() => {});
+      }
+      _pairStartPos = null;
+      setTool('select');
+      if (pair) select(pair);
+      return;
+    }
     const clickedEl = e.target.closest('[data-type="player"]') || e.target.closest('[data-type="referee"]');
     if (!clickedEl) {
       _pairStartPlayer = null;
@@ -2473,8 +2484,10 @@ S.svg.addEventListener('click', e => {
     // file input's change handler.
     return;
   }
-  else if (S.tool === 'marker') {
-    // ── Chain-connect: place marker + auto-link to previous ─────────────
+  else if (S.tool === 'marker' || S.tool === 'mark-player') {
+    // Both place a circle on the player (snapped to a detection, team-coloured).
+    // 'marker' = Connected Lines: also chains a link to the previous circle.
+    // 'mark-player' = Player Marker: a single circle, no line.
     const snap = _snapToDetectedPlayer(pt);
     placed = addMarker(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
     if (snap) {
@@ -2484,16 +2497,18 @@ S.svg.addEventListener('click', e => {
     } else {
       _smartRefineMarker(placed, pt);   // maybe a player the auto-pass missed
     }
-    if (placed && _lastChainMarker) {
-      const link = addLink(_lastChainMarker.id, placed.id);
-      if (link) {
-        trackElementInserted('connect');
-        const u2 = getCurrentUser();
-        if (u2) logAction(u2.uid, u2.email, 'element_inserted', { element: 'connect' }).catch(() => {});
+    if (S.tool === 'marker') {
+      if (placed && _lastChainMarker) {
+        const link = addLink(_lastChainMarker.id, placed.id);
+        if (link) {
+          trackElementInserted('connect');
+          const u2 = getCurrentUser();
+          if (u2) logAction(u2.uid, u2.email, 'element_inserted', { element: 'connect' }).catch(() => {});
+        }
       }
+      _lastChainMarker = placed;
     }
-    _lastChainMarker = placed;
-    // Stay in marker tool (don't switch to select) — handled below
+    // Stay in tool (keep marking) — handled below
   }
   if (placed) {
     const elType = placed.dataset.type;
@@ -2504,7 +2519,7 @@ S.svg.addEventListener('click', e => {
     if (u) logAction(u.uid, u.email, 'element_inserted', { element: elType }).catch(() => {});
     // Team players and markers stay in placement mode so you can keep adding.
     // Jokers are usually one-offs — auto-select so the properties panel opens.
-    if (S.tool === 'player-a' || S.tool === 'player-b' || S.tool === 'marker') {
+    if (S.tool === 'player-a' || S.tool === 'player-b' || S.tool === 'marker' || S.tool === 'mark-player') {
       // Don't switch tool — stay in placement/chain mode
     } else {
       finishInsert(placed);
@@ -5651,7 +5666,7 @@ onAuthChange(async (user) => {
             id: 'connect-tooltip-v1',
             anchorEl: connectBtn,
             img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#1a2a1a"/><rect x="10" y="10" width="260" height="120" rx="6" fill="#2d5a2d" opacity="0.6"/><line x1="140" y1="10" x2="140" y2="130" stroke="rgba(255,255,255,0.15)" stroke-width="1"/><circle cx="60" cy="50" r="18" fill="#8B5CF6" opacity="0.9"/><text x="60" y="55" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">2</text><circle cx="140" cy="40" r="18" fill="#8B5CF6" opacity="0.9"/><text x="140" y="45" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">6</text><circle cx="220" cy="55" r="18" fill="#8B5CF6" opacity="0.9"/><text x="220" y="60" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">9</text><circle cx="140" cy="100" r="18" fill="#FBBF24" opacity="0.9"/><text x="140" y="105" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">4</text><line x1="78" y1="50" x2="122" y2="40" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="158" y1="40" x2="202" y2="55" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="140" y1="58" x2="140" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/></svg>`),
-            title: 'Connect Players',
+            title: 'Connected Lines',
             text: 'Draw tactical connections between players. Click multiple players to chain them together — great for showing passing lanes and pressing triggers.',
             cta: 'Got it',
           });

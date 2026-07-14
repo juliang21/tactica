@@ -544,7 +544,7 @@ export function select(el, opts = {}) {
     : type === 'tag' ? 'Callout'
     : type === 'link' ? 'Player Link'
     : type === 'pair' ? 'Pair'
-    : type === 'marker' ? 'Connect Players'
+    : type === 'marker' ? 'Marker'
     : type === 'net-zone' ? 'Unit'
     : 'Zone';
   const hint = (type === 'player' || type === 'referee') ? ' · double-click to rename' : (type === 'textbox' || type === 'headline' || type === 'tag') ? ' · double-click to edit' : type?.startsWith('shadow') || type === 'freeform' ? ' · double-click to edit label' : '';
