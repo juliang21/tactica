@@ -24,6 +24,8 @@ export const imageMode = {
       'textbox', 'headline', 'tag', 'marker',
       // Connections
       'link', 'pair', 'net-zone',
+      // AI assist (Image Analysis only)
+      'mark-player',
     ],
     hiddenIds: ['step-btn'],  // no animation in image mode
   },

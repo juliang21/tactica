@@ -985,6 +985,7 @@ input[type=range]::-webkit-slider-thumb {
 .action-btn:hover { border-color: #444; color: var(--text); }
 .action-btn.danger { border-color: #3A1520; color: #F87171; }
 .action-btn.danger:hover { background: #3A1520; }
+.action-btn.active { border-color: #34D399; color: #34D399; background: rgba(52,211,153,0.08); }
 
 /* Layer order buttons (inline compact) */
 #layer-controls-inline {

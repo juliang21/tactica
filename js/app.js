@@ -20,8 +20,8 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=13';
-import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=7';
-import { findPlayerAt } from './detect.js';
+import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=8';
+import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=2';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
@@ -248,6 +248,15 @@ function finishInsert(el, opts = {}) {
 // Wrap setTool to clean up freeform preview when switching tools
 const _baseSetTool = setTool;
 window.setTool = function(t) {
+  // Add-Player tool: crosshair + guidance banner while active, cleared on exit
+  if (t === 'mark-player') {
+    S.svg.style.cursor = 'crosshair';
+    _maybeShowAddPlayerIntro();
+    _showMarkPlayerHint('Tap each player the auto-detector missed. Tap Done when finished.');
+  } else {
+    S.svg.style.cursor = '';
+    _hideMarkPlayerHint();
+  }
   // Clean up freeform if leaving freeform mode
   if (S.tool === 'freeform' && t !== 'freeform') {
     freeformPts = [];
@@ -2092,6 +2101,81 @@ let _netZonePreview = null;     // live preview polygon
 let _netZoneCoords = [];        // accumulated {x,y} points (legacy free zones)
 let _netZoneVertexDots = [];    // small vertex marker SVGs for image mode
 let _netZoneDraftMarkers = [];  // circles minted DURING unit drafting (removed on cancel)
+// "Add Player" is a real tool (data-tool="mark-player", Image Analysis only):
+// each click registers a recognised player at that spot via a tight local
+// detection (synthetic fallback). Entering/leaving the mode is driven by
+// setTool below; this shim keeps external callers working.
+window.toggleMarkPlayer = function(on) {
+  const turnOn = on === undefined ? S.tool !== 'mark-player' : !!on;
+  setTool(turnOn ? 'mark-player' : 'select');
+};
+
+let _mpHintEl = null;
+function _showMarkPlayerHint(msg) {
+  if (!_mpHintEl) {
+    _mpHintEl = document.createElement('div');
+    _mpHintEl.id = 'mark-player-hint';
+    _mpHintEl.style.cssText =
+      'position:absolute;top:70px;left:50%;transform:translateX(-50%);z-index:60;' +
+      'display:flex;align-items:center;gap:10px;padding:9px 16px;border-radius:22px;' +
+      'background:rgba(16,18,17,0.92);border:1px solid rgba(52,211,153,0.4);' +
+      'box-shadow:0 4px 24px rgba(0,0,0,0.45);color:#eef4f0;' +
+      'font:600 12.5px Manrope,system-ui,sans-serif;white-space:nowrap;';
+    (document.getElementById('canvas-wrap') || document.body).appendChild(_mpHintEl);
+  }
+  _mpHintEl.innerHTML = `<span>${msg}</span><button onclick="setTool('select')" style="pointer-events:auto;cursor:pointer;background:#34D399;color:#0d1a12;border:none;border-radius:14px;padding:4px 12px;font:700 11px Manrope,sans-serif">Done</button>`;
+  _mpHintEl.style.display = 'flex';
+}
+function _hideMarkPlayerHint() {
+  if (_mpHintEl) _mpHintEl.style.display = 'none';
+}
+
+// One-time explainer shown the first time the Add Player tool is picked, so
+// coaches understand it doesn't drop a circle — it points out a player for the
+// detector to recognise. Dismissable with a "don't show anymore" checkbox.
+const _ADDPLAYER_INTRO_KEY = 'tactica_addplayer_intro_dismissed';
+function _maybeShowAddPlayerIntro() {
+  try { if (localStorage.getItem(_ADDPLAYER_INTRO_KEY) === '1') return; } catch (e) {}
+  if (document.getElementById('addplayer-intro')) return;
+  const bd = document.createElement('div');
+  bd.className = 'modal-backdrop';
+  bd.id = 'addplayer-intro';
+  bd.innerHTML =
+    '<div class="modal-box" style="width:370px">' +
+      '<div style="display:flex;justify-content:center;padding:8px 0 2px">' +
+        '<svg width="120" height="80" viewBox="0 0 120 80" fill="none">' +
+          '<circle cx="52" cy="24" r="9" fill="rgba(255,255,255,0.85)"/>' +
+          '<path d="M52 34 C 44 34 41 41 41 49 L 44 64 L 49 64 L 50 53 L 54 53 L 55 64 L 60 64 L 63 49 C 63 41 60 34 52 34 Z" fill="rgba(255,255,255,0.85)"/>' +
+          '<path d="M30 18 L30 8 L40 8 M64 8 L74 8 L74 18 M74 58 L74 68 L64 68 M40 68 L30 68 L30 58" stroke="#34D399" stroke-width="2.5" stroke-linecap="round"/>' +
+          '<ellipse cx="52" cy="66" rx="20" ry="6" fill="rgba(52,211,153,0.15)" stroke="#34D399" stroke-width="2" stroke-dasharray="5,4"/>' +
+        '</svg>' +
+      '</div>' +
+      '<div class="modal-title" style="text-align:center">Add Player — point one out</div>' +
+      '<div style="font-size:12.5px;color:var(--text-muted);line-height:1.65;text-align:center">' +
+        'This doesn’t drop a circle. It tells Táctica <strong style="color:var(--text)">a player is here</strong> — ' +
+        'we run detection on that exact spot and recognise them, with their team colour, just like the automatic ones. ' +
+        'Use it for anyone the detector missed. Then <strong style="color:var(--text)">Connect Players</strong>, ' +
+        '<strong style="color:var(--text)">Unit</strong>, <strong style="color:var(--text)">Callout</strong> or ' +
+        '<strong style="color:var(--text)">Highlight</strong> will attach circles to them.' +
+      '</div>' +
+      '<label style="display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;' +
+        'font-size:12px;color:var(--text-muted);user-select:none;padding-top:2px">' +
+        '<input type="checkbox" id="api-dismiss" style="accent-color:#34D399;width:14px;height:14px;cursor:pointer">' +
+        'Don’t show this anymore' +
+      '</label>' +
+      '<div class="modal-row">' +
+        '<button class="modal-btn confirm" id="api-ok" style="width:100%">Got it</button>' +
+      '</div>' +
+    '</div>';
+  document.body.appendChild(bd);
+  bd.style.display = 'flex';
+  bd.querySelector('#api-ok').onclick = () => {
+    if (bd.querySelector('#api-dismiss').checked) {
+      try { localStorage.setItem(_ADDPLAYER_INTRO_KEY, '1'); } catch (e) {}
+    }
+    bd.remove();
+  };
+}
 
 // Snap a circle-placement click to a detected player: the circle lands at
 // their feet, sized to their body width (nearer player → bigger circle) and
@@ -2118,6 +2202,35 @@ function _applyTeamColorToMarker(m, snap) {
   const bg = `rgba(${snap.rgb.join(',')},0.18)`;
   m.dataset.bgColor = bg;
   m.querySelector('.marker-ellipse')?.setAttribute('fill', bg);
+}
+
+// Smart circle tools: a marker was just placed manually at (pt) because no
+// player was already recognised there. Run a tight local detection at that
+// spot in the background; if a player IS there, snap the marker onto their
+// feet, size and colour it — and register the player for future hovers.
+function _smartRefineMarker(el, pt, onDone) {
+  if (S.appMode !== 'image' || !isDetectionReady() || !el) return;
+  detectAt(pt.x, pt.y, { synthetic: false }).then(d => {
+    if (!d || !el.isConnected) return;
+    el.dataset.cx = d.cx; el.dataset.cy = d.feetY;
+    el.dataset.scale = Math.max(0.7, Math.min(3, (d.w * 0.62) / 17)).toFixed(2);
+    _applyTeamColorToMarker(el, { color: d.teamColor, rgb: d.teamRGB });
+    applyTransform(el);
+    updateAllLinks(); updateAllNetZones();
+    flashDetection(d);
+    if (onDone) onDone();
+  }).catch(() => {});
+}
+
+// Same, for elements positioned purely by cx/cy (Callout tag, Highlight spot).
+function _smartRefinePoint(el, pt, onMove) {
+  if (S.appMode !== 'image' || !isDetectionReady() || !el) return;
+  detectAt(pt.x, pt.y, { synthetic: false }).then(d => {
+    if (!d || !el.isConnected) return;
+    el.dataset.cx = d.cx; el.dataset.cy = d.feetY;
+    if (onMove) onMove(el);
+    flashDetection(d);
+  }).catch(() => {});
 }
 
 function clearLinkHighlight() {
@@ -2159,6 +2272,17 @@ function highlightLinkStart(playerEl) {
 S.svg.addEventListener('click', e => {
   if (S.dragMoved) return;
   if (S.tool === 'freeform') return; // handled by freeform click handler
+
+  // ── Add-Player tool: click registers a recognised player at that spot ───────
+  if (S.tool === 'mark-player' && S.appMode === 'image') {
+    const pt = S.getSVGPoint(e);
+    detectAt(pt.x, pt.y, { synthetic: true }).then(d => {
+      if (!d) return;
+      flashDetection(d);
+      _showMarkPlayerHint(`Player added — ${getDetections().length} recognised. Keep tapping players, or pick a circle tool.`);
+    });
+    return;
+  }
 
   // ── Link tool handling ────────────────────────────────────────────────────
   if (S.tool === 'link') {
@@ -2255,6 +2379,8 @@ S.svg.addEventListener('click', e => {
           m.dataset.scale = snap.scale.toFixed(2);
           _applyTeamColorToMarker(m, snap);
           applyTransform(m);
+        } else {
+          _smartRefineMarker(m, pt, () => updateNetZonePreview());
         }
         trackElementInserted('marker');
         _netZoneDraftMarkers.push(m);
@@ -2325,6 +2451,7 @@ S.svg.addEventListener('click', e => {
     // Snap the highlight beam to a detected player's feet
     const snap = _snapToDetectedPlayer(pt);
     placed = addSpotlight(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
+    if (!snap) _smartRefinePoint(placed, pt, el => applyTransform(el));
   }
   else if (S.tool === 'vision') placed = addVision(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
@@ -2334,6 +2461,7 @@ S.svg.addEventListener('click', e => {
     // and label stay attached to the right spot on the pitch
     const snap = _snapToDetectedPlayer(pt);
     placed = addTag(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
+    if (!snap) _smartRefinePoint(placed, pt, el => repositionTag(el));
   }
   else if (S.tool === 'image') {
     // Image tool doesn't place synchronously — it opens the file picker.
@@ -2353,6 +2481,8 @@ S.svg.addEventListener('click', e => {
       placed.dataset.scale = snap.scale.toFixed(2);
       _applyTeamColorToMarker(placed, snap);
       applyTransform(placed);
+    } else {
+      _smartRefineMarker(placed, pt);   // maybe a player the auto-pass missed
     }
     if (placed && _lastChainMarker) {
       const link = addLink(_lastChainMarker.id, placed.id);

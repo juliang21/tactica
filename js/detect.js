@@ -9,13 +9,27 @@ import * as S from './state.js';
 
 const TF_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
 const COCO_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js';
-const MIN_SCORE = 0.3;   // keep low: broadcast players are small
+const MIN_SCORE = 0.25;  // keep low: broadcast players are small
 const MAX_BOXES = 40;    // a full frame can show 20+ people incl. bench/refs
+// Tiling: a wide broadcast frame gets downscaled to ~300px by the model, so
+// small/distant players vanish. Running detection on overlapping crops sized
+// ~TILE_PX keeps each player large relative to the crop. Smaller tiles = more
+// passes but far better recall on distant players. Results are merged with
+// non-max suppression (IoU/overlap dedup).
+const TILE_PX = 460;
+const TILE_OVERLAP = 0.3;
+const MAX_TILES = 12;    // hard cap so a large image can't explode the pass count/time
+const NMS_IOU = 0.45;
+const NMS_CONTAIN = 0.6;    // also dedup partial overlaps (same figure split across tiles)
+const MIN_H_FRAC = 0.015;   // drop specks (crowd/noise) shorter than 1.5% of image height
+const MAX_H_FRAC = 0.6;     // and implausibly tall boxes
+const CROWD_TOP_FRAC = 0.15; // drop boxes lying ENTIRELY within the top 15% (stands)
 
 let _model = null;
 let _modelLoading = null;
 let _detections = [];    // [{x,y,w,h,cx,feetY,score}] in board coords (image natural px)
 let _detectRun = 0;      // bumped per image so stale async results are dropped
+let _srcCanvas = null;   // full-res image pixels, kept so manual detectAt() can crop/sample
 
 function _loadScript(src) {
   return new Promise((resolve, reject) => {
@@ -33,7 +47,7 @@ async function _ensureModel() {
     _modelLoading = (async () => {
       if (!window.tf) await _loadScript(TF_URL);
       if (!window.cocoSsd) await _loadScript(COCO_URL);
-      _model = await window.cocoSsd.load({ base: 'lite_mobilenet_v2' });
+      _model = await window.cocoSsd.load({ base: 'mobilenet_v2' });
       return _model;
     })().catch(err => { _modelLoading = null; throw err; });
   }
@@ -45,6 +59,7 @@ export function getDetections() { return _detections; }
 export function clearDetections() {
   _detectRun++;
   _detections = [];
+  _srcCanvas = null;
   _hideHighlight();
   _hideSweep();
   _hideStatus(true);
@@ -157,8 +172,41 @@ function _hideSweep() {
 }
 
 // ─── Success reveal ───────────────────────────────────────────────────────────
-// Flash the corner brackets of EVERY recognized player in a quick stagger —
-// the celebratory payoff that doubles as a map of what was found.
+// Mark EVERY recognized player — corner brackets + a dashed ground ring at the
+// feet — staggering in, then holding for a few seconds so the coach can see
+// exactly who was found before the markers fade.
+const REVEAL_STAGGER = 70;
+const REVEAL_HOLD = 3500;   // keep the reference on screen ~3.5s
+const REVEAL_FADE = 600;
+
+function _revealMark(g, d) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const color = d.teamColor || '#34D399';
+  const wrap = document.createElementNS(ns, 'g');
+  wrap.style.cssText = 'opacity:0;transition:opacity 0.18s ease-out;';
+  const brackets = document.createElementNS(ns, 'path');
+  brackets.setAttribute('d', _bracketPath(d));
+  brackets.setAttribute('fill', 'none');
+  brackets.setAttribute('stroke', color);
+  brackets.setAttribute('stroke-width', '2.5');
+  brackets.setAttribute('stroke-linecap', 'round');
+  brackets.setAttribute('vector-effect', 'non-scaling-stroke');
+  const rx = Math.max(14, Math.min(70, d.w * 0.62));
+  const feet = document.createElementNS(ns, 'ellipse');
+  feet.setAttribute('cx', d.cx); feet.setAttribute('cy', d.feetY);
+  feet.setAttribute('rx', rx); feet.setAttribute('ry', rx * 0.32);
+  feet.setAttribute('fill', 'none');
+  feet.setAttribute('stroke', color);
+  feet.setAttribute('stroke-width', '1.5');
+  feet.setAttribute('stroke-dasharray', '5,4');
+  feet.setAttribute('vector-effect', 'non-scaling-stroke');
+  wrap.appendChild(brackets); wrap.appendChild(feet);
+  g.appendChild(wrap);
+  wrap.getBoundingClientRect();
+  wrap.style.opacity = '1';
+  return wrap;
+}
+
 function _celebrateDetections() {
   if (!_detections.length) return;
   document.getElementById('player-detect-reveal')?.remove();
@@ -167,25 +215,14 @@ function _celebrateDetections() {
   g.setAttribute('id', 'player-detect-reveal');
   g.setAttribute('pointer-events', 'none');
   S.svg.appendChild(g);
-  const STAGGER = 90, HOLD = 950, FADE = 350;
   _detections.forEach((d, i) => {
     setTimeout(() => {
       if (!g.isConnected) return;
-      const p = document.createElementNS(ns, 'path');
-      p.setAttribute('d', _bracketPath(d));
-      p.setAttribute('fill', 'none');
-      p.setAttribute('stroke', d.teamColor || '#34D399');
-      p.setAttribute('stroke-width', '2.5');
-      p.setAttribute('stroke-linecap', 'round');
-      p.setAttribute('vector-effect', 'non-scaling-stroke');
-      p.style.cssText = 'opacity:0;transition:opacity 0.16s ease-out;';
-      g.appendChild(p);
-      p.getBoundingClientRect();
-      p.style.opacity = '1';
-      setTimeout(() => { p.style.transition = `opacity ${FADE}ms ease-in`; p.style.opacity = '0'; }, HOLD);
-    }, i * STAGGER);
+      const wrap = _revealMark(g, d);
+      setTimeout(() => { wrap.style.transition = `opacity ${REVEAL_FADE}ms ease-in`; wrap.style.opacity = '0'; }, REVEAL_HOLD);
+    }, i * REVEAL_STAGGER);
   });
-  setTimeout(() => g.remove(), _detections.length * STAGGER + HOLD + FADE + 200);
+  setTimeout(() => g.remove(), _detections.length * REVEAL_STAGGER + REVEAL_HOLD + REVEAL_FADE + 200);
 }
 
 // ─── First-time intro modal ───────────────────────────────────────────────────
@@ -250,19 +287,23 @@ function _maybeShowIntroModal() {
 // tint the hover highlight and the circles placed on that player.
 
 function _sampleJersey(ctx, d) {
-  const x0 = Math.round(d.x + d.w * 0.25);
-  const y0 = Math.round(d.y + d.h * 0.18);
-  const w = Math.max(2, Math.round(d.w * 0.5));
-  const h = Math.max(2, Math.round(d.h * 0.27));
+  // Central chest patch, anchored to the calibrated feet (feetY) rather than
+  // the raw box, so a slightly-high box doesn't push the sample into grass.
+  const bottom = (d.feetY != null ? d.feetY : d.y + d.h);
+  const bodyH = bottom - d.y;
+  const patchW = Math.max(3, Math.round(d.w * 0.46));
+  const patchH = Math.max(3, Math.round(bodyH * 0.26));
+  const x0 = Math.max(0, Math.round(d.cx - patchW / 2));
+  const y0 = Math.max(0, Math.round(d.y + bodyH * 0.22));   // upper torso, below head
   try {
-    const data = ctx.getImageData(x0, y0, w, h).data;
+    const data = ctx.getImageData(x0, y0, patchW, patchH).data;
     const rs = [], gs = [], bs = [];
-    for (let i = 0; i < data.length; i += 8) {   // every 2nd pixel is plenty
+    for (let i = 0; i < data.length; i += 4) {
       const r = data[i], g = data[i + 1], b = data[i + 2];
-      if (g > r + 10 && g > b + 10) continue;    // grass showing through
+      if (g > r + 12 && g > b + 12) continue;    // grass showing through
       rs.push(r); gs.push(g); bs.push(b);
     }
-    if (rs.length < 8) return null;
+    if (rs.length < 4) return null;
     const med = a => { a.sort((m, n) => m - n); return a[a.length >> 1]; };
     return [med(rs), med(gs), med(bs)];
   } catch (e) { return null; }
@@ -304,61 +345,236 @@ function _vivid([r, g, b]) {
   return [Math.round(R * 255), Math.round(G * 255), Math.round(B * 255)];
 }
 
-function _clusterTeams() {
+const NEUTRAL_RGB = [235, 235, 235];   // "detected, team unclear" — never green (invisible on grass)
+
+// Recompute team colours over the ENTIRE current detection set (auto + manual)
+// so the palette stays globally consistent: at most two team colours, every
+// same-team player identical. Called on the initial pass AND after every
+// manual Add-Player click, so adding players never introduces a third colour.
+function _recomputeTeams() {
   const pts = _detections.filter(d => d.jersey);
-  if (!pts.length) return;
-  // Seeds: first point + the point farthest from it
-  let far = pts[0], best = -1;
-  for (const p of pts) { const dd = _dist2(p.jersey, pts[0].jersey); if (dd > best) { best = dd; far = p; } }
-  let c1 = pts[0].jersey.slice(), c2 = far.jersey.slice();
-  for (let iter = 0; iter < 6; iter++) {
-    const g1 = [], g2 = [];
-    for (const p of pts) (_dist2(p.jersey, c1) <= _dist2(p.jersey, c2) ? g1 : g2).push(p.jersey);
-    if (!g1.length || !g2.length) break;
-    const mean = g => [0, 1, 2].map(i => Math.round(g.reduce((s, v) => s + v[i], 0) / g.length));
-    c1 = mean(g1); c2 = mean(g2);
+  const setColor = (d, rgb) => { d.teamRGB = rgb; d.teamColor = `rgb(${rgb.join(',')})`; };
+
+  if (pts.length >= 2) {
+    // 2-means over jersey colours; seed with the two farthest-apart samples
+    let far = pts[0], best = -1;
+    for (const p of pts) { const dd = _dist2(p.jersey, pts[0].jersey); if (dd > best) { best = dd; far = p; } }
+    let c1 = pts[0].jersey.slice(), c2 = far.jersey.slice();
+    for (let iter = 0; iter < 8; iter++) {
+      const g1 = [], g2 = [];
+      for (const p of pts) (_dist2(p.jersey, c1) <= _dist2(p.jersey, c2) ? g1 : g2).push(p.jersey);
+      if (!g1.length || !g2.length) break;
+      const mean = g => [0, 1, 2].map(i => Math.round(g.reduce((s, v) => s + v[i], 0) / g.length));
+      c1 = mean(g1); c2 = mean(g2);
+    }
+    const single = _dist2(c1, c2) < 1200;   // one team in frame
+    const v1 = _vivid(c1), v2 = _vivid(c2);
+    for (const d of pts) {
+      const inC1 = single || _dist2(d.jersey, c1) <= _dist2(d.jersey, c2);
+      d.team = inC1 ? 0 : 1;
+      setColor(d, inC1 ? v1 : v2);
+    }
+  } else if (pts.length === 1) {
+    pts[0].team = 0; setColor(pts[0], _vivid(pts[0].jersey));
   }
-  // Clusters closer than ~35 RGB units apart = only one team in frame
-  const single = _dist2(c1, c2) < 1200;
-  const v1 = _vivid(c1), v2 = _vivid(c2);
+
+  // Players whose jersey couldn't be sampled inherit the nearest teammate's
+  // colour (keeps the two-colour palette) — or a neutral light grey if there
+  // are no teams yet. Never the old green default.
   for (const d of _detections) {
-    if (!d.jersey) continue;
-    const inC1 = single || _dist2(d.jersey, c1) <= _dist2(d.jersey, c2);
-    d.team = inC1 ? 0 : 1;
-    d.teamRGB = inC1 ? v1 : v2;
-    d.teamColor = `rgb(${d.teamRGB.join(',')})`;
+    if (d.jersey) continue;
+    let nn = null, nd = Infinity;
+    for (const o of pts) { const dd = (o.cx - d.cx) ** 2 + (o.feetY - d.feetY) ** 2; if (dd < nd) { nd = dd; nn = o; } }
+    if (nn) { d.team = nn.team; setColor(d, nn.teamRGB); }
+    else { d.team = 0; setColor(d, NEUTRAL_RGB); }
   }
 }
 
 // ─── Feet calibration ─────────────────────────────────────────────────────────
-// COCO-SSD boxes on small broadcast players often cut off at the waist or
-// shins. Walk downward from the box bottom sampling a pixel strip under the
-// player: keep extending while the strip still contains non-grass (kit/skin/
-// sock) pixels, stop at the first clean-grass row — that is ground contact.
+// COCO-SSD boxes on small broadcast players are often a touch high (cut off at
+// the shins) or leave grass between the legs. Scan a wide strip from mid-body
+// down to below the box and take the LOWEST row that still shows the player
+// (boots/shadow) — the true ground contact. Finding the lowest contact (not
+// the first grassy row) stops the ring from sitting above the feet.
 function _refineFeet(ctx, d, natW, natH) {
-  const stripW = Math.max(6, Math.round(d.w * 0.4));
+  const stripW = Math.max(8, Math.round(d.w * 0.6));
   const x0 = Math.max(0, Math.round(d.cx - stripW / 2));
   const w = Math.min(stripW, natW - x0);
-  const maxY = Math.min(natH - 1, Math.round(d.feetY + d.h * 0.4));
-  let feet = d.feetY;
+  const yTop = Math.round(d.y + d.h * 0.55);
+  const yBot = Math.min(natH - 1, Math.round(d.feetY + d.h * 0.12));   // small margin — avoid diving into shadows
+  let lowest = Math.round(d.y + d.h * 0.75);   // never end up above ~3/4 down the body
   try {
-    for (let y = Math.round(d.feetY); y <= maxY; y += 2) {
+    for (let y = yTop; y <= yBot; y += 2) {
       const row = ctx.getImageData(x0, y, w, 1).data;
-      let grass = 0, n = 0;
+      let nonGrass = 0, n = 0;
       for (let i = 0; i < row.length; i += 4) {
         const r = row[i], g = row[i + 1], b = row[i + 2];
-        if (g > r + 10 && g > b + 10) grass++;
+        if (!(g > r + 8 && g > b + 8)) nonGrass++;   // boot / sock / shadow
         n++;
       }
-      feet = y;
-      if (grass / n >= 0.82) break;   // reached clean grass below the boots
+      if (nonGrass / n >= 0.28) lowest = y;   // player still present at this row
     }
   } catch (e) { /* tainted canvas etc. — keep the raw box bottom */ }
-  return feet;
+  return lowest;
 }
 
 // Kick off detection in the background. Called on every image load; safe to
 // call repeatedly — results for a replaced image are discarded.
+// Intersection-over-union and small-box-containment for de-duplicating the
+// same player found in overlapping tiles / the full frame.
+function _iou(a, b) {
+  const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h);
+  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  const uni = a.w * a.h + b.w * b.h - inter;
+  return uni <= 0 ? 0 : inter / uni;
+}
+function _containment(a, b) {   // overlap as a fraction of the smaller box
+  const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
+  const x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h);
+  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
+  const minA = Math.min(a.w * a.h, b.w * b.h);
+  return minA <= 0 ? 0 : inter / minA;
+}
+function _nms(boxes) {
+  boxes.sort((p, q) => q.score - p.score);   // strongest first
+  const keep = [];
+  for (const b of boxes) {
+    const dup = keep.some(k =>
+      _iou(b, k) > NMS_IOU ||
+      _containment(b, k) > NMS_CONTAIN ||
+      // faint fragment sitting on a much stronger detection (k.score ≥ b.score
+      // since keep is score-sorted) — same figure split, not a second player
+      (_containment(b, k) > 0.3 && b.score < 0.4 && k.score - b.score > 0.3));
+    if (!dup) keep.push(b);
+  }
+  return keep;
+}
+
+// Detect on the full frame plus an overlapping grid of crops, mapping every
+// box back to full-image coordinates. Recall on small players comes almost
+// entirely from the tiles; the full-frame pass covers big/near players.
+async function _detectTiled(model, img) {
+  const W = img.naturalWidth, H = img.naturalHeight;
+  const raw = [];
+  const tile = document.createElement('canvas');
+  const tctx = tile.getContext('2d');
+  const run = async (rx, ry, rw, rh) => {
+    tile.width = rw; tile.height = rh;
+    tctx.drawImage(img, rx, ry, rw, rh, 0, 0, rw, rh);
+    const preds = await model.detect(tile, MAX_BOXES, MIN_SCORE);
+    for (const p of preds) {
+      if (p.class !== 'person') continue;
+      const [x, y, w, h] = p.bbox;
+      raw.push({ x: x + rx, y: y + ry, w, h, score: p.score });
+    }
+    await new Promise(r => setTimeout(r));   // yield so the scan sweep keeps animating
+  };
+  await run(0, 0, W, H);                                   // full frame
+  let nCols = Math.max(1, Math.round(W / TILE_PX));
+  let nRows = Math.max(1, Math.round(H / TILE_PX));
+  // Keep total tiles under the cap by trimming the longer axis first
+  while (nCols * nRows > MAX_TILES) { if (nCols >= nRows) nCols--; else nRows--; }
+  if (nCols > 1 || nRows > 1) {
+    const baseW = W / nCols, baseH = H / nRows;
+    const mx = baseW * TILE_OVERLAP, my = baseH * TILE_OVERLAP;
+    for (let r = 0; r < nRows; r++) {
+      for (let c = 0; c < nCols; c++) {
+        const rx = Math.max(0, Math.round(c * baseW - mx));
+        const ry = Math.max(0, Math.round(r * baseH - my));
+        const rw = Math.min(W - rx, Math.round(baseW + 2 * mx));
+        const rh = Math.min(H - ry, Math.round(baseH + 2 * my));
+        await run(rx, ry, rw, rh);
+      }
+    }
+  }
+  // Drop specks (distant crowd) and implausibly tall boxes; drop boxes lying
+  // entirely in the stands strip at the top; then dedup.
+  const filtered = raw.filter(b =>
+    b.h >= MIN_H_FRAC * H && b.h <= MAX_H_FRAC * H &&
+    (b.y + b.h) >= CROWD_TOP_FRAC * H);
+  return { boxes: _nms(filtered), tiles: nCols * nRows };
+}
+
+// Manually recognise a player at a board-coordinate point the auto-pass
+// missed. Crops tightly around the click (so the player is large and easy to
+// detect), and if the model finds a person there, registers it with real
+// size + feet + team colour. When opts.synthetic is true and nothing is
+// found, drops a "player here" point anyway (perspective-sized, colour
+// sampled at the click) so the explicit Mark-player mode always yields one.
+// Returns the new detection, or null.
+export async function detectAt(bx, by, opts = {}) {
+  if (!_srcCanvas) return null;
+  const W = _srcCanvas.width, H = _srcCanvas.height;
+  if (bx < 0 || by < 0 || bx > W || by > H) return null;
+  let det = null;
+  try {
+    const model = await _ensureModel();
+    const cropH = Math.min(H, Math.max(140, Math.round(H * 0.24)));
+    const cropW = Math.min(W, cropH);
+    const rx = Math.max(0, Math.min(W - cropW, Math.round(bx - cropW / 2)));
+    const ry = Math.max(0, Math.min(H - cropH, Math.round(by - cropH / 2)));
+    const tile = document.createElement('canvas');
+    tile.width = cropW; tile.height = cropH;
+    tile.getContext('2d').drawImage(_srcCanvas, rx, ry, cropW, cropH, 0, 0, cropW, cropH);
+    const preds = await model.detect(tile, 20, 0.2);
+    let bestD = Infinity;
+    for (const p of preds) {
+      if (p.class !== 'person') continue;
+      const [x, y, w, h] = p.bbox;
+      const fx = rx + x, fy = ry + y;
+      const inside = bx >= fx - 4 && bx <= fx + w + 4 && by >= fy - 4 && by <= fy + h + 4;
+      if (!inside) continue;
+      const d2 = (fx + w / 2 - bx) ** 2 + (fy + h / 2 - by) ** 2;
+      if (d2 < bestD) { bestD = d2; det = { x: fx, y: fy, w, h, score: p.score }; }
+    }
+  } catch (e) { /* fall through to synthetic */ }
+
+  if (!det) {
+    if (!opts.synthetic) return null;   // smart-click: only snap to a real detection
+    // Perspective-sized box with feet at the click (players lower in frame are bigger)
+    const h = Math.round(H * (0.05 + 0.1 * (by / H)));
+    const w = Math.round(h * 0.42);
+    det = { x: bx - w / 2, y: by - h, w, h, score: 0 };
+  }
+  const ctx = _srcCanvas.getContext('2d', { willReadFrequently: true });
+  det.cx = det.x + det.w / 2;
+  det.feetY = det.score > 0 ? _refineFeet(ctx, { ...det, feetY: det.y + det.h }, W, H) : by;
+  det.jersey = _sampleJersey(ctx, det);
+  det.manual = true;
+  _detections.push(det);
+  _recomputeTeams();   // re-colour the whole set so the palette stays consistent
+  return det;
+}
+
+export function isDetectionReady() { return !!_srcCanvas; }
+
+// Brief bracket flash on one newly-added player (reuses the reveal group).
+export function flashDetection(d) {
+  if (!d) return;
+  const ns = 'http://www.w3.org/2000/svg';
+  let g = document.getElementById('player-detect-reveal');
+  if (!g) {
+    g = document.createElementNS(ns, 'g');
+    g.setAttribute('id', 'player-detect-reveal');
+    g.setAttribute('pointer-events', 'none');
+    S.svg.appendChild(g);
+  }
+  const p = document.createElementNS(ns, 'path');
+  p.setAttribute('d', _bracketPath(d));
+  p.setAttribute('fill', 'none');
+  p.setAttribute('stroke', d.teamColor || '#34D399');
+  p.setAttribute('stroke-width', '2.5');
+  p.setAttribute('stroke-linecap', 'round');
+  p.setAttribute('vector-effect', 'non-scaling-stroke');
+  p.style.cssText = 'opacity:0;transition:opacity 0.16s ease-out;';
+  g.appendChild(p);
+  p.getBoundingClientRect();
+  p.style.opacity = '1';
+  setTimeout(() => { p.style.transition = 'opacity 0.35s ease-in'; p.style.opacity = '0'; }, 900);
+  setTimeout(() => p.remove(), 1500);
+}
+
 export async function initPlayerDetection(dataUrl) {
   const run = ++_detectRun;
   _detections = [];
@@ -373,27 +589,26 @@ export async function initPlayerDetection(dataUrl) {
     const img = new Image();
     await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = dataUrl; });
     const t0 = performance.now();
-    const preds = await model.detect(img, MAX_BOXES, MIN_SCORE);
+    const { boxes, tiles } = await _detectTiled(model, img);
     if (run !== _detectRun) return;   // a newer image replaced this one
-    _detections = preds
-      .filter(p => p.class === 'person')
-      .map(p => {
-        const [x, y, w, h] = p.bbox;
-        return { x, y, w, h, cx: x + w / 2, feetY: y + h, score: p.score };
-      });
-    // Calibrate feet positions + sample jersey colours against the pixels
+    _detections = boxes.map(b => ({
+      x: b.x, y: b.y, w: b.w, h: b.h, cx: b.x + b.w / 2, feetY: b.y + b.h, score: b.score
+    }));
+    // Keep the full-res pixels around for feet/jersey sampling AND for later
+    // manual detectAt() clicks on players the auto-pass missed.
+    const cv = document.createElement('canvas');
+    cv.width = img.naturalWidth; cv.height = img.naturalHeight;
+    cv.getContext('2d', { willReadFrequently: true }).drawImage(img, 0, 0);
+    _srcCanvas = cv;
     if (_detections.length) {
-      const cv = document.createElement('canvas');
-      cv.width = img.naturalWidth; cv.height = img.naturalHeight;
       const ctx = cv.getContext('2d', { willReadFrequently: true });
-      ctx.drawImage(img, 0, 0);
       _detections.forEach(d => {
         d.feetY = _refineFeet(ctx, d, cv.width, cv.height);
         d.jersey = _sampleJersey(ctx, d);
       });
-      _clusterTeams();
+      _recomputeTeams();
     }
-    console.log(`[tactica] player detection: ${_detections.length} player(s) in ${Math.round(performance.now() - t0)}ms`);
+    console.log(`[tactica] player detection: ${_detections.length} player(s) across ${tiles + 1} passes in ${Math.round(performance.now() - t0)}ms`);
     _hideSweep();
     if (_detections.length > 0) {
       _showStatus(`${_detections.length} player${_detections.length === 1 ? '' : 's'} recognized — click them with a circle tool`, { success: true, autoHideMs: 4500 });
