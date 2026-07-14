@@ -288,24 +288,36 @@ function _maybeShowIntroModal() {
 
 function _sampleJersey(ctx, d) {
   // Central chest patch, anchored to the calibrated feet (feetY) rather than
-  // the raw box, so a slightly-high box doesn't push the sample into grass.
+  // the raw box. Filter out grass, skin (face/arms — warm tones that make
+  // white kits read red) and deep shadow, then take the DOMINANT colour via a
+  // coarse histogram. Dominant (not median) survives contamination from
+  // overlapping opponents in a packed box — a white shirt with red bleed
+  // still reads white.
   const bottom = (d.feetY != null ? d.feetY : d.y + d.h);
   const bodyH = bottom - d.y;
-  const patchW = Math.max(3, Math.round(d.w * 0.46));
-  const patchH = Math.max(3, Math.round(bodyH * 0.26));
+  const patchW = Math.max(3, Math.round(d.w * 0.42));
+  const patchH = Math.max(3, Math.round(bodyH * 0.24));
   const x0 = Math.max(0, Math.round(d.cx - patchW / 2));
   const y0 = Math.max(0, Math.round(d.y + bodyH * 0.22));   // upper torso, below head
   try {
     const data = ctx.getImageData(x0, y0, patchW, patchH).data;
-    const rs = [], gs = [], bs = [];
+    const bins = new Map();   // quantised colour → {n, r, g, b}
     for (let i = 0; i < data.length; i += 4) {
       const r = data[i], g = data[i + 1], b = data[i + 2];
-      if (g > r + 12 && g > b + 12) continue;    // grass showing through
-      rs.push(r); gs.push(g); bs.push(b);
+      if (g > r + 12 && g > b + 12) continue;                       // grass
+      if (r + g + b < 75) continue;                                 // deep shadow / near-black
+      // skin: warm, all channels present, green not crushed (a red kit has
+      // green far lower, so it is NOT caught here)
+      if (r > b + 12 && r >= g && g >= b && g > r * 0.55 && b > r * 0.30 && (r - b) < 115) continue;
+      const key = (r >> 5) * 64 + (g >> 5) * 8 + (b >> 5);          // 8 levels/channel
+      let e = bins.get(key);
+      if (!e) { e = { n: 0, r: 0, g: 0, b: 0 }; bins.set(key, e); }
+      e.n++; e.r += r; e.g += g; e.b += b;
     }
-    if (rs.length < 4) return null;
-    const med = a => { a.sort((m, n) => m - n); return a[a.length >> 1]; };
-    return [med(rs), med(gs), med(bs)];
+    let best = null;
+    for (const e of bins.values()) if (!best || e.n > best.n) best = e;
+    if (!best || best.n < 3) return null;
+    return [Math.round(best.r / best.n), Math.round(best.g / best.n), Math.round(best.b / best.n)];
   } catch (e) { return null; }
 }
 

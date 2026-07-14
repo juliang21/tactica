@@ -4,7 +4,7 @@ import { deselect, switchTab, select, makeDraggable, applyTransform } from './in
 import { trackModeSwitch, trackElementInserted } from './analytics.js';
 import { addPlayer, addBall, addCone, addReferee, addArrow, addShadow, addSpotlight, addVision, addTextBox, addHeadline, addTag } from './elements.js';
 import { activateMode } from './core/mode-registry.js';
-import { initPlayerDetection, clearDetections } from './detect.js?v=2';
+import { initPlayerDetection, clearDetections } from './detect.js?v=3';
 
 // ─── Trigger file picker ──────────────────────────────────────────────────────
 export function triggerImageUpload() {
