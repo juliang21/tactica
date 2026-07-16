@@ -1410,7 +1410,6 @@ export function updateMarkerRim(el) {
   }
   const sy = parseFloat(el.dataset.markerScaleY || '1');
   const rx = 17, ry = 5.4 * sy;
-  const { off, iry } = rimGeom(ry, 1);
   // Keep the fill ellipse in sync (legacy markers carry the old taller ry)
   const fillRing = el.querySelector('.marker-ellipse');
   if (fillRing) fillRing.setAttribute('ry', ry);
@@ -1422,11 +1421,34 @@ export function updateMarkerRim(el) {
     lbl.setAttribute('font-weight', '400');
     lbl.setAttribute('font-family', 'Poppins, sans-serif');
   }
-  const irx = rx - 1.2;   // side thickness; vertical rim comes from rimGeom (1:10)
+  const { off, iry, irx } = markerRimGeom(el, rx, ry);
   rim.setAttribute('d',
     `M ${-rx} 0 A ${rx} ${ry} 0 1 0 ${rx} 0 A ${rx} ${ry} 0 1 0 ${-rx} 0 Z ` +
     `M ${-irx} ${-off} A ${irx} ${iry} 0 1 1 ${irx} ${-off} A ${irx} ${iry} 0 1 1 ${-irx} ${-off} Z`);
 }
+
+// The rim is the band between the outer ellipse and this inner one. Two shapes:
+// the default perspective rim (inner ellipse pushed up, giving the thick bottom
+// and hairline top), and the even ring used by Connected Lines, where a flat
+// line meeting a 3D rim looked like two different drawings.
+// MUST MATCH the inline copy in export.js.
+function markerRimGeom(el, rx, ry) {
+  if (el.dataset.rimStyle !== 'even') {
+    const { off, iry } = rimGeom(ry, 1);
+    return { off, iry, irx: rx - 1.2 };
+  }
+  // Counter-scale so the ring lands at LINK_STROKE board units on every circle:
+  // the group is scaled by `scale`, so a fixed width would grow with the circle
+  // and the chain's weights would no longer match each other or the line.
+  const sc = parseFloat(el.dataset.scale || '1') || 1;
+  const w = Math.min(LINK_STROKE / sc, rx * 0.5, ry * 0.75);
+  return { off: 0, iry: ry - w, irx: rx - w };
+}
+
+// Weight of a Connected Lines annotation, in board units: the line's stroke and
+// the even ring on the circles it joins are the same size, so the chain reads as
+// one piece of line-art. Mirrored in export.js (which cannot import from here).
+export const LINK_STROKE = 2;
 
 // ─── Spotlight ────────────────────────────────────────────────────────────────
 // Perspective rim geometry — thick bottom, hairline top at 1:10, thickness
@@ -2279,9 +2301,11 @@ export function addLink(player1Id, player2Id, opts = {}) {
   const line = document.createElementNS(ns, 'line');
   line.classList.add('link-line');
   line.setAttribute('stroke', g.dataset.linkColor);
-  line.setAttribute('stroke-width', '3');
+  line.setAttribute('stroke-width', LINK_STROKE);
   if (g.dataset.linkStyle === 'dashed') line.setAttribute('stroke-dasharray', '6,4');
-  line.setAttribute('stroke-linecap', 'round');
+  // Butt, not round: a round cap overhangs the end point by half the stroke,
+  // which pokes past the rim and shows through the circle's translucent fill.
+  line.setAttribute('stroke-linecap', 'butt');
   line.setAttribute('pointer-events', 'none');
 
   // Thicker invisible hit line for click targeting
@@ -2293,7 +2317,15 @@ export function addLink(player1Id, player2Id, opts = {}) {
 
   g.appendChild(hit);
   g.appendChild(line);
-  S.objectsLayer.appendChild(g);
+  // Slide the line UNDER the circles it joins so their rims paint over its
+  // ends. Players live in a different layer, so their links just go on top as
+  // before.
+  const under = [player1Id, player2Id]
+    .map(pid => document.getElementById(pid))
+    .filter(el => el && el.parentNode === S.objectsLayer)
+    .sort((a, b) => (a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING) ? -1 : 1)[0];
+  if (under) S.objectsLayer.insertBefore(g, under);
+  else S.objectsLayer.appendChild(g);
 
   // Position the line from player positions
   updateLink(g);
@@ -2320,21 +2352,34 @@ export function addLink(player1Id, player2Id, opts = {}) {
   return g;
 }
 
-// ── Ellipse-border intersection ─────────────────────────────────────────────
-// Given a center (cx,cy), radii (rx,ry), scale, and a target point (tx,ty),
-// return the point where the ray center→target EXITS the ellipse, pushed a few
-// px further out so the link line never touches or enters the circle. The
-// naive parametric form (rx·cosθ, ry·sinθ at the geometric angle) is NOT on
-// the ray for flat ellipses — it made links visibly cut into the marker.
-function ellipseBorderPoint(cx, cy, rx, ry, scale, tx, ty) {
+// ── Where a link line stops on a circle ─────────────────────────────────────
+// The line ends on the rim's INNER edge, and is drawn beneath the circle (see
+// addLink), so the rim paints over its last stretch and the visible end lands
+// flush on the rim's outer edge at every angle. Stopping on the outer edge
+// instead leaves an antialiasing seam; overshooting it cuts across the rim's
+// hairline top, where there is no thickness to hide under.
+// Note the naive parametric form (rx·cosθ, ry·sinθ at the geometric angle) is
+// NOT on the ray for flat ellipses — it made links visibly cut into the marker.
+function ellipseBorderPoint(el, cx, cy, rx, ry, scale, tx, ty) {
   const dx = tx - cx, dy = ty - cy;
-  const srx = rx * scale, sry = ry * scale;
-  const dist = Math.sqrt(dx * dx + dy * dy);
-  if (dist === 0) return { x: cx + srx, y: cy };
-  // Exact ray–ellipse intersection: multiplier t of (dx,dy) on the border
-  const t = 1 / Math.sqrt((dx / srx) ** 2 + (dy / sry) ** 2);
-  const GAP = 3; // px of clear air between rim and line end
-  const m = t + GAP / dist;
+  if (dx === 0 && dy === 0) return { x: cx + rx * scale, y: cy };
+  // Multiplier of (dx,dy) where the ray leaves an ellipse centred (0,oy), radii (a,b)
+  const exit = (a, b, oy) => {
+    const qa = (dx / a) ** 2 + (dy / b) ** 2;
+    const qb = -2 * dy * oy / (b * b);
+    const qc = (oy / b) ** 2 - 1;
+    const disc = qb * qb - 4 * qa * qc;
+    if (disc < 0) return null;                  // ray misses this ellipse
+    return (-qb + Math.sqrt(disc)) / (2 * qa);
+  };
+  const mOut = exit(rx * scale, ry * scale, 0);
+  // Same inner ellipse the rim is built from, so the line stops under whichever
+  // rim this circle actually wears.
+  const { off, iry, irx } = markerRimGeom(el, rx, ry);
+  const mIn = exit(irx * scale, iry * scale, -off * scale);
+  // On a very flat circle the rim spans the whole radius and the ray can miss
+  // the inner ellipse entirely; stop on the outer edge rather than overshoot.
+  const m = (mIn !== null && mIn > 0 && mIn < mOut) ? mIn : mOut;
   return { x: cx + dx * m, y: cy + dy * m };
 }
 
@@ -2366,13 +2411,13 @@ export function updateLink(linkEl) {
   if (p1?.dataset.type === 'marker') {
     const s = parseFloat(p1.dataset.scale || '1');
     const sy1 = parseFloat(p1.dataset.markerScaleY || '1');
-    const bp = ellipseBorderPoint(cx1, cy1, 17, 5.4 * sy1, s, cx2, cy2);
+    const bp = ellipseBorderPoint(p1, cx1, cy1, 17, 5.4 * sy1, s, cx2, cy2);
     x1 = bp.x; y1 = bp.y;
   }
   if (p2?.dataset.type === 'marker') {
     const s = parseFloat(p2.dataset.scale || '1');
     const sy2 = parseFloat(p2.dataset.markerScaleY || '1');
-    const bp = ellipseBorderPoint(cx2, cy2, 17, 5.4 * sy2, s, cx1, cy1);
+    const bp = ellipseBorderPoint(p2, cx2, cy2, 17, 5.4 * sy2, s, cx1, cy1);
     x2 = bp.x; y2 = bp.y;
   }
 
@@ -2392,8 +2437,8 @@ export function updateLink(linkEl) {
   // Apply style
   const color = linkEl.dataset.linkColor || 'rgba(255,255,255,0.4)';
   line.setAttribute('stroke', color);
-  line.setAttribute('stroke-width', '3');
-  line.setAttribute('stroke-linecap', 'round');
+  line.setAttribute('stroke-width', LINK_STROKE);
+  line.setAttribute('stroke-linecap', 'butt');
   if (linkEl.dataset.linkStyle === 'solid') {
     line.removeAttribute('stroke-dasharray');
   } else {

@@ -19,7 +19,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyImageCrop, applyImageOpacity,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=13';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=16';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=10';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=4';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -914,7 +914,35 @@ window._syncWatermarkUI = function() {
     const toggle = document.getElementById(id);
     if (toggle) toggle.checked = S.watermarkVisible;
   });
+  window._syncWatermarkPos();
 };
+
+// Pin the watermark to the IMAGE's bottom-right, not the container's. They are
+// usually the same box, but not when the container is wider/taller than the
+// board — e.g. with the Side Pitch on, or a letterboxed image — which would
+// leave the watermark floating on the backdrop instead of on the image.
+window._syncWatermarkPos = function() {
+  const wm = document.querySelector('.shared-watermark');
+  const svg = document.getElementById('pitch-svg');
+  const pc = document.getElementById('pitch-container');
+  if (!wm || !svg || !pc) return;
+  const s = svg.getBoundingClientRect(), c = pc.getBoundingClientRect();
+  if (!s.width || !c.width) return;            // layout not settled yet
+  wm.style.bottom = Math.round(c.bottom - s.bottom + 12) + 'px';
+  wm.style.right = Math.round(c.right - s.right + 14) + 'px';
+};
+// Re-pin on any layout change — image swap, zoom, Side Pitch, window resize.
+// Cheaper and far more reliable than trying to name every trigger.
+(() => {
+  const svg = document.getElementById('pitch-svg');
+  const pc = document.getElementById('pitch-container');
+  if (!svg || !pc || typeof ResizeObserver === 'undefined') {
+    window.addEventListener('resize', () => window._syncWatermarkPos());
+    return;
+  }
+  const ro = new ResizeObserver(() => window._syncWatermarkPos());
+  ro.observe(svg); ro.observe(pc);
+})();
 window._syncWatermarkUI();
 
 // ─── Unsaved-work indicator ──────────────────────────────────────────────────
@@ -2191,6 +2219,18 @@ function _applyTeamColorToMarker(m, snap) {
   const bg = `rgba(${snap.rgb.join(',')},0.18)`;
   m.dataset.bgColor = bg;
   m.querySelector('.marker-ellipse')?.setAttribute('fill', bg);
+  _recolorMarkerLinks(m);
+}
+
+// Connected Lines take the colour of the circle they leave from. The team
+// colour can land ~300ms after the circle is placed (detectAt is async), so
+// the link has to be repainted whenever its start circle is recoloured.
+function _recolorMarkerLinks(m) {
+  document.querySelectorAll('#objects-layer [data-type="link"]').forEach(link => {
+    if (link.dataset.player1 !== m.id) return;
+    link.dataset.linkColor = m.dataset.borderColor;
+    updateLink(link);
+  });
 }
 
 // Smart circle tools: a marker was just placed manually at (pt) because no
@@ -2490,6 +2530,9 @@ S.svg.addEventListener('click', e => {
     // 'mark-player' = Player Marker: a single circle, no line.
     const snap = _snapToDetectedPlayer(pt);
     placed = addMarker(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
+    // Chained circles wear an even ring matching the line's weight; a standalone
+    // Marker keeps the 3D perspective rim.
+    if (S.tool === 'marker') placed.dataset.rimStyle = 'even';
     if (snap) {
       placed.dataset.scale = snap.scale.toFixed(2);
       _applyTeamColorToMarker(placed, snap);
@@ -2499,7 +2542,10 @@ S.svg.addEventListener('click', e => {
     }
     if (S.tool === 'marker') {
       if (placed && _lastChainMarker) {
-        const link = addLink(_lastChainMarker.id, placed.id);
+        const link = addLink(_lastChainMarker.id, placed.id, {
+          color: _lastChainMarker.dataset.borderColor,
+          style: 'solid',
+        });
         if (link) {
           trackElementInserted('connect');
           const u2 = getCurrentUser();
@@ -4030,6 +4076,7 @@ function _copyElementData(el) {
     data.markerName = el.dataset.markerName || '';
     data.markerOpacity = el.dataset.markerOpacity || '1';
     data.markerHighlight = el.dataset.markerHighlight || '0';
+    if (el.dataset.rimStyle) data.rimStyle = el.dataset.rimStyle;
     data.borderColor = el.dataset.borderColor || 'rgba(255,255,255,0.85)';
     data.bgColor = el.dataset.bgColor || 'rgba(255,255,255,0.10)';
     data.lineColor = el.dataset.lineColor || 'rgba(255,255,255,0.5)';
@@ -4297,6 +4344,7 @@ function _pasteOne(d, x, y) {
       if (d.markerName) { placed.dataset.markerName = d.markerName; const lbl = placed.querySelector('.marker-label'); if (lbl) lbl.textContent = d.markerName; }
       if (d.markerOpacity) placed.dataset.markerOpacity = d.markerOpacity;
       if (d.markerHighlight === '1') placed.dataset.markerHighlight = '1';
+      if (d.rimStyle) placed.dataset.rimStyle = d.rimStyle;
       if (d.borderColor) placed.dataset.borderColor = d.borderColor;
       if (d.bgColor) placed.dataset.bgColor = d.bgColor;
       if (d.lineColor) placed.dataset.lineColor = d.lineColor;
