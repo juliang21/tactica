@@ -856,25 +856,18 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.fillStyle = bgColor;
     ctx.fill();
 
-    // Rim: evenodd fill between the outer ellipse and an inner one. Geometry
-    // MUST MATCH markerRimGeom in elements.js — the default perspective rim
-    // (1:10 top:bottom, shrunk when the ellipse is too flat), or the even ring
-    // worn by Connected Lines circles.
+    // Perspective rim: evenodd fill between outer and offset inner ellipse —
+    // thick at the bottom, thin at the top. Geometry MUST MATCH markerRimGeom
+    // in elements.js (1:10 ratio, shrunk when the ellipse is too flat).
     {
       const ryL = 5.4 * sy;
-      let off, iry, irx;
-      if (g.dataset.rimStyle === 'even') {
-        const w = Math.min(2 / sc, 17 * 0.5, ryL * 0.75);   // 2 = LINK_STROKE
-        off = 0; iry = ryL - w; irx = 17 - w;
-      } else {
-        let T = 0.3, B = 3.0;
-        const maxHalf = ryL * 0.75;
-        if ((T + B) / 2 > maxHalf) { const k = maxHalf / ((T + B) / 2); T *= k; B *= k; }
-        off = (B - T) / 2; iry = ryL - (T + B) / 2; irx = 15.8;
-      }
+      let T = 0.3, B = 3.0;
+      const maxHalf = ryL * 0.75;
+      if ((T + B) / 2 > maxHalf) { const k = maxHalf / ((T + B) / 2); T *= k; B *= k; }
+      const off = (B - T) / 2, iry = ryL - (T + B) / 2;
       ctx.beginPath();
       ctx.ellipse(cx, cy, 17 * sc, ryL * sc, 0, 0, Math.PI * 2);
-      ctx.ellipse(cx, cy - off * sc, irx * sc, iry * sc, 0, 0, Math.PI * 2);
+      ctx.ellipse(cx, cy - off * sc, 15.8 * sc, iry * sc, 0, 0, Math.PI * 2);
       ctx.fillStyle = borderColor;
       ctx.fill('evenodd');
     }

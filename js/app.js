@@ -19,7 +19,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyImageCrop, applyImageOpacity,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=16';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=18';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=10';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=4';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -2530,9 +2530,6 @@ S.svg.addEventListener('click', e => {
     // 'mark-player' = Player Marker: a single circle, no line.
     const snap = _snapToDetectedPlayer(pt);
     placed = addMarker(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
-    // Chained circles wear an even ring matching the line's weight; a standalone
-    // Marker keeps the 3D perspective rim.
-    if (S.tool === 'marker') placed.dataset.rimStyle = 'even';
     if (snap) {
       placed.dataset.scale = snap.scale.toFixed(2);
       _applyTeamColorToMarker(placed, snap);
@@ -4076,7 +4073,6 @@ function _copyElementData(el) {
     data.markerName = el.dataset.markerName || '';
     data.markerOpacity = el.dataset.markerOpacity || '1';
     data.markerHighlight = el.dataset.markerHighlight || '0';
-    if (el.dataset.rimStyle) data.rimStyle = el.dataset.rimStyle;
     data.borderColor = el.dataset.borderColor || 'rgba(255,255,255,0.85)';
     data.bgColor = el.dataset.bgColor || 'rgba(255,255,255,0.10)';
     data.lineColor = el.dataset.lineColor || 'rgba(255,255,255,0.5)';
@@ -4344,7 +4340,6 @@ function _pasteOne(d, x, y) {
       if (d.markerName) { placed.dataset.markerName = d.markerName; const lbl = placed.querySelector('.marker-label'); if (lbl) lbl.textContent = d.markerName; }
       if (d.markerOpacity) placed.dataset.markerOpacity = d.markerOpacity;
       if (d.markerHighlight === '1') placed.dataset.markerHighlight = '1';
-      if (d.rimStyle) placed.dataset.rimStyle = d.rimStyle;
       if (d.borderColor) placed.dataset.borderColor = d.borderColor;
       if (d.bgColor) placed.dataset.bgColor = d.bgColor;
       if (d.lineColor) placed.dataset.lineColor = d.lineColor;

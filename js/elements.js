@@ -1421,33 +1421,23 @@ export function updateMarkerRim(el) {
     lbl.setAttribute('font-weight', '400');
     lbl.setAttribute('font-family', 'Poppins, sans-serif');
   }
-  const { off, iry, irx } = markerRimGeom(el, rx, ry);
+  const { off, iry, irx } = markerRimGeom(rx, ry);
   rim.setAttribute('d',
     `M ${-rx} 0 A ${rx} ${ry} 0 1 0 ${rx} 0 A ${rx} ${ry} 0 1 0 ${-rx} 0 Z ` +
     `M ${-irx} ${-off} A ${irx} ${iry} 0 1 1 ${irx} ${-off} A ${irx} ${iry} 0 1 1 ${-irx} ${-off} Z`);
 }
 
-// The rim is the band between the outer ellipse and this inner one. Two shapes:
-// the default perspective rim (inner ellipse pushed up, giving the thick bottom
-// and hairline top), and the even ring used by Connected Lines, where a flat
-// line meeting a 3D rim looked like two different drawings.
+// The rim is the band between the outer ellipse and this inner one, pushed up
+// so the rim is thick at the bottom and a hairline on top. Every circle wears
+// it — Marker, Connected Lines, Unit and Highlight alike.
 // MUST MATCH the inline copy in export.js.
-function markerRimGeom(el, rx, ry) {
-  if (el.dataset.rimStyle !== 'even') {
-    const { off, iry } = rimGeom(ry, 1);
-    return { off, iry, irx: rx - 1.2 };
-  }
-  // Counter-scale so the ring lands at LINK_STROKE board units on every circle:
-  // the group is scaled by `scale`, so a fixed width would grow with the circle
-  // and the chain's weights would no longer match each other or the line.
-  const sc = parseFloat(el.dataset.scale || '1') || 1;
-  const w = Math.min(LINK_STROKE / sc, rx * 0.5, ry * 0.75);
-  return { off: 0, iry: ry - w, irx: rx - w };
+function markerRimGeom(rx, ry) {
+  const { off, iry } = rimGeom(ry, 1);
+  return { off, iry, irx: rx - 1.2 };
 }
 
-// Weight of a Connected Lines annotation, in board units: the line's stroke and
-// the even ring on the circles it joins are the same size, so the chain reads as
-// one piece of line-art. Mirrored in export.js (which cannot import from here).
+// Stroke weight of a Connected Lines line, in board units.
+// Mirrored in export.js (which cannot import from here).
 export const LINK_STROKE = 2;
 
 // ─── Spotlight ────────────────────────────────────────────────────────────────
@@ -2360,7 +2350,7 @@ export function addLink(player1Id, player2Id, opts = {}) {
 // hairline top, where there is no thickness to hide under.
 // Note the naive parametric form (rx·cosθ, ry·sinθ at the geometric angle) is
 // NOT on the ray for flat ellipses — it made links visibly cut into the marker.
-function ellipseBorderPoint(el, cx, cy, rx, ry, scale, tx, ty) {
+function ellipseBorderPoint(cx, cy, rx, ry, scale, tx, ty) {
   const dx = tx - cx, dy = ty - cy;
   if (dx === 0 && dy === 0) return { x: cx + rx * scale, y: cy };
   // Multiplier of (dx,dy) where the ray leaves an ellipse centred (0,oy), radii (a,b)
@@ -2373,12 +2363,17 @@ function ellipseBorderPoint(el, cx, cy, rx, ry, scale, tx, ty) {
     return (-qb + Math.sqrt(disc)) / (2 * qa);
   };
   const mOut = exit(rx * scale, ry * scale, 0);
-  // Same inner ellipse the rim is built from, so the line stops under whichever
-  // rim this circle actually wears.
-  const { off, iry, irx } = markerRimGeom(el, rx, ry);
-  const mIn = exit(irx * scale, iry * scale, -off * scale);
-  // On a very flat circle the rim spans the whole radius and the ray can miss
-  // the inner ellipse entirely; stop on the outer edge rather than overshoot.
+  // Same inner ellipse the rim is built from, so the line stops under the rim.
+  const { off, iry, irx } = markerRimGeom(rx, ry);
+  // Clear the rim's inner edge by the line's HALF-WIDTH, not just its centre.
+  // The end is a flat cut LINK_STROKE wide; on a flat ellipse its corners cross
+  // the inner edge well before the centre does, and the overhang shows through
+  // the circle's translucent fill as a notch at the join. Inflating the inner
+  // ellipse keeps the whole cut buried in the rim band.
+  const pad = LINK_STROKE / 2;
+  const mIn = exit(irx * scale + pad, iry * scale + pad, -off * scale);
+  // If that lands outside the circle there is no band to hide in (the rim's
+  // hairline top is thinner than the line): stop on the outer edge instead.
   const m = (mIn !== null && mIn > 0 && mIn < mOut) ? mIn : mOut;
   return { x: cx + dx * m, y: cy + dy * m };
 }
@@ -2411,13 +2406,13 @@ export function updateLink(linkEl) {
   if (p1?.dataset.type === 'marker') {
     const s = parseFloat(p1.dataset.scale || '1');
     const sy1 = parseFloat(p1.dataset.markerScaleY || '1');
-    const bp = ellipseBorderPoint(p1, cx1, cy1, 17, 5.4 * sy1, s, cx2, cy2);
+    const bp = ellipseBorderPoint(cx1, cy1, 17, 5.4 * sy1, s, cx2, cy2);
     x1 = bp.x; y1 = bp.y;
   }
   if (p2?.dataset.type === 'marker') {
     const s = parseFloat(p2.dataset.scale || '1');
     const sy2 = parseFloat(p2.dataset.markerScaleY || '1');
-    const bp = ellipseBorderPoint(p2, cx2, cy2, 17, 5.4 * sy2, s, cx1, cy1);
+    const bp = ellipseBorderPoint(cx2, cy2, 17, 5.4 * sy2, s, cx1, cy1);
     x2 = bp.x; y2 = bp.y;
   }
 
