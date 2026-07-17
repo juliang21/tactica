@@ -12,6 +12,9 @@ function applyZoom() {
   container.style.transform = `scale(${_zoomLevel})`;
   container.style.transformOrigin = 'center center';
   document.getElementById('zoom-level').textContent = Math.round(_zoomLevel * 100) + '%';
+  // Zoom is a CSS transform, which ResizeObserver doesn't fire on — re-pin the
+  // watermark so it tracks the scaled image corner.
+  if (typeof window._syncWatermarkPos === 'function') window._syncWatermarkPos();
 }
 
 export function zoomIn() {

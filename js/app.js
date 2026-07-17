@@ -31,7 +31,7 @@ import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnal
 import { hideUpgradePrompt, setUserTier, updateLockedUI, initSubscriptionListener, stopSubscriptionListener, startCheckout, openManageSubscription, isPro } from './subscription.js';
 import './features/feedback.js';
 import './features/bundles.js';
-import './features/zoom.js';
+import './features/zoom.js?v=2';
 import './features/notes.js';
 import { updateAuthUI, openAuthModal, closeAuthModal } from './features/auth-ui.js';
 import { registerMode, activateMode, getActiveModeId, switchTabForMode } from './core/mode-registry.js';
@@ -917,19 +917,25 @@ window._syncWatermarkUI = function() {
   window._syncWatermarkPos();
 };
 
-// Pin the watermark to the IMAGE's bottom-right, not the container's. They are
-// usually the same box, but not when the container is wider/taller than the
-// board — e.g. with the Side Pitch on, or a letterboxed image — which would
-// leave the watermark floating on the backdrop instead of on the image.
+// Pin the watermark to the bottom-right of the PICTURE, which is not the SVG's
+// bottom-right and not the container's. The layout stretches the SVG to its own
+// aspect, so preserveAspectRatio letterboxes the photo inside it — anchoring to
+// the SVG (or the container, which hugs it) drops the watermark into that dead
+// bar, off the image and onto the backdrop.
 window._syncWatermarkPos = function() {
   const wm = document.querySelector('.shared-watermark');
-  const svg = document.getElementById('pitch-svg');
   const pc = document.getElementById('pitch-container');
-  if (!wm || !svg || !pc) return;
-  const s = svg.getBoundingClientRect(), c = pc.getBoundingClientRect();
-  if (!s.width || !c.width) return;            // layout not settled yet
-  wm.style.bottom = Math.round(c.bottom - s.bottom + 12) + 'px';
-  wm.style.right = Math.round(c.right - s.right + 14) + 'px';
+  // #image-bg is the photo itself; its box already accounts for the
+  // letterboxing. On the Tactical Board the pitch fills the SVG, so use that.
+  const box = document.getElementById('image-bg') || document.getElementById('pitch-svg');
+  if (!wm || !box || !pc) return;
+  const b = box.getBoundingClientRect(), c = pc.getBoundingClientRect();
+  if (!b.width || !c.width || !pc.offsetWidth) return;   // layout not settled yet
+  // Zoom scales the container via a CSS transform, so these rects are in
+  // scaled pixels while the offsets we set are not. Divide it back out.
+  const zoom = c.width / pc.offsetWidth;
+  wm.style.bottom = Math.round((c.bottom - b.bottom) / zoom + 12) + 'px';
+  wm.style.right = Math.round((c.right - b.right) / zoom + 14) + 'px';
 };
 // Re-pin on any layout change — image swap, zoom, Side Pitch, window resize.
 // Cheaper and far more reliable than trying to name every trigger.
