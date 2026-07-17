@@ -324,8 +324,6 @@ function _sampleJersey(ctx, d) {
   } catch (e) { return null; }
 }
 
-const _dist2 = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
-
 // Punch the sampled kit colour up to a readable annotation colour (kits read
 // dark/muted on broadcast footage — shadows, compression).
 function _vivid([r, g, b]) {
@@ -368,72 +366,99 @@ const NEUTRAL_RGB = [235, 235, 235];   // "detected, team unclear" — never gre
 // manual Add-Player click, so adding players never introduces a third colour.
 const mean3 = g => [0, 1, 2].map(i => Math.round(g.reduce((s, v) => s + v[i], 0) / g.length));
 
+// Team clustering runs in an opponent-colour space with lightness heavily
+// DOWN-weighted (_TEAM_L). The same kit under sun vs shadow has very different
+// brightness but near-identical hue, so plain RGB k-means split it by
+// brightness — mixing shadowed sky-blue in with the dark reds and tinting those
+// City players a muddy mauve. Down-weighting lightness clusters a kit together
+// regardless of the light on it; the small lightness term that remains still
+// separates two neutral kits (e.g. white vs black).
+const _TEAM_L = 0.45;
+const _teamVec = ([r, g, b]) => [r - g, g - b, (r + g + b) * _TEAM_L / 3];
+const _distV = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+// A real referee/keeper kit is genuinely dark (black) or vivid (fluorescent),
+// never a muddy mid-tone — so a muddy outlier is a contaminated sample, not an
+// official, and stays a team player.
+const _cleanKit = ([r, g, b]) => {
+  const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 510;
+  const s = mx === mn ? 0 : (l < 0.5 ? (mx - mn) / (mx + mn) : (mx - mn) / (510 - mx - mn));
+  return l < 0.28 || s > 0.68;
+};
+
+// A cluster's display colour, robust to two kinds of contamination: washed-out
+// samples (sun-bleach/shadow) and grass-bleed. A COLOURED kit reveals itself as
+// a coherent group of ≥2 chromatic samples that agree on hue — trust those and
+// ignore the washed rest. A NEUTRAL kit (white/grey) has no such group, only
+// the odd lone high-chroma contaminant (e.g. a grass-muddied white), which is
+// ignored, so the kit stays neutral instead of being hijacked to that colour.
+const _chroma = ([r, g, b]) => Math.max(r, g, b) - Math.min(r, g, b);
+const _kitColor = members => {
+  const nonGrass = members.filter(d => { const [r, g, b] = d.jersey; return !(g > r + 6 && g > b + 6); });
+  const pool = nonGrass.length ? nonGrass : members;
+  const chromatic = pool.filter(d => _chroma(d.jersey) > 40);
+  if (chromatic.length >= 2) {
+    const m = mean3(chromatic.map(d => d.jersey));
+    if (_chroma(m) > 30) return m;   // they agree on a hue → that is the kit colour
+  }
+  return mean3(pool.map(d => d.jersey));   // neutral kit
+};
+
 function _recomputeTeams() {
   const pts = _detections.filter(d => d.jersey);
   const setColor = (d, rgb) => { d.teamRGB = rgb; d.teamColor = `rgb(${rgb.join(',')})`; };
   const assign = (d, role, team, rgb) => { d.role = role; d.team = team; setColor(d, rgb); };
 
   if (pts.length >= 3) {
-    // 2-means over jersey colours; seed with the two farthest-apart samples
-    let far = pts[0], best = -1;
-    for (const p of pts) { const dd = _dist2(p.jersey, pts[0].jersey); if (dd > best) { best = dd; far = p; } }
-    let c1 = pts[0].jersey.slice(), c2 = far.jersey.slice();
+    const V = pts.map(d => _teamVec(d.jersey));   // parallel to pts
+    // 2-means in team-space; seed with the two farthest-apart samples
+    let far = 0, best = -1;
+    for (let i = 0; i < V.length; i++) { const dd = _distV(V[i], V[0]); if (dd > best) { best = dd; far = i; } }
+    let c1 = V[0].slice(), c2 = V[far].slice();
     for (let iter = 0; iter < 8; iter++) {
       const g1 = [], g2 = [];
-      for (const p of pts) (_dist2(p.jersey, c1) <= _dist2(p.jersey, c2) ? g1 : g2).push(p.jersey);
+      for (let i = 0; i < V.length; i++) (_distV(V[i], c1) <= _distV(V[i], c2) ? g1 : g2).push(V[i]);
       if (!g1.length || !g2.length) break;
       c1 = mean3(g1); c2 = mean3(g2);
     }
 
-    if (_dist2(c1, c2) < 1200) {                 // only one team colour in frame
-      const v = _vivid(c1);
+    if (_distV(c1, c2) < 700) {                  // only one team colour in frame
+const v = _vivid(_kitColor(pts));
       pts.forEach(d => assign(d, 'team', 0, v));
     } else {
       // Referees and goalkeepers wear kits distinct from BOTH teams, so they sit
-      // far from either centroid — well beyond normal within-team variation.
-      // Flag those as "officials" instead of forcing them into the nearest team
-      // (which is why a referee used to read as, say, a red player).
-      const nearest = d => Math.min(_dist2(d.jersey, c1), _dist2(d.jersey, c2));
-      const sd = pts.map(d => Math.sqrt(nearest(d))).sort((a, b) => a - b);
+      // far from either centroid. Flag those as officials (own colour) instead
+      // of forcing them into the nearest team.
+      const nearest = i => Math.min(_distV(V[i], c1), _distV(V[i], c2));
+      const sd = pts.map((_, i) => Math.sqrt(nearest(i))).sort((a, b) => a - b);
       const bulk = sd.slice(0, Math.max(1, Math.round(sd.length * 0.7)));  // the tight majority
       const spread = bulk.reduce((s, v) => s + v, 0) / bulk.length;
-      const thr = Math.max(70, spread * 2.2);
-      // A real referee/keeper kit is either genuinely dark (black) or genuinely
-      // vivid (fluorescent) — never a muddy mid-tone. A muddy outlier is a
-      // contaminated jersey sample (shadow/overlap in a packed box), not an
-      // official, so it stays a team player rather than getting mis-promoted.
-      const cleanKit = ([r, g, b]) => {
-        const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 510;
-        const s = mx === mn ? 0 : (l < 0.5 ? (mx - mn) / (mx + mn) : (mx - mn) / (510 - mx - mn));
-        return l < 0.28 || s > 0.68;
-      };
-      let officials = pts.filter(d => Math.sqrt(nearest(d)) > thr && cleanKit(d.jersey));
+      const thr = Math.max(45, spread * 2.2);
+      let officials = pts.filter((d, i) => Math.sqrt(nearest(i)) > thr && _cleanKit(d.jersey));
       // Guard: if a quarter-plus of the field reads as "outliers", the two-team
       // assumption is shaky (3+ kits, or bad sampling) — don't invent a crowd of
       // officials; fall back to colouring everyone by their nearest team.
       if (officials.length > pts.length * 0.25) officials = [];
       const isOfficial = new Set(officials);
 
-      // Re-derive the team centroids from NON-officials only, so a bright
-      // referee kit never defines (or tints) a team's colour.
+      // Re-derive centroids (team-space) and display colours (raw mean of the
+      // members) from NON-officials only, so a bright referee kit never defines
+      // or tints a team's colour.
       const inl = pts.filter(d => !isOfficial.has(d));
-      const g1 = inl.filter(d => _dist2(d.jersey, c1) <= _dist2(d.jersey, c2)).map(d => d.jersey);
-      const g2 = inl.filter(d => _dist2(d.jersey, c1) >  _dist2(d.jersey, c2)).map(d => d.jersey);
-      if (g1.length) c1 = mean3(g1);
-      if (g2.length) c2 = mean3(g2);
-      const v1 = _vivid(c1), v2 = _vivid(c2);
+      const gA = [], gB = [];
+      inl.forEach(d => (_distV(_teamVec(d.jersey), c1) <= _distV(_teamVec(d.jersey), c2) ? gA : gB).push(d));
+      if (gA.length) c1 = mean3(gA.map(d => _teamVec(d.jersey)));
+      if (gB.length) c2 = mean3(gB.map(d => _teamVec(d.jersey)));
+      const v1 = _vivid(_kitColor(gA.length ? gA : inl));
+      const v2 = _vivid(_kitColor(gB.length ? gB : inl));
 
-      pts.forEach(d => {
-        if (isOfficial.has(d)) {
-          assign(d, 'official', -1, _vivid(d.jersey));   // keeps its own distinct colour
-        } else {
-          const a = _dist2(d.jersey, c1) <= _dist2(d.jersey, c2);
-          assign(d, 'team', a ? 0 : 1, a ? v1 : v2);
-        }
+      pts.forEach((d, i) => {
+        if (isOfficial.has(d)) { assign(d, 'official', -1, _vivid(d.jersey)); return; }
+        const inA = _distV(V[i], c1) <= _distV(V[i], c2);
+        assign(d, 'team', inA ? 0 : 1, inA ? v1 : v2);
       });
     }
   } else if (pts.length === 2) {
-    const distinct = _dist2(pts[0].jersey, pts[1].jersey) >= 1200;
+    const distinct = _distV(_teamVec(pts[0].jersey), _teamVec(pts[1].jersey)) >= 700;
     assign(pts[0], 'team', 0, _vivid(pts[0].jersey));
     assign(pts[1], 'team', distinct ? 1 : 0, _vivid(distinct ? pts[1].jersey : pts[0].jersey));
   } else if (pts.length === 1) {

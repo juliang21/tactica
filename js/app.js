@@ -20,8 +20,8 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=18';
-import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=11';
-import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=9';
+import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=12';
+import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=10';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
@@ -285,8 +285,11 @@ window.setTool = function(t) {
   }
   _baseSetTool(t);
 
-  // Pointing tools in Image Analysis get a crosshair, not the default pointer.
-  S.svg.style.cursor = (t === 'detect-player' || t === 'mark-player') ? 'crosshair' : '';
+  // Placement tools get a crosshair — never the grab/hand, which means "drag",
+  // not "insert here". These tools have no CSS cursor rule of their own, so in
+  // Image Analysis they'd otherwise inherit the pan-hand from #pitch-wrap.
+  const _CROSSHAIR_TOOLS = new Set(['detect-player', 'mark-player', 'headline', 'tag', 'vision', 'link', 'pair']);
+  S.svg.style.cursor = _CROSSHAIR_TOOLS.has(t) ? 'crosshair' : '';
 
   // "Done" banner for the continuous Image-Analysis tools.
   const doneLabel = (S.appMode === 'image') ? _DONE_TOOL_LABELS[t] : null;
@@ -2512,7 +2515,13 @@ S.svg.addEventListener('click', e => {
   }
   else if (S.tool === 'vision') placed = addVision(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
-  else if (S.tool === 'headline') placed = addHeadline(pt.x, pt.y);
+  else if (S.tool === 'headline') {
+    placed = addHeadline(pt.x, pt.y);
+    // Over a photo, transparent headline text is hard to read, so default to a
+    // background in Image Analysis (the Tactical Board's solid pitch doesn't
+    // need it). Uses the standard dark background opacity.
+    if (placed && S.appMode === 'image') { placed.dataset.hlBg = 'rgba(0,0,0,0.5)'; rewrapHeadline(placed); }
+  }
   else if (S.tool === 'tag') {
     // Callout anchors to the detected player's feet so the pointer line
     // and label stay attached to the right spot on the pitch
