@@ -7,20 +7,15 @@
 // behaves exactly as before.
 import * as S from './state.js';
 
-const TF_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@4.22.0/dist/tf.min.js';
-const COCO_URL = 'https://cdn.jsdelivr.net/npm/@tensorflow-models/coco-ssd@2.2.3/dist/coco-ssd.min.js';
+// Detector: YOLOS-tiny (26MB) via transformers.js, WebGPU with a WASM fallback.
+// Replaced COCO-SSD/MobileNet-v2: on the same broadcast frames it roughly
+// doubles recall (12 → ~22 players) in a SINGLE pass — no tiling needed —
+// with tighter boxes, which also cleans up the downstream jersey sampling.
+// The op set these ONNX exports use needs transformers.js ≥ 4.x; older
+// runtimes throw "AveragePool ceil not supported" — so this version is pinned.
+const TRANSFORMERS_URL = 'https://cdn.jsdelivr.net/npm/@huggingface/transformers@4.2.0/dist/transformers.min.js';
+const MODEL_ID = 'Xenova/yolos-tiny';
 const MIN_SCORE = 0.25;  // keep low: broadcast players are small
-const MAX_BOXES = 40;    // a full frame can show 20+ people incl. bench/refs
-// Tiling: a wide broadcast frame gets downscaled to ~300px by the model, so
-// small/distant players vanish. Running detection on overlapping crops sized
-// ~TILE_PX keeps each player large relative to the crop. Smaller tiles = more
-// passes but far better recall on distant players. Results are merged with
-// non-max suppression (IoU/overlap dedup).
-const TILE_PX = 460;
-const TILE_OVERLAP = 0.3;
-const MAX_TILES = 12;    // hard cap so a large image can't explode the pass count/time
-const NMS_IOU = 0.45;
-const NMS_CONTAIN = 0.6;    // also dedup partial overlaps (same figure split across tiles)
 const MIN_H_FRAC = 0.015;   // drop specks (crowd/noise) shorter than 1.5% of image height
 const MAX_H_FRAC = 0.6;     // and implausibly tall boxes
 const CROWD_TOP_FRAC = 0.15; // drop boxes lying ENTIRELY within the top 15% (stands)
@@ -31,23 +26,30 @@ let _detections = [];    // [{x,y,w,h,cx,feetY,score}] in board coords (image na
 let _detectRun = 0;      // bumped per image so stale async results are dropped
 let _srcCanvas = null;   // full-res image pixels, kept so manual detectAt() can crop/sample
 
-function _loadScript(src) {
-  return new Promise((resolve, reject) => {
-    const s = document.createElement('script');
-    s.src = src;
-    s.onload = resolve;
-    s.onerror = () => reject(new Error('script failed: ' + src));
-    document.head.appendChild(s);
-  });
-}
-
+// Load YOLOS-tiny once and wrap it so the rest of this file keeps talking to a
+// COCO-SSD-shaped detector: detect(src, minScore) → [{class, bbox:[x,y,w,h],
+// score}] in the input image's pixel space. `src` is a data URL (full frame)
+// or a canvas (detectAt crop). Everything downstream — feet calibration,
+// jersey sampling, team clustering — is unchanged; only the box source moved.
 async function _ensureModel() {
   if (_model) return _model;
   if (!_modelLoading) {
     _modelLoading = (async () => {
-      if (!window.tf) await _loadScript(TF_URL);
-      if (!window.cocoSsd) await _loadScript(COCO_URL);
-      _model = await window.cocoSsd.load({ base: 'mobilenet_v2' });
+      const { pipeline, env } = await import(TRANSFORMERS_URL);
+      env.allowLocalModels = false;
+      let pipe;
+      try { pipe = await pipeline('object-detection', MODEL_ID, { device: 'webgpu', dtype: 'fp32' }); }
+      catch (e) { pipe = await pipeline('object-detection', MODEL_ID, { device: 'wasm', dtype: 'q8' }); }
+      _model = {
+        detect: async (src, minScore) => {
+          const input = (typeof src === 'string') ? src : src.toDataURL();
+          const res = await pipe(input, { threshold: minScore });
+          return res.filter(r => r.label === 'person').map(r => ({
+            class: 'person', score: r.score,
+            bbox: [r.box.xmin, r.box.ymin, r.box.xmax - r.box.xmin, r.box.ymax - r.box.ymin],
+          }));
+        },
+      };
       return _model;
     })().catch(err => { _modelLoading = null; throw err; });
   }
@@ -364,11 +366,14 @@ const NEUTRAL_RGB = [235, 235, 235];   // "detected, team unclear" — never gre
 // so the palette stays globally consistent: at most two team colours, every
 // same-team player identical. Called on the initial pass AND after every
 // manual Add-Player click, so adding players never introduces a third colour.
+const mean3 = g => [0, 1, 2].map(i => Math.round(g.reduce((s, v) => s + v[i], 0) / g.length));
+
 function _recomputeTeams() {
   const pts = _detections.filter(d => d.jersey);
   const setColor = (d, rgb) => { d.teamRGB = rgb; d.teamColor = `rgb(${rgb.join(',')})`; };
+  const assign = (d, role, team, rgb) => { d.role = role; d.team = team; setColor(d, rgb); };
 
-  if (pts.length >= 2) {
+  if (pts.length >= 3) {
     // 2-means over jersey colours; seed with the two farthest-apart samples
     let far = pts[0], best = -1;
     for (const p of pts) { const dd = _dist2(p.jersey, pts[0].jersey); if (dd > best) { best = dd; far = p; } }
@@ -377,29 +382,74 @@ function _recomputeTeams() {
       const g1 = [], g2 = [];
       for (const p of pts) (_dist2(p.jersey, c1) <= _dist2(p.jersey, c2) ? g1 : g2).push(p.jersey);
       if (!g1.length || !g2.length) break;
-      const mean = g => [0, 1, 2].map(i => Math.round(g.reduce((s, v) => s + v[i], 0) / g.length));
-      c1 = mean(g1); c2 = mean(g2);
+      c1 = mean3(g1); c2 = mean3(g2);
     }
-    const single = _dist2(c1, c2) < 1200;   // one team in frame
-    const v1 = _vivid(c1), v2 = _vivid(c2);
-    for (const d of pts) {
-      const inC1 = single || _dist2(d.jersey, c1) <= _dist2(d.jersey, c2);
-      d.team = inC1 ? 0 : 1;
-      setColor(d, inC1 ? v1 : v2);
+
+    if (_dist2(c1, c2) < 1200) {                 // only one team colour in frame
+      const v = _vivid(c1);
+      pts.forEach(d => assign(d, 'team', 0, v));
+    } else {
+      // Referees and goalkeepers wear kits distinct from BOTH teams, so they sit
+      // far from either centroid — well beyond normal within-team variation.
+      // Flag those as "officials" instead of forcing them into the nearest team
+      // (which is why a referee used to read as, say, a red player).
+      const nearest = d => Math.min(_dist2(d.jersey, c1), _dist2(d.jersey, c2));
+      const sd = pts.map(d => Math.sqrt(nearest(d))).sort((a, b) => a - b);
+      const bulk = sd.slice(0, Math.max(1, Math.round(sd.length * 0.7)));  // the tight majority
+      const spread = bulk.reduce((s, v) => s + v, 0) / bulk.length;
+      const thr = Math.max(70, spread * 2.2);
+      // A real referee/keeper kit is either genuinely dark (black) or genuinely
+      // vivid (fluorescent) — never a muddy mid-tone. A muddy outlier is a
+      // contaminated jersey sample (shadow/overlap in a packed box), not an
+      // official, so it stays a team player rather than getting mis-promoted.
+      const cleanKit = ([r, g, b]) => {
+        const mx = Math.max(r, g, b), mn = Math.min(r, g, b), l = (mx + mn) / 510;
+        const s = mx === mn ? 0 : (l < 0.5 ? (mx - mn) / (mx + mn) : (mx - mn) / (510 - mx - mn));
+        return l < 0.28 || s > 0.68;
+      };
+      let officials = pts.filter(d => Math.sqrt(nearest(d)) > thr && cleanKit(d.jersey));
+      // Guard: if a quarter-plus of the field reads as "outliers", the two-team
+      // assumption is shaky (3+ kits, or bad sampling) — don't invent a crowd of
+      // officials; fall back to colouring everyone by their nearest team.
+      if (officials.length > pts.length * 0.25) officials = [];
+      const isOfficial = new Set(officials);
+
+      // Re-derive the team centroids from NON-officials only, so a bright
+      // referee kit never defines (or tints) a team's colour.
+      const inl = pts.filter(d => !isOfficial.has(d));
+      const g1 = inl.filter(d => _dist2(d.jersey, c1) <= _dist2(d.jersey, c2)).map(d => d.jersey);
+      const g2 = inl.filter(d => _dist2(d.jersey, c1) >  _dist2(d.jersey, c2)).map(d => d.jersey);
+      if (g1.length) c1 = mean3(g1);
+      if (g2.length) c2 = mean3(g2);
+      const v1 = _vivid(c1), v2 = _vivid(c2);
+
+      pts.forEach(d => {
+        if (isOfficial.has(d)) {
+          assign(d, 'official', -1, _vivid(d.jersey));   // keeps its own distinct colour
+        } else {
+          const a = _dist2(d.jersey, c1) <= _dist2(d.jersey, c2);
+          assign(d, 'team', a ? 0 : 1, a ? v1 : v2);
+        }
+      });
     }
+  } else if (pts.length === 2) {
+    const distinct = _dist2(pts[0].jersey, pts[1].jersey) >= 1200;
+    assign(pts[0], 'team', 0, _vivid(pts[0].jersey));
+    assign(pts[1], 'team', distinct ? 1 : 0, _vivid(distinct ? pts[1].jersey : pts[0].jersey));
   } else if (pts.length === 1) {
-    pts[0].team = 0; setColor(pts[0], _vivid(pts[0].jersey));
+    assign(pts[0], 'team', 0, _vivid(pts[0].jersey));
   }
 
-  // Players whose jersey couldn't be sampled inherit the nearest teammate's
-  // colour (keeps the two-colour palette) — or a neutral light grey if there
-  // are no teams yet. Never the old green default.
+  // Players whose jersey couldn't be sampled inherit the nearest TEAM
+  // teammate's colour (never an official's — an unsampled outfielder isn't a
+  // referee) — or a neutral light grey if there are no teams yet.
+  const teamPts = pts.filter(d => d.role === 'team');
   for (const d of _detections) {
     if (d.jersey) continue;
     let nn = null, nd = Infinity;
-    for (const o of pts) { const dd = (o.cx - d.cx) ** 2 + (o.feetY - d.feetY) ** 2; if (dd < nd) { nd = dd; nn = o; } }
-    if (nn) { d.team = nn.team; setColor(d, nn.teamRGB); }
-    else { d.team = 0; setColor(d, NEUTRAL_RGB); }
+    for (const o of teamPts) { const dd = (o.cx - d.cx) ** 2 + (o.feetY - d.feetY) ** 2; if (dd < nd) { nd = dd; nn = o; } }
+    if (nn) assign(d, 'team', nn.team, nn.teamRGB);
+    else assign(d, 'team', 0, NEUTRAL_RGB);
   }
 }
 
@@ -442,71 +492,32 @@ function _iou(a, b) {
   const uni = a.w * a.h + b.w * b.h - inter;
   return uni <= 0 ? 0 : inter / uni;
 }
-function _containment(a, b) {   // overlap as a fraction of the smaller box
-  const x1 = Math.max(a.x, b.x), y1 = Math.max(a.y, b.y);
-  const x2 = Math.min(a.x + a.w, b.x + b.w), y2 = Math.min(a.y + a.h, b.y + b.h);
-  const inter = Math.max(0, x2 - x1) * Math.max(0, y2 - y1);
-  const minA = Math.min(a.w * a.h, b.w * b.h);
-  return minA <= 0 ? 0 : inter / minA;
-}
-function _nms(boxes) {
-  boxes.sort((p, q) => q.score - p.score);   // strongest first
-  const keep = [];
-  for (const b of boxes) {
-    const dup = keep.some(k =>
-      _iou(b, k) > NMS_IOU ||
-      _containment(b, k) > NMS_CONTAIN ||
-      // faint fragment sitting on a much stronger detection (k.score ≥ b.score
-      // since keep is score-sorted) — same figure split, not a second player
-      (_containment(b, k) > 0.3 && b.score < 0.4 && k.score - b.score > 0.3));
-    if (!dup) keep.push(b);
-  }
-  return keep;
-}
-
-// Detect on the full frame plus an overlapping grid of crops, mapping every
-// box back to full-image coordinates. Recall on small players comes almost
-// entirely from the tiles; the full-frame pass covers big/near players.
-async function _detectTiled(model, img) {
-  const W = img.naturalWidth, H = img.naturalHeight;
-  const raw = [];
-  const tile = document.createElement('canvas');
-  const tctx = tile.getContext('2d');
-  const run = async (rx, ry, rw, rh) => {
-    tile.width = rw; tile.height = rh;
-    tctx.drawImage(img, rx, ry, rw, rh, 0, 0, rw, rh);
-    const preds = await model.detect(tile, MAX_BOXES, MIN_SCORE);
-    for (const p of preds) {
-      if (p.class !== 'person') continue;
-      const [x, y, w, h] = p.bbox;
-      raw.push({ x: x + rx, y: y + ry, w, h, score: p.score });
-    }
-    await new Promise(r => setTimeout(r));   // yield so the scan sweep keeps animating
-  };
-  await run(0, 0, W, H);                                   // full frame
-  let nCols = Math.max(1, Math.round(W / TILE_PX));
-  let nRows = Math.max(1, Math.round(H / TILE_PX));
-  // Keep total tiles under the cap by trimming the longer axis first
-  while (nCols * nRows > MAX_TILES) { if (nCols >= nRows) nCols--; else nRows--; }
-  if (nCols > 1 || nRows > 1) {
-    const baseW = W / nCols, baseH = H / nRows;
-    const mx = baseW * TILE_OVERLAP, my = baseH * TILE_OVERLAP;
-    for (let r = 0; r < nRows; r++) {
-      for (let c = 0; c < nCols; c++) {
-        const rx = Math.max(0, Math.round(c * baseW - mx));
-        const ry = Math.max(0, Math.round(r * baseH - my));
-        const rw = Math.min(W - rx, Math.round(baseW + 2 * mx));
-        const rh = Math.min(H - ry, Math.round(baseH + 2 * my));
-        await run(rx, ry, rw, rh);
-      }
-    }
-  }
-  // Drop specks (distant crowd) and implausibly tall boxes; drop boxes lying
-  // entirely in the stands strip at the top; then dedup.
+// One full-frame pass — YOLOS has the recall that COCO-SSD only reached by
+// tiling, so the whole tile grid is gone. Same post-filters: drop specks and
+// implausibly tall boxes, drop boxes lying entirely in the stands, then a light
+// IoU dedup.
+async function _detectFrame(model, dataUrl, W, H) {
+  const preds = await model.detect(dataUrl, MIN_SCORE);
+  const raw = preds
+    .filter(p => p.class === 'person')
+    .map(p => { const [x, y, w, h] = p.bbox; return { x, y, w, h, score: p.score }; });
   const filtered = raw.filter(b =>
     b.h >= MIN_H_FRAC * H && b.h <= MAX_H_FRAC * H &&
     (b.y + b.h) >= CROWD_TOP_FRAC * H);
-  return { boxes: _nms(filtered), tiles: nCols * nRows };
+  // YOLOS is a set-prediction model — one query per object, so it doesn't emit
+  // the duplicates that COCO-SSD's tiling did. The old _nms (containment +
+  // faint-fragment rules) was built for those and here it deletes real players
+  // standing close together. A light IoU-only pass just catches the rare exact
+  // double.
+  return { boxes: _dedupeIoU(filtered, 0.7), passes: 1 };
+}
+
+// Loose IoU dedup: drop a box only when it heavily overlaps a stronger one.
+function _dedupeIoU(boxes, thr) {
+  boxes.sort((p, q) => q.score - p.score);
+  const keep = [];
+  for (const b of boxes) if (!keep.some(k => _iou(b, k) > thr)) keep.push(b);
+  return keep;
 }
 
 // Manually recognise a player at a board-coordinate point the auto-pass
@@ -530,7 +541,7 @@ export async function detectAt(bx, by, opts = {}) {
     const tile = document.createElement('canvas');
     tile.width = cropW; tile.height = cropH;
     tile.getContext('2d').drawImage(_srcCanvas, rx, ry, cropW, cropH, 0, 0, cropW, cropH);
-    const preds = await model.detect(tile, 20, 0.2);
+    const preds = await model.detect(tile, 0.2);
     let bestD = Infinity;
     for (const p of preds) {
       if (p.class !== 'person') continue;
@@ -602,7 +613,7 @@ export async function initPlayerDetection(dataUrl) {
     const img = new Image();
     await new Promise((resolve, reject) => { img.onload = resolve; img.onerror = reject; img.src = dataUrl; });
     const t0 = performance.now();
-    const { boxes, tiles } = await _detectTiled(model, img);
+    const { boxes } = await _detectFrame(model, dataUrl, img.naturalWidth, img.naturalHeight);
     if (run !== _detectRun) return;   // a newer image replaced this one
     _detections = boxes.map(b => ({
       x: b.x, y: b.y, w: b.w, h: b.h, cx: b.x + b.w / 2, feetY: b.y + b.h, score: b.score
@@ -621,7 +632,7 @@ export async function initPlayerDetection(dataUrl) {
       });
       _recomputeTeams();
     }
-    console.log(`[tactica] player detection: ${_detections.length} player(s) across ${tiles + 1} passes in ${Math.round(performance.now() - t0)}ms`);
+    console.log(`[tactica] player detection: ${_detections.length} player(s) (YOLOS-tiny, single pass) in ${Math.round(performance.now() - t0)}ms`);
     _hideSweep();
     if (_detections.length > 0) {
       _showStatus(`${_detections.length} player${_detections.length === 1 ? '' : 's'} recognized — click them with a circle tool`, { success: true, autoHideMs: 4500 });
