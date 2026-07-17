@@ -129,10 +129,11 @@ function _ensureStatus() {
   return _statusEl;
 }
 
-function _showStatus(text, { spinner = false, success = false, autoHideMs = 0 } = {}) {
+function _showStatus(text, { spinner = false, success = false, autoHideMs = 0, html = null } = {}) {
   const el = _ensureStatus();
   el.querySelector('.pdh-icon').innerHTML = spinner ? _SPINNER_SVG : (success ? _CHECK_SVG : '');
-  el.querySelector('.pdh-text').textContent = text;
+  const t = el.querySelector('.pdh-text');
+  if (html != null) t.innerHTML = html; else t.textContent = text;
   el.classList.toggle('pdh-success', success);
   el.style.animation = 'none';
   el.getBoundingClientRect();   // flush so transition + re-triggered animation run
@@ -140,6 +141,31 @@ function _showStatus(text, { spinner = false, success = false, autoHideMs = 0 } 
   el.style.opacity = '1';
   clearTimeout(_statusTimer);
   if (autoHideMs) _statusTimer = setTimeout(() => _hideStatus(), autoHideMs);
+}
+
+// The "players recognized" pill, broken down by team: one gradient chip per
+// team in that team's detected colour, so the coach sees the split at a glance.
+function _teamSummaryHTML() {
+  const teams = new Map();   // teamColor → { rgb, n }
+  let officials = 0;
+  for (const d of _detections) {
+    if (d.role === 'official') { officials++; continue; }
+    if (!teams.has(d.teamColor)) teams.set(d.teamColor, { rgb: d.teamRGB || [200, 200, 200], n: 0 });
+    teams.get(d.teamColor).n++;
+  }
+  const chip = ({ rgb: [r, g, b], n }) => {
+    const dk = [r, g, b].map(c => Math.round(c * 0.55));
+    const txt = (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? '#101410' : '#fff';
+    return `<span style="display:inline-flex;align-items:center;justify-content:center;` +
+      `min-width:20px;height:20px;padding:0 8px;border-radius:10px;font:700 13px Manrope,sans-serif;` +
+      `background:linear-gradient(135deg,rgb(${r},${g},${b}),rgb(${dk.join(',')}));color:${txt};` +
+      `box-shadow:0 1px 4px rgba(0,0,0,0.35)">${n}</span>`;
+  };
+  const dot = '<span style="opacity:.4;margin:0 5px">·</span>';
+  let html = [...teams.values()].sort((a, b) => b.n - a.n).map(chip).join(dot);
+  if (officials) html += `${dot}<span style="opacity:.75;font-size:12.5px">${officials} ref/GK</span>`;
+  html += '<span style="margin-left:8px">players recognized</span>';
+  return html;
 }
 
 function _hideStatus(immediate) {
@@ -375,7 +401,25 @@ const mean3 = g => [0, 1, 2].map(i => Math.round(g.reduce((s, v) => s + v[i], 0)
 // separates two neutral kits (e.g. white vs black).
 const _TEAM_L = 0.45;
 const _teamVec = ([r, g, b]) => [r - g, g - b, (r + g + b) * _TEAM_L / 3];
-const _distV = (a, b) => (a[0] - b[0]) ** 2 + (a[1] - b[1]) ** 2 + (a[2] - b[2]) ** 2;
+const _distV = (a, b) => { let s = 0; for (let k = 0; k < a.length; k++) s += (a[k] - b[k]) ** 2; return s; };
+const _rgbDist = (a, b) => Math.hypot(a[0] - b[0], a[1] - b[1], a[2] - b[2]);
+
+// 2-means, seeded with the two farthest-apart points; returns per-point
+// assignment (0|1) and the two centroids. Works in any dimension.
+function _kmeans2(V) {
+  let far = 0, best = -1;
+  for (let i = 0; i < V.length; i++) { const dd = _distV(V[i], V[0]); if (dd > best) { best = dd; far = i; } }
+  let c1 = V[0].slice(), c2 = V[far].slice();
+  const meanN = g => { const m = g[0].map(() => 0); for (const v of g) v.forEach((x, k) => m[k] += x); return m.map(x => x / g.length); };
+  let asn = V.map(() => 0);
+  for (let iter = 0; iter < 12; iter++) {
+    const g1 = [], g2 = [];
+    asn = V.map((v, i) => { const a = _distV(v, c1) <= _distV(v, c2); (a ? g1 : g2).push(v); return a ? 0 : 1; });
+    if (!g1.length || !g2.length) break;
+    c1 = meanN(g1); c2 = meanN(g2);
+  }
+  return { asn, c1, c2 };
+}
 // A real referee/keeper kit is genuinely dark (black) or vivid (fluorescent),
 // never a muddy mid-tone — so a muddy outlier is a contaminated sample, not an
 // official, and stays a team player.
@@ -391,15 +435,25 @@ const _cleanKit = ([r, g, b]) => {
 // ignore the washed rest. A NEUTRAL kit (white/grey) has no such group, only
 // the odd lone high-chroma contaminant (e.g. a grass-muddied white), which is
 // ignored, so the kit stays neutral instead of being hijacked to that colour.
-const _chroma = ([r, g, b]) => Math.max(r, g, b) - Math.min(r, g, b);
 const _kitColor = members => {
   const nonGrass = members.filter(d => { const [r, g, b] = d.jersey; return !(g > r + 6 && g > b + 6); });
   const pool = nonGrass.length ? nonGrass : members;
-  const chromatic = pool.filter(d => _chroma(d.jersey) > 40);
-  if (chromatic.length >= 2) {
-    const m = mean3(chromatic.map(d => d.jersey));
-    if (_chroma(m) > 30) return m;   // they agree on a hue → that is the kit colour
-  }
+  // Vote on which channel each sample leans to. Uses channel dominance, not
+  // absolute chroma, so a DARK kit (navy) is still read as blue even though its
+  // chroma is small — the failure of a chroma cut-off, which called navy grey.
+  const lean = ([r, g, b]) => {
+    if (b > r + 8 && b >= g) return 'b';
+    if (r > g + 8 && r >= b) return 'r';
+    if (g > r + 8 && g > b + 8) return 'g';
+    return 'n';   // neutral (white/grey/black)
+  };
+  const votes = { r: [], g: [], b: [] };
+  for (const d of pool) { const k = lean(d.jersey); if (k !== 'n') votes[k].push(d); }
+  const top = [votes.r, votes.g, votes.b].sort((a, b) => b.length - a.length)[0];
+  // Trust a coloured kit only when its lean is a real presence, not a couple of
+  // stray contaminants on a neutral kit — then colour from those samples only,
+  // so washed/neutral members don't dilute it.
+  if (top.length >= 2 && top.length >= pool.length * 0.2) return mean3(top.map(d => d.jersey));
   return mean3(pool.map(d => d.jersey));   // neutral kit
 };
 
@@ -409,52 +463,57 @@ function _recomputeTeams() {
   const assign = (d, role, team, rgb) => { d.role = role; d.team = team; setColor(d, rgb); };
 
   if (pts.length >= 3) {
-    const V = pts.map(d => _teamVec(d.jersey));   // parallel to pts
-    // 2-means in team-space; seed with the two farthest-apart samples
-    let far = 0, best = -1;
-    for (let i = 0; i < V.length; i++) { const dd = _distV(V[i], V[0]); if (dd > best) { best = dd; far = i; } }
-    let c1 = V[0].slice(), c2 = V[far].slice();
-    for (let iter = 0; iter < 8; iter++) {
-      const g1 = [], g2 = [];
-      for (let i = 0; i < V.length; i++) (_distV(V[i], c1) <= _distV(V[i], c2) ? g1 : g2).push(V[i]);
-      if (!g1.length || !g2.length) break;
-      c1 = mean3(g1); c2 = mean3(g2);
-    }
+    // ── 1. Rough pass in the fixed opponent-colour space, only to find the kits
+    // that sit far from BOTH team colours — referees, keepers, and contaminated
+    // samples. Holding these out is what keeps step 2 from being hijacked.
+    const rv = pts.map(d => _teamVec(d.jersey));
+    const rk = _kmeans2(rv);
+    const nd = i => Math.min(_distV(rv[i], rk.c1), _distV(rv[i], rk.c2));
+    const sd = pts.map((_, i) => Math.sqrt(nd(i))).sort((a, b) => a - b);
+    const bulk = sd.slice(0, Math.max(1, Math.round(sd.length * 0.7)));
+    const spread = bulk.reduce((s, v) => s + v, 0) / bulk.length;
+    const thr = Math.max(45, spread * 2.2);
+    let outlier = new Set(pts.map((_, i) => i).filter(i => Math.sqrt(nd(i)) > thr));
+    if (outlier.size > pts.length * 0.25) outlier = new Set();   // shaky → trust no outliers
+    // Officials = outliers whose kit is genuinely dark or vivid (ref/keeper);
+    // the rest are muddy contaminated samples that still belong to a team.
+    const official = new Set([...outlier].filter(i => _cleanKit(pts[i].jersey)));
 
-    if (_distV(c1, c2) < 700) {                  // only one team colour in frame
-const v = _vivid(_kitColor(pts));
-      pts.forEach(d => assign(d, 'team', 0, v));
+    // ── 2. Cluster the CLEAN CORE (non-outliers) with each colour axis
+    // z-standardised, so the split follows whichever axis actually separates the
+    // teams — hue for sky-blue-vs-red, brightness for navy-vs-white — instead of
+    // a fixed weighting that only suits one of those.
+    const core = pts.map((_, i) => i).filter(i => !outlier.has(i));
+    const F = core.map(i => { const [r, g, b] = pts[i].jersey; return [r - g, g - b, (r + g + b) / 3]; });
+    const mu = [0, 1, 2].map(k => F.reduce((s, f) => s + f[k], 0) / F.length);
+    const st = [0, 1, 2].map(k => { const m = mu[k]; return Math.sqrt(F.reduce((s, f) => s + (f[k] - m) ** 2, 0) / F.length) || 1; });
+    const proj = ([r, g, b]) => [(r - g - mu[0]) / st[0], (g - b - mu[1]) / st[1], ((r + g + b) / 3 - mu[2]) / st[2]];
+    const Z = F.map((_, j) => proj(pts[core[j]].jersey));
+    const zk = _kmeans2(Z);
+
+    const memA = core.filter((_, j) => zk.asn[j] === 0).map(i => pts[i]);
+    const memB = core.filter((_, j) => zk.asn[j] === 1).map(i => pts[i]);
+    const colA = _kitColor(memA.length ? memA : core.map(i => pts[i]));
+    const colB = _kitColor(memB.length ? memB : core.map(i => pts[i]));
+    // One team in frame if a cluster is empty or the two colours are basically
+    // the same (z-scoring always splits, so guard against splitting noise).
+    const oneTeam = !memA.length || !memB.length || _rgbDist(colA, colB) < 45;
+
+    if (oneTeam) {
+      const v = _vivid(_kitColor(core.map(i => pts[i])));
+      core.forEach(i => assign(pts[i], 'team', 0, v));
+      outlier.forEach(i => official.has(i)
+        ? assign(pts[i], 'official', -1, _vivid(pts[i].jersey))
+        : assign(pts[i], 'team', 0, v));
     } else {
-      // Referees and goalkeepers wear kits distinct from BOTH teams, so they sit
-      // far from either centroid. Flag those as officials (own colour) instead
-      // of forcing them into the nearest team.
-      const nearest = i => Math.min(_distV(V[i], c1), _distV(V[i], c2));
-      const sd = pts.map((_, i) => Math.sqrt(nearest(i))).sort((a, b) => a - b);
-      const bulk = sd.slice(0, Math.max(1, Math.round(sd.length * 0.7)));  // the tight majority
-      const spread = bulk.reduce((s, v) => s + v, 0) / bulk.length;
-      const thr = Math.max(45, spread * 2.2);
-      let officials = pts.filter((d, i) => Math.sqrt(nearest(i)) > thr && _cleanKit(d.jersey));
-      // Guard: if a quarter-plus of the field reads as "outliers", the two-team
-      // assumption is shaky (3+ kits, or bad sampling) — don't invent a crowd of
-      // officials; fall back to colouring everyone by their nearest team.
-      if (officials.length > pts.length * 0.25) officials = [];
-      const isOfficial = new Set(officials);
-
-      // Re-derive centroids (team-space) and display colours (raw mean of the
-      // members) from NON-officials only, so a bright referee kit never defines
-      // or tints a team's colour.
-      const inl = pts.filter(d => !isOfficial.has(d));
-      const gA = [], gB = [];
-      inl.forEach(d => (_distV(_teamVec(d.jersey), c1) <= _distV(_teamVec(d.jersey), c2) ? gA : gB).push(d));
-      if (gA.length) c1 = mean3(gA.map(d => _teamVec(d.jersey)));
-      if (gB.length) c2 = mean3(gB.map(d => _teamVec(d.jersey)));
-      const v1 = _vivid(_kitColor(gA.length ? gA : inl));
-      const v2 = _vivid(_kitColor(gB.length ? gB : inl));
-
-      pts.forEach((d, i) => {
-        if (isOfficial.has(d)) { assign(d, 'official', -1, _vivid(d.jersey)); return; }
-        const inA = _distV(V[i], c1) <= _distV(V[i], c2);
-        assign(d, 'team', inA ? 0 : 1, inA ? v1 : v2);
+      const vA = _vivid(colA), vB = _vivid(colB);
+      core.forEach((i, j) => assign(pts[i], 'team', zk.asn[j], zk.asn[j] === 0 ? vA : vB));
+      outlier.forEach(i => {
+        if (official.has(i)) { assign(pts[i], 'official', -1, _vivid(pts[i].jersey)); return; }
+        // muddy sample → nearest team in the standardised space
+        const z = proj(pts[i].jersey);
+        const t = _distV(z, zk.c1) <= _distV(z, zk.c2) ? 0 : 1;
+        assign(pts[i], 'team', t, t === 0 ? vA : vB);
       });
     }
   } else if (pts.length === 2) {
@@ -660,7 +719,7 @@ export async function initPlayerDetection(dataUrl) {
     console.log(`[tactica] player detection: ${_detections.length} player(s) (YOLOS-tiny, single pass) in ${Math.round(performance.now() - t0)}ms`);
     _hideSweep();
     if (_detections.length > 0) {
-      _showStatus(`${_detections.length} player${_detections.length === 1 ? '' : 's'} recognized — click them with a circle tool`, { success: true, autoHideMs: 4500 });
+      _showStatus('', { success: true, autoHideMs: 5000, html: _teamSummaryHTML() });
       _celebrateDetections();
       // Teach the attach behavior once the bracket flash has had its moment
       setTimeout(() => { if (run === _detectRun && S.appMode === 'image') _maybeShowIntroModal(); }, 1100);

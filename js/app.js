@@ -20,8 +20,8 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=18';
-import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=12';
-import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=10';
+import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=13';
+import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=13';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
@@ -241,6 +241,17 @@ function finishInsert(el, opts = {}) {
   }
   setTool('select');
   select(el);
+}
+
+// Log an element insertion to both analytics layers (GA + Firestore, the one
+// the admin reads). The click handler logs placed elements centrally, but
+// drag/multi-click-drawn elements (arrow, freeform) never pass through it, so
+// they log here. Firing this also bumps the 3-interaction "analysis started"
+// threshold — correct: drawing an element is real engagement.
+function _logElementInserted(elType) {
+  trackElementInserted(elType);
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'element_inserted', { element: elType }).catch(() => {});
 }
 
 // ─── Expose to inline HTML handlers ──────────────────────────────────────────
@@ -2682,7 +2693,7 @@ function arrowEnd(e) {
   if (Math.sqrt(dx*dx + dy*dy) > 10) {
     S.pushUndo();
     const arrow = addArrow(S.arrowStart.x, S.arrowStart.y, pt.x, pt.y, S.arrowType);
-    if (arrow) finishInsert(arrow, { dragBased: true });
+    if (arrow) { _logElementInserted('arrow'); finishInsert(arrow, { dragBased: true }); }
   }
 }
 S.svg.addEventListener('mouseup', arrowEnd);
@@ -2696,7 +2707,7 @@ function closeFreeform() {
   if (freeformPts.length >= 3) {
     S.pushUndo();
     const zone = addFreeformZone([...freeformPts]);
-    if (zone) finishInsert(zone);
+    if (zone) { _logElementInserted('freeform'); finishInsert(zone); }
   }
   // Clean up
   freeformPts = [];
