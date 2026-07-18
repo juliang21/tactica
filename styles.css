@@ -2949,7 +2949,7 @@ body.shared-view #canvas-wrap {
 .landing-split {
   display: flex; align-items: center;
   width: 100%; max-width: 1200px;
-  padding: 56px 64px 24px; gap: 64px;
+  padding: 30px 64px 24px; gap: 64px;
   position: relative; z-index: 1;
   min-height: 0;               /* the proof row sits right below; both fit the fold */
   box-sizing: border-box;
@@ -2966,26 +2966,39 @@ body.shared-view #canvas-wrap {
   display: flex; align-items: center; justify-content: center;
 }
 
-/* Alpha badge */
-.landing-alpha-badge {
-  display: inline-block;
-  font-family: 'Manrope', sans-serif;
-  font-size: 11px; font-weight: 700;
-  letter-spacing: 1.5px; text-transform: uppercase;
-  color: var(--accent); border: 1px solid rgba(30,215,96,0.4);
-  padding: 4px 12px; border-radius: 20px;
-  margin-bottom: 24px;
-  background: rgba(30,215,96,0.06);
+/* ── Header (wordmark left · nav right) ── */
+.landing-header {
+  width: 100%; max-width: 1200px;
+  padding: 26px 64px 0;
+  box-sizing: border-box; flex-shrink: 0;
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
 }
+.landing-logo {
+  font-family: 'Outfit', sans-serif;
+  font-size: 21px; font-weight: 900;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--accent);
+}
+.landing-nav { display: flex; align-items: center; gap: 28px; }
+.landing-nav a, .landing-nav button {
+  font-family: 'Manrope', sans-serif;
+  font-size: 13.5px; font-weight: 600;
+  color: rgba(255,255,255,0.55); text-decoration: none;
+  background: none; border: none; padding: 0; cursor: pointer;
+  transition: color 0.15s;
+}
+.landing-nav a:hover, .landing-nav button:hover { color: var(--text); }
 
 /* Headline */
 .landing-headline {
   font-family: 'Outfit', sans-serif;
-  font-size: 72px; font-weight: 900;
+  font-size: 60px; font-weight: 900;
   color: var(--text); line-height: 1.05;
   letter-spacing: -2px;
   margin-bottom: 20px;
 }
+.landing-headline-alt { color: var(--accent); }
 
 .landing-sub {
   font-family: 'Manrope', sans-serif;
@@ -3014,11 +3027,6 @@ body.shared-view #canvas-wrap {
   color: var(--text);
 }
 .landing-btn-secondary:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.06); }
-.landing-terms-link {
-  display: inline-block; margin-top: 20px; font-size: 12px;
-  color: rgba(255,255,255,0.35); text-decoration: none; transition: color 0.15s;
-}
-.landing-terms-link:hover { color: rgba(255,255,255,0.6); }
 
 /* ── Above-the-fold social proof (rating · coaches · review carousel) ──
    Big number + small muted label, split by hairline dividers, with the live

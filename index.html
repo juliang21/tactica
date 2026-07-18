@@ -43,7 +43,7 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@800;900&family=Playfair+Display:wght@600&family=Poppins:wght@300;400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=15">
+<link rel="stylesheet" href="styles.css?v=16">
 <link rel="stylesheet" href="js/modes/training/training.css?v=1">
 <!-- Hotjar Tracking Code for Táctica -->
 <script>
@@ -61,11 +61,17 @@
 
 <!-- ── Landing Gate (shown when not authenticated) ── -->
 <div id="landing-gate" class="landing-gate">
+  <header class="landing-header">
+    <span class="landing-logo">Táctica</span>
+    <nav class="landing-nav">
+      <a href="/terms.html">Terms &amp; Conditions</a>
+      <button type="button" onclick="openAuthModal(); switchAuthTab('signin');">Login</button>
+    </nav>
+  </header>
   <div class="landing-split">
     <!-- Left: text -->
     <div class="landing-left">
-      <p class="landing-alpha-badge">Beta</p>
-      <h1 class="landing-headline">Master<br>Every Play</h1>
+      <h1 class="landing-headline">Master Every Play<br><span class="landing-headline-alt">with Táctica</span></h1>
       <p class="landing-sub">Elevate your coaching with Táctica's intuitive professional tactical board. Plan formations, draw dynamic plays, and analyze in real-time.</p>
       <div class="landing-actions">
         <button class="landing-btn landing-btn-primary" onclick="openAuthModal(); switchAuthTab('signup');">
@@ -75,7 +81,6 @@
           Sign in
         </button>
       </div>
-      <a href="/terms.html" class="landing-terms-link">Terms &amp; Conditions</a>
     </div>
     <!-- Right: product preview -->
     <div class="landing-right">
