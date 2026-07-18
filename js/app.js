@@ -3579,44 +3579,123 @@ function buildGIF(frameImages, width, height, onDone) {
   const delay = 120; // centiseconds (1.2s per frame)
   const holdLast = 200; // hold last frame longer
 
-  // Use median-cut quantization for each frame
+  // Median-cut quantisation. The previous uniform 6-levels-per-channel version
+  // capped out at 216 colours and collapsed near-identical shades onto each
+  // other — the two pitch stripe greens (#3a7a38 / #367035) both landed on
+  // (51,102,51), which flattened the stripes out of every exported GIF.
+  function boxStats(colors) {
+    let count = 0, sr = 0, sg = 0, sb = 0;
+    for (let i = 0; i < colors.length; i++) {
+      const c = colors[i];
+      count += c.n; sr += c.r * c.n; sg += c.g * c.n; sb += c.b * c.n;
+    }
+    const mr = sr / count, mg = sg / count, mb = sb / count;
+    // Weighted squared error, split per channel. Splitting the box with the
+    // largest total error is the textbook criterion and — unlike splitting by
+    // colour-space extent — it accounts for how many pixels actually wear the
+    // colour. The pitch stripe greens sit ~10 apart but cover most of the
+    // frame, so extent-based splitting starved them into one averaged green.
+    let er = 0, eg = 0, eb = 0;
+    for (let i = 0; i < colors.length; i++) {
+      const c = colors[i];
+      er += c.n * (c.r - mr) * (c.r - mr);
+      eg += c.n * (c.g - mg) * (c.g - mg);
+      eb += c.n * (c.b - mb) * (c.b - mb);
+    }
+    let channel = 'r', chErr = er;
+    if (eg > chErr) { channel = 'g'; chErr = eg; }
+    if (eb > chErr) { channel = 'b'; chErr = eb; }
+    return { channel: channel, error: er + eg + eb, count: count };
+  }
+
   function quantizeFrame(imageData) {
     const pixels = imageData.data;
     const n = width * height;
     const indexed = new Uint8Array(n);
-    // Simple uniform quantization: 6 bits R, 7 bits G, 5 bits B → 256 colors
-    const palette = [];
-    const colorMap = new Map();
-    let colorIdx = 0;
 
+    // Pass 1: exact colour histogram.
+    const hist = new Map();
     for (let i = 0; i < n; i++) {
-      const r = pixels[i * 4], g = pixels[i * 4 + 1], b = pixels[i * 4 + 2];
-      // Reduce to 6-6-6 level
-      const qr = Math.round(r / 51) * 51;
-      const qg = Math.round(g / 51) * 51;
-      const qb = Math.round(b / 51) * 51;
-      const key = (qr << 16) | (qg << 8) | qb;
+      const o = i * 4;
+      const key = (pixels[o] << 16) | (pixels[o + 1] << 8) | pixels[o + 2];
+      hist.set(key, (hist.get(key) || 0) + 1);
+    }
 
-      if (colorMap.has(key)) {
-        indexed[i] = colorMap.get(key);
-      } else if (colorIdx < 256) {
-        colorMap.set(key, colorIdx);
-        palette.push(qr, qg, qb);
-        indexed[i] = colorIdx;
-        colorIdx++;
-      } else {
-        // Find closest existing color
-        let bestDist = Infinity, bestIdx = 0;
-        for (let c = 0; c < palette.length / 3; c++) {
-          const dr = palette[c * 3] - r, dg = palette[c * 3 + 1] - g, db = palette[c * 3 + 2] - b;
-          const dist = dr * dr + dg * dg + db * db;
-          if (dist < bestDist) { bestDist = dist; bestIdx = c; }
+    const colors = [];
+    hist.forEach(function (count, key) {
+      colors.push({ r: (key >> 16) & 255, g: (key >> 8) & 255, b: key & 255, n: count, key: key });
+    });
+
+    const palette = [];
+    const lut = new Map();
+
+    if (colors.length <= 256) {
+      // Board art is flat-coloured, so this is the common case: keep every
+      // colour exactly as-is and the GIF is lossless.
+      for (let i = 0; i < colors.length; i++) {
+        lut.set(colors[i].key, i);
+        palette.push(colors[i].r, colors[i].g, colors[i].b);
+      }
+    } else {
+      // Reserve exact slots for colours covering a meaningful share of the
+      // frame, THEN median-cut the rest. Pure error-based splitting fails here:
+      // the two pitch stripe greens are 94% of the pixels but sit ~10 apart,
+      // so every split went to the visually diverse 6% (lines, kits, edges) and
+      // the stripes averaged into one flat green.
+      colors.sort(function (a, b) { return b.n - a.n; });
+      const totalPx = width * height;
+      const reserved = [];
+      for (let i = 0; i < colors.length && reserved.length < 64; i++) {
+        if (colors[i].n < totalPx * 0.002) break;   // <0.2% of the frame
+        reserved.push(colors[i]);
+      }
+      for (let i = 0; i < reserved.length; i++) {
+        lut.set(reserved[i].key, palette.length / 3);
+        palette.push(reserved[i].r, reserved[i].g, reserved[i].b);
+      }
+
+      const rest = colors.slice(reserved.length);
+      const budget = 256 - reserved.length;
+      if (rest.length) {
+        let boxes = [{ colors: rest, stats: boxStats(rest) }];
+        while (boxes.length < budget) {
+          let bi = -1, best = 0;
+          for (let i = 0; i < boxes.length; i++) {
+            if (boxes[i].colors.length < 2) continue;
+            if (boxes[i].stats.error > best) { best = boxes[i].stats.error; bi = i; }
+          }
+          if (bi < 0) break;
+          const box = boxes[bi], ch = box.stats.channel;
+          box.colors.sort(function (a, b) { return a[ch] - b[ch]; });
+          const half = box.stats.count / 2;
+          let acc = 0, cut = 1;
+          for (let i = 0; i < box.colors.length - 1; i++) {
+            acc += box.colors[i].n;
+            if (acc >= half) { cut = i + 1; break; }
+          }
+          const left = box.colors.slice(0, cut), right = box.colors.slice(cut);
+          boxes.splice(bi, 1, { colors: left, stats: boxStats(left) },
+                              { colors: right, stats: boxStats(right) });
         }
-        indexed[i] = bestIdx;
+        for (let i = 0; i < boxes.length; i++) {
+          const box = boxes[i].colors;
+          const idx = palette.length / 3;
+          let tr = 0, tg = 0, tb = 0, tc = 0;
+          for (let j = 0; j < box.length; j++) {
+            tr += box[j].r * box[j].n; tg += box[j].g * box[j].n; tb += box[j].b * box[j].n; tc += box[j].n;
+            lut.set(box[j].key, idx);
+          }
+          palette.push(Math.round(tr / tc), Math.round(tg / tc), Math.round(tb / tc));
+        }
       }
     }
 
-    // Pad palette to 256
+    for (let i = 0; i < n; i++) {
+      const o = i * 4;
+      const idx = lut.get((pixels[o] << 16) | (pixels[o + 1] << 8) | pixels[o + 2]);
+      indexed[i] = idx === undefined ? 0 : idx;
+    }
+
     while (palette.length < 768) palette.push(0);
     return { indexed, palette };
   }
