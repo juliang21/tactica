@@ -2948,12 +2948,15 @@ body.shared-view #canvas-wrap {
 /* ── Split layout ── */
 .landing-split {
   display: flex; align-items: center;
-  width: 100%; max-width: 1200px;
-  padding: 30px 64px 24px; gap: 64px;
+  width: 100%; max-width: var(--landing-max, 1200px);
+  padding: clamp(20px, 3.4vh, 52px) 64px clamp(22px, 2.8vh, 34px);
+  gap: clamp(48px, 5vw, 88px);
   position: relative; z-index: 1;
-  min-height: 0;               /* the proof row sits right below; both fit the fold */
   box-sizing: border-box;
-  flex-shrink: 0;
+  flex: 0 0 auto; margin-top: auto;   /* with .landing-proof's margin-bottom:auto the
+                                         leftover height splits above/below the pair,
+                                         so the proof card stays close to the hero */
+  min-height: 0;
 }
 .landing-left {
   flex: 1; min-width: 0;
@@ -2966,10 +2969,12 @@ body.shared-view #canvas-wrap {
   display: flex; align-items: center; justify-content: center;
 }
 
+:root { --landing-max: min(1340px, 94vw); }
+
 /* ── Header (wordmark left · nav right) ── */
 .landing-header {
-  width: 100%; max-width: 1200px;
-  padding: 26px 64px 0;
+  width: 100%; max-width: var(--landing-max, 1200px);
+  padding: clamp(20px, 2.6vh, 34px) 64px 0;
   box-sizing: border-box; flex-shrink: 0;
   position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: space-between;
@@ -2989,22 +2994,35 @@ body.shared-view #canvas-wrap {
   transition: color 0.15s;
 }
 .landing-nav a:hover, .landing-nav button:hover { color: var(--text); }
+@media (max-width: 620px) {
+  /* full-width nav labels collide with the wordmark below this */
+  .landing-header { padding: 18px 20px 0; }
+  .landing-logo { font-size: 16px; letter-spacing: 1.6px; }
+  .landing-nav { gap: 16px; }
+  .landing-nav a, .landing-nav button { font-size: 12px; }
+}
+.landing-logo, .landing-nav a, .landing-nav button { white-space: nowrap; }
 
 /* Headline */
 .landing-headline {
   font-family: 'Outfit', sans-serif;
-  font-size: 60px; font-weight: 900;
+  font-size: clamp(38px, 4.5vw, 67px); font-weight: 900;
   color: var(--text); line-height: 1.05;
   letter-spacing: -2px;
-  margin-bottom: 20px;
+  margin-bottom: clamp(16px, 2.2vh, 28px);
 }
-.landing-headline-alt { color: var(--accent); }
+.landing-headline-alt {
+  font-family: 'Poppins', sans-serif;   /* Outfit/Manrope ship no italic axis */
+  font-weight: 700; font-style: italic;
+  color: var(--accent);
+  letter-spacing: -1.5px;
+}
 
 .landing-sub {
   font-family: 'Manrope', sans-serif;
-  font-size: 16px; font-weight: 400;
-  color: var(--text-muted); margin-bottom: 36px;
-  line-height: 1.65; max-width: 420px;
+  font-size: clamp(15px, 1.15vw, 18px); font-weight: 400;
+  color: var(--text-muted); margin-bottom: clamp(28px, 4vh, 46px);
+  line-height: 1.65; max-width: 30em;
 }
 
 /* CTAs */
@@ -3033,9 +3051,9 @@ body.shared-view #canvas-wrap {
    review carousel as the third column. Reveals on LOAD, not on scroll: it sits
    above the fold, so a scroll trigger would never fire and it'd stay invisible. */
 .landing-proof {
-  width: 100%; max-width: 1200px; margin: 0 auto;
-  box-sizing: border-box; flex-shrink: 0;
-  padding: 6px 64px 34px;
+  width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
+  box-sizing: border-box; flex: 0 0 auto; margin-bottom: auto;
+  padding: 0 64px clamp(20px, 3vh, 40px);
 }
 /* One bounded card so the three read as a single block of proof. The stat
    columns size to their CONTENT (auto) rather than stretching to equal
@@ -3137,7 +3155,7 @@ body.shared-view #canvas-wrap {
 /* Product mockup */
 .landing-mockup {
   position: relative;
-  width: 100%; max-width: 520px;
+  width: 100%; max-width: clamp(520px, 42vw, 660px);
   border-radius: 14px;
   overflow: hidden;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255,255,255,0.06);
