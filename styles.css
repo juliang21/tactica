@@ -2994,6 +2994,29 @@ body.shared-view #canvas-wrap {
   transition: color 0.15s;
 }
 .landing-nav a:hover, .landing-nav button:hover { color: var(--text); }
+
+/* Byline + terms: sits under the ratings card, bottom-left of the page */
+.landing-footer {
+  width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
+  margin-bottom: auto;          /* pairs with .landing-split's margin-top:auto */
+  box-sizing: border-box; flex: 0 0 auto;
+  padding: 0 64px clamp(20px, 3vh, 40px);
+}
+.landing-byline {
+  margin-top: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px; font-weight: 400; line-height: 1.65;
+  color: rgba(255,255,255,0.42);
+  max-width: 54em;              /* wide enough to land on two lines */
+}
+.landing-byline b { color: rgba(255,255,255,0.82); font-weight: 700; }
+.landing-byline a { color: var(--accent); text-decoration: none; }
+.landing-byline a:hover { text-decoration: underline; }
+.landing-terms-link {
+  display: inline-block; margin-top: 12px; font-size: 12px;
+  color: rgba(255,255,255,0.32); text-decoration: none; transition: color 0.15s;
+}
+.landing-terms-link:hover { color: rgba(255,255,255,0.6); }
 @media (max-width: 620px) {
   /* full-width nav labels collide with the wordmark below this */
   .landing-header { padding: 18px 20px 0; }
@@ -3052,8 +3075,8 @@ body.shared-view #canvas-wrap {
    above the fold, so a scroll trigger would never fire and it'd stay invisible. */
 .landing-proof {
   width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
-  box-sizing: border-box; flex: 0 0 auto; margin-bottom: auto;
-  padding: 0 64px clamp(20px, 3vh, 40px);
+  box-sizing: border-box; flex: 0 0 auto;
+  padding: 0 64px clamp(14px, 2vh, 22px);
 }
 /* One bounded card so the three read as a single block of proof. The stat
    columns size to their CONTENT (auto) rather than stretching to equal
@@ -3222,10 +3245,15 @@ body.shared-view #canvas-wrap {
 /* ── Landing responsive (mobile) ── */
 @media (max-width: 860px) {
   .landing-split {
-    flex-direction: column; padding: 48px 24px; gap: 40px;
+    flex-direction: column; padding: 28px 24px; gap: 24px;
     text-align: center;
     align-items: center;      /* column direction: this is horizontal centring */
   }
+  /* the byline costs ~80px stacked — claw it back so the reviews stay in view */
+  .landing-byline { font-size: 12.5px; }
+  .landing-terms-link { margin-top: 10px; }
+  .landing-footer { padding: 0 24px 24px; text-align: center; }
+  .landing-byline { max-width: 100%; }
   .landing-left { align-items: center; }
   .landing-headline { font-size: 48px; letter-spacing: -1px; }
   .landing-sub { max-width: 100%; }
