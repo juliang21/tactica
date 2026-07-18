@@ -2949,9 +2949,9 @@ body.shared-view #canvas-wrap {
 .landing-split {
   display: flex; align-items: center;
   width: 100%; max-width: 1200px;
-  padding: 72px 64px 40px; gap: 64px;
+  padding: 56px 64px 24px; gap: 64px;
   position: relative; z-index: 1;
-  min-height: 78vh;            /* leave the top of the trust band peeking above the fold */
+  min-height: 0;               /* the proof row sits right below; both fit the fold */
   box-sizing: border-box;
   flex-shrink: 0;
 }
@@ -3020,71 +3020,69 @@ body.shared-view #canvas-wrap {
 }
 .landing-terms-link:hover { color: rgba(255,255,255,0.6); }
 
-/* ── Trust signals section (below the fold) ── */
-.landing-trust {
-  position: relative; width: 100%; box-sizing: border-box;
-  padding: 64px 64px 96px; flex-shrink: 0;
-  border-top: 1px solid rgba(255,255,255,0.06);
-  background:
-    radial-gradient(800px 320px at 50% 0%, rgba(30,215,96,0.10), transparent 70%),
-    linear-gradient(180deg, rgba(255,255,255,0.025), rgba(255,255,255,0) 45%);
-  overflow: hidden;
+/* ── Above-the-fold social proof (rating · coaches · review carousel) ──
+   Big number + small muted label, split by hairline dividers, with the live
+   review carousel as the third column. Reveals on LOAD, not on scroll: it sits
+   above the fold, so a scroll trigger would never fire and it'd stay invisible. */
+.landing-proof {
+  width: 100%; max-width: 1200px; margin: 0 auto;
+  box-sizing: border-box; flex-shrink: 0;
+  padding: 6px 64px 34px;
 }
-/* Faint dot-grid texture, masked to fade out toward the edges */
-.landing-trust::before {
-  content: ""; position: absolute; inset: 0; pointer-events: none;
-  background-image: radial-gradient(rgba(255,255,255,0.05) 1px, transparent 1px);
-  background-size: 24px 24px; opacity: 0.6;
-  -webkit-mask-image: radial-gradient(ellipse 60% 70% at 50% 28%, #000, transparent 78%);
-          mask-image: radial-gradient(ellipse 60% 70% at 50% 28%, #000, transparent 78%);
+/* One bounded card so the three read as a single block of proof. The stat
+   columns size to their CONTENT (auto) rather than stretching to equal
+   fractions — spread across the full width they read as three loose,
+   unrelated items. */
+.proof-card {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  border: 1px solid rgba(255,255,255,0.075);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.038), rgba(255,255,255,0.012));
+  padding: 14px 24px;
 }
-.trust-eyebrow {
-  position: relative; z-index: 1;
-  max-width: 1200px; margin: 0 auto 36px;
-  text-align: center;
-  font-family: 'Manrope', sans-serif;
-  font-size: 11px; font-weight: 700; letter-spacing: 1.5px;
-  text-transform: uppercase; color: var(--text-muted);
+.lstat { min-width: 0; padding: 0 30px; }
+.lstat:first-child { padding-left: 6px; }
+.lstat + .lstat { border-left: 1px solid rgba(255,255,255,0.09); }
+.lstat-quotes { padding-right: 6px; }
+.lstat-num {
+  display: flex; align-items: center; gap: 5px;
+  font-family: 'Outfit', sans-serif; font-weight: 800;
+  font-size: 44px; line-height: 1.02; color: var(--text); letter-spacing: -1.6px;
+  font-variant-numeric: tabular-nums;
 }
-.trust-inner {
-  position: relative; z-index: 1;
-  max-width: 1200px; margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr 1.5fr;
-  gap: 40px; align-items: center;
+.lstat-star { color: var(--accent); font-size: 28px; letter-spacing: 0; }
+.lstat-label {
+  margin-top: 7px; font-size: 12.5px; line-height: 1.35;
+  color: rgba(255,255,255,0.42); letter-spacing: 0.2px;
 }
-
-/* Reveal-on-scroll motion */
-.reveal {
-  opacity: 0; transform: translateY(26px);
-  transition: opacity 0.7s cubic-bezier(0.22,0.61,0.36,1),
-              transform 0.7s cubic-bezier(0.22,0.61,0.36,1);
+/* staggered fade-up, driven by .in from the loader script */
+.landing-proof .lstat {
+  opacity: 0; transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
 }
-.reveal.in { opacity: 1; transform: none; }
+.landing-proof.in .lstat { opacity: 1; transform: none; }
+.landing-proof.in .lstat:nth-of-type(2) { transition-delay: 0.09s; }
+.landing-proof.in .lstat:nth-of-type(3) { transition-delay: 0.18s; }
 @media (prefers-reduced-motion: reduce) {
-  .reveal { opacity: 1; transform: none; transition: none; }
+  .landing-proof .lstat { opacity: 1; transform: none; transition: none; }
 }
-.trust-stat { text-align: center; }
-.trust-number {
-  font-family: 'Outfit', sans-serif;
-  font-size: 60px; font-weight: 900;
-  color: var(--text); line-height: 1; letter-spacing: -2px;
+@media (max-width: 900px) {
+  .landing-proof { padding: 6px 32px 30px; }
+  .proof-card { grid-template-columns: auto auto; gap: 14px 0; padding: 14px 16px; }
+  .lstat { padding: 0 18px; }
+  .lstat-num { font-size: 32px; }
+  .lstat-quotes { grid-column: 1 / -1; padding: 0; border-left: none; }
 }
-.trust-rating-top {
-  display: flex; align-items: baseline; gap: 12px; justify-content: center;
-}
-.trust-stars {
-  color: #FBBF24; font-size: 20px; letter-spacing: 3px;
-}
-.trust-label {
-  font-family: 'Manrope', sans-serif;
-  font-size: 13px; color: var(--text-muted); margin-top: 12px;
+@media (max-width: 560px) {
+  .landing-proof { padding: 18px 20px 28px; }
+  .lstat-num { font-size: 26px; }
+  .lstat-label { font-size: 11px; }
 }
 
-/* Vertical testimonial marquee */
-.trust-testimonials { position: relative; }
+/* ── Review carousel (third column of the proof row) ── */
 .trust-marquee {
-  position: relative; height: 190px; overflow: hidden;
+  position: relative; height: 118px; overflow: hidden;
   -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
           mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
 }

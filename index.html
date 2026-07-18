@@ -128,52 +128,47 @@
     </div>
   </div>
 
-  <!-- ── Trust signals (below the fold) ── -->
-  <section class="landing-trust">
-    <p class="trust-eyebrow reveal">Trusted by coaches worldwide</p>
-    <div class="trust-inner">
-      <!-- Col 1: coaches -->
-      <div class="trust-stat reveal">
-        <div class="trust-number" id="trust-coaches" data-count="600" data-prefix="+">+600</div>
-        <div class="trust-label">Coaches are trusting Táctica</div>
-      </div>
-      <!-- Col 2: rating. Numbers are hydrated from data/trust.json on load. -->
-      <div class="trust-stat reveal">
-        <div class="trust-rating-top">
-          <span class="trust-number" id="trust-rating" data-count="4.96" data-decimals="2">4.96</span>
-          <span class="trust-stars" aria-label="4.9 out of 5 stars">★★★★★</span>
-        </div>
-        <div class="trust-label">Average rating · <span id="trust-review-count">26</span> reviews</div>
-      </div>
-      <!-- Col 3: scrolling testimonials -->
-      <div class="trust-testimonials reveal">
-        <div class="trust-marquee">
-          <!-- Edit testimonials here; the script below duplicates them for a seamless loop. -->
-          <div class="trust-track" id="trust-track">
-            <figure class="t-card">
-              <div class="t-stars">★★★★☆</div>
-              <blockquote>"I use Táctica to analyse teams and share my analysis on social media — very visual, with loads of teams and national sides."</blockquote>
-              <figcaption>Aitor V.</figcaption>
-            </figure>
-            <figure class="t-card">
-              <div class="t-stars">★★★★★</div>
-              <blockquote>"Excellent — thank you so much."</blockquote>
-              <figcaption>Roberto P.</figcaption>
-            </figure>
-            <figure class="t-card">
-              <div class="t-stars">★★★★★</div>
-              <blockquote>"Really useful for designing tactics."</blockquote>
-              <figcaption>Oscar</figcaption>
-            </figure>
-            <figure class="t-card">
-              <div class="t-stars">★★★★★</div>
-              <blockquote>"Amazing!"</blockquote>
-              <figcaption>Django L.</figcaption>
-            </figure>
-          </div>
+  <!-- ── Social proof, above the fold ──
+       Rating · coaches · live review carousel. Numbers hydrate from
+       data/trust.json then the live Firestore doc — never hardcode them. -->
+  <section class="landing-proof" id="landing-stats">
+   <div class="proof-card">
+    <div class="lstat">
+      <div class="lstat-num"><span id="hero-rating" data-count="4.96" data-decimals="2">4.96</span><span class="lstat-star">★</span></div>
+      <div class="lstat-label">average rating · <span id="hero-reviews">24</span> reviews</div>
+    </div>
+    <div class="lstat">
+      <div class="lstat-num"><span id="hero-coaches" data-count="600" data-prefix="+">+600</span></div>
+      <div class="lstat-label">coaches on Táctica</div>
+    </div>
+    <div class="lstat lstat-quotes">
+      <div class="trust-marquee">
+        <!-- Edit testimonials here; the script below duplicates them for a seamless loop. -->
+        <div class="trust-track" id="trust-track">
+          <figure class="t-card">
+            <div class="t-stars">★★★★☆</div>
+            <blockquote>"I use Táctica to analyse teams and share my analysis on social media — very visual, with loads of teams and national sides."</blockquote>
+            <figcaption>Aitor V.</figcaption>
+          </figure>
+          <figure class="t-card">
+            <div class="t-stars">★★★★★</div>
+            <blockquote>"Excellent — thank you so much."</blockquote>
+            <figcaption>Roberto P.</figcaption>
+          </figure>
+          <figure class="t-card">
+            <div class="t-stars">★★★★★</div>
+            <blockquote>"Really useful for designing tactics."</blockquote>
+            <figcaption>Oscar</figcaption>
+          </figure>
+          <figure class="t-card">
+            <div class="t-stars">★★★★★</div>
+            <blockquote>"Amazing!"</blockquote>
+            <figcaption>Django L.</figcaption>
+          </figure>
         </div>
       </div>
     </div>
+   </div>
   </section>
 </div>
 <script>
@@ -185,30 +180,79 @@
   // layers update the DOM identically.
   window.__applyTrustStats = function (d) {
     if (!d) return;
-    var coaches = document.getElementById('trust-coaches');
-    if (coaches && d.coaches != null) {
+    // Coaches read like "+600" — split the prefix off so the count-up animates
+    // the number and re-applies the "+".
+    var setCoaches = function (el) {
+      if (!el || d.coaches == null) return;
       var s = String(d.coaches);
       var m = s.match(/[\d.]+/);
-      coaches.setAttribute('data-count', m ? m[0] : s);
-      coaches.setAttribute('data-prefix', m ? s.slice(0, m.index) : '');
-      coaches.textContent = s;
-    }
-    var rating = document.getElementById('trust-rating');
-    if (rating && d.rating != null) {
+      el.setAttribute('data-count', m ? m[0] : s);
+      el.setAttribute('data-prefix', m ? s.slice(0, m.index) : '');
+      el.textContent = s;
+    };
+    // Rating keeps its own decimals (2dp — 1dp once rounded to a misleading 5.0).
+    var setRating = function (el) {
+      if (!el || d.rating == null) return;
       var rv = String(d.rating);
       var dot = rv.indexOf('.');
-      rating.setAttribute('data-count', rv);
-      rating.setAttribute('data-decimals', dot >= 0 ? String(rv.length - dot - 1) : '0');
-      rating.textContent = rv;
-    }
-    var rc = document.getElementById('trust-review-count');
-    if (rc && d.reviews != null) rc.textContent = String(d.reviews);
+      el.setAttribute('data-count', rv);
+      el.setAttribute('data-decimals', dot >= 0 ? String(rv.length - dot - 1) : '0');
+      el.textContent = rv;
+    };
+    setCoaches(document.getElementById('hero-coaches'));
+    setRating(document.getElementById('hero-rating'));
+    // Review count rides in the rating's label, so it's set as plain text (no
+    // data-count) — it shouldn't count up inside a sentence.
+    var hr = document.getElementById('hero-reviews');
+    if (hr && d.reviews != null) hr.textContent = String(d.reviews);
   };
+  // Hero stat row: reveal + count-up. Runs on LOAD — it sits above the fold, so
+  // the band's scroll trigger would never fire and the numbers would stay
+  // invisible. Waits for the hydration below so it counts to the real values
+  // rather than animating the fallbacks and then snapping.
+  (function () {
+    var row = document.getElementById('landing-stats');
+    if (!row) return;
+    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    var started = false;
+    function countUp(el) {
+      var dur = 900, start = performance.now();
+      // Re-read the target EVERY frame: the live Firestore stats can land while
+      // this is animating, and they differ from the static trust.json seed. If we
+      // captured the target up front, the last frame would overwrite the live
+      // number with the stale one and the hero would disagree with the band.
+      function tick(now) {
+        var to = parseFloat(el.getAttribute('data-count'));
+        if (!isFinite(to)) return;
+        var dec = parseInt(el.getAttribute('data-decimals') || '0', 10);
+        var pre = el.getAttribute('data-prefix') || '';
+        var p = Math.min(1, Math.max(0, (now - start) / dur));
+        var eased = 1 - Math.pow(1 - p, 3);
+        el.textContent = pre + Math.max(0, to * eased).toFixed(dec);
+        if (p < 1) requestAnimationFrame(tick);
+        else el.textContent = pre + to.toFixed(dec);
+      }
+      requestAnimationFrame(tick);
+    }
+    window.__startHeroStats = function () {
+      if (started) return;
+      started = true;
+      row.classList.add('in');
+      if (reduce) return;                     // values are already correct in the DOM
+      Array.prototype.forEach.call(row.querySelectorAll('[data-count]'), function (c, i) {
+        window.setTimeout(function () { countUp(c); }, 90 * i + 240);
+      });
+    };
+    // Safety net: reveal even if the hydration fetch never settles.
+    window.setTimeout(function () { window.__startHeroStats(); }, 1500);
+  })();
+
   (function () {
     fetch('data/trust.json?ts=' + Date.now())
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) { window.__applyTrustStats(d); })
-      .catch(function () {});
+      .catch(function () {})
+      .then(function () { if (window.__startHeroStats) window.__startHeroStats(); });
   })();
 
   // Duplicate testimonial cards once so the vertical marquee loops seamlessly.
@@ -217,77 +261,6 @@
     if (track) track.innerHTML += track.innerHTML;
   })();
 
-  // Reveal-on-scroll + count-up for the trust signals band.
-  // The whole band waits until you scroll down to it, then the three columns
-  // fade/slide up in a stagger; the count-up only starts once a column is in.
-  (function () {
-    var gate = document.getElementById('landing-gate');
-    var section = document.querySelector('.landing-trust');
-    if (!section) return;
-    var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    var reveals = [].slice.call(section.querySelectorAll('.reveal'));
-
-    function countUp(el) {
-      var to = parseFloat(el.getAttribute('data-count'));
-      var dec = parseInt(el.getAttribute('data-decimals') || '0', 10);
-      var pre = el.getAttribute('data-prefix') || '';
-      var suf = el.getAttribute('data-suffix') || '';
-      if (reduce) { el.textContent = pre + to.toFixed(dec) + suf; return; }
-      var dur = 1100, start = performance.now();
-      function tick(now) {
-        var p = Math.min(1, Math.max(0, (now - start) / dur));
-        var eased = 1 - Math.pow(1 - p, 3);
-        el.textContent = pre + (to * eased).toFixed(dec) + suf;
-        if (p < 1) requestAnimationFrame(tick);
-        else el.textContent = pre + to.toFixed(dec) + suf;
-      }
-      requestAnimationFrame(tick);
-    }
-
-    function cascade() {
-      reveals.forEach(function (el, i) {
-        var delay = i * 150;                 // stagger the three columns
-        el.style.transitionDelay = delay + 'ms';
-        el.classList.add('in');
-        // Count up only AFTER the column has faded in.
-        var counters = el.querySelectorAll('[data-count]');
-        if (counters.length) {
-          counters.forEach(function (c) {
-            window.setTimeout(function () { countUp(c); }, delay + 650);
-          });
-        }
-      });
-    }
-
-    if (reduce) {
-      reveals.forEach(function (el) { el.classList.add('in'); });
-      section.querySelectorAll('[data-count]').forEach(countUp);
-      return;
-    }
-
-    // Trigger when the band scrolls up past ~72% of the viewport. This keeps it
-    // hidden while it merely peeks above the fold, then fires on a small scroll.
-    var fired = false, ticking = false;
-    function check() {
-      ticking = false;
-      if (fired) return;
-      var vh = (gate ? gate.clientHeight : window.innerHeight) || window.innerHeight;
-      var top = section.getBoundingClientRect().top;
-      if (top < vh * 0.72) { fired = true; cascade(); teardown(); }
-    }
-    function onScroll() {
-      if (!ticking) { ticking = true; requestAnimationFrame(check); }
-    }
-    function teardown() {
-      (gate || window).removeEventListener('scroll', onScroll);
-      window.removeEventListener('scroll', onScroll, true);
-      window.removeEventListener('resize', onScroll);
-    }
-    (gate || window).addEventListener('scroll', onScroll, { passive: true });
-    window.addEventListener('scroll', onScroll, true);   // fallback if gate isn't the scroller
-    window.addEventListener('resize', onScroll);
-    requestAnimationFrame(check); // in case it's already in view on load (tall screens)
-  })();
 </script>
 
 <!-- ── Top Notification Bar ── -->
@@ -2922,6 +2895,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=57"></script>
+<script type="module" src="js/app.js?v=61"></script>
 </body>
 </html>
