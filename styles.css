@@ -2949,7 +2949,7 @@ body.shared-view #canvas-wrap {
 .landing-split {
   display: flex; align-items: flex-start;   /* headline top lines up with the mockup top */
   width: 100%; max-width: var(--landing-max, 1200px);
-  padding: clamp(20px, 3.4vh, 52px) 64px clamp(22px, 2.8vh, 34px);
+  padding: clamp(20px, 3.4vh, 52px) 64px clamp(32px, 3.8vh, 44px);
   gap: clamp(48px, 5vw, 88px);
   position: relative; z-index: 1;
   box-sizing: border-box;
@@ -3146,7 +3146,7 @@ body.shared-view #canvas-wrap {
   position: absolute;
   width: 140%; height: 140%;
   top: -20%; left: -20%;
-  background: radial-gradient(ellipse at center, rgba(30,215,96,0.22) 0%, rgba(30,215,96,0.10) 35%, transparent 65%);
+  background: radial-gradient(ellipse at center, rgba(30,215,96,0.32) 0%, rgba(30,215,96,0.15) 35%, transparent 68%);
   border-radius: 50%;
   pointer-events: none;
   filter: blur(50px);
@@ -3155,18 +3155,40 @@ body.shared-view #canvas-wrap {
 /* Product mockup */
 .landing-mockup {
   position: relative;
-  position: relative;
-  width: 100%; max-width: clamp(520px, 42vw, 660px);
-  aspect-ratio: 3 / 2;          /* fixed frame: the two slides differ in ratio */
+  position: absolute; inset: 0;
   border-radius: 14px;
   overflow: hidden;
-  /* Deliberately heavy — the frame should read as lifted off the page */
+  /* On a #111 page a black shadow has almost nothing to darken, so elevation
+     is carried by the .hero-ambient bloom behind + a rim light on top here.
+     The dark layers only do the short contact shadow. */
   box-shadow:
-    0 48px 100px -24px rgba(0, 0, 0, 0.92),
-    0 28px 60px -12px rgba(0, 0, 0, 0.65),
-    0 10px 24px rgba(0, 0, 0, 0.45),
-    0 0 0 1px rgba(255, 255, 255, 0.07);
+    0 30px 60px -20px rgba(0, 0, 0, 0.9),
+    0 8px 20px -6px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
   background: #1a2e16;
+  z-index: 1;
+}
+
+/* Wrapper: owns the sizing so the bloom can spill outside the clipped frame. */
+.hero-frame {
+  position: relative;
+  width: 100%; max-width: clamp(520px, 42vw, 660px);
+  aspect-ratio: 3 / 2;          /* fixed box: the two slides differ in ratio */
+}
+.hero-ambient {
+  position: absolute; inset: 0;
+  z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center;
+  border-radius: 50%;
+  filter: blur(56px) saturate(2.3);
+  opacity: 0;
+  transform: scale(1.08) translateY(26px);
+  transition: opacity 0.7s ease;
+}
+.hero-ambient.is-active { opacity: 0.95; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-ambient { transition: none; }
 }
 
 /* ── Hero carousel ── */
@@ -3211,7 +3233,8 @@ body.shared-view #canvas-wrap {
   /* slides are absolutely positioned, so the frame has no intrinsic width —
      the shrink-to-fit column would collapse it to zero without this */
   .landing-right { width: 100%; }
-  .landing-mockup { max-width: 400px; margin: 0 auto; }
+  .hero-frame { max-width: 400px; margin: 0 auto; }
+  .hero-ambient { filter: blur(34px) saturate(2.1); }
   .landing-trust { padding: 48px 24px 64px; }
   .trust-inner { grid-template-columns: 1fr; gap: 32px; text-align: center; }
   .trust-number { font-size: 52px; }
