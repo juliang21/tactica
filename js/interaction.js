@@ -538,7 +538,7 @@ export function select(el, opts = {}) {
     : type === 'textbox' ? 'Text'
     : type === 'spotlight' ? 'Spotlight'
     : type === 'vision' ? 'Player\'s Vision'
-    : type === 'freeform' ? 'Freeform Zone'
+    : type === 'freeform' ? 'Free Zone'
     : type === 'motion' ? 'Motion Path'
     : type === 'headline' ? 'Headline'
     : type === 'tag' ? 'Callout'
@@ -1358,6 +1358,19 @@ export function showVisionHandles(el) {
 }
 
 // ── Freeform zone handles (vertex handles) ──
+// Local half-extents of the outline (before scale/rotation) — the box the
+// resize handles sit on.
+export function freeformHalfExtents(el) {
+  const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+  let hw = 1, hh = 1;
+  for (const d of deltas) { hw = Math.max(hw, Math.abs(d.dx)); hh = Math.max(hh, Math.abs(d.dy)); }
+  return { hw, hh };
+}
+
+// A Free Zone has two editing modes, like a design tool:
+//   distort (default) — a handle per vertex, drag to reshape the outline
+//   resize            — a bounding box: drag a corner to scale the whole zone,
+//                       or the top handle to rotate it
 export function showFreeformHandles(el) {
   removeHandles();
   const ns = 'http://www.w3.org/2000/svg';
@@ -1367,15 +1380,31 @@ export function showFreeformHandles(el) {
 
   const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
   const scale = parseFloat(el.dataset.scale || '1');
-  const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
-  const cosR = Math.cos(rot), sinR = Math.sin(rot);
-  const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+  const rotDeg = parseFloat(el.dataset.rotation || '0');
 
-  deltas.forEach((d, i) => {
-    const wx = cx + (d.dx * scale * cosR - d.dy * scale * sinR);
-    const wy = cy + (d.dx * scale * sinR + d.dy * scale * cosR);
-    handleGroup.appendChild(createHandle(ns, wx, wy, 'freeform-' + i, 'move'));
-  });
+  if (el.dataset.ffMode === 'resize') {
+    const { hw, hh } = freeformHalfExtents(el);
+    const w = hw * scale, h = hh * scale;
+    const tl = rotatedPoint(cx, cy, -w, -h, rotDeg);
+    const tr = rotatedPoint(cx, cy,  w, -h, rotDeg);
+    const br = rotatedPoint(cx, cy,  w,  h, rotDeg);
+    const bl = rotatedPoint(cx, cy, -w,  h, rotDeg);
+    const rotateAt = rotatedPoint(cx, cy, 0, -h - 18, rotDeg);
+    handleGroup.appendChild(createHandle(ns, tl.x, tl.y, 'ffbox-tl', 'nwse-resize'));
+    handleGroup.appendChild(createHandle(ns, tr.x, tr.y, 'ffbox-tr', 'nesw-resize'));
+    handleGroup.appendChild(createHandle(ns, br.x, br.y, 'ffbox-br', 'nwse-resize'));
+    handleGroup.appendChild(createHandle(ns, bl.x, bl.y, 'ffbox-bl', 'nesw-resize'));
+    handleGroup.appendChild(createRotateHandle(ns, rotateAt.x, rotateAt.y));
+  } else {
+    const rot = rotDeg * Math.PI / 180;
+    const cosR = Math.cos(rot), sinR = Math.sin(rot);
+    const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+    deltas.forEach((d, i) => {
+      const wx = cx + (d.dx * scale * cosR - d.dy * scale * sinR);
+      const wy = cy + (d.dx * scale * sinR + d.dy * scale * cosR);
+      handleGroup.appendChild(createHandle(ns, wx, wy, 'freeform-' + i, 'move'));
+    });
+  }
   S.svg.appendChild(handleGroup);
 }
 
@@ -1564,17 +1593,29 @@ export function updateHandlePositions(el) {
   } else if (type === 'freeform') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const scale = parseFloat(el.dataset.scale || '1');
-    const rot = parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
-    const cosR = Math.cos(rot), sinR = Math.sin(rot);
-    const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+    const rotDeg = parseFloat(el.dataset.rotation || '0');
     const children = handleGroup.children;
-    deltas.forEach((d, i) => {
-      if (children[i]) {
-        const wx = cx + (d.dx * scale * cosR - d.dy * scale * sinR);
-        const wy = cy + (d.dx * scale * sinR + d.dy * scale * cosR);
-        moveHandleTo(children[i], wx, wy);
-      }
-    });
+    if (el.dataset.ffMode === 'resize') {
+      const { hw, hh } = freeformHalfExtents(el);
+      const w = hw * scale, h = hh * scale;
+      const pts = [
+        rotatedPoint(cx, cy, -w, -h, rotDeg), rotatedPoint(cx, cy,  w, -h, rotDeg),
+        rotatedPoint(cx, cy,  w,  h, rotDeg), rotatedPoint(cx, cy, -w,  h, rotDeg),
+        rotatedPoint(cx, cy,  0, -h - 18, rotDeg),
+      ];
+      pts.forEach((p, i) => { if (children[i]) moveHandleTo(children[i], p.x, p.y); });
+    } else {
+      const rot = rotDeg * Math.PI / 180;
+      const cosR = Math.cos(rot), sinR = Math.sin(rot);
+      const deltas = JSON.parse(el.dataset.freeformPts || '[]');
+      deltas.forEach((d, i) => {
+        if (children[i]) {
+          const wx = cx + (d.dx * scale * cosR - d.dy * scale * sinR);
+          const wy = cy + (d.dx * scale * sinR + d.dy * scale * cosR);
+          moveHandleTo(children[i], wx, wy);
+        }
+      });
+    }
   } else if (type === 'motion') {
     const trail = el.querySelector('.motion-trail');
     if (trail) {
@@ -1739,7 +1780,34 @@ function onVisionHandleDrag(el, pt) {
 
 function onFreeformHandleDrag(el, pt) {
   const h = S.endpointDragging;
-  if (!h || !h.startsWith('freeform-')) return;
+  if (!h) return;
+
+  // ── Resize mode: rotate, or scale the whole zone from a corner ──
+  if (h === 'rotate') {
+    const cx0 = parseFloat(el.dataset.cx), cy0 = parseFloat(el.dataset.cy);
+    let deg = (Math.atan2(pt.y - cy0, pt.x - cx0) * 180 / Math.PI) + 90;
+    if (deg < 0) deg += 360;
+    el.dataset.rotation = deg;
+    applyTransform(el);
+    updateHandlePositions(el);
+    return;
+  }
+  if (h.startsWith('ffbox-')) {
+    const cx0 = parseFloat(el.dataset.cx), cy0 = parseFloat(el.dataset.cy);
+    // Un-rotate the cursor into the zone's local frame, then scale uniformly by
+    // whichever axis the drag stretched most so it tracks the corner naturally.
+    const r = -parseFloat(el.dataset.rotation || '0') * Math.PI / 180;
+    const lx = (pt.x - cx0) * Math.cos(r) - (pt.y - cy0) * Math.sin(r);
+    const ly = (pt.x - cx0) * Math.sin(r) + (pt.y - cy0) * Math.cos(r);
+    const { hw, hh } = freeformHalfExtents(el);
+    const s = Math.max(Math.abs(lx) / hw, Math.abs(ly) / hh);
+    el.dataset.scale = Math.max(0.2, Math.min(6, s));
+    applyTransform(el);
+    updateHandlePositions(el);
+    return;
+  }
+
+  if (!h.startsWith('freeform-')) return;
   const idx = parseInt(h.split('-')[1]);
   const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
   const scale = parseFloat(el.dataset.scale || '1');

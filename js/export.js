@@ -698,22 +698,27 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const sStroke = g.dataset.savedStroke || shape?.getAttribute('stroke') || 'rgba(255,255,255,0.5)';
     const sDash = shape?.getAttribute('stroke-dasharray') || '';
 
-    // Catmull-Rom to Bezier — smooth closed curve
+    // Outline through the vertices — straight polygon by default, rounded when
+    // the zone is set to curved. MUST MATCH freeformPathD in elements.js.
     const n = pts.length;
-    const tension = 0.35;
     ctx.save();
     ctx.beginPath();
     ctx.moveTo(pts[0].x, pts[0].y);
-    for (let i = 0; i < n; i++) {
-      const p0 = pts[(i - 1 + n) % n];
-      const p1 = pts[i];
-      const p2 = pts[(i + 1) % n];
-      const p3 = pts[(i + 2) % n];
-      const cp1x = p1.x + (p2.x - p0.x) * tension;
-      const cp1y = p1.y + (p2.y - p0.y) * tension;
-      const cp2x = p2.x - (p3.x - p1.x) * tension;
-      const cp2y = p2.y - (p3.y - p1.y) * tension;
-      ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+    if (g.dataset.freeformCurve !== 'curved') {
+      for (let i = 1; i < n; i++) ctx.lineTo(pts[i].x, pts[i].y);
+    } else {
+      const tension = 0.35;
+      for (let i = 0; i < n; i++) {
+        const p0 = pts[(i - 1 + n) % n];
+        const p1 = pts[i];
+        const p2 = pts[(i + 1) % n];
+        const p3 = pts[(i + 2) % n];
+        const cp1x = p1.x + (p2.x - p0.x) * tension;
+        const cp1y = p1.y + (p2.y - p0.y) * tension;
+        const cp2x = p2.x - (p3.x - p1.x) * tension;
+        const cp2y = p2.y - (p3.y - p1.y) * tension;
+        ctx.bezierCurveTo(cp1x, cp1y, cp2x, cp2y, p2.x, p2.y);
+      }
     }
     ctx.closePath();
     ctx.fillStyle = sFill; ctx.fill();

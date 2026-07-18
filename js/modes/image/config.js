@@ -15,8 +15,9 @@ export const imageMode = {
       // Essentials (no referee in Image Analysis; Detect Player takes its slot)
       'select', 'player-a', 'player-b', 'player-joker',
       'ball', 'cone', 'detect-player',
-      // Zones & highlights
-      'shadow-rect',
+      // Zones & highlights ('freeform' = Free Zone: draw your own shape by
+      // dropping vertices, then drag any vertex to reshape it)
+      'shadow-rect', 'freeform',
       'spotlight', 'vision',
       // Arrows
       'arrow',

@@ -1,5 +1,5 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
 import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
@@ -19,7 +19,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyImageCrop, applyImageOpacity,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=18';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=19';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=13';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=13';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -260,8 +260,11 @@ function _logElementInserted(elType) {
 const _baseSetTool = setTool;
 window.setTool = function(t) {
   // Add-Player tool: crosshair + guidance banner while active, cleared on exit
-  // Clean up freeform if leaving freeform mode
+  // Leaving the freeform tool: COMMIT a shape that already has enough points
+  // instead of discarding it. Finishing via the Done banner or a tool switch
+  // used to silently lose the drawing — the same trap the Unit tool had.
   if (S.tool === 'freeform' && t !== 'freeform') {
+    if (freeformPts.length >= 3) closeFreeform({ keepTool: true });
     freeformPts = [];
     if (freeformPreview) { freeformPreview.remove(); freeformPreview = null; }
     const dotsG = document.getElementById('freeform-dots');
@@ -304,13 +307,14 @@ window.setTool = function(t) {
 
   // "Done" banner for the continuous Image-Analysis tools.
   const doneLabel = (S.appMode === 'image') ? _DONE_TOOL_LABELS[t] : null;
-  if (doneLabel) _showToolDoneBanner(doneLabel); else _hideToolDoneBanner();
+  if (doneLabel) _showToolDoneBanner(doneLabel, { noButton: _NO_DONE_BUTTON.has(t) }); else _hideToolDoneBanner();
 
   // ── Show element properties panel when a tool is selected ──────────────
   // Maps tool names to their panel section + hint text so the user can
   // pre-configure settings before placing the element on the pitch.
   const _toolPanelMap = {
     'shadow-rect':  { panel: 'zone-edit-section',      label: 'Zone',          hint: 'Click on the pitch to place' },
+    'freeform':     { panel: 'zone-edit-section',      label: 'Free Zone',     hint: 'Click to drop points, then the first one again to close' },
     'shadow-circle':{ panel: 'zone-edit-section',      label: 'Zone',          hint: 'Click on the pitch to place' },
     'spotlight':    { panel: 'spotlight-edit-section',  label: 'Highlight',     hint: 'Click on the pitch to place' },
     'vision':       { panel: 'vision-edit-section',     label: 'Vision',        hint: 'Click on the pitch to place' },
@@ -1610,6 +1614,31 @@ window.toggleZoneAdvanced = function() {
   toggle?.classList.toggle('zone-advanced-open', open);
 };
 
+// Free Zone editing mode: per-vertex distortion (default) or a bounding box
+// that scales/rotates the whole zone. Re-shows the handles in the new mode.
+window.applyZoneHandleMode = function(mode) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'freeform') return;
+  if (mode === 'resize') el.dataset.ffMode = 'resize';
+  else delete el.dataset.ffMode;             // absent = distort
+  showFreeformHandles(el);
+  document.querySelectorAll('#zone-edit-section [data-ffmode]').forEach(b =>
+    b.classList.toggle('active', b.dataset.ffmode === (mode === 'resize' ? 'resize' : 'distort')));
+};
+
+// Free Zone outline: straight polygon (default) or rounded/blobby.
+window.applyZoneEdges = function(mode) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'freeform') return;
+  S.pushUndo();
+  if (mode === 'curved') el.dataset.freeformCurve = 'curved';
+  else delete el.dataset.freeformCurve;      // absent = straight
+  updateFreeformPath(el);
+  trackElementEdited('freeform', 'edges');
+  document.querySelectorAll('#zone-edit-section [data-edges]').forEach(b =>
+    b.classList.toggle('active', b.dataset.edges === (mode === 'curved' ? 'curved' : 'straight')));
+};
+
 window.applyZoneCorners = function(style) {
   const el = S.selectedEl;
   if (!el || el.dataset.type !== 'shadow-rect') return;
@@ -1704,6 +1733,18 @@ function _syncZonePanelState(el) {
   // Corners group visibility (only for rects)
   const cornersGroup = document.getElementById('zone-corners-group');
   if (cornersGroup) cornersGroup.style.display = type === 'shadow-rect' ? '' : 'none';
+  // Edges group — Free Zone only (straight polygon vs rounded blob)
+  const edges = el.dataset.freeformCurve === 'curved' ? 'curved' : 'straight';
+  document.querySelectorAll('#zone-edit-section [data-edges]').forEach(b =>
+    b.classList.toggle('active', b.dataset.edges === edges));
+  const edgesGroup = document.getElementById('zone-edges-group');
+  if (edgesGroup) edgesGroup.style.display = type === 'freeform' ? '' : 'none';
+  // Handles group — Free Zone only (distort vertices vs resize the whole zone)
+  const ffMode = el.dataset.ffMode === 'resize' ? 'resize' : 'distort';
+  document.querySelectorAll('#zone-edit-section [data-ffmode]').forEach(b =>
+    b.classList.toggle('active', b.dataset.ffmode === ffMode));
+  const ffModeGroup = document.getElementById('zone-ffmode-group');
+  if (ffModeGroup) ffModeGroup.style.display = type === 'freeform' ? '' : 'none';
   // Label toggle + input visibility + label opts
   const labelVisible = el.dataset.zoneLabelVisible !== 'false';
   const lt = document.getElementById('zone-label-toggle');
@@ -2186,9 +2227,14 @@ const _DONE_TOOL_LABELS = {
   'detect-player': 'Detecting players — tap the ones the detector missed',
   'net-zone':      'Building a unit — click players, then the first again to close',
   'marker':        'Connecting lines — click players to chain them',
+  // Free Zone shows no Done button: the shape rubber-bands to the cursor while
+  // drawing, so travelling up to a button warps it and reads as "still drawing".
+  // Double-click is the finish gesture, so say that instead.
+  'freeform':      'Drawing a free zone — <b>double-click to finish</b> · or click your first point',
 };
+const _NO_DONE_BUTTON = new Set(['freeform']);
 let _doneBannerEl = null;
-function _showToolDoneBanner(label) {
+function _showToolDoneBanner(label, opts = {}) {
   if (!_doneBannerEl) {
     _doneBannerEl = document.createElement('div');
     _doneBannerEl.id = 'tool-done-banner';
@@ -2201,9 +2247,11 @@ function _showToolDoneBanner(label) {
     (document.getElementById('canvas-wrap') || document.body).appendChild(_doneBannerEl);
   }
   _doneBannerEl.innerHTML = `<span>${label}</span>` +
-    `<button onclick="setTool('select')" style="pointer-events:auto;cursor:pointer;` +
-    `background:#34D399;color:#0d1a12;border:none;border-radius:14px;padding:5px 16px;` +
-    `font:700 11px Manrope,sans-serif">Done</button>`;
+    (opts.noButton ? '' :
+      `<button onclick="setTool('select')" style="pointer-events:auto;cursor:pointer;` +
+      `background:#34D399;color:#0d1a12;border:none;border-radius:14px;padding:5px 16px;` +
+      `font:700 11px Manrope,sans-serif">Done</button>`);
+  _doneBannerEl.style.padding = opts.noButton ? '9px 18px' : '8px 8px 8px 18px';
   _doneBannerEl.style.display = 'flex';
 }
 function _hideToolDoneBanner() { if (_doneBannerEl) _doneBannerEl.style.display = 'none'; }
@@ -2703,11 +2751,13 @@ S.svg.addEventListener('touchend', arrowEnd);
 let freeformPts = [];          // accumulating click points
 let freeformPreview = null;    // SVG preview path element
 
-function closeFreeform() {
+function closeFreeform(opts = {}) {
   if (freeformPts.length >= 3) {
     S.pushUndo();
     const zone = addFreeformZone([...freeformPts]);
-    if (zone) { _logElementInserted('freeform'); finishInsert(zone); }
+    // opts.keepTool: committing because the user is leaving the tool — don't
+    // also switch/select, the caller is already changing tools.
+    if (zone) { _logElementInserted('freeform'); if (!opts.keepTool) finishInsert(zone); }
   }
   // Clean up
   freeformPts = [];

@@ -1675,8 +1675,20 @@ export function updateFreeformPath(g) {
     y: cy + (d.dx * scale * sinR + d.dy * scale * cosR)
   }));
 
-  // Catmull-Rom to Bezier — smooth closed curve
+  path.setAttribute('d', freeformPathD(pts, g.dataset.freeformCurve));
+}
+
+// The zone outline through its vertices. Straight by default — a plain polygon
+// like the Unit, which is what a tactical zone usually wants; 'curved' rounds it
+// off (Catmull-Rom → Bezier) for a blobbier shape.
+// MUST MATCH the inline copy in export.js.
+export function freeformPathD(pts, mode) {
   const n = pts.length;
+  if (mode !== 'curved') {
+    let d = `M ${pts[0].x} ${pts[0].y}`;
+    for (let i = 1; i < n; i++) d += ` L ${pts[i].x} ${pts[i].y}`;
+    return d + ' Z';
+  }
   const tension = 0.35;
   let d = `M ${pts[0].x} ${pts[0].y}`;
   for (let i = 0; i < n; i++) {
@@ -1690,8 +1702,7 @@ export function updateFreeformPath(g) {
     const cp2y = p2.y - (p3.y - p1.y) * tension;
     d += ` C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${p2.x} ${p2.y}`;
   }
-  d += ' Z';
-  path.setAttribute('d', d);
+  return d + ' Z';
 }
 
 // ─── Add Motion (player movement trail + ghost) ─────────────────────────────

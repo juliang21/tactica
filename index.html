@@ -431,6 +431,17 @@
       </svg>
       <span class="tool-label">Zone</span>
     </button>
+    <button class="tool-btn" data-tool="freeform" onclick="setTool('freeform')">
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+        <path d="M4 8.5 L11 3 L18.5 9.5 L15 18.5 L6 16 Z" fill="rgba(216,255,60,0.18)" stroke="rgba(216,255,60,0.6)" stroke-width="1.2" stroke-dasharray="3,2" stroke-linejoin="round"/>
+        <circle cx="4" cy="8.5" r="1.7" fill="rgba(216,255,60,0.95)"/>
+        <circle cx="11" cy="3" r="1.7" fill="rgba(216,255,60,0.95)"/>
+        <circle cx="18.5" cy="9.5" r="1.7" fill="rgba(216,255,60,0.95)"/>
+        <circle cx="15" cy="18.5" r="1.7" fill="rgba(216,255,60,0.95)"/>
+        <circle cx="6" cy="16" r="1.7" fill="rgba(216,255,60,0.95)"/>
+      </svg>
+      <span class="tool-label">Free Zone</span>
+    </button>
     <button class="tool-btn" data-tool="spotlight" onclick="setTool('spotlight')">
         <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
           <path d="M10 2 L5 16 L17 16 L12 2 Z" fill="rgba(200,210,230,0.2)"/>
@@ -2119,6 +2130,21 @@
             </button>
           </div>
         </div>
+        <!-- Free Zone only: how the handles behave, and the outline style -->
+        <div class="field-group" id="zone-ffmode-group">
+          <div class="field-label">Handles</div>
+          <div class="style-btn-row">
+            <button class="style-btn" data-ffmode="distort" onclick="applyZoneHandleMode('distort')">Distort</button>
+            <button class="style-btn" data-ffmode="resize" onclick="applyZoneHandleMode('resize')">Resize</button>
+          </div>
+        </div>
+        <div class="field-group" id="zone-edges-group">
+          <div class="field-label">Edges</div>
+          <div class="style-btn-row">
+            <button class="style-btn" data-edges="straight" onclick="applyZoneEdges('straight')">Straight</button>
+            <button class="style-btn" data-edges="curved" onclick="applyZoneEdges('curved')">Curved</button>
+          </div>
+        </div>
         <div class="field-group">
           <div class="field-label">Colour</div>
           <div class="picker-row">
@@ -2896,6 +2922,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=53"></script>
+<script type="module" src="js/app.js?v=57"></script>
 </body>
 </html>
