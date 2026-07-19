@@ -4841,7 +4841,7 @@ window.hideNotification = hideNotification;
 //   position: 'right' (default) or 'above' — where tooltip appears relative to anchor
 //   skipCheck: if true, skip the localStorage "already seen" check (for chained tooltips)
 let _activeAnnounce = null;
-function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', onCta, position = 'right', skipCheck = false, maxShows = 1 }) {
+function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', onCta, position = 'right', skipCheck = false, maxShows = 1, dismissible = false }) {
   const key = 'tactica_announce_' + id;
   if (!skipCheck) {
     const seen = parseInt(localStorage.getItem(key) || '0', 10);
@@ -4857,6 +4857,14 @@ function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', o
   let imgHTML = '';
   if (img) imgHTML = `<img class="feature-announce-img" src="${img}" alt="">`;
 
+  // Opt-out only earns its place when the tip is set to repeat (maxShows > 1);
+  // on a once-only tip the checkbox would promise something already true.
+  const dismissHTML = dismissible
+    ? `<label class="modal-dismiss feature-announce-dismiss">
+         <input type="checkbox" class="feature-announce-never"> Don't show this again
+       </label>`
+    : '';
+
   el.innerHTML = `
     <button class="feature-announce-close" aria-label="Close">&times;</button>
     ${imgHTML}
@@ -4865,6 +4873,7 @@ function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', o
       <div class="feature-announce-title">${title}</div>
       <div class="feature-announce-text">${text}</div>
       <button class="feature-announce-cta">${cta}</button>
+      ${dismissHTML}
     </div>
   `;
 
@@ -4911,8 +4920,9 @@ function showFeatureAnnounce({ id, anchorEl, img, title, text, cta = 'Got it', o
   if (au) logAction(au.uid, au.email, 'feature_announce_shown', { feature: id }).catch(() => {});
 
   function dismiss(action) {
+    const never = el.querySelector('.feature-announce-never')?.checked;
     const prev = parseInt(localStorage.getItem(key) || '0', 10);
-    localStorage.setItem(key, String(prev + 1));
+    localStorage.setItem(key, never ? '9999' : String(prev + 1));
     if (anchorEl) anchorEl.classList.remove('announce-highlight');
     if (typeof window.gtag === 'function') window.gtag('event', 'feature_announce_' + action, { feature_id: id });
     const du = getCurrentUser();
@@ -5915,6 +5925,26 @@ onAuthChange(async (user) => {
             cta: 'Got it',
           });
           stepBtn.removeEventListener('click', _stepAnnounce);
+        });
+      }
+
+
+      const zoomBtn = document.getElementById('zoom-btn');
+      if (zoomBtn) {
+        zoomBtn.addEventListener('click', function _zoomAnnounce() {
+          showFeatureAnnounce({
+            id: 'zoom-tooltip-v1',
+            anchorEl: zoomBtn,
+            img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><defs><clipPath id="lens"><circle cx="192" cy="70" r="44"/></clipPath></defs><rect width="280" height="140" fill="#14200f"/><rect x="0" y="18" width="280" height="104" fill="#3a7a38"/><rect x="28" y="18" width="28" height="104" fill="#367035"/><rect x="84" y="18" width="28" height="104" fill="#367035"/><rect x="140" y="18" width="28" height="104" fill="#367035"/><rect x="196" y="18" width="28" height="104" fill="#367035"/><rect x="252" y="18" width="28" height="104" fill="#367035"/><line x1="0" y1="40" x2="280" y2="40" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/><circle cx="54" cy="76" r="7" fill="#2f4fbf"/><circle cx="96" cy="58" r="7" fill="#e9e6e7"/><circle cx="128" cy="92" r="7" fill="#2f4fbf"/><g clip-path="url(#lens)"><rect x="148" y="18" width="88" height="104" fill="#3a7a38"/><rect x="168" y="18" width="26" height="104" fill="#367035"/><rect x="216" y="18" width="26" height="104" fill="#367035"/><circle cx="192" cy="70" r="20" fill="#2f4fbf"/><ellipse cx="192" cy="94" rx="24" ry="7" fill="none" stroke="#d8ff3c" stroke-width="2.5"/></g><circle cx="192" cy="70" r="44" fill="none" stroke="#d8ff3c" stroke-width="3"/><path d="M138 84 Q160 96 150 70" fill="none" stroke="rgba(255,255,255,0.5)" stroke-width="1.5" stroke-dasharray="4,3"/></svg>`),
+            title: 'Zoom into the play',
+            text: 'Drop a magnifier over any part of your image to enlarge it — a player, a duel, a gap in the line. Drag it anywhere, pull the rim to resize, and set how much it magnifies.',
+            cta: 'Got it',
+            // Repeats a couple of times while it's new, so the checkbox is a
+            // real choice rather than a no-op.
+            maxShows: 3,
+            dismissible: true,
+          });
+          zoomBtn.removeEventListener('click', _zoomAnnounce);
         });
       }
 

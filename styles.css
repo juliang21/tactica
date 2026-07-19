@@ -1073,6 +1073,12 @@ input[type=range]::-webkit-slider-thumb {
   transition: color 0.15s;
 }
 .modal-dismiss:hover { color: var(--text); }
+/* Same component inside a feature tooltip — left-aligned to match its copy */
+.feature-announce .modal-dismiss {
+  justify-content: flex-start;
+  margin-top: 10px; padding-top: 10px;
+  font-size: 11.5px;
+}
 .modal-dismiss input[type="checkbox"] {
   width: 14px; height: 14px; margin: 0;
   accent-color: var(--accent); cursor: pointer;
