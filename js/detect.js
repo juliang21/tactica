@@ -272,7 +272,7 @@ function _maybeShowIntroModal() {
   bd.id = 'player-detect-intro';
   bd.innerHTML =
     '<div class="modal-box" style="width:360px">' +
-      '<div style="display:flex;justify-content:center;padding:8px 0 2px">' +
+      '<div style="display:flex;justify-content:center;padding-top:4px">' +
         '<svg width="132" height="84" viewBox="0 0 132 84" fill="none">' +
           // player silhouette
           '<circle cx="66" cy="18" r="8" fill="rgba(255,255,255,0.85)"/>' +
@@ -291,14 +291,14 @@ function _maybeShowIntroModal() {
         'hover a player to see them highlighted — click and the element attaches at their feet, ' +
         'sized and coloured to match. Clicking open grass still places freely.' +
       '</div>' +
-      '<label style="display:flex;align-items:center;gap:8px;justify-content:center;cursor:pointer;' +
-        'font-size:12px;color:var(--text-muted);user-select:none;padding-top:2px">' +
-        '<input type="checkbox" id="pdi-dismiss" style="accent-color:#34D399;width:14px;height:14px;cursor:pointer">' +
-        'Don’t show this again' +
-      '</label>' +
       '<div class="modal-row">' +
         '<button class="modal-btn confirm" id="pdi-ok" style="width:100%">Got it</button>' +
       '</div>' +
+      // Dismiss sits below the CTA — see .modal-dismiss in styles.css
+      '<label class="modal-dismiss">' +
+        '<input type="checkbox" id="pdi-dismiss">' +
+        'Don’t show this again' +
+      '</label>' +
     '</div>';
   document.body.appendChild(bd);
   bd.style.display = 'flex';
