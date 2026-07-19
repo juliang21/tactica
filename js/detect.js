@@ -286,7 +286,7 @@ function _maybeShowIntroModal() {
       '<div class="modal-title" style="text-align:center">Players recognized automatically</div>' +
       '<div style="font-size:12.5px;color:var(--text-muted);line-height:1.65;text-align:center">' +
         'Táctica now spots the players in your image — and their team colours. With ' +
-        '<strong style="color:var(--text)">Connected Lines</strong>, <strong style="color:var(--text)">Unit</strong>, ' +
+        '<strong style="color:var(--text)">Chain</strong>, <strong style="color:var(--text)">Unit</strong>, ' +
         '<strong style="color:var(--text)">Callout</strong> or <strong style="color:var(--text)">Highlight</strong> active, ' +
         'hover a player to see them highlighted — click and the element attaches at their feet, ' +
         'sized and coloured to match. Clicking open grass still places freely.' +

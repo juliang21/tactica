@@ -1429,14 +1429,14 @@ export function updateMarkerRim(el) {
 
 // The rim is the band between the outer ellipse and this inner one, pushed up
 // so the rim is thick at the bottom and a hairline on top. Every circle wears
-// it — Marker, Connected Lines, Unit and Highlight alike.
+// it — Marker, Chain, Unit and Highlight alike.
 // MUST MATCH the inline copy in export.js.
 function markerRimGeom(rx, ry) {
   const { off, iry } = rimGeom(ry, 1);
   return { off, iry, irx: rx - 1.2 };
 }
 
-// Stroke weight of a Connected Lines line, in board units.
+// Stroke weight of a Chain link, in board units.
 // Mirrored in export.js (which cannot import from here).
 export const LINK_STROKE = 2;
 
@@ -1616,7 +1616,7 @@ export function addSpotlight(x, y) {
   ellipse.setAttribute('stroke-width', '1.5');
   ellipse.classList.add('spotlight-ring');
 
-  // Perspective rim — same circle style as Connect Players / Unit
+  // Perspective rim — same circle style as Chain / Unit
   const rim = document.createElementNS(ns, 'path');
   rim.classList.add('spotlight-rim');
   rim.setAttribute('fill', 'rgba(255,255,255,0.85)');

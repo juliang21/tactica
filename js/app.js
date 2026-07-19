@@ -22,7 +22,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
 import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=20';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=13';
-import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=13';
+import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=14';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
 import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAnalysis, listAnalyses, getCurrentId, clearCurrentId, formatDate, quickSave, migrateLocalToCloud, captureState, generateThumbnail, listFolders, createFolder, renameFolder, deleteFolder, moveAnalysisToFolder } from './storage.js';
 import { onAuthChange, getCurrentUser } from './auth.js';
@@ -2238,12 +2238,12 @@ window.toggleMarkPlayer = function(on) {
 };
 
 // ─── "Done" banner for continuous Image-Analysis tools ──────────────────────
-// Detect Player / Unit / Connected Lines keep you clicking; a Done button at
+// Detect Player / Unit / Chain keep you clicking; a Done button at
 // the top makes it obvious how to stop (drops back to the select tool).
 const _DONE_TOOL_LABELS = {
   'detect-player': 'Detecting players — tap the ones the detector missed',
   'net-zone':      'Building a unit — click players, then the first again to close',
-  'marker':        'Connecting lines — click players to chain them',
+  'marker':        'Building a chain — click players to add them',
   // Free Zone shows no Done button: the shape rubber-bands to the cursor while
   // drawing, so travelling up to a button warps it and reads as "still drawing".
   // Double-click is the finish gesture, so say that instead.
@@ -2307,7 +2307,7 @@ function _applyTeamColorToMarker(m, snap) {
   _recolorMarkerLinks(m);
 }
 
-// Connected Lines take the colour of the circle they leave from. The team
+// Chain links take the colour of the circle they leave from. The team
 // colour can land ~300ms after the circle is placed (detectAt is async), so
 // the link has to be repainted whenever its start circle is recoloured.
 function _recolorMarkerLinks(m) {
@@ -2621,7 +2621,7 @@ S.svg.addEventListener('click', e => {
   }
   else if (S.tool === 'marker' || S.tool === 'mark-player') {
     // Both place a circle on the player (snapped to a detection, team-coloured).
-    // 'marker' = Connected Lines: also chains a link to the previous circle.
+    // 'marker' = the Chain tool: also chains a link to the previous circle.
     // 'mark-player' = Player Marker: a single circle, no line.
     const snap = _snapToDetectedPlayer(pt);
     placed = addMarker(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
@@ -5895,7 +5895,7 @@ onAuthChange(async (user) => {
             id: 'connect-tooltip-v1',
             anchorEl: connectBtn,
             img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#1a2a1a"/><rect x="10" y="10" width="260" height="120" rx="6" fill="#2d5a2d" opacity="0.6"/><line x1="140" y1="10" x2="140" y2="130" stroke="rgba(255,255,255,0.15)" stroke-width="1"/><circle cx="60" cy="50" r="18" fill="#8B5CF6" opacity="0.9"/><text x="60" y="55" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">2</text><circle cx="140" cy="40" r="18" fill="#8B5CF6" opacity="0.9"/><text x="140" y="45" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">6</text><circle cx="220" cy="55" r="18" fill="#8B5CF6" opacity="0.9"/><text x="220" y="60" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">9</text><circle cx="140" cy="100" r="18" fill="#FBBF24" opacity="0.9"/><text x="140" y="105" text-anchor="middle" font-family="sans-serif" font-size="12" font-weight="700" fill="white">4</text><line x1="78" y1="50" x2="122" y2="40" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="158" y1="40" x2="202" y2="55" stroke="rgba(255,255,255,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/><line x1="140" y1="58" x2="140" y2="82" stroke="rgba(59,130,246,0.5)" stroke-width="3" stroke-dasharray="6,4" stroke-linecap="round"/></svg>`),
-            title: 'Connected Lines',
+            title: 'Chain',
             text: 'Draw tactical connections between players. Click multiple players to chain them together — great for showing passing lanes and pressing triggers.',
             cta: 'Got it',
           });

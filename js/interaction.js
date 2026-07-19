@@ -576,7 +576,7 @@ export function select(el, opts = {}) {
     : type === 'motion' ? 'Motion Path'
     : type === 'headline' ? 'Headline'
     : type === 'tag' ? 'Callout'
-    : type === 'link' ? 'Player Link'
+    : type === 'link' ? 'Chain link'
     : type === 'pair' ? 'Pair'
     : type === 'marker' ? 'Marker'
     : type === 'net-zone' ? 'Unit'
@@ -1776,7 +1776,7 @@ function onSpotlightHandleDrag(el, pt) {
   const newRx = Math.max(12, Math.abs(pt.x - cx));   // min radius 12
   el.dataset.rx = newRx;
   // Keep ry proportional — marker circle ratio (9/28 ≈ 0.32), so a resized
-  // Highlight keeps the same perspective look as Connect Players / Unit
+  // Highlight keeps the same perspective look as Chain / Unit
   el.dataset.ry = Math.max(3, newRx * 9 / 28);
   applyTransform(el);
   updateHandlePositions(el);
