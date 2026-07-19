@@ -43,7 +43,7 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@800;900&family=Playfair+Display:wght@600&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=34">
+<link rel="stylesheet" href="styles.css?v=35">
 <link rel="stylesheet" href="js/modes/training/training.css?v=1">
 <!-- Hotjar Tracking Code for Táctica -->
 <script>
@@ -191,8 +191,11 @@
       Master in Talent Development in Football (Escuela de Real Madrid) &amp; Certified CONMEBOL Coach.
       <a href="https://twitter.com/juliangenoud" target="_blank" rel="noopener noreferrer">@juliangenoud</a>
     </p>
-    <a href="/terms.html" class="landing-terms-link">Terms &amp; Conditions</a>
   </footer>
+  <!-- Legal sits last so the leftover height falls between it and the byline -->
+  <div class="landing-legal">
+    <a href="/terms.html" class="landing-terms-link">Terms &amp; Conditions</a>
+  </div>
 </div>
 <script>
   // Hydrate the trust-band numbers. Two layers, both optional and safe:
@@ -444,6 +447,22 @@
           <ellipse cx="11" cy="16" rx="6" ry="2.5" fill="none" stroke="currentColor" stroke-width="1.3"/>
         </svg>
         <span class="tool-label">Highlight</span>
+    </button>
+    <button class="tool-btn" data-tool="zoom" onclick="setTool('zoom')">
+      <span class="badge-new">New</span>
+      <!-- A lens magnifying part of a photo — deliberately not a bare
+           magnifier, which reads as "zoom the canvas in/out". -->
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+        <rect x="2.5" y="4" width="14" height="10.5" rx="1.5"
+              fill="rgba(255,255,255,0.08)" stroke="currentColor" stroke-width="1.2"/>
+        <circle cx="6.5" cy="8" r="1.1" fill="currentColor" opacity="0.55"/>
+        <circle cx="10.5" cy="10.5" r="1.1" fill="currentColor" opacity="0.55"/>
+        <circle cx="14" cy="14" r="6" fill="#12160c" stroke="#d8ff3c" stroke-width="1.6"/>
+        <circle cx="14" cy="13.4" r="2.6" fill="#d8ff3c"/>
+        <line x1="18.4" y1="18.4" x2="20.6" y2="20.6" stroke="currentColor"
+              stroke-width="1.8" stroke-linecap="round"/>
+      </svg>
+      <span class="tool-label">Zoom</span>
     </button>
     <button class="tool-btn" data-tool="vision" onclick="setTool('vision')">
       <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
@@ -2247,6 +2266,28 @@
     </div>
 
     <!-- Spotlight properties -->
+    <div class="panel-section" id="zoom-edit-section" style="display:none">
+      <h3>Zoom</h3>
+      <div class="field-group">
+        <div class="field-label">Magnification <span id="zoom-factor-val" class="field-val">2.0×</span></div>
+        <input type="range" min="1.2" max="5" step="0.1" value="2" oninput="applyZoomFactor(this.value)">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Lens size <span id="zoom-size-val" class="field-val">70px</span></div>
+        <input type="range" min="30" max="200" step="1" value="70" oninput="applyZoomSize(this.value)">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Ring</div>
+        <div class="picker-row">
+          <div class="color-swatch mini active" style="background:#d8ff3c" data-color="#d8ff3c" onclick="applyZoomRing(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-color="#FFFFFF" onclick="applyZoomRing(this)"></div>
+          <div class="color-swatch mini" style="background:#F59E0B" data-color="#F59E0B" onclick="applyZoomRing(this)"></div>
+          <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyZoomRing(this)"></div>
+          <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyZoomRing(this)"></div>
+          <div class="color-swatch mini" style="background:#111111" data-color="#111111" onclick="applyZoomRing(this)"></div>
+        </div>
+      </div>
+    </div>
     <div class="panel-section" id="spotlight-edit-section" style="display:none">
       <h3>Spotlight</h3>
       <div class="field-group">
@@ -2918,6 +2959,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=65"></script>
+<script type="module" src="js/app.js?v=68"></script>
 </body>
 </html>

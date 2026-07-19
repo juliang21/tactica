@@ -3000,7 +3000,12 @@ body.shared-view #canvas-wrap {
   width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
   margin-bottom: auto;          /* pairs with .landing-split's margin-top:auto */
   box-sizing: border-box; flex: 0 0 auto;
-  padding: 0 64px clamp(20px, 3vh, 40px);
+  padding: 0 64px;
+}
+.landing-legal {
+  width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
+  box-sizing: border-box; flex: 0 0 auto;
+  padding: 16px 64px clamp(16px, 2.4vh, 28px);
 }
 .landing-byline {
   margin-top: 0;
@@ -3013,7 +3018,7 @@ body.shared-view #canvas-wrap {
 .landing-byline a { color: var(--accent); text-decoration: none; }
 .landing-byline a:hover { text-decoration: underline; }
 .landing-terms-link {
-  display: inline-block; margin-top: 12px; font-size: 12px;
+  display: inline-block; font-size: 12px;
   color: rgba(255,255,255,0.32); text-decoration: none; transition: color 0.15s;
 }
 .landing-terms-link:hover { color: rgba(255,255,255,0.6); }
@@ -3251,8 +3256,8 @@ body.shared-view #canvas-wrap {
   }
   /* the byline costs ~80px stacked — claw it back so the reviews stay in view */
   .landing-byline { font-size: 12.5px; }
-  .landing-terms-link { margin-top: 10px; }
-  .landing-footer { padding: 0 24px 24px; text-align: center; }
+  .landing-footer { padding: 0 24px; text-align: center; }
+  .landing-legal { padding: 14px 24px 20px; text-align: center; }
   .landing-byline { max-width: 100%; }
   .landing-left { align-items: center; }
   .landing-headline { font-size: 48px; letter-spacing: -1px; }

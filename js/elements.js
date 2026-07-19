@@ -1467,6 +1467,73 @@ export function spotlightRimPath(cx, cy, rx, ry) {
     `M ${cx - irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx + irx} ${cy - off} A ${irx} ${iry} 0 1 1 ${cx - irx} ${cy - off} Z`;
 }
 
+// ─── Zoom lens ───────────────────────────────────────────────────────────────
+// A circular magnifier over the Image Analysis photo. The lens references the
+// background <image> via <use> rather than copying its href — the photo is a
+// data URL, so a copy per lens would bloat both the DOM and every save.
+// The clip lives on an outer <g> and the scale on the inner <use>: putting both
+// on one node would scale the clip circle too, and the lens would grow instead
+// of magnifying.
+export function addZoom(x, y) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const id = 'zoom-' + S.nextObjectId();
+  const r = 70, factor = 2;
+
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'zoom';
+  g.dataset.cx = x; g.dataset.cy = y;
+  g.dataset.scale = '1'; g.dataset.rotation = '0';
+  g.dataset.r = r;
+  g.dataset.zoomFactor = factor;
+  g.dataset.ringColor = '#d8ff3c';
+
+  // The clipPath lives INSIDE the group, not in <defs>: saves and undo
+  // serialise objectsLayer.innerHTML only, so a clip parked in <defs> would be
+  // dropped on reload and the magnified copy would spill over the whole canvas.
+  const clipId = 'zoomclip-' + id;
+  const clip = document.createElementNS(ns, 'clipPath');
+  clip.setAttribute('id', clipId);
+  clip.setAttribute('clipPathUnits', 'userSpaceOnUse');
+  const clipCircle = document.createElementNS(ns, 'circle');
+  clipCircle.setAttribute('cx', x); clipCircle.setAttribute('cy', y); clipCircle.setAttribute('r', r);
+  clip.appendChild(clipCircle);
+  g.appendChild(clip);
+
+  const lens = document.createElementNS(ns, 'g');
+  lens.classList.add('zoom-lens');
+  lens.setAttribute('clip-path', `url(#${clipId})`);
+  lens.setAttribute('pointer-events', 'none');
+
+  const use = document.createElementNS(ns, 'use');
+  use.classList.add('zoom-src');
+  use.setAttribute('href', '#image-bg');
+  use.setAttribute('transform', `translate(${x},${y}) scale(${factor}) translate(${-x},${-y})`);
+  lens.appendChild(use);
+
+  const ring = document.createElementNS(ns, 'circle');
+  ring.classList.add('zoom-ring');
+  ring.setAttribute('cx', x); ring.setAttribute('cy', y); ring.setAttribute('r', r);
+  ring.setAttribute('fill', 'none');
+  ring.setAttribute('stroke', '#d8ff3c');
+  ring.setAttribute('stroke-width', '3');
+  ring.setAttribute('pointer-events', 'none');
+
+  const hit = document.createElementNS(ns, 'circle');
+  hit.classList.add('hit-area');
+  hit.setAttribute('cx', x); hit.setAttribute('cy', y); hit.setAttribute('r', r);
+  hit.setAttribute('fill', 'transparent');
+
+  g.appendChild(lens); g.appendChild(ring); g.appendChild(hit);
+  S.objectsLayer.appendChild(g);
+
+  makeDraggable(g);
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') { e.stopPropagation(); select(g); }
+  });
+  return g;
+}
+
 export function addSpotlight(x, y) {
   const svgEl = S.svg;
   const topY = 0;

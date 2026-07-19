@@ -1065,6 +1065,37 @@ export function applyHeadlineBgValue(color) {
 }
 
 // ─── Spotlight Properties ────────────────────────────────────────────────────
+// ─── Zoom lens ───────────────────────────────────────────────────────────────
+export function applyZoomFactor(v) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'zoom') return;
+  S.selectedEl.dataset.zoomFactor = v;
+  const out = document.getElementById('zoom-factor-val');
+  if (out) out.textContent = parseFloat(v).toFixed(1) + '×';
+  applyTransform(S.selectedEl);
+  updateHandlePositions(S.selectedEl);
+  trackElementEdited('zoom', 'factor');
+}
+
+export function applyZoomSize(v) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'zoom') return;
+  S.selectedEl.dataset.r = v;
+  const out = document.getElementById('zoom-size-val');
+  if (out) out.textContent = Math.round(v) + 'px';
+  applyTransform(S.selectedEl);
+  updateHandlePositions(S.selectedEl);
+  trackElementEdited('zoom', 'size');
+}
+
+export function applyZoomRing(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'zoom') return;
+  const color = swatchEl.dataset.color || swatchEl.style.background || '#d8ff3c';
+  S.selectedEl.dataset.ringColor = color;
+  S.selectedEl.querySelector('.zoom-ring')?.setAttribute('stroke', color);
+  document.querySelectorAll('#zoom-edit-section .swatch').forEach(sw => sw.classList.remove('active'));
+  swatchEl.classList.add('active');
+  trackElementEdited('zoom', 'ring');
+}
+
 export function applySpotlightColor(swatchEl) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'spotlight') return;
   trackElementEdited('spotlight', 'color');

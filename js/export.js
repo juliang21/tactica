@@ -270,6 +270,7 @@ export function doExport(action) {
         // Draw main image centered vertically
         const mainY = (totalH - H) / 2;
         ctx.drawImage(bgImg, 0, mainY, W, H);
+        _exportBgImg = bgImg;      // renderZoom magnifies this same bitmap
 
         // Render main canvas element overlays (players, arrows, etc.)
         // We shift ctx so renderOverlays draws at the correct Y offset
@@ -308,6 +309,7 @@ export function doExport(action) {
       const bgImg = new Image();
       bgImg.onload = () => {
         ctx.drawImage(bgImg, 0, 0, W, H);
+        _exportBgImg = bgImg;      // renderZoom magnifies this same bitmap
         renderOverlays(ctx, W, H, SCALE, canvas, prevSelected);
       };
       bgImg.src = S.imageData;
@@ -456,6 +458,8 @@ export function doExport(action) {
 
   renderOverlays(ctx, W, H, SCALE, canvas, prevSelected);
 }
+
+let _exportBgImg = null;   // decoded photo, set by the image-mode export paths
 
 function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
 
@@ -1457,6 +1461,35 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.restore();
   }
 
+  // Zoom lens: magnify the photo about the lens centre, clipped to the circle.
+  // Mirrors the on-screen element, which references #image-bg via <use> — so it
+  // magnifies the photo only, not the annotations sitting under it.
+  function renderZoom(g) {
+    if (!_exportBgImg) return;
+    const bgEl = document.getElementById('image-bg');
+    if (!bgEl) return;
+    const bw = parseFloat(bgEl.getAttribute('width'));
+    const bh = parseFloat(bgEl.getAttribute('height'));
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    const sc = parseFloat(g.dataset.scale || '1');
+    const r = parseFloat(g.dataset.r || '70') * sc;
+    const k = parseFloat(g.dataset.zoomFactor || '2');
+    const ringEl = g.querySelector('.zoom-ring');
+    const stroke = g.dataset.ringColor || ringEl?.getAttribute('stroke') || '#d8ff3c';
+    const sw = parseFloat(ringEl?.getAttribute('stroke-width') || '3') * sc;
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2); ctx.clip();
+    ctx.translate(cx, cy); ctx.scale(k, k); ctx.translate(-cx, -cy);
+    ctx.drawImage(_exportBgImg, 0, 0, bw, bh);
+    ctx.restore();
+
+    ctx.save();
+    ctx.beginPath(); ctx.arc(cx, cy, r, 0, Math.PI * 2);
+    ctx.strokeStyle = stroke; ctx.lineWidth = sw; ctx.stroke();
+    ctx.restore();
+  }
+
   // ── Render objects layer in DOM order (preserves layer stacking) ──────────
   document.querySelectorAll('#objects-layer > g').forEach(g => {
     const type = g.dataset.type;
@@ -1471,6 +1504,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     else if (type === 'vision') renderVision(g);
     else if (type === 'freeform') renderFreeform(g);
     else if (type === 'motion') renderMotion(g);
+    else if (type === 'zoom') renderZoom(g);
   });
 
   // ── Render players layer in DOM order (preserves layer stacking) ──────────

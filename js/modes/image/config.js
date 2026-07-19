@@ -18,7 +18,7 @@ export const imageMode = {
       // Zones & highlights ('freeform' = Free Zone: draw your own shape by
       // dropping vertices, then drag any vertex to reshape it)
       'shadow-rect', 'freeform',
-      'spotlight', 'vision',
+      'spotlight', 'vision', 'zoom',
       // Arrows
       'arrow',
       // Text & annotations

@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -17,9 +17,10 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          liveUpdateTagLabel, liveUpdateTagValue, applyTagLabelColor, applyTagValueColor, applyTagLineColor, applyTagLineDash, applyTagLineLen, applyTagLineAngle, applyTagTextAnchor,
          applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, applyMarkerHighlight, liveUpdateMarkerName, confirmMarkerName,
          applyImageCrop, applyImageOpacity,
+         applyZoomFactor, applyZoomSize, applyZoomRing,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=19';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=20';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=13';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=13';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -303,7 +304,20 @@ window.setTool = function(t) {
   // not "insert here". These tools have no CSS cursor rule of their own, so in
   // Image Analysis they'd otherwise inherit the pan-hand from #pitch-wrap.
   const _CROSSHAIR_TOOLS = new Set(['detect-player', 'mark-player', 'headline', 'tag', 'vision', 'link', 'pair']);
-  S.svg.style.cursor = _CROSSHAIR_TOOLS.has(t) ? 'crosshair' : '';
+  // Zoom gets a lens-shaped cursor instead of the pan hand, so it's obvious
+  // you're about to drop a magnifier rather than drag the photo around.
+  // Dark halo under a white stroke keeps it legible on any part of a photo.
+  const _ZOOM_CURSOR =
+    "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='28' height='28'%3E" +
+    "%3Cg fill='none' stroke='%23000' stroke-opacity='0.55' stroke-width='4'%3E" +
+    "%3Ccircle cx='12' cy='12' r='7'/%3E%3Cline x1='17.2' y1='17.2' x2='24' y2='24'/%3E%3C/g%3E" +
+    "%3Cg fill='none' stroke='%23fff' stroke-width='2'%3E" +
+    "%3Ccircle cx='12' cy='12' r='7'/%3E%3Cline x1='17.2' y1='17.2' x2='24' y2='24'/%3E%3C/g%3E" +
+    "%3Cg stroke='%23d8ff3c' stroke-width='1.6' stroke-linecap='round'%3E" +
+    "%3Cline x1='8.5' y1='12' x2='15.5' y2='12'/%3E%3Cline x1='12' y1='8.5' x2='12' y2='15.5'/%3E%3C/g%3E" +
+    "%3C/svg%3E\") 12 12, crosshair";
+  S.svg.style.cursor = t === 'zoom' ? _ZOOM_CURSOR
+    : (_CROSSHAIR_TOOLS.has(t) ? 'crosshair' : '');
 
   // "Done" banner for the continuous Image-Analysis tools.
   const doneLabel = (S.appMode === 'image') ? _DONE_TOOL_LABELS[t] : null;
@@ -1810,6 +1824,9 @@ window.applyMarkerScaleY = function(val) {
   applyTransform(el);
   updateAllLinks(); // flattening the ellipse moves the rim → re-trim link lines
 };
+window.applyZoomFactor = applyZoomFactor;
+window.applyZoomSize = applyZoomSize;
+window.applyZoomRing = applyZoomRing;
 window.applyImageCrop = applyImageCrop;
 window.applyImageOpacity = applyImageOpacity;
 // Replace the source on the currently selected image. Clears any stale
@@ -2571,6 +2588,10 @@ S.svg.addEventListener('click', e => {
     const snap = _snapToDetectedPlayer(pt);
     placed = addSpotlight(snap ? snap.x : pt.x, snap ? snap.y : pt.y);
     if (!snap) _smartRefinePoint(placed, pt, el => applyTransform(el));
+  }
+  else if (S.tool === 'zoom') {
+    const snapZ = _snapToDetectedPlayer(pt);
+    placed = addZoom(snapZ ? snapZ.x : pt.x, snapZ ? snapZ.y : pt.y);
   }
   else if (S.tool === 'vision') placed = addVision(pt.x, pt.y);
   else if (S.tool === 'textbox') placed = addTextBox(pt.x, pt.y);
@@ -4246,6 +4267,11 @@ function _copyElementData(el) {
     data.textAlign = el.dataset.textAlign || 'center';
     data.hw = el.dataset.hw || '60'; data.hh = el.dataset.hh || '20';
     data.rotation = el.dataset.rotation || '0';
+  } else if (t === 'zoom') {
+    data.r = el.dataset.r || '70';
+    data.zoomFactor = el.dataset.zoomFactor || '2';
+    data.ringColor = el.dataset.ringColor || '#FFFFFF';
+    data.scale = el.dataset.scale || '1';
   } else if (t === 'spotlight') {
     data.rx = el.dataset.rx || '28'; data.ry = el.dataset.ry || '5';
     data.spotColor = el.dataset.spotColor || 'rgba(255,255,255,0.85)';
@@ -4354,6 +4380,11 @@ function copySelected() {
     data.hlBg = el.dataset.hlBg || 'none';
     data.hw = el.dataset.hw || '130'; data.hh = el.dataset.hh || '40';
     data.rotation = el.dataset.rotation || '0';
+  } else if (t === 'zoom') {
+    data.r = el.dataset.r || '70';
+    data.zoomFactor = el.dataset.zoomFactor || '2';
+    data.ringColor = el.dataset.ringColor || '#FFFFFF';
+    data.scale = el.dataset.scale || '1';
   } else if (t === 'spotlight') {
     data.rx = el.dataset.rx || '28';
     data.ry = el.dataset.ry || '5';

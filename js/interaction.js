@@ -211,6 +211,20 @@ export function applyTransform(el) {
       clipEllipse.setAttribute('cx', cx); clipEllipse.setAttribute('cy', cy);
       clipEllipse.setAttribute('rx', hw); clipEllipse.setAttribute('ry', hh);
     }
+  } else if (t === 'zoom') {
+    const r = parseFloat(el.dataset.r || '70') * scale;
+    const k = parseFloat(el.dataset.zoomFactor || '2');
+    const use = el.querySelector('.zoom-src');
+    const ring = el.querySelector('.zoom-ring');
+    const hit = el.querySelector('.hit-area');
+    const clipCircle = el.querySelector('clipPath circle');
+    // magnify about the lens centre so what sits under the glass is what grows
+    if (use) use.setAttribute('transform', `translate(${cx},${cy}) scale(${k}) translate(${-cx},${-cy})`);
+    if (clipCircle) { clipCircle.setAttribute('cx', cx); clipCircle.setAttribute('cy', cy); clipCircle.setAttribute('r', r); }
+    if (ring) { ring.setAttribute('cx', cx); ring.setAttribute('cy', cy); ring.setAttribute('r', r); }
+    if (hit) { hit.setAttribute('cx', cx); hit.setAttribute('cy', cy); hit.setAttribute('r', r); }
+    const selRing = el.querySelector('.select-ring');
+    if (selRing) { selRing.setAttribute('cx', cx); selRing.setAttribute('cy', cy); selRing.setAttribute('r', r + 7); }
   } else if (t === 'spotlight') {
     const rx = parseFloat(el.dataset.rx || '28') * scale;
     const ry = parseFloat(el.dataset.ry || '5') * scale;
@@ -316,6 +330,7 @@ function moveElement(el, nx, ny) {
   else if (t === 'arrow') updateArrowVisual(el);
   else if (t === 'motion') applyTransform(el);
   else if (t === 'spotlight') applyTransform(el);
+  else if (t === 'zoom') applyTransform(el);
   else if (t === 'tag') applyTransform(el);
   else if (t === 'freeform') applyTransform(el);
   else if (t === 'marker') applyTransform(el);
@@ -417,6 +432,24 @@ export function select(el, opts = {}) {
     ring.setAttribute('stroke-dasharray', '3,2.5');
     ring.setAttribute('pointer-events', 'none');
     el.appendChild(ring);
+  }
+  if (type === 'zoom') {
+    // Don't recolour the ring — yellow is the default now, so selection is
+    // shown with the usual dashed ring plus rim handles.
+    if (!el.querySelector('.select-ring')) {
+      const ns2 = 'http://www.w3.org/2000/svg';
+      const sr = document.createElementNS(ns2, 'circle');
+      sr.setAttribute('class', 'select-ring');
+      sr.setAttribute('cx', el.dataset.cx); sr.setAttribute('cy', el.dataset.cy);
+      sr.setAttribute('r', parseFloat(el.dataset.r || '70') * parseFloat(el.dataset.scale || '1') + 7);
+      sr.setAttribute('fill', 'none');
+      sr.setAttribute('stroke', 'rgba(255,255,255,0.85)');
+      sr.setAttribute('stroke-width', '1.5');
+      sr.setAttribute('stroke-dasharray', '4,3');
+      sr.setAttribute('pointer-events', 'none');
+      el.appendChild(sr);
+    }
+    showZoomHandles(el);
   }
   if (type === 'textbox') {
     const bg = el.querySelector('.textbox-bg');
@@ -537,6 +570,7 @@ export function select(el, opts = {}) {
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
     : type === 'textbox' ? 'Text'
     : type === 'spotlight' ? 'Spotlight'
+    : type === 'zoom' ? 'Zoom'
     : type === 'vision' ? 'Player\'s Vision'
     : type === 'freeform' ? 'Free Zone'
     : type === 'motion' ? 'Motion Path'
@@ -594,6 +628,8 @@ export function select(el, opts = {}) {
   if (markerSecInit) markerSecInit.style.display = 'none';
   const nzSec = document.getElementById('nz-edit-section');
   if (nzSec) nzSec.style.display = 'none';
+  const zoomSec = document.getElementById('zoom-edit-section');
+  if (zoomSec) zoomSec.style.display = type === 'zoom' ? '' : 'none';
   delSec.style.display = '';
   layerInline.style.display = '';
 
@@ -1289,6 +1325,23 @@ export function showSpotlightHandles(el) {
   S.svg.appendChild(handleGroup);
 }
 
+// ── Zoom lens handles (drag any rim point to resize the lens) ──
+export function showZoomHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'zoom';
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const r = parseFloat(el.dataset.r || '70') * parseFloat(el.dataset.scale || '1');
+  handleGroup.appendChild(createHandle(ns, cx - r, cy, 'zoom-l', 'ew-resize'));
+  handleGroup.appendChild(createHandle(ns, cx + r, cy, 'zoom-r', 'ew-resize'));
+  handleGroup.appendChild(createHandle(ns, cx, cy - r, 'zoom-t', 'ns-resize'));
+  handleGroup.appendChild(createHandle(ns, cx, cy + r, 'zoom-b', 'ns-resize'));
+  S.svg.appendChild(handleGroup);
+}
+
 // ── Marker handles ──
 // Marker is a flat ellipse with a fixed base radius of 17 (see addMarker), so
 // effective rx = 17 * dataset.scale. Drag either side handle to scale.
@@ -1573,6 +1626,14 @@ export function updateHandlePositions(el) {
     const children = handleGroup.children;
     moveHandleTo(children[0], cx - rx, cy);
     moveHandleTo(children[1], cx + rx, cy);
+  } else if (type === 'zoom') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const r = parseFloat(el.dataset.r || '70') * parseFloat(el.dataset.scale || '1');
+    const children = handleGroup.children;
+    moveHandleTo(children[0], cx - r, cy);
+    moveHandleTo(children[1], cx + r, cy);
+    moveHandleTo(children[2], cx, cy - r);
+    moveHandleTo(children[3], cx, cy + r);
   } else if (type === 'marker') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const rx = MARKER_BASE_RX * parseFloat(el.dataset.scale || '1');
@@ -1648,6 +1709,8 @@ function onEndpointDrag(e) {
     onArrowEndpointDrag(el, pt);
   } else if (t === 'spotlight') {
     onSpotlightHandleDrag(el, pt);
+  } else if (t === 'zoom') {
+    onZoomHandleDrag(el, pt);
   } else if (t === 'marker') {
     onMarkerHandleDrag(el, pt);
   } else if (t === 'vision') {
@@ -1717,6 +1780,21 @@ function onSpotlightHandleDrag(el, pt) {
   el.dataset.ry = Math.max(3, newRx * 9 / 28);
   applyTransform(el);
   updateHandlePositions(el);
+}
+
+function onZoomHandleDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const sc = parseFloat(el.dataset.scale || '1');
+  // Any rim handle resizes: use the raw distance so grabbing top or side feels
+  // the same. Clamped to the panel slider's range so the two stay in step.
+  const dist = Math.hypot(pt.x - cx, pt.y - cy) / sc;
+  el.dataset.r = Math.max(30, Math.min(200, dist));
+  applyTransform(el);
+  updateHandlePositions(el);
+  const slider = document.querySelector('#zoom-edit-section input[type="range"][max="200"]');
+  const out = document.getElementById('zoom-size-val');
+  if (slider) slider.value = el.dataset.r;
+  if (out) out.textContent = Math.round(parseFloat(el.dataset.r)) + 'px';
 }
 
 function onMarkerHandleDrag(el, pt) {
