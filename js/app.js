@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom, addLadder, updateLadder } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom, addLadder, updateLadder, addPole, addHoop, updatePoleColor, updateHoopColor } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -18,10 +18,10 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, applyMarkerHighlight, liveUpdateMarkerName, confirmMarkerName,
          applyImageCrop, applyImageOpacity,
          applyZoomFactor, applyZoomSize, applyZoomRing,
-         applyLadderRungs, applyLadderColor,
+         applyLadderRungs, applyLadderColor, applyPoleColor, applyHoopColor,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=22';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=23';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=14';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=15';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -1825,6 +1825,8 @@ window.applyMarkerScaleY = function(val) {
   applyTransform(el);
   updateAllLinks(); // flattening the ellipse moves the rim → re-trim link lines
 };
+window.applyPoleColor = applyPoleColor;
+window.applyHoopColor = applyHoopColor;
 window.applyLadderRungs = applyLadderRungs;
 window.applyLadderColor = applyLadderColor;
 window.applyZoomFactor = applyZoomFactor;
@@ -2584,6 +2586,8 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'disc-cone') placed = addDiscCone(pt.x, pt.y);
   else if (S.tool === 'small-goal') placed = addSmallGoal(pt.x, pt.y);
   else if (S.tool === 'ladder') placed = addLadder(pt.x, pt.y);
+  else if (S.tool === 'pole') placed = addPole(pt.x, pt.y);
+  else if (S.tool === 'hoop') placed = addHoop(pt.x, pt.y);
   else if (S.tool === 'referee') placed = addReferee(pt.x, pt.y);
   else if (S.tool === 'shadow-circle') placed = addShadow(pt.x, pt.y, 'shadow-circle');
   else if (S.tool === 'shadow-rect') placed = addShadow(pt.x, pt.y, 'shadow-rect');
@@ -2756,6 +2760,50 @@ function arrowMove(e) {
 S.svg.addEventListener('mousemove', arrowMove);
 S.svg.addEventListener('touchmove', arrowMove, { passive: false });
 
+// ─── Default arrow style ─────────────────────────────────────────────────────
+// Coaches asked to set a preferred arrow look once and have every new arrow use
+// it. "Set as default" captures the selected arrow's full style; new arrows
+// (drawn via the arrow tool) reproduce it. Persisted across sessions.
+const DEFAULT_ARROW_KEY = 'tactica_default_arrow_v1';
+function _readDefaultArrow() {
+  try { return JSON.parse(localStorage.getItem(DEFAULT_ARROW_KEY) || 'null'); } catch (e) { return null; }
+}
+window.setArrowAsDefault = function() {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'arrow') return;
+  const line = el.querySelector('.arrow-line');
+  const def = {
+    type: el.dataset.arrowType || 'run',
+    color: el.dataset.arrowColor || line?.getAttribute('stroke') || '#FFFFFF',
+    dashStyle: el.dataset.arrowDashStyle || 'solid',
+    width: el.dataset.arrowWidth || line?.getAttribute('stroke-width') || '2.5',
+    opacity: el.dataset.arrowOpacity || line?.getAttribute('opacity') || '0.95',
+    headScale: el.dataset.arrowHeadScale || '1',
+  };
+  try { localStorage.setItem(DEFAULT_ARROW_KEY, JSON.stringify(def)); } catch (e) {}
+  S.setArrowType(def.type);   // so the next arrow also starts from this type
+  showNotification('Saved as your default arrow style.', 'success', 2500);
+  const u = getCurrentUser();
+  if (u) logAction(u.uid, u.email, 'feature_arrow_default_set', { type: def.type }).catch(() => {});
+};
+// Stamp a freshly-drawn arrow with the saved default. The arrow is already
+// selected (finishInsert -> select), so the existing apply* helpers can act on
+// it without touching undo (arrowEnd already pushed one entry).
+function _applyDefaultArrowStyle(arrow) {
+  const def = _readDefaultArrow();
+  if (!def || !arrow) return;
+  const prev = S.selectedEl;
+  S.setSelectedEl(arrow);
+  try {
+    if (def.color) applyArrowColor({ dataset: { color: def.color } });
+    if (def.dashStyle) applyArrowStyle(def.dashStyle);
+    if (def.width) applyArrowWidth(def.width);
+    if (def.opacity) applyArrowOpacity(def.opacity);
+    if (def.headScale) applyArrowHeadScale(def.headScale);
+  } catch (e) {}
+  S.setSelectedEl(prev);
+}
+
 function arrowEnd(e) {
   if (!S.arrowDrawing || !S.arrowPreview) return;
   S.setArrowDrawing(false);
@@ -2766,7 +2814,7 @@ function arrowEnd(e) {
   if (Math.sqrt(dx*dx + dy*dy) > 10) {
     S.pushUndo();
     const arrow = addArrow(S.arrowStart.x, S.arrowStart.y, pt.x, pt.y, S.arrowType);
-    if (arrow) { _logElementInserted('arrow'); finishInsert(arrow, { dragBased: true }); }
+    if (arrow) { _logElementInserted('arrow'); finishInsert(arrow, { dragBased: true }); _applyDefaultArrowStyle(arrow); }
   }
 }
 S.svg.addEventListener('mouseup', arrowEnd);
@@ -4258,6 +4306,14 @@ function _copyElementData(el) {
     data.rotation = el.dataset.rotation || '0';
     data.rungs = el.dataset.rungs || '6';
     data.ladderColor = el.dataset.ladderColor || '#FBBF24';
+  } else if (t === 'pole') {
+    data.scale = el.dataset.scale || '1';
+    data.rotation = el.dataset.rotation || '0';
+    data.poleColor = el.dataset.poleColor || 'red';
+  } else if (t === 'hoop') {
+    data.scale = el.dataset.scale || '1';
+    data.rotation = el.dataset.rotation || '0';
+    data.hoopColor = el.dataset.hoopColor || 'yellow';
   } else if (t && t.startsWith('shadow')) {
     data.hw = el.dataset.hw; data.hh = el.dataset.hh;
     data.scale = el.dataset.scale || '1';
@@ -4480,6 +4536,18 @@ function _pasteOne(d, x, y) {
       placed.dataset.ladderColor = d.ladderColor || '#FBBF24';
       updateLadder(placed); applyTransform(placed);
     }
+  } else if (d.type === 'pole') {
+    placed = addPole(x, y, d.poleColor || 'red');
+    if (placed) {
+      placed.dataset.scale = d.scale || '1'; placed.dataset.rotation = d.rotation || '0';
+      applyTransform(placed);
+    }
+  } else if (d.type === 'hoop') {
+    placed = addHoop(x, y, d.hoopColor || 'yellow');
+    if (placed) {
+      placed.dataset.scale = d.scale || '1'; placed.dataset.rotation = d.rotation || '0';
+      applyTransform(placed);
+    }
   } else if (d.type && d.type.startsWith('shadow')) {
     placed = addShadow(x, y, d.type);
     if (placed) {
@@ -4656,6 +4724,12 @@ document.addEventListener('keydown', e => {
   // Copy / Paste (Cmd+C / Cmd+V)
   if ((e.metaKey || e.ctrlKey) && e.key === 'c' && !typing) { e.preventDefault(); copySelected(); return; }
   if ((e.metaKey || e.ctrlKey) && e.key === 'v' && !typing) { e.preventDefault(); pasteClipboard(); return; }
+  // Duplicate (Cmd+D) — copy + paste in one step, straight beside the source.
+  if ((e.metaKey || e.ctrlKey) && e.key === 'd' && !typing) {
+    e.preventDefault();
+    if (S.selectedEl || S.selectedEls.size > 0) { copySelected(); pasteClipboard(); }
+    return;
+  }
 
   if (typing) return;
   if (e.key === 'v') setTool('select');

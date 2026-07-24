@@ -1,6 +1,8 @@
 // ─── Global State ─────────────────────────────────────────────────────────────
 export let tool = 'select';
-export let arrowType = 'run';
+export let arrowType = (() => {
+  try { return localStorage.getItem('tactica_pref_arrow_type') || 'run'; } catch (e) { return 'run'; }
+})();
 export let visionType = 'rounded';
 export function setVisionType(v) { visionType = v; }
 export let selectedEl = null;
@@ -72,7 +74,12 @@ export function pushUndo() {
 
 // Setters for primitives (modules can't reassign imports)
 export function setTool(v) { tool = v; }
-export function setArrowType(v) { arrowType = v; }
+export function setArrowType(v) {
+  arrowType = v;
+  // Remember the coach's preferred arrow style so new arrows default to it
+  // next session instead of always resetting to 'run'.
+  try { localStorage.setItem('tactica_pref_arrow_type', v); } catch (e) {}
+}
 export function setSelectedEl(v) { selectedEl = v; }
 export function addSelectedEl(el) { selectedEls.add(el); }
 export function removeSelectedEl(el) { selectedEls.delete(el); }

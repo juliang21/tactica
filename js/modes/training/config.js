@@ -14,9 +14,10 @@ export const trainingMode = {
     tools: [
       'select',
       'player-a', 'player-b', 'player-joker',
-      'ball', 'cone', 'disc-cone', 'small-goal', 'ladder',
+      'ball', 'cone', 'disc-cone', 'small-goal', 'ladder', 'pole', 'hoop',
       'shadow-rect',           // Zone
       'arrow',
+      'textbox',               // Text — instructions, coaching points, numbers
     ],
     hiddenIds: [],
   },

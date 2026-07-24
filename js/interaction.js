@@ -111,8 +111,8 @@ export function applyTransform(el) {
   const rot = parseFloat(el.dataset.rotation || '0');
   const t = el.dataset.type;
 
-  if (t === 'small-goal' || t === 'ladder') {
-    // Both support rotation — goals get flipped, ladders get laid at angles.
+  if (t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop') {
+    // Equipment that supports rotate + uniform scale.
     el.setAttribute('transform', `translate(${cx},${cy}) rotate(${rot}) scale(${scale})`);
   } else if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'marker') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
@@ -324,7 +324,7 @@ export function arrowControlPoint(p1, p2, k) {
 function moveElement(el, nx, ny) {
   el.dataset.cx = nx; el.dataset.cy = ny;
   const t = el.dataset.type;
-  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'vision') applyTransform(el);
+  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop' || t === 'vision') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'headline') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
@@ -405,7 +405,7 @@ export function select(el, opts = {}) {
     el.appendChild(ring);
   }
   // Same dashed lime indicator for non-player objects so selection is obvious.
-  if ((type === 'cone' || type === 'ball' || type === 'disc-cone' || type === 'small-goal' || type === 'ladder' || type === 'referee')
+  if ((type === 'cone' || type === 'ball' || type === 'disc-cone' || type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop' || type === 'referee')
       && !el.querySelector('.select-ring')) {
     const ns = 'http://www.w3.org/2000/svg';
     let ring;
@@ -424,6 +424,14 @@ export function select(el, opts = {}) {
       ring.setAttribute('x', '-17'); ring.setAttribute('y', '-10');
       ring.setAttribute('width', '34'); ring.setAttribute('height', '20');
       ring.setAttribute('rx', '2');
+    } else if (type === 'pole') {
+      ring = document.createElementNS(ns, 'rect');
+      ring.setAttribute('x', '-8'); ring.setAttribute('y', '-19');
+      ring.setAttribute('width', '16'); ring.setAttribute('height', '32'); ring.setAttribute('rx', '3');
+    } else if (type === 'hoop') {
+      ring = document.createElementNS(ns, 'ellipse');
+      ring.setAttribute('cx', '0'); ring.setAttribute('cy', '0');
+      ring.setAttribute('rx', '18'); ring.setAttribute('ry', '9');
     } else if (type === 'disc-cone') {
       ring = document.createElementNS(ns, 'ellipse');
       ring.setAttribute('cx', '0'); ring.setAttribute('cy', '0');
@@ -500,6 +508,12 @@ export function select(el, opts = {}) {
   }
   if (type === 'ladder') {
     showLadderHandles(el);
+  }
+  if (type === 'pole') {
+    showEquipHandles(el, 4, 15, 'pole');
+  }
+  if (type === 'hoop') {
+    showEquipHandles(el, 15, 6, 'hoop');
   }
   if (type === 'vision') {
     const shape = el.querySelector('.vision-shape');
@@ -580,6 +594,8 @@ export function select(el, opts = {}) {
     : type === 'disc-cone' ? 'Disc Cone'
     : type === 'small-goal' ? 'Small Goal'
     : type === 'ladder' ? 'Ladder'
+    : type === 'pole' ? 'Pole'
+    : type === 'hoop' ? 'Hoop'
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
     : type === 'textbox' ? 'Text'
     : type === 'spotlight' ? 'Spotlight'
@@ -643,6 +659,18 @@ export function select(el, opts = {}) {
   if (nzSec) nzSec.style.display = 'none';
   const zoomSec = document.getElementById('zoom-edit-section');
   if (zoomSec) zoomSec.style.display = type === 'zoom' ? '' : 'none';
+  const poleSec = document.getElementById('pole-edit-section');
+  if (poleSec) {
+    poleSec.style.display = type === 'pole' ? '' : 'none';
+    if (type === 'pole') document.querySelectorAll('#pole-edit-section .color-swatch').forEach(sw =>
+      sw.classList.toggle('active', sw.dataset.color === (el.dataset.poleColor || 'red')));
+  }
+  const hoopSec = document.getElementById('hoop-edit-section');
+  if (hoopSec) {
+    hoopSec.style.display = type === 'hoop' ? '' : 'none';
+    if (type === 'hoop') document.querySelectorAll('#hoop-edit-section .color-swatch').forEach(sw =>
+      sw.classList.toggle('active', sw.dataset.color === (el.dataset.hoopColor || 'yellow')));
+  }
   const ladderSec = document.getElementById('ladder-edit-section');
   if (ladderSec) {
     ladderSec.style.display = type === 'ladder' ? '' : 'none';
@@ -672,10 +700,10 @@ export function select(el, opts = {}) {
   // Pair rotation is driven by player positions, not editable
   // Net-zone has no rotation (vertices are players)
   // Zones have rotation/layer inside their Advanced panel, so hide standalone sections
-  const showStandaloneRot = (type === 'vision' || type === 'small-goal' || type === 'ladder') && !isZone;
+  const showStandaloneRot = (type === 'vision' || type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop') && !isZone;
   document.getElementById('rotation-section').style.display = showStandaloneRot ? '' : 'none';
   // Sync the rotation slider value for small-goal / ladder (vision is handled below)
-  if (type === 'small-goal' || type === 'ladder') {
+  if (type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop') {
     const rv = el.dataset.rotation || '0';
     document.getElementById('rot-slider').value = rv;
     document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
@@ -1404,6 +1432,66 @@ function _syncLadderPanel(el) {
   if (rotVal) rotVal.textContent = Math.round(parseFloat(rv)) + '°';
 }
 
+// ── Generic equipment handles (pole, hoop): 4 corners scale, 1 rotates ──
+// native half-width/height are passed in and stashed so the drag + reposition
+// paths can recover them without another lookup table.
+export function showEquipHandles(el, nhw, nhh, handleType) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = handleType;
+  handleGroup.dataset.nhw = nhw; handleGroup.dataset.nhh = nhh;
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const scale = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const hw = nhw * scale, hh = nhh * scale;
+  const tl = rotatedPoint(cx, cy, -hw, -hh, rot);
+  const tr = rotatedPoint(cx, cy, hw, -hh, rot);
+  const br = rotatedPoint(cx, cy, hw, hh, rot);
+  const bl = rotatedPoint(cx, cy, -hw, hh, rot);
+  const rotateAt = rotatedPoint(cx, cy, 0, -hh - 18, rot);
+  handleGroup.appendChild(createHandle(ns, tl.x, tl.y, handleType + '-tl', 'nwse-resize'));
+  handleGroup.appendChild(createHandle(ns, tr.x, tr.y, handleType + '-tr', 'nesw-resize'));
+  handleGroup.appendChild(createHandle(ns, br.x, br.y, handleType + '-br', 'nwse-resize'));
+  handleGroup.appendChild(createHandle(ns, bl.x, bl.y, handleType + '-bl', 'nesw-resize'));
+  handleGroup.appendChild(createRotateHandle(ns, rotateAt.x, rotateAt.y));
+  S.svg.appendChild(handleGroup);
+}
+
+function onEquipHandleDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const nhw = parseFloat(handleGroup.dataset.nhw || '10');
+  const handle = S.endpointDragging;
+  if (handle === 'rotate') {
+    const dx = pt.x - cx, dy = pt.y - cy;
+    let deg = (Math.atan2(dy, dx) * 180 / Math.PI) + 90;
+    if (deg < 0) deg += 360;
+    el.dataset.rotation = deg;
+    applyTransform(el); _syncEquipPanel(el); return;
+  }
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const r = -rot * Math.PI / 180;
+  const lx = (pt.x - cx) * Math.cos(r) - (pt.y - cy) * Math.sin(r);
+  const ly = (pt.x - cx) * Math.sin(r) + (pt.y - cy) * Math.cos(r);
+  const nhh = parseFloat(handleGroup.dataset.nhh || '10');
+  // Use whichever axis the cursor drove further, so a tall pole scales from its
+  // long axis and a wide hoop from its long axis alike.
+  const target = Math.max(Math.abs(lx) / nhw, Math.abs(ly) / nhh);
+  el.dataset.scale = Math.max(0.4, Math.min(4, target));
+  applyTransform(el); _syncEquipPanel(el);
+}
+
+function _syncEquipPanel(el) {
+  const sc = parseFloat(el.dataset.scale || '1');
+  const ss = document.getElementById('size-slider'); const sv = document.getElementById('size-val');
+  if (ss) ss.value = Math.round(sc * 100); if (sv) sv.textContent = sc.toFixed(1) + '\u00d7';
+  const rs = document.getElementById('rot-slider'); const rv = document.getElementById('rot-val');
+  const r = el.dataset.rotation || '0';
+  if (rs) rs.value = r; if (rv) rv.textContent = Math.round(parseFloat(r)) + '\u00b0';
+}
+
 // ── Spotlight handles (left/right resize) ──
 export function showSpotlightHandles(el) {
   removeHandles();
@@ -1735,6 +1823,27 @@ export function updateHandlePositions(el) {
       const rp = rotG.querySelector('path');
       if (rp) rp.setAttribute('d', `M${rotateAt.x-3},${rotateAt.y-2} A4,4 0 1,1 ${rotateAt.x+2},${rotateAt.y-3}`);
     }
+  } else if (type === 'pole' || type === 'hoop') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const scale = parseFloat(el.dataset.scale || '1');
+    const rot = parseFloat(el.dataset.rotation || '0');
+    const hw = parseFloat(handleGroup.dataset.nhw || '10') * scale;
+    const hh = parseFloat(handleGroup.dataset.nhh || '10') * scale;
+    const tl = rotatedPoint(cx, cy, -hw, -hh, rot);
+    const tr = rotatedPoint(cx, cy, hw, -hh, rot);
+    const br = rotatedPoint(cx, cy, hw, hh, rot);
+    const bl = rotatedPoint(cx, cy, -hw, hh, rot);
+    const rotateAt = rotatedPoint(cx, cy, 0, -hh - 18, rot);
+    const ch = handleGroup.children;
+    moveHandleTo(ch[0], tl.x, tl.y); moveHandleTo(ch[1], tr.x, tr.y);
+    moveHandleTo(ch[2], br.x, br.y); moveHandleTo(ch[3], bl.x, bl.y);
+    const rotG = ch[4];
+    if (rotG) {
+      const rc = rotG.querySelector('circle');
+      if (rc) { rc.setAttribute('cx', rotateAt.x); rc.setAttribute('cy', rotateAt.y); }
+      const rp = rotG.querySelector('path');
+      if (rp) rp.setAttribute('d', `M${rotateAt.x-3},${rotateAt.y-2} A4,4 0 1,1 ${rotateAt.x+2},${rotateAt.y-3}`);
+    }
   } else if (type === 'spotlight') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const rx = parseFloat(el.dataset.rx || '28') * parseFloat(el.dataset.scale || '1');
@@ -1842,6 +1951,8 @@ function onEndpointDrag(e) {
     onSmallGoalHandleDrag(el, pt);
   } else if (t === 'ladder') {
     onLadderHandleDrag(el, pt);
+  } else if (t === 'pole' || t === 'hoop') {
+    onEquipHandleDrag(el, pt);
   }
 }
 

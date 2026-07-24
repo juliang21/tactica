@@ -1540,6 +1540,50 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.restore();
   }
 
+  function renderPole(g) {
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    if (isNaN(cx) || isNaN(cy)) return;
+    const sc = parseFloat(g.dataset.scale || '1');
+    const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+    const bar = g.querySelector('.pole-bar');
+    const color = bar?.getAttribute('fill') || '#E63946';
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(sc, sc);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(0, 9, 5, 2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a2a2a';
+    ctx.beginPath(); ctx.ellipse(0, 8, 4.5, 1.8, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = color; ctx.strokeStyle = 'rgba(0,0,0,0.25)'; ctx.lineWidth = 0.6;
+    const bx = -2, by = -15, bw = 4, bh = 23, br = 2;
+    ctx.beginPath();
+    ctx.moveTo(bx+br,by); ctx.arcTo(bx+bw,by,bx+bw,by+br,br);
+    ctx.lineTo(bx+bw,by+bh-br); ctx.arcTo(bx+bw,by+bh,bx+bw-br,by+bh,br);
+    ctx.lineTo(bx+br,by+bh); ctx.arcTo(bx,by+bh,bx,by+bh-br,br);
+    ctx.lineTo(bx,by+br); ctx.arcTo(bx,by,bx+br,by,br); ctx.closePath();
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.35)';
+    ctx.fillRect(-1.2, -14, 1.1, 20);
+    ctx.restore();
+  }
+
+  function renderHoop(g) {
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    if (isNaN(cx) || isNaN(cy)) return;
+    const sc = parseFloat(g.dataset.scale || '1');
+    const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+    const ring = g.querySelector('.hoop-ring');
+    const color = ring?.getAttribute('stroke') || '#FFD43B';
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(sc, sc);
+    ctx.fillStyle = 'rgba(0,0,0,0.16)';
+    ctx.beginPath(); ctx.ellipse(0, 3, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.04)';
+    ctx.beginPath(); ctx.ellipse(0, 0, 15, 6, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineWidth = 2.6;
+    ctx.beginPath(); ctx.ellipse(0, 0, 15, 6, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.strokeStyle = 'rgba(255,255,255,0.35)'; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(0, 0, 13, 5, 0, 0, Math.PI, false); ctx.stroke();
+    ctx.restore();
+  }
+
   // Zoom lens: magnify the photo about the lens centre, clipped to the circle.
   // Mirrors the on-screen element, which references #image-bg via <use> — so it
   // magnifies the photo only, not the annotations sitting under it.
@@ -1599,6 +1643,8 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     else if (type === 'ladder') renderLadder(g);
     else if (type === 'small-goal') renderSmallGoal(g);
     else if (type === 'disc-cone') renderDiscCone(g);
+    else if (type === 'pole') renderPole(g);
+    else if (type === 'hoop') renderHoop(g);
     else if (type === 'tag') renderTag(g);
   });
 

@@ -330,6 +330,121 @@ export function addDiscCone(x, y, color = 'yellow') {
 // ─── Small Goal (training drills) ────────────────────────────────────────────
 // A mini-net icon: solid back panel + criss-cross netting lines + two posts.
 // Default colour: white. Used in the Training Builder; safe to use anywhere.
+// ─── Slalom pole ─────────────────────────────────────────────────────────────
+// Training equipment: a standing slalom/agility pole. Drawn as a standing bar
+// with a base so it reads as vertical (like the small goal), and rotatable so
+// coaches can lay a line of them at an angle.
+const POLE_COLORS = {
+  red:    '#E63946', yellow: '#FFD43B', blue: '#3D6FE5',
+  green:  '#4ADE80', white:  '#F2F2F2', orange: '#F58A1E',
+};
+export function addPole(x, y, color = 'red') {
+  const ns = 'http://www.w3.org/2000/svg';
+  const id = 'pole-' + S.nextObjectId();
+  const c = POLE_COLORS[color] || POLE_COLORS.red;
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'pole';
+  const _sc = window.getPreferredScale?.('pole') ?? 1;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_sc);
+  g.dataset.rotation = '0'; g.dataset.poleColor = color;
+
+  const sh = document.createElementNS(ns, 'ellipse');
+  sh.setAttribute('cx','0'); sh.setAttribute('cy','9');
+  sh.setAttribute('rx','5'); sh.setAttribute('ry','2');
+  sh.setAttribute('fill','rgba(0,0,0,0.28)'); sh.setAttribute('pointer-events','none');
+
+  const base = document.createElementNS(ns, 'ellipse');
+  base.setAttribute('cx','0'); base.setAttribute('cy','8');
+  base.setAttribute('rx','4.5'); base.setAttribute('ry','1.8');
+  base.setAttribute('fill','#2a2a2a');
+
+  const bar = document.createElementNS(ns, 'rect');
+  bar.classList.add('pole-bar');
+  bar.setAttribute('x','-2'); bar.setAttribute('y','-15');
+  bar.setAttribute('width','4'); bar.setAttribute('height','23');
+  bar.setAttribute('rx','2'); bar.setAttribute('fill', c);
+  bar.setAttribute('stroke','rgba(0,0,0,0.25)'); bar.setAttribute('stroke-width','0.6');
+
+  const shine = document.createElementNS(ns, 'rect');
+  shine.setAttribute('x','-1.2'); shine.setAttribute('y','-14');
+  shine.setAttribute('width','1.1'); shine.setAttribute('height','20');
+  shine.setAttribute('rx','0.6'); shine.setAttribute('fill','rgba(255,255,255,0.35)');
+  shine.setAttribute('pointer-events','none');
+
+  const hit = document.createElementNS(ns, 'circle');
+  hit.classList.add('hit-area');
+  hit.setAttribute('cx','0'); hit.setAttribute('cy','-3'); hit.setAttribute('r','16');
+  hit.setAttribute('fill','transparent'); hit.setAttribute('stroke','none');
+
+  g.appendChild(hit); g.appendChild(sh); g.appendChild(base); g.appendChild(bar); g.appendChild(shine);
+  g.setAttribute('transform', `translate(${x},${y}) rotate(0) scale(${_sc})`);
+  S.playersLayer.appendChild(g);
+  makeDraggable(g);
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
+  return g;
+}
+
+// ─── Agility hoop ────────────────────────────────────────────────────────────
+// Training equipment: a flat ring on the ground (agility/coordination hoop).
+// A low, wide ellipse outline so it reads as lying on the grass. Scalable and
+// rotatable.
+const HOOP_COLORS = {
+  yellow: '#FFD43B', red: '#E63946', blue: '#3D6FE5', green: '#4ADE80',
+  orange: '#F58A1E', white: '#F2F2F2',
+};
+export function addHoop(x, y, color = 'yellow') {
+  const ns = 'http://www.w3.org/2000/svg';
+  const id = 'hoop-' + S.nextObjectId();
+  const c = HOOP_COLORS[color] || HOOP_COLORS.yellow;
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'hoop';
+  const _sc = window.getPreferredScale?.('hoop') ?? 1;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_sc);
+  g.dataset.rotation = '0'; g.dataset.hoopColor = color;
+
+  const sh = document.createElementNS(ns, 'ellipse');
+  sh.setAttribute('cx','0'); sh.setAttribute('cy','3');
+  sh.setAttribute('rx','15'); sh.setAttribute('ry','6');
+  sh.setAttribute('fill','rgba(0,0,0,0.16)'); sh.setAttribute('pointer-events','none');
+
+  // Ring: thick coloured ellipse outline with a faint inner fill.
+  const ring = document.createElementNS(ns, 'ellipse');
+  ring.classList.add('hoop-ring');
+  ring.setAttribute('cx','0'); ring.setAttribute('cy','0');
+  ring.setAttribute('rx','15'); ring.setAttribute('ry','6');
+  ring.setAttribute('fill','rgba(255,255,255,0.04)');
+  ring.setAttribute('stroke', c); ring.setAttribute('stroke-width','2.6');
+
+  // Highlight arc on the near edge for a bit of 3D depth.
+  const hi = document.createElementNS(ns, 'path');
+  hi.setAttribute('d','M -13 2.5 A 15 6 0 0 0 13 2.5');
+  hi.setAttribute('fill','none'); hi.setAttribute('stroke','rgba(255,255,255,0.35)');
+  hi.setAttribute('stroke-width','1'); hi.setAttribute('pointer-events','none');
+
+  const hit = document.createElementNS(ns, 'ellipse');
+  hit.classList.add('hit-area');
+  hit.setAttribute('cx','0'); hit.setAttribute('cy','0'); hit.setAttribute('rx','16'); hit.setAttribute('ry','8');
+  hit.setAttribute('fill','transparent'); hit.setAttribute('stroke','none');
+
+  g.appendChild(hit); g.appendChild(sh); g.appendChild(ring); g.appendChild(hi);
+  g.setAttribute('transform', `translate(${x},${y}) rotate(0) scale(${_sc})`);
+  S.playersLayer.appendChild(g);
+  makeDraggable(g);
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
+  return g;
+}
+
+export function updatePoleColor(el, color) {
+  el.dataset.poleColor = color;
+  el.querySelector('.pole-bar')?.setAttribute('fill', POLE_COLORS[color] || color);
+}
+export function updateHoopColor(el, color) {
+  el.dataset.hoopColor = color;
+  el.querySelector('.hoop-ring')?.setAttribute('stroke', HOOP_COLORS[color] || color);
+}
+
 // ─── Agility ladder ──────────────────────────────────────────────────────────
 // Training equipment: a flat speed/agility ladder. Rotatable like the small
 // goal — coaches lay these at angles across a grid — and drawn in perspective-
