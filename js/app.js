@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom, addLadder, updateLadder } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -18,9 +18,10 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, applyMarkerHighlight, liveUpdateMarkerName, confirmMarkerName,
          applyImageCrop, applyImageOpacity,
          applyZoomFactor, applyZoomSize, applyZoomRing,
+         applyLadderRungs, applyLadderColor,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=20';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=22';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=14';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=15';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -1824,6 +1825,8 @@ window.applyMarkerScaleY = function(val) {
   applyTransform(el);
   updateAllLinks(); // flattening the ellipse moves the rim → re-trim link lines
 };
+window.applyLadderRungs = applyLadderRungs;
+window.applyLadderColor = applyLadderColor;
 window.applyZoomFactor = applyZoomFactor;
 window.applyZoomSize = applyZoomSize;
 window.applyZoomRing = applyZoomRing;
@@ -2580,6 +2583,7 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'cone') placed = addCone(pt.x, pt.y);
   else if (S.tool === 'disc-cone') placed = addDiscCone(pt.x, pt.y);
   else if (S.tool === 'small-goal') placed = addSmallGoal(pt.x, pt.y);
+  else if (S.tool === 'ladder') placed = addLadder(pt.x, pt.y);
   else if (S.tool === 'referee') placed = addReferee(pt.x, pt.y);
   else if (S.tool === 'shadow-circle') placed = addShadow(pt.x, pt.y, 'shadow-circle');
   else if (S.tool === 'shadow-rect') placed = addShadow(pt.x, pt.y, 'shadow-rect');
@@ -4243,6 +4247,26 @@ function _copyElementData(el) {
     data.scale = el.dataset.scale || '0.7';
   } else if (t === 'cone') {
     data.scale = el.dataset.scale || '1';
+  } else if (t === 'disc-cone') {
+    data.scale = el.dataset.scale || '1';
+    data.discColor = el.dataset.discColor || 'yellow';
+  } else if (t === 'small-goal') {
+    data.scale = el.dataset.scale || '1';
+    data.rotation = el.dataset.rotation || '0';
+  } else if (t === 'ladder') {
+    data.scale = el.dataset.scale || '1';
+    data.rotation = el.dataset.rotation || '0';
+    data.rungs = el.dataset.rungs || '6';
+    data.ladderColor = el.dataset.ladderColor || '#FBBF24';
+  } else if (t && t.startsWith('shadow')) {
+    data.hw = el.dataset.hw; data.hh = el.dataset.hh;
+    data.scale = el.dataset.scale || '1';
+    data.rotation = el.dataset.rotation || '0';
+    data.zoneLabel = el.dataset.zoneLabel || '';
+    const sh = el.querySelector('rect,ellipse');
+    data.zoneFill = sh?.getAttribute('fill');
+    data.zoneStroke = el.dataset.savedStroke || sh?.getAttribute('stroke');
+    data.zoneDash = sh?.getAttribute('stroke-dasharray') || '';
   } else if (t === 'marker') {
     data.scale = el.dataset.scale || '1';
     data.markerScaleY = el.dataset.markerScaleY || '1';
@@ -4518,6 +4542,39 @@ function _pasteOne(d, x, y) {
   } else if (d.type === 'cone') {
     placed = addCone(x, y);
     if (placed) placed.dataset.scale = d.scale;
+  } else if (d.type === 'disc-cone') {
+    placed = addDiscCone(x, y, d.discColor || 'yellow');
+    if (placed) { placed.dataset.scale = d.scale; applyTransform(placed); }
+  } else if (d.type === 'small-goal') {
+    placed = addSmallGoal(x, y);
+    if (placed) {
+      placed.dataset.scale = d.scale; placed.dataset.rotation = d.rotation || '0';
+      applyTransform(placed);
+    }
+  } else if (d.type === 'ladder') {
+    placed = addLadder(x, y);
+    if (placed) {
+      placed.dataset.scale = d.scale; placed.dataset.rotation = d.rotation || '0';
+      placed.dataset.rungs = d.rungs || '6';
+      placed.dataset.ladderColor = d.ladderColor || '#FBBF24';
+      updateLadder(placed); applyTransform(placed);
+    }
+  } else if (d.type && d.type.startsWith('shadow')) {
+    placed = addShadow(x, y, d.type);
+    if (placed) {
+      if (d.hw) placed.dataset.hw = d.hw;
+      if (d.hh) placed.dataset.hh = d.hh;
+      placed.dataset.scale = d.scale || '1';
+      placed.dataset.rotation = d.rotation || '0';
+      if (d.zoneLabel) placed.dataset.zoneLabel = d.zoneLabel;
+      const sh = placed.querySelector('rect,ellipse');
+      if (sh) {
+        if (d.zoneFill) sh.setAttribute('fill', d.zoneFill);
+        if (d.zoneStroke) { sh.setAttribute('stroke', d.zoneStroke); placed.dataset.savedStroke = d.zoneStroke; }
+        if (d.zoneDash) sh.setAttribute('stroke-dasharray', d.zoneDash);
+      }
+      updateShadowLabel(placed); applyTransform(placed);
+    }
   } else if (d.type === 'marker') {
     placed = addMarker(x, y);
     if (placed) {

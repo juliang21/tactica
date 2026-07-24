@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, select, switchTab, applyTransform, updateArrowVisual, showArrowHandles, updateSpotlightNameBg, updateHandlePositions } from './interaction.js';
-import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag, applyJerseyStyle, updateAllLinks } from './elements.js';
+import { addPlayer, rewrapTextBox, rewrapHeadline, updatePlayerArms, repositionTag, applyJerseyStyle, updateAllLinks, updateLadder } from './elements.js';
 import { trackElementEdited } from './analytics.js';
 import { rebuildPitch } from './pitch.js';
 
@@ -1065,6 +1065,33 @@ export function applyHeadlineBgValue(color) {
 }
 
 // ─── Spotlight Properties ────────────────────────────────────────────────────
+// ─── Agility ladder ──────────────────────────────────────────────────────────
+export function applyLadderRungs(v) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'ladder') return;
+  S.selectedEl.dataset.rungs = v;
+  const out = document.getElementById('ladder-rungs-val');
+  if (out) out.textContent = v;
+  updateLadder(S.selectedEl);
+  // the dashed select box is sized off the rung count — rebuild it
+  const ring = S.selectedEl.querySelector('.select-ring');
+  if (ring) {
+    const hw = (parseInt(v, 10) * 8) / 2 + 4;
+    ring.setAttribute('x', -hw); ring.setAttribute('width', hw * 2);
+  }
+  applyTransform(S.selectedEl);
+  trackElementEdited('ladder', 'rungs');
+}
+
+export function applyLadderColor(swatchEl) {
+  if (!S.selectedEl || S.selectedEl.dataset.type !== 'ladder') return;
+  const color = swatchEl.dataset.color || '#FBBF24';
+  S.selectedEl.dataset.ladderColor = color;
+  updateLadder(S.selectedEl);
+  document.querySelectorAll('#ladder-edit-section .color-swatch').forEach(sw => sw.classList.remove('active'));
+  swatchEl.classList.add('active');
+  trackElementEdited('ladder', 'colour');
+}
+
 // ─── Zoom lens ───────────────────────────────────────────────────────────────
 export function applyZoomFactor(v) {
   if (!S.selectedEl || S.selectedEl.dataset.type !== 'zoom') return;
@@ -1443,7 +1470,7 @@ export function applySize(val) {
     trackElementEdited(el.dataset.type, 'scale');
     el.dataset.scale = val/100;
     const t = el.dataset.type;
-    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'vision' || t === 'marker' || t.startsWith('shadow') || t === 'tag') applyTransform(el);
+    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'vision' || t === 'marker' || t.startsWith('shadow') || t === 'tag') applyTransform(el);
     else if (t === 'arrow') updateArrowVisual(el);
     // Keep resize handles in sync with the slider
     if (S.selectedEl === el) updateHandlePositions(el);
@@ -1469,7 +1496,8 @@ export function applyRotation(val) {
   trackElementEdited(S.selectedEl.dataset.type, 'rotation');
   S.selectedEl.dataset.rotation = val;
   const t = S.selectedEl.dataset.type;
-  if (t.startsWith('shadow') || t === 'vision' || t === 'freeform' || t === 'pair' || t === 'small-goal') applyTransform(S.selectedEl);
+  if (t.startsWith('shadow') || t === 'vision' || t === 'freeform' || t === 'pair' || t === 'small-goal' || t === 'ladder') applyTransform(S.selectedEl);
+  if (t === 'small-goal' || t === 'ladder') updateHandlePositions(S.selectedEl);
   else if (t === 'arrow') updateArrowVisual(S.selectedEl);
   else if (t === 'player' && S.selectedEl.dataset.arms === '1') updatePlayerArms(S.selectedEl);
 }

@@ -111,8 +111,8 @@ export function applyTransform(el) {
   const rot = parseFloat(el.dataset.rotation || '0');
   const t = el.dataset.type;
 
-  if (t === 'small-goal') {
-    // Small goal supports rotation so coaches can flip the goal direction.
+  if (t === 'small-goal' || t === 'ladder') {
+    // Both support rotation — goals get flipped, ladders get laid at angles.
     el.setAttribute('transform', `translate(${cx},${cy}) rotate(${rot}) scale(${scale})`);
   } else if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'marker') {
     el.setAttribute('transform', `translate(${cx},${cy}) scale(${scale})`);
@@ -324,7 +324,7 @@ export function arrowControlPoint(p1, p2, k) {
 function moveElement(el, nx, ny) {
   el.dataset.cx = nx; el.dataset.cy = ny;
   const t = el.dataset.type;
-  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'vision') applyTransform(el);
+  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'vision') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'headline') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
@@ -405,11 +405,20 @@ export function select(el, opts = {}) {
     el.appendChild(ring);
   }
   // Same dashed lime indicator for non-player objects so selection is obvious.
-  if ((type === 'cone' || type === 'ball' || type === 'disc-cone' || type === 'small-goal' || type === 'referee')
+  if ((type === 'cone' || type === 'ball' || type === 'disc-cone' || type === 'small-goal' || type === 'ladder' || type === 'referee')
       && !el.querySelector('.select-ring')) {
     const ns = 'http://www.w3.org/2000/svg';
     let ring;
-    if (type === 'small-goal') {
+    if (type === 'ladder') {
+      // Ladder length grows with its rung count, so derive the box rather than
+      // reusing the goal's fixed bounds.
+      const rungs = parseInt(el.dataset.rungs || '6', 10);
+      const hw = (rungs * 8) / 2 + 4;
+      ring = document.createElementNS(ns, 'rect');
+      ring.setAttribute('x', -hw); ring.setAttribute('y', '-12');
+      ring.setAttribute('width', hw * 2); ring.setAttribute('height', '24');
+      ring.setAttribute('rx', '2');
+    } else if (type === 'small-goal') {
       // Rect around the goal's natural bounds (-13,-6 to 13,6) with a bit of padding
       ring = document.createElementNS(ns, 'rect');
       ring.setAttribute('x', '-17'); ring.setAttribute('y', '-10');
@@ -489,6 +498,9 @@ export function select(el, opts = {}) {
   if (type === 'small-goal') {
     showSmallGoalHandles(el);
   }
+  if (type === 'ladder') {
+    showLadderHandles(el);
+  }
   if (type === 'vision') {
     const shape = el.querySelector('.vision-shape');
     if (shape) {
@@ -567,6 +579,7 @@ export function select(el, opts = {}) {
     : type === 'cone' ? 'Cone'
     : type === 'disc-cone' ? 'Disc Cone'
     : type === 'small-goal' ? 'Small Goal'
+    : type === 'ladder' ? 'Ladder'
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
     : type === 'textbox' ? 'Text'
     : type === 'spotlight' ? 'Spotlight'
@@ -630,6 +643,17 @@ export function select(el, opts = {}) {
   if (nzSec) nzSec.style.display = 'none';
   const zoomSec = document.getElementById('zoom-edit-section');
   if (zoomSec) zoomSec.style.display = type === 'zoom' ? '' : 'none';
+  const ladderSec = document.getElementById('ladder-edit-section');
+  if (ladderSec) {
+    ladderSec.style.display = type === 'ladder' ? '' : 'none';
+    if (type === 'ladder') {
+      const rv = el.dataset.rungs || '6';
+      const sl = ladderSec.querySelector('input[type="range"]');
+      if (sl) sl.value = rv;
+      const lbl = document.getElementById('ladder-rungs-val');
+      if (lbl) lbl.textContent = rv;
+    }
+  }
   delSec.style.display = '';
   layerInline.style.display = '';
 
@@ -648,10 +672,10 @@ export function select(el, opts = {}) {
   // Pair rotation is driven by player positions, not editable
   // Net-zone has no rotation (vertices are players)
   // Zones have rotation/layer inside their Advanced panel, so hide standalone sections
-  const showStandaloneRot = (type === 'vision' || type === 'small-goal') && !isZone;
+  const showStandaloneRot = (type === 'vision' || type === 'small-goal' || type === 'ladder') && !isZone;
   document.getElementById('rotation-section').style.display = showStandaloneRot ? '' : 'none';
-  // Sync the rotation slider value for small-goal (vision is already handled below)
-  if (type === 'small-goal') {
+  // Sync the rotation slider value for small-goal / ladder (vision is handled below)
+  if (type === 'small-goal' || type === 'ladder') {
     const rv = el.dataset.rotation || '0';
     document.getElementById('rot-slider').value = rv;
     document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
@@ -1309,6 +1333,77 @@ function onSmallGoalHandleDrag(el, pt) {
   applyTransform(el);
 }
 
+// ── Ladder handles (4 corners for uniform scale + rotate) ──
+// Ladder half-width depends on the rung count, so it's derived per element
+// rather than a constant like the goal's.
+function _ladderHalfW(el) {
+  const rungs = parseInt(el.dataset.rungs || '6', 10);
+  return (rungs * 8) / 2;
+}
+const LADDER_HH = 8;   // native half-height
+export function showLadderHandles(el) {
+  removeHandles();
+  const ns = 'http://www.w3.org/2000/svg';
+  handleGroup = document.createElementNS(ns, 'g');
+  handleGroup.setAttribute('id', 'element-handles');
+  handleGroup.dataset.handleType = 'ladder';
+
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const scale = parseFloat(el.dataset.scale || '1');
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const hw = _ladderHalfW(el) * scale, hh = LADDER_HH * scale;
+
+  const tl = rotatedPoint(cx, cy, -hw, -hh, rot);
+  const tr = rotatedPoint(cx, cy, hw, -hh, rot);
+  const br = rotatedPoint(cx, cy, hw, hh, rot);
+  const bl = rotatedPoint(cx, cy, -hw, hh, rot);
+  const rotateAt = rotatedPoint(cx, cy, 0, -hh - 18, rot);
+
+  handleGroup.appendChild(createHandle(ns, tl.x, tl.y, 'ladder-corner-tl', 'nwse-resize'));
+  handleGroup.appendChild(createHandle(ns, tr.x, tr.y, 'ladder-corner-tr', 'nesw-resize'));
+  handleGroup.appendChild(createHandle(ns, br.x, br.y, 'ladder-corner-br', 'nwse-resize'));
+  handleGroup.appendChild(createHandle(ns, bl.x, bl.y, 'ladder-corner-bl', 'nesw-resize'));
+  handleGroup.appendChild(createRotateHandle(ns, rotateAt.x, rotateAt.y));
+  S.svg.appendChild(handleGroup);
+}
+
+function onLadderHandleDrag(el, pt) {
+  const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+  const handle = S.endpointDragging;
+  if (handle === 'rotate') {
+    const dx = pt.x - cx, dy = pt.y - cy;
+    let deg = (Math.atan2(dy, dx) * 180 / Math.PI) + 90;
+    if (deg < 0) deg += 360;
+    el.dataset.rotation = deg;
+    applyTransform(el);
+    _syncLadderPanel(el);
+    return;
+  }
+  // Corner: uniform scale from the un-rotated cursor distance along local x.
+  const rot = parseFloat(el.dataset.rotation || '0');
+  const r = -rot * Math.PI / 180;
+  const lx = (pt.x - cx) * Math.cos(r) - (pt.y - cy) * Math.sin(r);
+  const halfW = _ladderHalfW(el);
+  const newScale = Math.max(0.4, Math.min(4, Math.abs(lx) / halfW));
+  el.dataset.scale = newScale;
+  applyTransform(el);
+  _syncLadderPanel(el);
+}
+
+// Keep the Size / rotation sliders in step while dragging a handle.
+function _syncLadderPanel(el) {
+  const sizeSlider = document.getElementById('size-slider');
+  const sizeVal = document.getElementById('size-val');
+  const sc = parseFloat(el.dataset.scale || '1');
+  if (sizeSlider) sizeSlider.value = Math.round(sc * 100);
+  if (sizeVal) sizeVal.textContent = sc.toFixed(1) + '×';
+  const rotSlider = document.getElementById('rot-slider');
+  const rotVal = document.getElementById('rot-val');
+  const rv = el.dataset.rotation || '0';
+  if (rotSlider) rotSlider.value = rv;
+  if (rotVal) rotVal.textContent = Math.round(parseFloat(rv)) + '°';
+}
+
 // ── Spotlight handles (left/right resize) ──
 export function showSpotlightHandles(el) {
   removeHandles();
@@ -1620,6 +1715,26 @@ export function updateHandlePositions(el) {
       const rp = rotG.querySelector('path');
       if (rp) rp.setAttribute('d', `M${rotateAt.x-3},${rotateAt.y-2} A4,4 0 1,1 ${rotateAt.x+2},${rotateAt.y-3}`);
     }
+  } else if (type === 'ladder') {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    const scale = parseFloat(el.dataset.scale || '1');
+    const rot = parseFloat(el.dataset.rotation || '0');
+    const hw = _ladderHalfW(el) * scale, hh = LADDER_HH * scale;
+    const tl = rotatedPoint(cx, cy, -hw, -hh, rot);
+    const tr = rotatedPoint(cx, cy, hw, -hh, rot);
+    const br = rotatedPoint(cx, cy, hw, hh, rot);
+    const bl = rotatedPoint(cx, cy, -hw, hh, rot);
+    const rotateAt = rotatedPoint(cx, cy, 0, -hh - 18, rot);
+    const ch = handleGroup.children;
+    moveHandleTo(ch[0], tl.x, tl.y); moveHandleTo(ch[1], tr.x, tr.y);
+    moveHandleTo(ch[2], br.x, br.y); moveHandleTo(ch[3], bl.x, bl.y);
+    const rotG = ch[4];
+    if (rotG) {
+      const rc = rotG.querySelector('circle');
+      if (rc) { rc.setAttribute('cx', rotateAt.x); rc.setAttribute('cy', rotateAt.y); }
+      const rp = rotG.querySelector('path');
+      if (rp) rp.setAttribute('d', `M${rotateAt.x-3},${rotateAt.y-2} A4,4 0 1,1 ${rotateAt.x+2},${rotateAt.y-3}`);
+    }
   } else if (type === 'spotlight') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const rx = parseFloat(el.dataset.rx || '28') * parseFloat(el.dataset.scale || '1');
@@ -1725,6 +1840,8 @@ function onEndpointDrag(e) {
     onZoneHandleDrag(el, pt);
   } else if (t === 'small-goal') {
     onSmallGoalHandleDrag(el, pt);
+  } else if (t === 'ladder') {
+    onLadderHandleDrag(el, pt);
   }
 }
 

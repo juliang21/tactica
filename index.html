@@ -404,6 +404,20 @@
       <svg width="20" height="14" viewBox="0 0 22 14" fill="none"><rect x="2" y="2" width="18" height="10" stroke="currentColor" stroke-width="1.4" fill="none"/><line x1="2" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="0.7"/><line x1="7" y1="2" x2="7" y2="12" stroke="currentColor" stroke-width="0.7"/><line x1="11" y1="2" x2="11" y2="12" stroke="currentColor" stroke-width="0.7"/><line x1="15" y1="2" x2="15" y2="12" stroke="currentColor" stroke-width="0.7"/></svg>
       <span class="tool-label">Goal</span>
     </button>
+    <button class="tool-btn" data-tool="ladder" onclick="setTool('ladder')">
+      <span class="badge-new">New</span>
+      <svg width="18" height="18" viewBox="0 0 22 22" fill="none">
+        <g stroke="#FBBF24" stroke-width="1.5" stroke-linecap="round">
+          <line x1="2.5" y1="6.5" x2="19.5" y2="6.5"/>
+          <line x1="2.5" y1="15.5" x2="19.5" y2="15.5"/>
+          <line x1="2.5" y1="6.5" x2="2.5" y2="15.5"/>
+          <line x1="8.2" y1="6.5" x2="8.2" y2="15.5"/>
+          <line x1="13.8" y1="6.5" x2="13.8" y2="15.5"/>
+          <line x1="19.5" y1="6.5" x2="19.5" y2="15.5"/>
+        </g>
+      </svg>
+      <span class="tool-label">Ladder</span>
+    </button>
     <button class="tool-btn" data-tool="referee" onclick="setTool('referee')">
       <svg width="18" height="18" viewBox="0 0 18 18"><circle cx="9" cy="9" r="7" fill="#1a1a1a" stroke="#FBBF24" stroke-width="1.5"/><text x="9" y="9.5" text-anchor="middle" dominant-baseline="central" font-family="sans-serif" font-size="7" font-weight="700" fill="white">R</text></svg>
       <span class="tool-label">Referee</span>
@@ -2266,6 +2280,23 @@
     </div>
 
     <!-- Spotlight properties -->
+    <div class="panel-section" id="ladder-edit-section" style="display:none">
+      <h3>Ladder</h3>
+      <div class="field-group">
+        <div class="field-label">Rungs <span id="ladder-rungs-val" class="field-val">6</span></div>
+        <input type="range" min="3" max="12" step="1" value="6" oninput="applyLadderRungs(this.value)">
+      </div>
+      <div class="field-group">
+        <div class="field-label">Colour</div>
+        <div class="picker-row">
+          <div class="color-swatch mini active" style="background:#FBBF24" data-color="#FBBF24" onclick="applyLadderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#ffffff" data-color="#FFFFFF" onclick="applyLadderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#f87171" data-color="#f87171" onclick="applyLadderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#60a5fa" data-color="#60a5fa" onclick="applyLadderColor(this)"></div>
+          <div class="color-swatch mini" style="background:#4ADE80" data-color="#4ADE80" onclick="applyLadderColor(this)"></div>
+        </div>
+      </div>
+    </div>
     <div class="panel-section" id="zoom-edit-section" style="display:none">
       <h3>Zoom</h3>
       <div class="field-group">
@@ -2959,6 +2990,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=72"></script>
+<script type="module" src="js/app.js?v=75"></script>
 </body>
 </html>

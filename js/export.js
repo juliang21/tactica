@@ -1461,6 +1461,85 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.restore();
   }
 
+  // Training equipment. These three had no export renderer at all, so a drill
+  // exported without its ladders, small goals or disc cones — renderOverlays
+  // silently skips any type it doesn't know.
+  function renderLadder(g) {
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    if (isNaN(cx) || isNaN(cy)) return;
+    const sc = parseFloat(g.dataset.scale || '1');
+    const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+    const rungs = parseInt(g.dataset.rungs || '6', 10);
+    const color = g.dataset.ladderColor || '#FBBF24';
+    const halfH = 8, halfW = (rungs * 8) / 2;
+
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(sc, sc);
+    ctx.fillStyle = 'rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.ellipse(0, halfH + 1.5, halfW, 2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = color; ctx.lineCap = 'round';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(-halfW, -halfH); ctx.lineTo(halfW, -halfH);
+    ctx.moveTo(-halfW,  halfH); ctx.lineTo(halfW,  halfH);
+    ctx.stroke();
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    for (let i = 0; i <= rungs; i++) {
+      const rx = -halfW + i * 8;
+      ctx.moveTo(rx, -halfH); ctx.lineTo(rx, halfH);
+    }
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function renderSmallGoal(g) {
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    if (isNaN(cx) || isNaN(cy)) return;
+    const sc = parseFloat(g.dataset.scale || '1');
+    const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(sc, sc);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(0, 7, 14, 2.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = 'rgba(255,255,255,0.18)';
+    ctx.fillRect(-13, -6, 26, 12);
+    ctx.strokeStyle = '#ffffff'; ctx.lineWidth = 1.4;
+    ctx.strokeRect(-13, -6, 26, 12);
+    ctx.lineWidth = 0.55; ctx.globalAlpha = 0.85;
+    ctx.beginPath();
+    [-9, -4.5, 0, 4.5, 9].forEach(vx => { ctx.moveTo(vx, -6); ctx.lineTo(vx, 6); });
+    ctx.moveTo(-13, 0); ctx.lineTo(13, 0);
+    ctx.stroke(); ctx.globalAlpha = 1;
+    ctx.lineWidth = 2; ctx.lineCap = 'round';
+    ctx.beginPath();
+    ctx.moveTo(-13, -6); ctx.lineTo(-13, 6);
+    ctx.moveTo(13, -6);  ctx.lineTo(13, 6);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function renderDiscCone(g) {
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    if (isNaN(cx) || isNaN(cy)) return;
+    const sc = parseFloat(g.dataset.scale || '1');
+    // Three ellipses: shadow (cy=3), disc body (cy=0), cap (cy=-1.2). Match the
+    // body by its cy — picking the first ellipse grabs the shadow and paints a
+    // translucent black disc instead of the coach's colour.
+    const ellipses = [...g.querySelectorAll('ellipse')];
+    const shadow = ellipses.find(e => e.getAttribute('cy') === '3');
+    const disc = ellipses.find(e => e.getAttribute('cy') === '0') || ellipses[1];
+    const fill = disc?.getAttribute('fill') || '#FBBF24';
+    const stroke = disc?.getAttribute('stroke') || 'rgba(0,0,0,0.25)';
+    ctx.save(); ctx.translate(cx, cy); ctx.scale(sc, sc);
+    ctx.fillStyle = shadow?.getAttribute('fill') || 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(0, 3, 9, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = fill; ctx.strokeStyle = stroke; ctx.lineWidth = 1;
+    ctx.beginPath(); ctx.ellipse(0, 0, 8, 3.2, 0, 0, Math.PI * 2);
+    ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(0,0,0,0.45)';
+    ctx.beginPath(); ctx.ellipse(0, -1.2, 2.6, 0.9, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+
   // Zoom lens: magnify the photo about the lens centre, clipped to the circle.
   // Mirrors the on-screen element, which references #image-bg via <use> — so it
   // magnifies the photo only, not the annotations sitting under it.
@@ -1517,6 +1596,9 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     else if (type === 'referee') renderReferee(g);
     else if (type === 'ball') renderBall(g);
     else if (type === 'cone') renderCone(g);
+    else if (type === 'ladder') renderLadder(g);
+    else if (type === 'small-goal') renderSmallGoal(g);
+    else if (type === 'disc-cone') renderDiscCone(g);
     else if (type === 'tag') renderTag(g);
   });
 

@@ -330,6 +330,98 @@ export function addDiscCone(x, y, color = 'yellow') {
 // ─── Small Goal (training drills) ────────────────────────────────────────────
 // A mini-net icon: solid back panel + criss-cross netting lines + two posts.
 // Default colour: white. Used in the Training Builder; safe to use anywhere.
+// ─── Agility ladder ──────────────────────────────────────────────────────────
+// Training equipment: a flat speed/agility ladder. Rotatable like the small
+// goal — coaches lay these at angles across a grid — and drawn in perspective-
+// free top-down so it reads as lying ON the grass rather than standing up.
+export function addLadder(x, y) {
+  const ns = 'http://www.w3.org/2000/svg';
+  const id = 'ladder-' + S.nextObjectId();
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'ladder';
+  const _ladderScale = window.getPreferredScale?.('ladder') ?? 1;
+  g.dataset.cx = x; g.dataset.cy = y;
+  g.dataset.scale = String(_ladderScale);
+  g.dataset.rotation = '0';
+  g.dataset.rungs = '6';
+  g.dataset.ladderColor = '#FBBF24';
+
+  // Native geometry: 8 units tall, rungs every 8 units along the length.
+  const HALF_H = 8;
+  const RUNGS = 6;
+  const HALF_W = (RUNGS * 8) / 2;
+
+  const sh = document.createElementNS(ns, 'ellipse');
+  sh.setAttribute('cx', '0'); sh.setAttribute('cy', HALF_H + 1.5);
+  sh.setAttribute('rx', HALF_W); sh.setAttribute('ry', '2');
+  sh.setAttribute('fill', 'rgba(0,0,0,0.22)');
+  sh.setAttribute('pointer-events', 'none');
+
+  const body = document.createElementNS(ns, 'g');
+  body.classList.add('ladder-body');
+  _buildLadderRungs(body, RUNGS, HALF_H, '#FBBF24');
+
+  const hit = document.createElementNS(ns, 'rect');
+  hit.classList.add('hit-area');
+  hit.setAttribute('x', -HALF_W - 2); hit.setAttribute('y', -HALF_H - 4);
+  hit.setAttribute('width', HALF_W * 2 + 4); hit.setAttribute('height', HALF_H * 2 + 8);
+  hit.setAttribute('fill', 'transparent'); hit.setAttribute('stroke', 'none');
+
+  g.appendChild(hit); g.appendChild(sh); g.appendChild(body);
+  g.setAttribute('transform', `translate(${x},${y}) rotate(0) scale(${_ladderScale})`);
+  S.playersLayer.appendChild(g);
+
+  makeDraggable(g);
+  g.addEventListener('click', e => {
+    if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); }
+  });
+  return g;
+}
+
+// Redraws the rails + rungs. Shared by creation and by the rung-count/colour
+// controls, so the two can never drift apart.
+export function _buildLadderRungs(body, rungs, halfH, color) {
+  while (body.firstChild) body.removeChild(body.firstChild);
+  const ns = 'http://www.w3.org/2000/svg';
+  const halfW = (rungs * 8) / 2;
+
+  const rail = (yy) => {
+    const l = document.createElementNS(ns, 'line');
+    l.setAttribute('x1', -halfW); l.setAttribute('y1', yy);
+    l.setAttribute('x2', halfW);  l.setAttribute('y2', yy);
+    l.setAttribute('stroke', color); l.setAttribute('stroke-width', '1.8');
+    l.setAttribute('stroke-linecap', 'round');
+    return l;
+  };
+  body.appendChild(rail(-halfH));
+  body.appendChild(rail(halfH));
+
+  // Rung at every cell boundary, including both ends.
+  for (let i = 0; i <= rungs; i++) {
+    const rx = -halfW + i * 8;
+    const r = document.createElementNS(ns, 'line');
+    r.setAttribute('x1', rx); r.setAttribute('y1', -halfH);
+    r.setAttribute('x2', rx); r.setAttribute('y2', halfH);
+    r.setAttribute('stroke', color); r.setAttribute('stroke-width', '1.5');
+    r.setAttribute('stroke-linecap', 'round');
+    body.appendChild(r);
+  }
+}
+
+export function updateLadder(el) {
+  const body = el.querySelector('.ladder-body');
+  if (!body) return;
+  const rungs = parseInt(el.dataset.rungs || '6', 10);
+  const color = el.dataset.ladderColor || '#FBBF24';
+  _buildLadderRungs(body, rungs, 8, color);
+  const halfW = (rungs * 8) / 2;
+  const sh = el.querySelector('ellipse');
+  if (sh) sh.setAttribute('rx', halfW);
+  const hit = el.querySelector('.hit-area');
+  if (hit) { hit.setAttribute('x', -halfW - 2); hit.setAttribute('width', halfW * 2 + 4); }
+}
+
 export function addSmallGoal(x, y) {
   const id = 'sgoal-' + S.nextObjectId();
   const g = document.createElementNS('http://www.w3.org/2000/svg', 'g');
