@@ -423,11 +423,14 @@ async function renderSessionDrillList() {
         ...(d.objectives?.offensive || []),
         ...(d.objectives?.defensive || []),
       ].slice(0, 3);
+      const dur = d.duration ? `${d.duration} min` : '';
+      const cat = d.category ? `<span class="session-drill-phase">${escapeHtml(d.category)}</span>` : '';
+      const metaBits = [d.numPlayers ? `${d.numPlayers} players` : '', dur, ...tags.map(escapeHtml)].filter(Boolean);
       card.innerHTML = `
         <div class="session-drill-num">${idx + 1}</div>
         <div class="session-drill-body">
-          <div class="session-drill-title">${escapeHtml(d.name)}</div>
-          <div class="session-drill-meta">${d.numPlayers || '?'} players${tags.length ? ' · ' + tags.map(escapeHtml).join(' · ') : ''}</div>
+          <div class="session-drill-title">${cat}${escapeHtml(d.name)}</div>
+          <div class="session-drill-meta">${metaBits.join(' · ')}</div>
         </div>
         <div class="session-drill-actions">
           <button class="session-drill-iconbtn" ${idx === 0 ? 'disabled' : ''} onclick="sessionMoveDrill(${idx}, -1)" title="Move up">↑</button>
@@ -437,6 +440,18 @@ async function renderSessionDrillList() {
     }
     list.appendChild(card);
   });
+  _updateSessionSummary(drillIds.map(id => byId[id]).filter(Boolean));
+}
+
+// Session total time + aggregate equipment, shown in the session header.
+function _updateSessionSummary(drills) {
+  const totalMin = drills.reduce((a, d) => a + (parseInt(d.duration, 10) || 0), 0);
+  const agg = {};
+  drills.forEach(d => { Object.entries(d.equipment || {}).forEach(([t, n]) => { agg[t] = (agg[t] || 0) + n; }); });
+  const totalEl = document.getElementById('session-total-time');
+  if (totalEl) totalEl.textContent = totalMin ? `${totalMin} min` : '—';
+  const equipEl = document.getElementById('session-total-equip');
+  if (equipEl) equipEl.textContent = equipmentText(agg);
 }
 
 export function sessionRemoveDrill(idx) {
@@ -503,8 +518,13 @@ function blankDrill() {
     id: null,
     name: '',
     numPlayers: 10,
+    duration: 15,                 // minutes — powers the session total
+    category: '',                 // Warm-up / Technical / … — phase + library filter
+    description: '',              // organisation + instructions
+    coachingPoints: '',          // what to look for / correct
     objectives: { general: [], offensive: [], defensive: [] },
     variants: '',
+    equipment: {},               // { cone: 6, 'small-goal': 2, … } auto-counted
     boardState: null,
     createdAt: null,
     updatedAt: null,
@@ -518,22 +538,72 @@ function applyDrillToForm(drill) {
   const nameEl = drillNameEl();
   if (nameEl) nameEl.value = drill.name || '';
   document.getElementById('drill-num-players').value = drill.numPlayers ?? 10;
+  const dur = document.getElementById('drill-duration'); if (dur) dur.value = drill.duration ?? 15;
+  const cat = document.getElementById('drill-category'); if (cat) cat.value = drill.category || '';
+  const desc = document.getElementById('drill-description'); if (desc) desc.value = drill.description || '';
+  const cp = document.getElementById('drill-coaching-points'); if (cp) cp.value = drill.coachingPoints || '';
   document.getElementById('drill-variants').value = drill.variants || '';
   ['general', 'offensive', 'defensive'].forEach(g => {
     renderTagChips(g, drill.objectives?.[g] || []);
   });
+  ensureEquipObserver();
+  updateEquipmentReadout();
 }
 
 function readDrillFromForm() {
   const name = (drillNameEl()?.value || '').trim();
   const numPlayers = parseInt(document.getElementById('drill-num-players').value, 10) || 0;
+  const duration = Math.max(0, parseInt(document.getElementById('drill-duration')?.value, 10) || 0);
+  const category = document.getElementById('drill-category')?.value || '';
+  const description = (document.getElementById('drill-description')?.value || '').trim();
+  const coachingPoints = (document.getElementById('drill-coaching-points')?.value || '').trim();
   const variants = document.getElementById('drill-variants').value.trim();
   const objectives = {
     general: tagsFor('general'),
     offensive: tagsFor('offensive'),
     defensive: tagsFor('defensive'),
   };
-  return { name, numPlayers, variants, objectives };
+  return { name, numPlayers, duration, category, description, coachingPoints, variants, objectives, equipment: countEquipment() };
+}
+
+// ─── Auto equipment list ─────────────────────────────────────────────────────
+// Counts the physical gear on the pitch so a coach gets a setup checklist for
+// free. Players and pure annotations (arrows, zones, text) are excluded.
+const EQUIP_LABELS = {
+  ball: 'ball', cone: 'cone', 'disc-cone': 'disc cone', 'small-goal': 'goal',
+  ladder: 'ladder', pole: 'pole', hoop: 'hoop',
+};
+const EQUIP_ORDER = ['ball','cone','disc-cone','small-goal','ladder','pole','hoop'];
+export function countEquipment() {
+  const counts = {};
+  const scan = (layer) => { if (!layer) return; layer.querySelectorAll('[data-type]').forEach(el => {
+    const t = el.dataset.type; if (EQUIP_LABELS[t]) counts[t] = (counts[t] || 0) + 1;
+  }); };
+  scan(S.playersLayer); scan(S.objectsLayer);
+  return counts;
+}
+export function equipmentText(counts) {
+  if (!counts) return 'No equipment';
+  const parts = EQUIP_ORDER.filter(t => counts[t]).map(t => {
+    const n = counts[t], lbl = EQUIP_LABELS[t];
+    return `${n} ${lbl}${n > 1 ? 's' : ''}`;
+  });
+  return parts.length ? parts.join(' · ') : 'No equipment';
+}
+function updateEquipmentReadout() {
+  const el = document.getElementById('drill-equipment-readout');
+  if (el) el.textContent = equipmentText(countEquipment());
+}
+// Keep the readout live while a drill is being edited: any element added or
+// removed from the board updates it. Cheap — only fires when the readout exists.
+let _equipObserver = null;
+function ensureEquipObserver() {
+  if (_equipObserver || !S.playersLayer || !S.objectsLayer) return;
+  _equipObserver = new MutationObserver(() => {
+    if (document.getElementById('drill-equipment-readout')) updateEquipmentReadout();
+  });
+  _equipObserver.observe(S.playersLayer, { childList: true });
+  _equipObserver.observe(S.objectsLayer, { childList: true });
 }
 
 // Clear the drill name input when leaving the editor.
@@ -659,7 +729,7 @@ async function renderLibrary() {
 }
 
 async function renderDrillLibrary() {
-  const wrap = document.querySelector('.training-library-section:first-child');
+  const wrap = document.querySelectorAll('.training-library-section')[0];
   if (!wrap) return;
   wrap.querySelectorAll('.training-empty, .drill-card-list').forEach(n => n.remove());
 
@@ -684,9 +754,15 @@ async function renderDrillLibrary() {
       ...(d.objectives?.offensive || []),
       ...(d.objectives?.defensive || []),
     ].slice(0, 3);
+    card.dataset.search = [d.name, d.category,
+      ...(d.objectives?.general||[]), ...(d.objectives?.offensive||[]), ...(d.objectives?.defensive||[])
+    ].join(' ').toLowerCase();
+    const cat = d.category ? `<span class="drill-card-phase">${escapeHtml(d.category)}</span>` : '';
+    const dur = d.duration ? `${d.duration} min` : '';
+    const metaBits = [d.numPlayers ? `${d.numPlayers} players` : '', dur, ...objTags.map(t => escapeHtml(t))].filter(Boolean);
     card.innerHTML = `
-      <div class="drill-card-title">${escapeHtml(d.name || 'Untitled drill')}</div>
-      <div class="drill-card-meta">${d.numPlayers || '?'} players · ${objTags.length ? objTags.map(t => escapeHtml(t)).join(' · ') : 'no objectives'}</div>
+      <div class="drill-card-title">${cat}${escapeHtml(d.name || 'Untitled drill')}</div>
+      <div class="drill-card-meta">${metaBits.length ? metaBits.join(' · ') : 'no details yet'}</div>
       <button class="drill-card-delete" type="button" aria-label="Delete drill">&times;</button>
     `;
     card.onclick = (e) => {
@@ -726,6 +802,9 @@ async function renderSessionLibrary() {
   sessions.forEach(s => {
     const card = document.createElement('div');
     card.className = 'drill-card';
+    card.dataset.search = [s.name,
+      ...(s.objectives?.general||[]), ...(s.objectives?.offensive||[]), ...(s.objectives?.defensive||[])
+    ].join(' ').toLowerCase();
     const count = (s.drillIds || []).length;
     const tags = [
       ...(s.objectives?.general || []),
@@ -812,6 +891,90 @@ if (document.readyState === 'loading') {
 }
 
 // ─── Window exposure ────────────────────────────────────────────────────────
+// ─── Library search ──────────────────────────────────────────────────────────
+export function filterTrainingLibrary(query) {
+  const q = (query || '').trim().toLowerCase();
+  document.querySelectorAll('.training-library-section').forEach(section => {
+    const cards = section.querySelectorAll('.drill-card');
+    let shown = 0;
+    cards.forEach(card => {
+      const match = !q || (card.dataset.search || '').includes(q);
+      card.style.display = match ? '' : 'none';
+      if (match) shown++;
+    });
+    // toggle a "no matches" line per section when searching
+    let none = section.querySelector('.training-search-empty');
+    if (q && cards.length && shown === 0) {
+      if (!none) {
+        none = document.createElement('div');
+        none.className = 'training-empty training-search-empty';
+        section.appendChild(none);
+      }
+      none.textContent = 'No matches.';
+      none.style.display = '';
+    } else if (none) { none.style.display = 'none'; }
+  });
+}
+window.filterTrainingLibrary = filterTrainingLibrary;
+
+// ─── Printable session sheet (Print / Save as PDF) ───────────────────────────
+export async function printSession() {
+  const session = readSessionFromForm();
+  const ids = _currentSession?.drillIds || [];
+  if (!ids.length) { window.showNotification?.('Add at least one drill before printing.', 'error', 3000); return; }
+  const all = await listDrills();
+  const byId = Object.fromEntries(all.map(d => [d.id, d]));
+  const drills = ids.map(id => byId[id]).filter(Boolean);
+  const totalMin = drills.reduce((a, d) => a + (parseInt(d.duration, 10) || 0), 0);
+  const agg = {}; drills.forEach(d => Object.entries(d.equipment || {}).forEach(([t, n]) => agg[t] = (agg[t] || 0) + n));
+  const objAll = [...session.objectives.general, ...session.objectives.offensive, ...session.objectives.defensive];
+
+  const esc = (x) => escapeHtml(String(x ?? ''));
+  const block = (label, val) => val ? `<div class="ps-field"><span class="ps-flabel">${label}</span><span class="ps-fval">${esc(val).replace(/\n/g,'<br>')}</span></div>` : '';
+  const drillHTML = drills.map((d, i) => {
+    const objs = [...(d.objectives?.general||[]),...(d.objectives?.offensive||[]),...(d.objectives?.defensive||[])];
+    const meta = [d.category, d.duration ? d.duration + ' min' : '', d.numPlayers ? d.numPlayers + ' players' : ''].filter(Boolean).join(' · ');
+    return `<section class="ps-drill">
+      <h3><span class="ps-num">${i+1}</span> ${esc(d.name || 'Untitled drill')}</h3>
+      ${meta ? `<div class="ps-meta">${esc(meta)}</div>` : ''}
+      ${block('Objectives', objs.join(', '))}
+      ${block('Description', d.description)}
+      ${block('Coaching points', d.coachingPoints)}
+      ${block('Progression / variants', d.variants)}
+      ${block('Equipment', equipmentText(d.equipment))}
+    </section>`;
+  }).join('');
+
+  let host = document.getElementById('session-print-sheet');
+  if (host) host.remove();
+  host = document.createElement('div');
+  host.id = 'session-print-sheet';
+  host.innerHTML = `
+    <div class="ps-page">
+      <header class="ps-head">
+        <div>
+          <div class="ps-brand">TÁCTICA · Training session</div>
+          <h1>${esc(session.name || 'Untitled session')}</h1>
+        </div>
+        <div class="ps-stats">
+          <div><b>${totalMin || '—'}${totalMin ? ' min' : ''}</b><span>Total</span></div>
+          <div><b>${session.numPlayers || '—'}</b><span>Players</span></div>
+          <div><b>${drills.length}</b><span>${drills.length === 1 ? 'Drill' : 'Drills'}</span></div>
+        </div>
+      </header>
+      ${objAll.length ? `<div class="ps-objectives"><b>Objectives:</b> ${esc(objAll.join(', '))}</div>` : ''}
+      <div class="ps-equip"><b>Equipment for the session:</b> ${esc(equipmentText(agg))}</div>
+      ${drillHTML}
+      <footer class="ps-foot">Made with Táctica · tactica.football</footer>
+    </div>`;
+  document.body.appendChild(host);
+  track('training_session_printed', { drills: drills.length, totalMin });
+  window.print();
+  // clean up shortly after the print dialog closes
+  setTimeout(() => host.remove(), 500);
+}
+window.printSession = printSession;
+
 window.startNewDrill = startNewDrill;
 window.startNewSession = startNewSession;
 window.exitDrillEditor = exitDrillEditor;

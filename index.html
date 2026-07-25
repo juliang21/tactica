@@ -44,7 +44,7 @@
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@800;900&family=Playfair+Display:wght@600&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="styles.css?v=38">
-<link rel="stylesheet" href="js/modes/training/training.css?v=3">
+<link rel="stylesheet" href="js/modes/training/training.css?v=5">
 <!-- Hotjar Tracking Code for Táctica -->
 <script>
     (function(h,o,t,j,a,r){
@@ -903,11 +903,23 @@
 
       <main class="session-canvas">
         <div class="session-header">
-          <h2 class="session-headline">Session drills</h2>
-          <button class="session-add-btn" onclick="openDrillPicker()">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
-            Add drill
-          </button>
+          <div class="session-header-info">
+            <h2 class="session-headline">Session drills</h2>
+            <div class="session-summary">
+              <span class="session-summary-pill"><svg width="12" height="12" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="8" cy="8" r="6"/><path d="M8 5v3l2 1.5" stroke-linecap="round"/></svg> <span id="session-total-time">—</span></span>
+              <span class="session-summary-equip">Equipment: <span id="session-total-equip">No equipment</span></span>
+            </div>
+          </div>
+          <div class="session-header-actions">
+            <button class="session-print-btn" onclick="printSession()" title="Print or save as PDF">
+              <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 6V2h8v4M4 12H3a1 1 0 01-1-1V8a1 1 0 011-1h10a1 1 0 011 1v3a1 1 0 01-1 1h-1M4 10h8v4H4z"/></svg>
+              Print / PDF
+            </button>
+            <button class="session-add-btn" onclick="openDrillPicker()">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+              Add drill
+            </button>
+          </div>
         </div>
         <div id="session-drill-list" class="session-drill-list">
           <!-- Drills appear here -->
@@ -964,6 +976,10 @@
       </div>
 
       <div class="training-library">
+        <div class="training-library-search">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M11 11l3 3"/></svg>
+          <input type="text" id="training-search" placeholder="Search drills and sessions by name, category or objective…" oninput="filterTrainingLibrary(this.value)">
+        </div>
         <div class="training-library-section">
           <div class="training-library-header">
             <h2 class="training-library-title">My Drills</h2>
@@ -1265,9 +1281,36 @@
         <label class="drill-meta-label">Drill name</label>
         <input type="text" id="drill-name-input-panel" class="drill-meta-input" placeholder="Untitled drill" maxlength="80">
       </div>
+      <div class="drill-meta-row" style="margin-top:14px">
+        <div class="drill-meta-section" style="flex:1">
+          <label class="drill-meta-label">Players</label>
+          <input type="number" id="drill-num-players" class="drill-meta-input" min="1" max="22" value="10">
+        </div>
+        <div class="drill-meta-section" style="flex:1">
+          <label class="drill-meta-label">Duration (min)</label>
+          <input type="number" id="drill-duration" class="drill-meta-input" min="0" max="180" value="15">
+        </div>
+      </div>
       <div class="drill-meta-section" style="margin-top:14px">
-        <label class="drill-meta-label">Number of players</label>
-        <input type="number" id="drill-num-players" class="drill-meta-input" min="1" max="22" value="10">
+        <label class="drill-meta-label">Category</label>
+        <select id="drill-category" class="drill-meta-input drill-meta-select">
+          <option value="">Uncategorised</option>
+          <option>Warm-up</option>
+          <option>Technical</option>
+          <option>Possession</option>
+          <option>Small-sided game</option>
+          <option>Phase of play</option>
+          <option>Match</option>
+          <option>Cool-down</option>
+        </select>
+      </div>
+      <div class="drill-meta-section" style="margin-top:14px">
+        <label class="drill-meta-label">Description <span style="opacity:.5">(setup &amp; instructions)</span></label>
+        <textarea id="drill-description" class="drill-meta-textarea" rows="3" placeholder="How the drill is organised and what the players do…"></textarea>
+      </div>
+      <div class="drill-meta-section" style="margin-top:14px">
+        <label class="drill-meta-label">Coaching points</label>
+        <textarea id="drill-coaching-points" class="drill-meta-textarea" rows="3" placeholder="What to look for and correct…"></textarea>
       </div>
       <div class="drill-meta-section" style="margin-top:14px">
         <label class="drill-meta-label">Objectives</label>
@@ -1288,8 +1331,12 @@
         </div>
       </div>
       <div class="drill-meta-section" style="margin-top:14px">
-        <label class="drill-meta-label">Variants</label>
-        <textarea id="drill-variants" class="drill-meta-textarea" rows="4" placeholder="Describe variants or progressions…"></textarea>
+        <label class="drill-meta-label">Progression / variants</label>
+        <textarea id="drill-variants" class="drill-meta-textarea" rows="3" placeholder="How to make it harder or easier…"></textarea>
+      </div>
+      <div class="drill-meta-section drill-equipment" style="margin-top:16px">
+        <label class="drill-meta-label">Equipment <span style="opacity:.5">(auto)</span></label>
+        <div id="drill-equipment-readout" class="drill-equipment-readout">No equipment</div>
       </div>
     </div>
   </div>

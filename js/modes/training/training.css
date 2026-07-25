@@ -230,6 +230,7 @@ body.training-mode #toolbar-toggle { display: none !important; }
 body.training-mode #current-analysis-bar { visibility: hidden; }
 body.training-mode #pitch-wrap { padding: 0; }
 body.training-mode #topbar-share-btn,
+body.training-mode #topbar-save-btn,
 body.training-mode #topbar-export-btn { display: none !important; }
 body.training-mode #topbar-drill-save-btn { display: none !important; }
 
@@ -260,6 +261,7 @@ body.training-drill-mode .drill-left-panel { display: none !important; }
    drill-name input at the top of the Drill tab instead (no topbar overlap). */
 body.training-drill-mode #current-analysis-bar { display: none !important; }
 body.training-drill-mode #topbar-share-btn { display: none !important; }
+body.training-drill-mode #topbar-save-btn { display: none !important; }
 body.training-drill-mode #topbar-export-btn { display: none !important; }
 body.training-drill-mode #topbar-drill-save-btn,
 body.training-drill-mode #topbar-drill-back-btn { display: inline-flex !important; }
@@ -538,6 +540,7 @@ body.training-session-mode #toolbar { display: none !important; }
 body.training-session-mode #toolbar-toggle { display: none !important; }
 body.training-session-mode #current-analysis-bar { display: none !important; }
 body.training-session-mode #topbar-share-btn { display: none !important; }
+body.training-session-mode #topbar-save-btn { display: none !important; }
 body.training-session-mode #topbar-export-btn { display: none !important; }
 body.training-session-mode #topbar-drill-save-btn { display: none !important; }
 body.training-session-mode #topbar-session-save-btn { display: inline-flex !important; }
@@ -734,4 +737,93 @@ body.training-session-mode #topbar-session-save-btn { display: inline-flex !impo
   .training-actions { grid-template-columns: 1fr; }
   .training-drill-editor { grid-template-columns: 1fr; grid-template-rows: auto 1fr; }
   .drill-left-panel { max-height: 38vh; }
+}
+
+/* ══════════ Planner additions ══════════ */
+/* Two fields side by side (Players + Duration) */
+.drill-meta-row { display: flex; gap: 12px; }
+/* Category select matches the text inputs */
+.drill-meta-select {
+  appearance: none; -webkit-appearance: none; cursor: pointer;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' fill='none' stroke='%239ea19c' stroke-width='1.6'%3E%3Cpath d='M3 5l3 3 3-3'/%3E%3C/svg%3E");
+  background-repeat: no-repeat; background-position: right 10px center; padding-right: 28px;
+}
+/* Auto equipment readout */
+.drill-equipment-readout {
+  font-size: 12.5px; color: var(--text); line-height: 1.5;
+  background: var(--accent-subtle); border: 1px solid rgba(52,211,153,0.18);
+  border-radius: 8px; padding: 9px 11px;
+}
+/* Category chip on drill/session cards + session rows */
+.drill-card-phase, .session-drill-phase {
+  display: inline-block; vertical-align: middle; margin-right: 7px;
+  font-size: 9.5px; font-weight: 800; letter-spacing: 0.05em; text-transform: uppercase;
+  color: var(--accent); background: var(--accent-subtle);
+  border-radius: 4px; padding: 2px 6px;
+}
+
+/* Session header: total time + equipment + print */
+.session-header-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+.session-summary { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.session-summary-pill {
+  display: inline-flex; align-items: center; gap: 5px;
+  font-size: 12px; font-weight: 700; color: var(--text);
+  background: var(--panel2); border: 1px solid var(--border);
+  border-radius: 999px; padding: 3px 10px;
+}
+.session-summary-pill svg { color: var(--accent); }
+.session-summary-equip { font-size: 12px; color: var(--text-muted); }
+.session-header-actions { display: flex; gap: 8px; align-items: center; }
+.session-print-btn {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 600;
+  color: var(--text-muted); background: transparent;
+  border: 1px solid var(--border); border-radius: 8px; padding: 7px 12px; cursor: pointer;
+  transition: color 0.15s, border-color 0.15s;
+}
+.session-print-btn:hover { color: var(--text); border-color: var(--text-dim); }
+
+/* Library search */
+.training-library-search {
+  display: flex; align-items: center; gap: 9px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px; padding: 0 12px; margin-bottom: 4px; height: 40px;
+}
+.training-library-search svg { color: var(--text-dim); flex-shrink: 0; }
+.training-library-search input {
+  flex: 1; background: transparent; border: none; outline: none;
+  font-family: 'Manrope', sans-serif; font-size: 13.5px; color: var(--text);
+}
+.training-library-search input::placeholder { color: var(--text-dim); }
+.training-library-search:focus-within { border-color: var(--accent); }
+
+/* ── Printable session sheet ── */
+#session-print-sheet { display: none; }
+@media print {
+  body { background: #fff !important; }
+  body > *:not(#session-print-sheet) { display: none !important; }
+  #session-print-sheet { display: block !important; position: static; }
+  .ps-page {
+    font-family: 'Manrope', -apple-system, system-ui, sans-serif;
+    color: #14181a; max-width: 720px; margin: 0 auto; padding: 6mm 4mm;
+  }
+  .ps-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 20px;
+    border-bottom: 2px solid #14181a; padding-bottom: 12px; margin-bottom: 16px; }
+  .ps-brand { font-size: 10px; font-weight: 800; letter-spacing: 0.14em; text-transform: uppercase; color: #16a06f; margin-bottom: 4px; }
+  .ps-head h1 { font-size: 24px; margin: 0; letter-spacing: -0.01em; }
+  .ps-stats { display: flex; gap: 18px; }
+  .ps-stats div { text-align: center; }
+  .ps-stats b { display: block; font-size: 18px; }
+  .ps-stats span { font-size: 9px; text-transform: uppercase; letter-spacing: 0.08em; color: #6b7280; }
+  .ps-objectives, .ps-equip { font-size: 12px; color: #374151; margin-bottom: 8px; }
+  .ps-equip { margin-bottom: 18px; }
+  .ps-drill { border: 1px solid #d7dbde; border-radius: 8px; padding: 12px 14px; margin-bottom: 12px; page-break-inside: avoid; }
+  .ps-drill h3 { font-size: 15px; margin: 0 0 4px; display: flex; align-items: center; gap: 8px; }
+  .ps-num { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
+    background: #16a06f; color: #fff; border-radius: 5px; font-size: 11px; font-weight: 800; }
+  .ps-meta { font-size: 11px; color: #16a06f; font-weight: 700; margin-bottom: 8px; }
+  .ps-field { display: grid; grid-template-columns: 130px 1fr; gap: 10px; font-size: 12px; margin-bottom: 5px; }
+  .ps-flabel { font-weight: 700; color: #6b7280; }
+  .ps-fval { color: #14181a; }
+  .ps-foot { margin-top: 16px; font-size: 10px; color: #9aa0a6; text-align: center; }
 }
