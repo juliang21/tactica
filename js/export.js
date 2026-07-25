@@ -501,7 +501,8 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
     const sc = parseFloat(g.dataset.scale || '1');
     const rx = parseFloat(g.dataset.rx || '28') * sc;
-    const ry = parseFloat(g.dataset.ry || '5') * sc;
+    // Include the Height multiplier so exports match the on-screen highlight.
+    const ry = parseFloat(g.dataset.ry || '5') * sc * parseFloat(g.dataset.spotScaleY || '1');
     const beamW = rx * 2;
     const sourceW = 6;
 

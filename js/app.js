@@ -21,7 +21,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyLadderRungs, applyLadderColor, applyPoleColor, applyHoopColor,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=23';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=24';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=14';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=15';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -1816,6 +1816,15 @@ window.applyMarkerOpacity = applyMarkerOpacity;
 window.liveUpdateMarkerName = liveUpdateMarkerName;
 window.confirmMarkerName = confirmMarkerName;
 window.applyMarkerHighlight = applyMarkerHighlight;
+window.applySpotHeight = function(val) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'spotlight') return;
+  S.pushUndo();
+  el.dataset.spotScaleY = (val / 100).toFixed(2);
+  const out = document.getElementById('spot-scaley-val');
+  if (out) out.textContent = (val / 100).toFixed(1) + '\u00d7';
+  applyTransform(el);
+};
 window.applyMarkerScaleY = function(val) {
   const el = S.selectedEl;
   if (!el || el.dataset.type !== 'marker') return;
@@ -4366,6 +4375,7 @@ function _copyElementData(el) {
     data.rx = el.dataset.rx || '28'; data.ry = el.dataset.ry || '5';
     data.spotColor = el.dataset.spotColor || 'rgba(255,255,255,0.85)';
     data.spotName = el.dataset.spotName || ''; data.spotNameSize = el.dataset.spotNameSize || '11';
+    data.spotScaleY = el.dataset.spotScaleY || '1';
     data.scale = el.dataset.scale || '1';
   } else if (t === 'vision') {
     data.scale = el.dataset.scale || '1'; data.rotation = el.dataset.rotation || '0';
@@ -4625,6 +4635,7 @@ function _pasteOne(d, x, y) {
     if (placed) {
       placed.dataset.rx = d.rx; placed.dataset.ry = d.ry;
       placed.dataset.scale = d.scale;
+      if (d.spotScaleY) placed.dataset.spotScaleY = d.spotScaleY;
       // Apply color
       if (d.spotColor !== 'rgba(255,255,255,0.85)') {
         setSpotlightColor(placed, d.spotColor);

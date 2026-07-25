@@ -2366,7 +2366,7 @@
       </div>
     </div>
     <div class="panel-section" id="spotlight-edit-section" style="display:none">
-      <h3>Spotlight</h3>
+      <h3>Highlight</h3>
       <div class="field-group">
         <div class="field-label">Colour</div>
         <div class="picker-row">
@@ -2377,6 +2377,13 @@
           <div class="color-swatch mini" style="background:#f87171" data-spot-color="rgba(248,113,113,0.7)" onclick="applySpotlightColor(this)"></div>
           <div class="color-swatch mini" style="background:#ffffff" data-spot-color="rgba(255,255,255,0.85)" onclick="applySpotlightColor(this)"></div>
           <button class="color-picker-btn" onclick="openColorPicker('spotlight')">＋</button>
+        </div>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Height</div>
+        <div class="slider-wrap">
+          <div class="slider-label"><span>Vertical</span><span id="spot-scaley-val">1.0×</span></div>
+          <input type="range" id="spot-scaley-slider" min="30" max="200" value="100" oninput="applySpotHeight(this.value)">
         </div>
       </div>
       <div class="field-group">
@@ -2676,17 +2683,6 @@
           <div class="color-swatch mini" style="background:#4ade80" data-color="rgba(74,222,128,0.7)" onclick="applyMarkerBorderColor(this)"></div>
           <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.7)" onclick="applyMarkerBorderColor(this)"></div>
           <button class="color-picker-btn" onclick="openColorPicker('marker-border')">+</button>
-        </div>
-      </div>
-      <div class="field-group">
-        <div class="field-label">Line colour</div>
-        <div class="picker-row">
-          <div class="color-swatch mini" style="background:#ffffff" data-color="rgba(255,255,255,0.5)" onclick="applyMarkerLineColor(this)"></div>
-          <div class="color-swatch mini" style="background:#4f9cf9" data-color="rgba(79,156,249,0.5)" onclick="applyMarkerLineColor(this)"></div>
-          <div class="color-swatch mini" style="background:#f94f4f" data-color="rgba(249,79,79,0.5)" onclick="applyMarkerLineColor(this)"></div>
-          <div class="color-swatch mini" style="background:#ffd700" data-color="rgba(255,215,0,0.5)" onclick="applyMarkerLineColor(this)"></div>
-          <div class="color-swatch mini" style="background:#000000;border:1px solid rgba(255,255,255,0.15)" data-color="rgba(0,0,0,0.5)" onclick="applyMarkerLineColor(this)"></div>
-          <button class="color-picker-btn" onclick="openColorPicker('marker-line')">+</button>
         </div>
       </div>
       <div class="field-group">
@@ -3036,6 +3032,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=78"></script>
+<script type="module" src="js/app.js?v=80"></script>
 </body>
 </html>

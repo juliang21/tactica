@@ -227,7 +227,7 @@ export function applyTransform(el) {
     if (selRing) { selRing.setAttribute('cx', cx); selRing.setAttribute('cy', cy); selRing.setAttribute('r', r + 7); }
   } else if (t === 'spotlight') {
     const rx = parseFloat(el.dataset.rx || '28') * scale;
-    const ry = parseFloat(el.dataset.ry || '5') * scale;
+    const ry = parseFloat(el.dataset.ry || '5') * scale * parseFloat(el.dataset.spotScaleY || '1');
     const sourceW = 6;
     const beamW = rx * 2;
 
@@ -598,7 +598,7 @@ export function select(el, opts = {}) {
     : type === 'hoop' ? 'Hoop'
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
     : type === 'textbox' ? 'Text'
-    : type === 'spotlight' ? 'Spotlight'
+    : type === 'spotlight' ? 'Highlight'
     : type === 'zoom' ? 'Zoom'
     : type === 'vision' ? 'Player\'s Vision'
     : type === 'freeform' ? 'Free Zone'
@@ -824,6 +824,11 @@ export function select(el, opts = {}) {
     }
   } else if (type === 'spotlight') {
     spotlightSec.style.display = '';
+    const sSy = Math.round(parseFloat(el.dataset.spotScaleY || '1') * 100);
+    const syS = document.getElementById('spot-scaley-slider');
+    const syV = document.getElementById('spot-scaley-val');
+    if (syS) syS.value = sSy;
+    if (syV) syV.textContent = (sSy / 100).toFixed(1) + '\u00d7';
     document.getElementById('spot-name-input').value = el.dataset.spotName || '';
     const sNameSize = el.dataset.spotNameSize || '11';
     document.getElementById('spot-name-size-slider').value = sNameSize;

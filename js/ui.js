@@ -1434,7 +1434,7 @@ window.getPreferredScale = function(type) {
 const TYPE_LABELS = {
   player: 'players', cone: 'cones', 'disc-cone': 'disc cones',
   'small-goal': 'small goals', ball: 'balls', referee: 'referees',
-  marker: 'markers', spotlight: 'spotlights', vision: 'visions',
+  vision: 'visions',
 };
 
 function _updateSizeApplyAllRow(el, scale) {
@@ -1486,7 +1486,7 @@ export function applySize(val) {
     trackElementEdited(el.dataset.type, 'scale');
     el.dataset.scale = val/100;
     const t = el.dataset.type;
-    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop' || t === 'vision' || t === 'marker' || t.startsWith('shadow') || t === 'tag') applyTransform(el);
+    if (t === 'player' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop' || t === 'vision' || t === 'marker' || t === 'spotlight' || t.startsWith('shadow') || t === 'tag') applyTransform(el);
     else if (t === 'arrow') updateArrowVisual(el);
     // Keep resize handles in sync with the slider
     if (S.selectedEl === el) updateHandlePositions(el);
