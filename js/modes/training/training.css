@@ -158,25 +158,55 @@
 
 /* ── Action cards ──────────────────────────────────────────────────────── */
 .training-actions {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 16px;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 18px;
 }
+/* ── Pitch cards: each action shows a real drill / session illustration ── */
 .training-action-card {
-  background: var(--panel); border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 14px; padding: 28px;
-  display: flex; flex-direction: column; gap: 14px;
-  cursor: pointer; transition: all 0.15s;
+  position: relative; overflow: hidden;
+  background: var(--panel); border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 16px; padding: 0;
+  display: flex; flex-direction: column;
+  cursor: pointer; transition: transform 0.18s, border-color 0.18s, box-shadow 0.18s;
   text-align: left; font-family: inherit; color: inherit;
 }
 .training-action-card:hover {
-  border-color: var(--accent); background: var(--panel2); transform: translateY(-1px);
+  border-color: var(--accent); transform: translateY(-3px);
+  box-shadow: 0 22px 50px -28px rgba(52,211,153,0.5);
 }
-.training-action-icon {
-  width: 44px; height: 44px; border-radius: 10px;
-  background: var(--accent-subtle); color: var(--accent);
+.training-action-art {
+  position: relative; display: block;
+  aspect-ratio: 16 / 8; background: #0c120b; overflow: hidden;
+}
+.training-action-art::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: linear-gradient(180deg, transparent 42%, rgba(20,21,20,0.55) 78%, var(--panel));
+}
+.ta-pitch { display: block; width: 100%; height: 100%; }
+.training-action-body {
+  position: relative; display: flex; flex-direction: column;
+  padding: 16px 18px 20px;
+}
+.training-action-chip {
+  position: absolute; top: -17px; left: 18px; z-index: 2;
+  width: 34px; height: 34px; border-radius: 9px;
   display: flex; align-items: center; justify-content: center;
+  background: var(--accent); color: #08130e;
+  box-shadow: 0 6px 16px -4px rgba(52,211,153,0.6);
 }
-.training-action-title { font-size: 17px; font-weight: 700; color: var(--text); margin: 0; }
+.training-action-title {
+  font-size: 18px; font-weight: 800; color: var(--text); margin: 6px 0 6px;
+  letter-spacing: -0.01em;
+}
 .training-action-desc { font-size: 13px; color: var(--text-muted); line-height: 1.5; margin: 0; }
+.training-action-go {
+  margin-top: 14px; display: inline-flex; align-items: center; gap: 7px;
+  color: var(--accent); font-weight: 700; font-size: 13px;
+}
+.training-action-go svg { transition: transform 0.18s; }
+.training-action-card:hover .training-action-go svg { transform: translateX(4px); }
+@media (prefers-reduced-motion: reduce) {
+  .training-action-card, .training-action-go svg { transition: none; }
+}
 
 /* ── Library section ───────────────────────────────────────────────────── */
 .training-library { display: flex; flex-direction: column; gap: 22px; }
