@@ -342,42 +342,34 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
 }
+/* Underlined mode tabs: all three labels stay legible, the active one carries
+   an emerald underline (browser-tab metaphor). Inactive tabs are clearly
+   present — not the near-invisible dim state they used to be. */
 .mode-tab-group {
-  display: inline-flex; gap: 2px;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.06);
-  border-radius: 10px;
-  padding: 3px;
-  height: 36px;
-  align-items: center;
+  display: inline-flex; gap: 4px; align-items: flex-end;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
 }
 .mode-tab {
+  position: relative;
   display: flex; align-items: center; justify-content: center; gap: 7px;
-  padding: 0 12px; height: 100%;
-  min-width: 145px;
-  border-radius: 7px;
-  border: 1px solid transparent;
-  font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 500;
-  color: var(--text-dim); background: transparent;
-  cursor: pointer; transition: color 0.15s, background 0.15s;
-  white-space: nowrap;
+  padding: 9px 12px;
+  border: none; border-radius: 0; background: transparent;
+  font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 600;
+  color: var(--text-muted);
+  cursor: pointer; white-space: nowrap;
+  transition: color 0.15s;
 }
-.mode-tab:hover {
-  color: var(--text);
-  background: rgba(255, 255, 255, 0.03);
+.mode-tab::after {
+  content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px;
+  border-radius: 2px; background: transparent; transition: background 0.15s;
 }
-.mode-tab.active {
-  background: rgba(255, 255, 255, 0.09);
-  border-color: rgba(255, 255, 255, 0.1);
-  color: var(--text);
-  font-weight: 600;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-.mode-tab.active:hover {
-  background: rgba(255, 255, 255, 0.11);
-}
-.mode-tab svg { opacity: 0.55; transition: opacity 0.15s; }
+.mode-tab:hover { color: var(--text); }
+.mode-tab:hover::after { background: rgba(255, 255, 255, 0.14); }
+.mode-tab.active { color: #ffffff; }
+.mode-tab.active::after { background: var(--accent); }
+.mode-tab svg { opacity: 0.75; transition: opacity 0.15s; }
 .mode-tab.active svg { opacity: 1; }
+@media (prefers-reduced-motion: reduce) { .mode-tab, .mode-tab::after { transition: none; } }
 
 /* ── Zoom Controls ── */
 .zoom-controls {
