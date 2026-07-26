@@ -232,6 +232,11 @@ body.training-mode #pitch-wrap { padding: 0; }
 body.training-mode #topbar-share-btn,
 body.training-mode #topbar-save-btn,
 body.training-mode #topbar-export-btn { display: none !important; }
+/* Training has its own Description / Coaching points fields, so the global
+   floating Notes button + panel are redundant here — hide them everywhere in
+   Training (landing, drill editor, session editor). */
+body.training-mode #notes-toggle-btn,
+body.training-mode #notes-panel { display: none !important; }
 body.training-mode #topbar-drill-save-btn { display: none !important; }
 
 
