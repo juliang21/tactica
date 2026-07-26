@@ -31,17 +31,35 @@ export function activateMode(newModeId) {
   }
   if (activeMode?.id === newModeId) return;
 
-  // Deactivate current mode
-  activeMode?.onDeactivate?.();
+  const prev = activeMode;
 
-  // Apply toolbar + side panel for the new mode
-  applyToolbarForMode(newMode);
-  applySidePanelForMode(newMode);
+  // Highlight the destination mode tab immediately so the click feels instant,
+  // even while the panels crossfade.
   syncModeButtons(newModeId, newMode.label);
 
-  // Activate new mode
-  newMode.onActivate?.();
-  activeMode = newMode;
+  const doSwap = () => {
+    prev?.onDeactivate?.();
+    applyToolbarForMode(newMode);
+    applySidePanelForMode(newMode);
+    newMode.onActivate?.();
+    activeMode = newMode;
+  };
+
+  // Crossfade the left toolbar + right side panel so switching use cases feels
+  // like a smooth transition rather than a hard cut. Skip on the very first
+  // activation (no prior mode → nothing to fade from) and for reduced-motion.
+  const fadeEls = [document.getElementById('toolbar'), document.getElementById('side-panel')].filter(Boolean);
+  const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
+  if (!prev || reduce || !fadeEls.length) { doSwap(); return; }
+
+  fadeEls.forEach(el => {
+    el.classList.remove('mode-swapping');
+    void el.offsetWidth;            // restart the animation if mid-swap
+    el.classList.add('mode-swapping');
+    el.addEventListener('animationend', () => el.classList.remove('mode-swapping'), { once: true });
+  });
+  // Swap the content while the panels are faded out (~40% through the anim).
+  setTimeout(doSwap, 150);
 }
 
 // ─── Side Panel Tabs ───────────────────────────────────────────────────────

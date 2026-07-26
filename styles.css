@@ -341,7 +341,26 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   background: var(--panel);
   border-bottom: 1px solid var(--border);
   display: flex; align-items: center; justify-content: center;
+  /* The bar spans the full window (for its background), but the tabs must read
+     as centred on the PITCH — which sits between the 210px toolbar and the
+     var(--panel-w) side panel. Insetting by those widths centres the tabs over
+     the canvas column, not the window. */
+  padding-left: 210px; padding-right: var(--panel-w);
 }
+/* When the left toolbar is collapsed it no longer occupies width — reclaim it
+   so the tabs stay centred on the pitch. */
+#toolbar.collapsed ~ #canvas-wrap #mode-bar { padding-left: 0; }
+
+/* Mode switch: crossfade the toolbar + side panel so changing use cases is a
+   smooth transition, not a hard cut. Animation (not transition) so it doesn't
+   clash with the toolbar's own width/opacity collapse transition. */
+@keyframes modeContentSwap {
+  0%   { opacity: 1; }
+  40%  { opacity: 0; }
+  60%  { opacity: 0; }
+  100% { opacity: 1; }
+}
+#toolbar.mode-swapping, #side-panel.mode-swapping { animation: modeContentSwap 0.34s ease; }
 /* Underlined mode tabs: all three labels stay legible, the active one carries
    an emerald underline (browser-tab metaphor). Inactive tabs are clearly
    present — not the near-invisible dim state they used to be. */

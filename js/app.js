@@ -6198,6 +6198,10 @@ onAuthChange(async (user) => {
             title: 'Add a team logo',
             text: 'Drop a club crest onto the pitch as a faint background watermark. Drag to move it, use the panel to set its size, opacity or crop — and lock it so you can click players over it.',
             cta: 'Got it',
+            // Keep showing it (once per session) until the coach opts out with
+            // the checkbox, rather than a silent one-and-done.
+            maxShows: 6,
+            dismissible: true,
           });
           logoBtn.removeEventListener('mouseenter', _logoAnnounce);
         });
