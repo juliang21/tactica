@@ -43,7 +43,7 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@800;900&family=Playfair+Display:wght@600&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=38">
+<link rel="stylesheet" href="styles.css?v=39">
 <link rel="stylesheet" href="js/modes/training/training.css?v=6">
 <!-- Hotjar Tracking Code for Táctica -->
 <script>
@@ -1723,7 +1723,7 @@
       <div style="font-size:12px;color:var(--text-muted);line-height:1.6;margin-bottom:12px">
         Annotate your match image with players, arrows, zones, and text.
       </div>
-      <button class="action-btn" onclick="triggerImageUpload()" style="margin-bottom:8px">
+      <button class="action-btn secondary" onclick="triggerImageUpload()" style="margin-bottom:8px">
         <svg width="14" height="14" viewBox="0 0 18 18" fill="none"><rect x="2" y="3" width="14" height="12" rx="2" stroke="currentColor" stroke-width="1.4"/><circle cx="7" cy="7.5" r="1.8" fill="currentColor"/><path d="M2 13l4-4 2.5 2.5L12 8l4 5" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
         Change Image
       </button>
@@ -1743,7 +1743,8 @@
         Hides the watermark from the board and exports. Free for now.
       </div>
     </div>
-    <div class="panel-section">
+    <!-- Side Pitch temporarily hidden (low usage) — kept in place to bring back later -->
+    <div class="panel-section" style="display:none">
       <h3>Side Pitch</h3>
       <div style="font-size:12px;color:var(--text-muted);line-height:1.5;margin-bottom:10px">
         Add a tactical pitch alongside your image to diagram plays.

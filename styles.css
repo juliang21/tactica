@@ -506,6 +506,9 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   border-bottom: 1px solid var(--border);
 }
 .panel-section:last-child { border-bottom: none; }
+/* Image Analysis panel: a bit more breathing room between the few sections
+   so they don't read as cramped. */
+#image-mode-info .panel-section { padding: 18px var(--space-4); }
 .panel-section h3 {
   font-size: 10px; font-weight: 700; letter-spacing: 2px;
   text-transform: uppercase; color: var(--text-dim); margin-bottom: 10px;
@@ -975,6 +978,10 @@ input[type=range]::-webkit-slider-thumb {
   display: flex; align-items: center; justify-content: center; gap: 6px;
 }
 .action-btn:hover { border-color: #444; color: var(--text); }
+/* Secondary CTA: reads clearly above the muted default but below a filled
+   primary — green-tinted border + full-strength text, brightens on hover. */
+.action-btn.secondary { border-color: rgba(52,211,153,0.45); color: var(--text); }
+.action-btn.secondary:hover { border-color: #34D399; color: #34D399; background: rgba(52,211,153,0.08); }
 .action-btn.danger { border-color: #3A1520; color: #F87171; }
 .action-btn.danger:hover { background: #3A1520; }
 .action-btn.active { border-color: #34D399; color: #34D399; background: rgba(52,211,153,0.08); }
