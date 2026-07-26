@@ -6186,6 +6186,23 @@ onAuthChange(async (user) => {
         });
       }
 
+      // Logo: clicking it opens a file picker immediately, so a click-triggered
+      // card would clash with the OS dialog — fire on first hover instead.
+      const logoBtn = document.getElementById('logo-btn');
+      if (logoBtn) {
+        logoBtn.addEventListener('mouseenter', function _logoAnnounce() {
+          showFeatureAnnounce({
+            id: 'logo-tooltip-v1',
+            anchorEl: logoBtn,
+            img: 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="280" height="140" viewBox="0 0 280 140"><rect width="280" height="140" fill="#14200f"/><rect x="0" y="18" width="280" height="104" fill="#3a7a38"/><rect x="28" y="18" width="28" height="104" fill="#367035"/><rect x="84" y="18" width="28" height="104" fill="#367035"/><rect x="140" y="18" width="28" height="104" fill="#367035"/><rect x="196" y="18" width="28" height="104" fill="#367035"/><rect x="252" y="18" width="28" height="104" fill="#367035"/><line x1="140" y1="18" x2="140" y2="122" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/><circle cx="140" cy="70" r="20" fill="none" stroke="rgba(255,255,255,0.35)" stroke-width="1.5"/><g opacity="0.28"><path d="M140 44 122 52v14c0 10 8 19 18 23 10-4 18-13 18-23V52L140 44Z" fill="#efebe0" stroke="#c9a94e" stroke-width="2"/><circle cx="140" cy="66" r="6" fill="none" stroke="#c9a94e" stroke-width="2"/></g><circle cx="70" cy="60" r="9" fill="#2f4fbf"/><circle cx="200" cy="84" r="9" fill="#e9e6e7"/></svg>`),
+            title: 'Add a team logo',
+            text: 'Drop a club crest onto the pitch as a faint background watermark. Drag to move it, use the panel to set its size, opacity or crop — and lock it so you can click players over it.',
+            cta: 'Got it',
+          });
+          logoBtn.removeEventListener('mouseenter', _logoAnnounce);
+        });
+      }
+
       const pairBtn = document.getElementById('pair-btn');
       if (pairBtn) {
         pairBtn.addEventListener('click', function _pairAnnounce() {
