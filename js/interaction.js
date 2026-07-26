@@ -325,6 +325,7 @@ function moveElement(el, nx, ny) {
   el.dataset.cx = nx; el.dataset.cy = ny;
   const t = el.dataset.type;
   if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop' || t === 'vision') applyTransform(el);
+  else if (t === 'image') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'headline') applyTransform(el);
   else if (t === 'arrow') updateArrowVisual(el);
@@ -881,8 +882,15 @@ export function select(el, opts = {}) {
     const imgSec = document.getElementById('image-edit-section');
     if (imgSec) {
       imgSec.style.display = '';
+      const lockToggle = document.getElementById('image-lock-toggle');
+      if (lockToggle) lockToggle.checked = el.dataset.locked === '1';
       const cropToggle = document.getElementById('image-crop-toggle');
       if (cropToggle) cropToggle.checked = el.dataset.imgCrop === '1';
+      const szSlider = document.getElementById('image-size-slider');
+      const szLabel = document.getElementById('image-size-val');
+      const sz = el.dataset.scale || '1';
+      if (szSlider) szSlider.value = sz;
+      if (szLabel) szLabel.textContent = Math.round(parseFloat(sz) * 100) + '%';
       const opSlider = document.getElementById('image-opacity-slider');
       const opLabel = document.getElementById('image-opacity-val');
       const op = el.dataset.imgOpacity || '1';

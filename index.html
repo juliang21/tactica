@@ -43,7 +43,7 @@
 <link rel="icon" href="favicon.ico" type="image/x-icon">
 <link rel="apple-touch-icon" href="images/favicon-180.png">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@300;400;500;600;700&family=Outfit:wght@800;900&family=Playfair+Display:wght@600&family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;1,700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="styles.css?v=39">
+<link rel="stylesheet" href="styles.css?v=41">
 <link rel="stylesheet" href="js/modes/training/training.css?v=6">
 <!-- Hotjar Tracking Code for Táctica -->
 <script>
@@ -506,15 +506,16 @@
       <svg width="18" height="18" viewBox="0 0 18 18" fill="none"><text x="4" y="14" font-family="sans-serif" font-size="14" font-weight="700" fill="currentColor">T</text></svg>
       <span class="tool-label">Text</span>
     </button>
-    <button class="tool-btn" data-tool="image" id="image-btn" onclick="setTool('image')">
-      <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
-        <rect x="2" y="3" width="14" height="12" rx="1.5" stroke="currentColor" stroke-width="1.3" fill="none"/>
-        <circle cx="6" cy="7" r="1.4" fill="currentColor"/>
-        <path d="M2 13 L7 9 L11 12 L16 8 L16 15 L2 15 Z" fill="currentColor" opacity="0.55"/>
+    <button class="tool-btn" id="logo-btn" onclick="addPitchLogo()" title="Add a team crest as a faint background watermark. Drag to move it, and use the panel to change size, opacity or crop. Lock it so you can click players over it.">
+      <span class="badge-new">New</span>
+      <svg width="18" height="18" viewBox="0 0 20 20" fill="none">
+        <path d="M10 2.2 3.6 4.6v4.9c0 3.4 2.6 6.6 6.4 7.9 3.8-1.3 6.4-4.5 6.4-7.9V4.6L10 2.2Z" stroke="currentColor" stroke-width="1.3" fill="rgba(52,211,153,0.12)"/>
+        <circle cx="10" cy="8.6" r="2.2" stroke="currentColor" stroke-width="1.2"/>
       </svg>
-      <span class="tool-label">Image</span>
+      <span class="tool-label">Logo</span>
     </button>
     <input type="file" id="image-tool-file-input" accept="image/*" style="display:none">
+    <input type="file" id="pitch-logo-file-input" accept="image/*" style="display:none">
     <!-- Panel for selected image (Crop to circle toggle) -->
     <!-- Note: actual panel section lives further down with the other element panels -->
 
@@ -1437,13 +1438,13 @@
       <h3 class="collapsible" data-collapse="kit">Kit colour</h3>
       <div class="collapsible-body" data-collapse-body="kit">
       <div class="kit-tabs">
-        <button class="kit-tab active" onclick="switchKitTab('national',this)">National</button>
-        <button class="kit-tab" onclick="switchKitTab('clubs',this)">Clubs</button>
+        <button class="kit-tab active" onclick="switchKitTab('clubs',this)">Clubs</button>
+        <button class="kit-tab" onclick="switchKitTab('national',this)">National</button>
       </div>
-      <input type="text" id="kit-search" class="text-input" placeholder="Search 160+ clubs..." oninput="searchKits(this.value)" style="margin-bottom:8px;display:none">
-      <input type="text" id="kit-search-national" class="text-input" placeholder="Search national teams..." oninput="searchNationalKits(this.value)" style="margin-bottom:8px">
-      <div class="kit-grid" id="kit-grid-clubs" style="display:none"></div>
-      <div class="kit-grid" id="kit-grid-national">
+      <input type="text" id="kit-search" class="text-input" placeholder="Search 160+ clubs..." oninput="searchKits(this.value)" style="margin-bottom:8px">
+      <input type="text" id="kit-search-national" class="text-input" placeholder="Search national teams..." oninput="searchNationalKits(this.value)" style="margin-bottom:8px;display:none">
+      <div class="kit-grid" id="kit-grid-clubs"></div>
+      <div class="kit-grid" id="kit-grid-national" style="display:none">
         <div class="kit-group-label">Group A</div>
         <div class="kit-btn" style="background:#006847" data-color="#006847" data-gk="#ff6600" onclick="applyKit(this)" data-track-name="Mexico" title="Mexico"><div class="kit-label">MEX</div></div>
         <div class="kit-btn" style="background:#009639" data-color="#009639" data-gk="#ffd700" onclick="applyKit(this)" data-track-name="South Africa" title="South Africa"><div class="kit-label">RSA</div></div>
@@ -1825,6 +1826,12 @@
           <svg width="12" height="12" viewBox="0 0 16 16" fill="none"><path d="M2 4h12M6 4V2.5A.5.5 0 016.5 2h3a.5.5 0 01.5.5V4M5 4l.5 9a1 1 0 001 1h3a1 1 0 001-1L11 4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
       </div>
+    </div>
+
+    <!-- Logo roster — lists every logo so a locked one can still be selected -->
+    <div class="panel-section" id="logo-roster-section" style="display:none">
+      <h3>Logos <span id="pitch-logo-count" style="color:var(--text-muted);font-weight:500;letter-spacing:0"></span></h3>
+      <div id="pitch-logo-list"></div>
     </div>
 
     <!-- Player properties -->
@@ -2751,13 +2758,27 @@
 
     <!-- Image properties -->
     <div class="panel-section" id="image-edit-section" style="display:none">
-      <h3>Image</h3>
+      <h3>Logo</h3>
+      <div class="field-group">
+        <label class="toggle-row">
+          <span class="toggle-label">Lock position <span style="display:block;font-size:10px;color:var(--text-muted);font-weight:400">Click-through so you can select players over it</span></span>
+          <input type="checkbox" id="image-lock-toggle" onchange="applyImageLock(this.checked)">
+          <span class="toggle-switch toggle-switch-lg"></span>
+        </label>
+      </div>
       <div class="field-group">
         <label class="toggle-row">
           <span class="toggle-label">Crop to circle</span>
           <input type="checkbox" id="image-crop-toggle" onchange="applyImageCrop(this.checked)">
           <span class="toggle-switch toggle-switch-lg"></span>
         </label>
+      </div>
+      <div class="field-group">
+        <div class="field-label">Size</div>
+        <div class="field-row">
+          <input type="range" id="image-size-slider" min="0.3" max="3" value="1" step="0.05" oninput="applyImageSize(this.value); document.getElementById('image-size-val').textContent = Math.round(this.value*100)+'%'" style="flex:1">
+          <span id="image-size-val" class="field-value">100%</span>
+        </div>
       </div>
       <div class="field-group">
         <div class="field-label">Opacity</div>
@@ -3081,6 +3102,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=80"></script>
+<script type="module" src="js/app.js?v=82"></script>
 </body>
 </html>

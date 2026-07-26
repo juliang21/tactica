@@ -463,6 +463,11 @@ let _exportBgImg = null;   // decoded photo, set by the image-mode export paths
 
 function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
 
+  // Logo/image bitmaps are decoded async up-front (see the preload gate at the
+  // bottom) and stashed here so renderImage can draw them synchronously in
+  // correct z-order.
+  const _imgCache = new Map();
+
   // ── Per-element render functions ──────────────────────────────────────────
 
   function renderShadow(g, type) {
@@ -1614,11 +1619,43 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.restore();
   }
 
+  // Logo / uploaded image. Bitmap comes from _imgCache (preloaded below).
+  // Matches the on-screen transform in interaction.js applyTransform('image'):
+  // centred at cx/cy, half-size hw/hh × scale, rotated, optional elliptical crop.
+  function renderImage(g) {
+    const im = _imgCache.get(g);
+    if (!im || !im.naturalWidth) return;   // decode failed → skip, never block export
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    const sc = parseFloat(g.dataset.scale || '1');
+    const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+    const hw = parseFloat(g.dataset.hw || '60') * sc;
+    const hh = parseFloat(g.dataset.hh || '60') * sc;
+    const op = parseFloat(g.dataset.imgOpacity || '1');
+    // Replicate the on-screen SVG preserveAspectRatio="xMidYMid meet": fit the
+    // source inside the hw×hh box WITHOUT distortion (letterboxed + centred),
+    // rather than stretching it to fill — otherwise a non-matching box (e.g.
+    // after a free resize) skews the logo only in the export.
+    const bw = hw * 2, bh = hh * 2;
+    const ia = im.naturalWidth / im.naturalHeight;
+    const ba = bw / bh;
+    let dw, dh;
+    if (ia > ba) { dw = bw; dh = bw / ia; } else { dh = bh; dw = bh * ia; }
+    ctx.save();
+    ctx.globalAlpha = Number.isFinite(op) ? op : 1;
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    if (g.dataset.imgCrop === '1') { ctx.beginPath(); ctx.ellipse(0, 0, hw, hh, 0, 0, Math.PI * 2); ctx.clip(); }
+    ctx.drawImage(im, -dw / 2, -dh / 2, dw, dh);
+    ctx.restore();
+  }
+
+  function _startPaint() {
   // ── Render objects layer in DOM order (preserves layer stacking) ──────────
   document.querySelectorAll('#objects-layer > g').forEach(g => {
     const type = g.dataset.type;
     if (!type) return;
-    if (type === 'shadow-circle' || type === 'shadow-rect') renderShadow(g, type);
+    if (type === 'image') renderImage(g);
+    else if (type === 'shadow-circle' || type === 'shadow-rect') renderShadow(g, type);
     else if (type === 'net-zone') renderNetZone(g);
     else if (type === 'pair') renderPair(g);
     else if (type === 'spotlight') renderSpotlight(g);
@@ -1714,4 +1751,23 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     if (onDone) onDone(finalizeExport);
     else finalizeExport();
   }, 50);
+  } // end _startPaint
+
+  // ── Preload gate ──────────────────────────────────────────────────────────
+  // Decode every logo/image bitmap first, then paint. Images draw with
+  // ctx.drawImage, which needs a decoded HTMLImageElement — so we can't paint
+  // until they're ready. The data URLs are already in memory, so this is quick.
+  const _imgGs = Array.from(document.querySelectorAll('#objects-layer > g'))
+    .filter(g => g.dataset.type === 'image' && g.dataset.imgHref);
+  if (_imgGs.length === 0) { _startPaint(); }
+  else {
+    let _pending = _imgGs.length;
+    const _done = () => { if (--_pending === 0) _startPaint(); };
+    _imgGs.forEach(g => {
+      const im = new Image();
+      im.onload = () => { _imgCache.set(g, im); _done(); };
+      im.onerror = () => { _imgCache.set(g, null); _done(); };
+      im.src = g.dataset.imgHref;
+    });
+  }
 }

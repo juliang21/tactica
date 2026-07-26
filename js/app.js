@@ -21,7 +21,7 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyLadderRungs, applyLadderColor, applyPoleColor, applyHoopColor,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=24';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=26';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=14';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=15';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -1843,6 +1843,22 @@ window.applyZoomSize = applyZoomSize;
 window.applyZoomRing = applyZoomRing;
 window.applyImageCrop = applyImageCrop;
 window.applyImageOpacity = applyImageOpacity;
+// Size slider for images/logos — scales around the handle-set base size.
+window.applyImageSize = function(val) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'image') return;
+  el.dataset.scale = String(val);
+  applyTransform(el);
+};
+// Lock a logo so it's click-through: you can then click players/elements over
+// it without grabbing the logo. Unlock again from the Logos roster.
+window.applyImageLock = function(on) {
+  const el = S.selectedEl;
+  if (!el || el.dataset.type !== 'image') return;
+  setLogoLocked(el, on);
+  if (on) deselect();          // becomes background immediately
+  refreshLogoList();
+};
 // Replace the source on the currently selected image. Clears any stale
 // pending placement point so the file picker change handler routes through
 // the replace branch.
@@ -2231,7 +2247,138 @@ async function _placeImageFromFile(file, x, y) {
       if (!file || !file.type || !file.type.startsWith('image/')) return;
       e.preventDefault();
       const pt = S.getSVGPoint(e);
-      await _placeImageFromFile(file, pt.x, pt.y);
+      await _placeLogoFromFile(file, pt.x, pt.y);
+    });
+  };
+  tryWire();
+})();
+
+// ─── Pitch Logos ────────────────────────────────────────────────────────────
+// Team crests placed as a faint background layer behind everything, so an
+// analysis can carry club branding without it taking over. A logo is just an
+// `image` element (so it inherits drag / resize / opacity / export / copy-paste)
+// tagged data-is-logo, started faint, and sent to the back of the objects layer.
+// Added from the Annotations toolbar (Logo). A logo can be LOCKED (click-through)
+// so players can be selected over it; the Logos roster in the Selection tab
+// still lists locked logos so they can be re-selected / unlocked.
+const LOGO_DEFAULT_OPACITY = 0.15;
+const MAX_LOGOS = 6;
+
+function _currentLogos() {
+  return Array.from(document.querySelectorAll('#objects-layer > g'))
+    .filter(g => g.dataset.type === 'image' && g.dataset.isLogo === '1');
+}
+
+// Toggle click-through. Inline pointer-events styles round-trip through the
+// innerHTML save/load serialization, so a locked logo stays locked after reload.
+function setLogoLocked(el, on) {
+  el.dataset.locked = on ? '1' : '';
+  const pe = on ? 'none' : '';
+  const bmp = el.querySelector('.image-bitmap');
+  const hit = el.querySelector('.image-hit');
+  if (bmp) bmp.style.pointerEvents = pe;
+  if (hit) hit.style.pointerEvents = pe;
+}
+
+window.addPitchLogo = function() {
+  if (_currentLogos().length >= MAX_LOGOS) {
+    showNotification(`You can add up to ${MAX_LOGOS} logos.`, 'info', 3500);
+    return;
+  }
+  const input = document.getElementById('pitch-logo-file-input');
+  if (input) input.click();
+};
+
+async function _placeLogoFromFile(file, x = 350, y = 240) {
+  const result = await _processImageFile(file);
+  if (!result || result.error) {
+    showNotification(result?.error || 'Could not load image', 'error', 4000);
+    return;
+  }
+  S.pushUndo();
+  const el = addImage(x, y, result.dataUrl, result.width, result.height);
+  if (!el) return;
+  el.dataset.isLogo = '1';
+  el.dataset.imgOpacity = String(LOGO_DEFAULT_OPACITY);
+  const bmp = el.querySelector('.image-bitmap');
+  if (bmp) bmp.setAttribute('opacity', String(LOGO_DEFAULT_OPACITY));
+  // Send to the back so it reads as a background watermark behind everything.
+  S.objectsLayer.insertBefore(el, S.objectsLayer.firstChild);
+  setTool('select');
+  select(el);
+  trackElementInserted('logo');
+  refreshLogoList();
+}
+
+const _LOCK_ICON = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3.5" y="7" width="9" height="6.5" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7V5.2a2.5 2.5 0 015 0V7" stroke="currentColor" stroke-width="1.3"/></svg>';
+const _UNLOCK_ICON = '<svg width="13" height="13" viewBox="0 0 16 16" fill="none"><rect x="3.5" y="7" width="9" height="6.5" rx="1.2" stroke="currentColor" stroke-width="1.3"/><path d="M5.5 7V5.2a2.5 2.5 0 014.9-.6" stroke="currentColor" stroke-width="1.3"/></svg>';
+
+function refreshLogoList() {
+  const section = document.getElementById('logo-roster-section');
+  const wrap = document.getElementById('pitch-logo-list');
+  if (!section || !wrap) return;
+  const logos = _currentLogos();
+  const countEl = document.getElementById('pitch-logo-count');
+  if (countEl) countEl.textContent = logos.length ? `${logos.length}/${MAX_LOGOS}` : '';
+  section.style.display = logos.length ? '' : 'none';
+  wrap.innerHTML = '';
+  logos.forEach((g, i) => {
+    const href = g.dataset.imgHref || g.querySelector('.image-bitmap')?.getAttribute('href') || '';
+    const locked = g.dataset.locked === '1';
+    const row = document.createElement('div');
+    row.className = 'logo-chip' + (locked ? ' locked' : '');
+    const thumb = document.createElement('img');
+    thumb.className = 'logo-chip-thumb'; thumb.src = href; thumb.alt = '';
+    const label = document.createElement('span');
+    label.className = 'logo-chip-label'; label.textContent = `Logo ${i + 1}${locked ? ' · locked' : ''}`;
+    const lockBtn = document.createElement('button');
+    lockBtn.className = 'logo-chip-lock'; lockBtn.title = locked ? 'Unlock' : 'Lock';
+    lockBtn.innerHTML = locked ? _LOCK_ICON : _UNLOCK_ICON;
+    const remove = document.createElement('button');
+    remove.className = 'logo-chip-remove'; remove.title = 'Remove logo'; remove.textContent = '×';
+    const pick = () => { setTool('select'); select(g); };
+    thumb.addEventListener('click', pick);
+    label.addEventListener('click', pick);
+    lockBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const nowLocked = !locked;
+      setLogoLocked(g, nowLocked);
+      if (nowLocked) { if (S.selectedEl === g) deselect(); }
+      else { setTool('select'); select(g); }
+      refreshLogoList();
+    });
+    remove.addEventListener('click', (e) => {
+      e.stopPropagation();
+      S.pushUndo();
+      if (S.selectedEl === g) deselect();
+      g.remove();
+      refreshLogoList();
+    });
+    row.append(thumb, label, lockBtn, remove);
+    wrap.appendChild(row);
+  });
+}
+window.refreshLogoList = refreshLogoList;
+
+// Keep the roster in sync when the Selection tab is opened (covers logos
+// restored from a saved analysis, undo/redo, etc. without threading a callback
+// through every mutation path).
+(function hookLogoListRefresh() {
+  const prev = window.switchTab;
+  window.switchTab = function(name) {
+    if (typeof prev === 'function') prev(name);
+    if (name === 'element') refreshLogoList();
+  };
+})();
+
+(function wireLogoInput() {
+  const tryWire = () => {
+    const input = document.getElementById('pitch-logo-file-input');
+    if (!input) { setTimeout(tryWire, 100); return; }
+    input.addEventListener('change', async (e) => {
+      const file = e.target.files && e.target.files[0];
+      e.target.value = '';
+      if (file) await _placeLogoFromFile(file);
     });
   };
   tryWire();
@@ -4402,6 +4549,15 @@ function _copyElementData(el) {
     data.dash = shape?.getAttribute('stroke-dasharray') || '';
     data.zoneSkewX = el.dataset.zoneSkewX || '0';
     data.zoneSkewY = el.dataset.zoneSkewY || '0';
+  } else if (t === 'image') {
+    data.imgHref = el.dataset.imgHref || el.querySelector('.image-bitmap')?.getAttribute('href') || '';
+    data.hw = el.dataset.hw || '60'; data.hh = el.dataset.hh || '60';
+    data.scale = el.dataset.scale || '1'; data.rotation = el.dataset.rotation || '0';
+    data.imgCrop = el.dataset.imgCrop || '0';
+    data.imgOpacity = el.dataset.imgOpacity || '1';
+    data.imgAspect = el.dataset.imgAspect || '1';
+    data.isLogo = el.dataset.isLogo || '';
+    data.locked = el.dataset.locked || '';
   }
   return data;
 }
@@ -4710,6 +4866,25 @@ function _pasteOne(d, x, y) {
         if (d.stroke) shape.setAttribute('stroke', d.stroke);
         if (d.dash) shape.setAttribute('stroke-dasharray', d.dash);
         else shape.removeAttribute('stroke-dasharray');
+      }
+    }
+  } else if (d.type === 'image') {
+    if (d.imgHref) {
+      const aspect = parseFloat(d.imgAspect || '1') || 1;
+      // addImage derives hw/hh from natural dims; feed a matching pair so the
+      // copy starts at the same proportions, then override with the exact size.
+      placed = addImage(x, y, d.imgHref, aspect >= 1 ? 200 : 200 * aspect, aspect >= 1 ? 200 / aspect : 200);
+      if (placed) {
+        placed.dataset.hw = d.hw || '60'; placed.dataset.hh = d.hh || '60';
+        placed.dataset.scale = d.scale || '1';
+        placed.dataset.rotation = d.rotation || '0';
+        placed.dataset.imgAspect = d.imgAspect || '1';
+        const bmp = placed.querySelector('.image-bitmap');
+        if (d.imgCrop === '1') { placed.dataset.imgCrop = '1'; if (bmp) bmp.setAttribute('clip-path', `url(#${placed.dataset.imgClipId})`); }
+        if (d.imgOpacity && d.imgOpacity !== '1') { placed.dataset.imgOpacity = d.imgOpacity; if (bmp) bmp.setAttribute('opacity', d.imgOpacity); }
+        // A logo stays a background layer — send it behind the other objects.
+        if (d.isLogo) { placed.dataset.isLogo = d.isLogo; S.objectsLayer.insertBefore(placed, S.objectsLayer.firstChild); }
+        if (d.locked === '1') setLogoLocked(placed, true);
       }
     }
   }
