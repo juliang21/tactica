@@ -7,7 +7,7 @@ import { showTrainingShell, hideTrainingShell } from './training.js';
 
 export const trainingMode = {
   id: 'training',
-  label: 'Training',
+  label: 'Session Builder',
 
   // Reuse the existing #toolbar; only show the drill-relevant tools.
   toolbar: {
