@@ -346,8 +346,24 @@ let _marquee = null;      // SVG rect element
 let _marqueeOrigin = null; // { x, y } in SVG coords
 
 // ─── Selection ────────────────────────────────────────────────────────────────
+// A Ctrl/Cmd+click fires BOTH a mousedown (startDrag selects, so you can drag
+// immediately) AND a click (the element's own handler selects again). Without a
+// guard the second, additive call toggles the element straight back off, so
+// Ctrl/Cmd+click multi-select silently loses elements. `_mdSelectEl` remembers
+// the element the mousedown just selected so the echo click can be swallowed.
+let _mdSelectEl = null;
+
 export function select(el, opts = {}) {
   const additive = opts.additive || false;
+
+  if (opts._fromDown) {
+    _mdSelectEl = el;                       // remember for the echo click
+  } else if (additive && el === _mdSelectEl) {
+    _mdSelectEl = null;                      // this click is that echo — ignore it
+    return;
+  } else {
+    _mdSelectEl = null;
+  }
 
   if (additive) {
     // Toggle: if already selected, remove it
@@ -2288,6 +2304,50 @@ export function makeDraggable(el) {
   el.addEventListener('touchstart', startDrag, { passive: false });
 }
 
+// ─── Group drag by the selected AREA ────────────────────────────────────────
+// When several elements are selected, let the user grab anywhere inside the
+// selection (even empty canvas between elements) and drag the whole group —
+// rather than only being able to grab one element, or starting a fresh marquee.
+// Works in every mode because it hangs off the same shared select/drag machinery.
+const SELECTION_DRAG_PAD = 46;   // pad the centre-bounds so edges feel grabbable
+
+export function getSelectionBounds() {
+  if (S.selectedEls.size < 2) return null;
+  let x1 = Infinity, y1 = Infinity, x2 = -Infinity, y2 = -Infinity;
+  for (const el of S.selectedEls) {
+    const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
+    if (!Number.isFinite(cx) || !Number.isFinite(cy)) continue;
+    x1 = Math.min(x1, cx); y1 = Math.min(y1, cy);
+    x2 = Math.max(x2, cx); y2 = Math.max(y2, cy);
+  }
+  if (x1 === Infinity) return null;
+  return { x1: x1 - SELECTION_DRAG_PAD, y1: y1 - SELECTION_DRAG_PAD,
+           x2: x2 + SELECTION_DRAG_PAD, y2: y2 + SELECTION_DRAG_PAD };
+}
+
+export function isPointInSelectionBounds(pt) {
+  const b = getSelectionBounds();
+  return !!b && pt.x >= b.x1 && pt.x <= b.x2 && pt.y >= b.y1 && pt.y <= b.y2;
+}
+
+// Begin dragging the whole multi-selection from an arbitrary point (e.g. empty
+// canvas inside the selection). Reuses the same _dragOffsets/onDrag path as a
+// grab on one of the selected elements.
+export function beginGroupDrag(e) {
+  if (S.selectedEls.size < 2) return false;
+  S.setDragSvg((e.currentTarget && e.currentTarget.ownerSVGElement) || S.svg);
+  const pt = S.getSVGPoint(e);
+  _dragOffsets.clear();
+  for (const el of S.selectedEls) {
+    _dragOffsets.set(el, { dx: pt.x - parseFloat(el.dataset.cx), dy: pt.y - parseFloat(el.dataset.cy) });
+  }
+  if (!S.selectedEl || !S.selectedEls.has(S.selectedEl)) S.setSelectedEl([...S.selectedEls][0]);
+  S.setIsDragging(true);
+  S.setDragMoved(false);
+  S.pushUndo();
+  return true;
+}
+
 function startDrag(e) {
   if (S.tool !== 'select') return;
   // Don't start whole-element drag if clicking a handle
@@ -2323,7 +2383,9 @@ function startDrag(e) {
   S.setDragMoved(false);
   S.pushUndo();
 
-  select(target, { additive });
+  // _fromDown so the echo click that follows this mousedown doesn't toggle an
+  // additively-selected element back off (breaks Ctrl/Cmd+click multi-select).
+  select(target, { additive, _fromDown: true });
 
   // Compute offsets for all selected elements (for multi-drag)
   _dragOffsets.clear();

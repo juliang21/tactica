@@ -1,5 +1,5 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected } from './interaction.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected, isPointInSelectionBounds, beginGroupDrag } from './interaction.js';
 import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom, addLadder, updateLadder, addPole, addHoop, updatePoleColor, updateHoopColor } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
@@ -2845,6 +2845,13 @@ S.svg.addEventListener('mousedown', e => {
   if (e.target.closest('[data-type]') || e.target.closest('[data-handle]')) return;
   // Don't start if dragging
   if (S.isDragging) return;
+  // If there's a multi-selection and the grab lands inside it, drag the whole
+  // group (move the selected area as one) rather than starting a new marquee.
+  if (S.selectedEls.size > 1 && isPointInSelectionBounds(S.getSVGPoint(e))) {
+    e.preventDefault();
+    beginGroupDrag(e);
+    return;
+  }
   _isMarqueeing = true;
   _marqueeDidDrag = false;
   startMarquee(e);
