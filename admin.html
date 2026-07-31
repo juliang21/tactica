@@ -83,8 +83,11 @@
   .uc-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #9a9a9a; white-space: nowrap; }
   .uc-tag + .uc-tag { margin-left: 10px; }
   .uc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
-  /* Shrink the two session-count columns (Sessions, 24h) to their content so
-     the Use Cases column has room to keep its tags on one line. */
+  /* Compact the First Seen / Last Seen columns to their content. */
+  #coaches-table th:nth-child(3), #coaches-table td:nth-child(3),
+  #coaches-table th:nth-child(4), #coaches-table td:nth-child(4) { width: 1%; white-space: nowrap; padding-left: 8px; padding-right: 8px; }
+  /* Shrink the two session-count columns (Sessions, Last 24hs) to their content
+     so the Use Cases column has room to keep its tags on one line. */
   #coaches-table th:nth-child(5), #coaches-table td:nth-child(5),
   #coaches-table th:nth-child(6), #coaches-table td:nth-child(6) { width: 1%; white-space: nowrap; padding-left: 8px; padding-right: 8px; text-align: center; }
   #coaches-table th:nth-child(8), #coaches-table td:nth-child(8) { white-space: nowrap; }
@@ -448,7 +451,7 @@
       <div class="table-wrap">
         <table id="coaches-table">
           <thead>
-            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Sessions</th><th>24h</th><th>Rating</th><th>Use Cases</th><th>Status</th></tr>
+            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Sessions</th><th>Last 24hs</th><th>Rating</th><th>Use Cases</th><th>Status</th></tr>
           </thead>
           <tbody id="users-table"></tbody>
         </table>
