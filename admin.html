@@ -80,6 +80,9 @@
   .email { color: #34D399; }
   .returning { color: #4ade80; font-weight: 600; }
   .new { color: #888; }
+  .uc-tag { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; color: #9a9a9a; white-space: nowrap; }
+  .uc-tag + .uc-tag { margin-left: 10px; }
+  .uc-dot { width: 7px; height: 7px; border-radius: 50%; flex-shrink: 0; }
 
   /* Retention */
   .ret-note { font-size: 12px; color: #888; line-height: 1.55; margin-bottom: 16px; max-width: 760px; }
@@ -440,7 +443,7 @@
       <div class="table-wrap">
         <table>
           <thead>
-            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Total Sessions</th><th>Sessions (24h)</th><th>Rating</th><th>Status</th></tr>
+            <tr><th>Email</th><th>Name</th><th>First Seen</th><th>Last Seen</th><th>Total Sessions</th><th>Sessions (24h)</th><th>Rating</th><th>Use Cases</th><th>Status</th></tr>
           </thead>
           <tbody id="users-table"></tbody>
         </table>
@@ -751,7 +754,7 @@ window.applyDateFilter = function() {
   renderSessionStats(filteredSessions, filteredActions);
   renderFeatureStats(filteredActions, activeUids.size);
   renderChart(filteredSessions, startStr, endStr);
-  renderUsersTable(filteredUsers);
+  renderUsersTable(filteredUsers, filteredActions);
   renderFeaturesTab(filteredActions, activeUids.size);
   renderReviewsTab(filteredActions);
   renderRetention();
@@ -1962,9 +1965,45 @@ let _tableShown = 0;
 const PAGE_SIZE = 50;
 
 let _sessionsTodayByUid = new Map();
-function renderUsersTable(users) {
+let _useCasesByUid = new Map();   // uid -> Set of 'pitch'|'image'|'training' active in the period
+
+// Which use cases a coach was active on in the period. Uses the SAME "active"
+// definitions as the Use-Case Breakdown so per-case coach counts reconcile:
+// Board/Image = an analysis started in that mode; Session Builder = a drill or
+// session started.
+const _UC_TRAIN_START = new Set(['training_drill_started', 'training_session_started']);
+function computeUseCasesByUid(actions) {
+  const map = new Map();
+  (actions || []).forEach(a => {
+    let mode = null;
+    if (a.action === 'analysis_started') {
+      mode = (a.meta && a.meta.mode === 'image') ? 'image' : 'pitch';
+    } else if (_UC_TRAIN_START.has(a.action) || (a.meta && a.meta.mode === 'training')) {
+      mode = 'training';
+    }
+    if (!mode) return;
+    let set = map.get(a.uid);
+    if (!set) { set = new Set(); map.set(a.uid, set); }
+    set.add(mode);
+  });
+  return map;
+}
+// Compact coloured pills matching the Use-Case Breakdown colours.
+const _UC_DEFS = [
+  ['pitch',    'Board',   'Tactical Board', '#8B5CF6'],
+  ['image',    'Image',   'Image Analysis', '#F59E0B'],
+  ['training', 'Session', 'Session Builder', '#34D399'],
+];
+function useCasesBadges(set) {
+  if (!set || set.size === 0) return '<span style="color:#555">—</span>';
+  return _UC_DEFS.filter(d => set.has(d[0]))
+    .map(([, label, full, color]) => `<span class="uc-tag" title="${full}"><span class="uc-dot" style="background:${color}"></span>${label}</span>`)
+    .join('');
+}
+function renderUsersTable(users, actions) {
   _tableUsers = users;
   _tableShown = 0;
+  _useCasesByUid = computeUseCasesByUid(actions);
   // Sessions in the last 24 hours (rolling window, not calendar day \u2014 a
   // midnight cutoff read as "all zeros" when checked late at night), per
   // coach, from the full sessions load \u2014 independent of the date filter.
@@ -2001,6 +2040,7 @@ window.showMoreUsers = function() {
       <td>${u.sessionCount || 0}</td>
       <td>${today > 0 ? `<strong>${today}</strong>` : '<span style="color:#555">0</span>'}</td>
       <td>${ratingCell}</td>
+      <td>${useCasesBadges(_useCasesByUid.get(u.uid))}</td>
       <td><span class="${isReturning ? 'returning' : 'new'}">${isReturning ? 'Returning' : 'New'}</span></td>
     </tr>`;
   }).join('');
