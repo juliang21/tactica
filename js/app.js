@@ -4957,20 +4957,6 @@ function toggleSaveMenu() {
     menu.querySelectorAll('.save-menu-anim').forEach(el => {
       el.style.display = hasAnim ? '' : 'none';
     });
-    // Session Builder: coaches export far more than they share, so lead with
-    // Export Image there. Share Link stays first on the Tactical Board / Image
-    // Analysis, where sharing an analysis is the common flow.
-    const shareItem = menu.querySelector('[onclick*="shareAnalysis"]');
-    const exportItem = menu.querySelector('[onclick*="exportImage"]');
-    const shareSep = menu.querySelector('.save-menu-sep:not(.save-menu-anim)');
-    if (shareItem && exportItem && shareSep) {
-      const training = document.body.classList.contains('training-mode');
-      const first = training ? exportItem : shareItem;
-      const second = training ? shareItem : exportItem;
-      menu.insertBefore(first, menu.firstChild);
-      menu.insertBefore(shareSep, first.nextSibling);
-      menu.insertBefore(second, shareSep.nextSibling);
-    }
     // On mobile, move menu to body so it escapes toolbar overflow
     const isMobile = window.innerWidth <= 768;
     if (isMobile && menu.parentElement !== document.body) {
