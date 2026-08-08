@@ -1668,7 +1668,14 @@ export function showFreeformHandles(el) {
     deltas.forEach((d, i) => {
       const wx = cx + (d.dx * scale * cosR - d.dy * scale * sinR);
       const wy = cy + (d.dx * scale * sinR + d.dy * scale * cosR);
-      handleGroup.appendChild(createHandle(ns, wx, wy, 'freeform-' + i, 'move'));
+      // Directional resize cursor (like the rect-zone corners) instead of the
+      // four-arrow 'move' icon — vertices reshape the zone, they don't drag it.
+      // Pick the double-arrow whose axis matches the vertex's direction from
+      // the zone centre.
+      const ang = (Math.atan2(wy - cy, wx - cx) * 180 / Math.PI + 360) % 360;
+      const cursors = ['ew-resize', 'nwse-resize', 'ns-resize', 'nesw-resize'];
+      const cursor = cursors[Math.round(ang / 45) % 4];
+      handleGroup.appendChild(createHandle(ns, wx, wy, 'freeform-' + i, cursor));
     });
   }
   S.svg.appendChild(handleGroup);
