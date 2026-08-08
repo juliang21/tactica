@@ -1398,6 +1398,26 @@ function renderPitchAnalytics(items, isSnapshot) {
 }
 
 
+// ─── Colour annotation for hex meta values ──────────────────────────────────
+// "Default" means exactly the two out-of-the-box TEAM colours — Home and Away.
+// Anything else, preset swatch or not, counts as a chosen colour.
+const DEFAULT_COLORS = new Set([
+  '8B5CF6',  // Home (team A purple)
+  'FBBF24',  // Away (team B yellow)
+]);
+
+// "#FBBF24" → "#FBBF24 <chip> (default)"; other hexes get just the chip;
+// non-hex values are returned unchanged.
+function annotateColorLabel(name) {
+  const m = String(name).match(/^#([0-9a-f]{3}|[0-9a-f]{6})$/i);
+  if (!m) return name;
+  const isDefault = DEFAULT_COLORS.has(m[1].length === 3
+    ? m[1].split('').map(x => x + x).join('').toUpperCase()
+    : m[1].toUpperCase());
+  const chip = `<span style="display:inline-block;width:10px;height:10px;border-radius:3px;background:${name};border:1px solid rgba(255,255,255,0.25);vertical-align:-1px;margin:0 5px 0 2px"></span>`;
+  return `${name}${chip}` + (isDefault ? `<span style="color:#777">(default)</span>` : '');
+}
+
 function renderFeaturesTab(actions, activeUsers) {
   // Render all three mode-specific tabs
   renderModeFeatures(FEATURE_CONFIGS_TACTICAL, actions, 'features-tactical', { includePitchAnalytics: true });
@@ -1528,7 +1548,7 @@ function renderModeFeatures(configs, actions, targetId, opts = {}) {
           const sessions = sessionSets[name] ? sessionSets[name].size : 0;
           const users = userSets[name] ? userSets[name].size : 0;
           html += `<div class="breakdown-bar">
-            <span class="breakdown-label">${name}</span>
+            <span class="breakdown-label">${annotateColorLabel(name)}</span>
             <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
             <span class="breakdown-count">${count} events</span>
             <span class="breakdown-sessions">${sessions} sessions</span>
