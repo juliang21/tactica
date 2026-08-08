@@ -400,6 +400,10 @@
       <div id="usecase-breakdown"></div>
     </div>
     <div class="section">
+      <div class="section-header"><span class="icon">&#128268;</span> Traffic Sources &mdash; where users come from (GA4)</div>
+      <div id="traffic-sources"></div>
+    </div>
+    <div class="section">
       <div class="section-header"><span class="icon">&#128100;</span> Coach-Level Data</div>
       <div class="stats-grid" id="user-stats"></div>
     </div>
@@ -513,7 +517,7 @@
 <script type="module">
 import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-app.js';
 import { getAuth, setPersistence, browserLocalPersistence, signInWithPopup, GoogleAuthProvider, onAuthStateChanged } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-auth.js';
-import { getFirestore, collection, query, orderBy, where, limit, startAfter, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
+import { getFirestore, collection, query, orderBy, where, limit, startAfter, getDocs, doc, getDoc } from 'https://www.gstatic.com/firebasejs/11.6.0/firebase-firestore.js';
 
 const firebaseConfig = {
   apiKey: "AIzaSyBda3avj-hYXV72mgbc5ueLw7QAQnqTI34",
@@ -561,6 +565,7 @@ window.switchAdminTab = function(tab) {
 
 // ─── Data cache ────────────────────────────────────────────────────────────
 let _allUsers = [];
+let _trafficData = null;   // tactica_admin/traffic_sources — GA4 sync, fetched once
 let _allSessions = [];
 let _allActions = [];
 
@@ -576,6 +581,12 @@ window.loadDashboard = async function() {
   try {
     const usersQ = query(collection(db, 'tactica_users'), orderBy('lastSeen', 'desc'));
     _allUsers = (await getDocs(usersQ)).docs.map(d => ({ uid: d.id, ...d.data() }));
+    if (_trafficData === null) {
+      try {
+        const tSnap = await getDoc(doc(db, 'tactica_admin', 'traffic_sources'));
+        _trafficData = tSnap.exists() ? tSnap.data() : undefined;   // undefined = not set up yet
+      } catch (e) { console.warn('Traffic sources fetch failed:', e); _trafficData = undefined; }
+    }
 
     const sessionsQ = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
     _allSessions = (await getDocs(sessionsQ)).docs.map(d => d.data());
@@ -758,6 +769,7 @@ window.applyDateFilter = function() {
   const signUps = allUsersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
 
   renderUseCaseBreakdown(filteredActions, activeUids.size, filteredSessions);
+  renderTrafficSources(startStr, endStr);
   renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids, signUps);
   renderSessionStats(filteredSessions, filteredActions);
   renderFeatureStats(filteredActions, activeUids.size);
@@ -1397,6 +1409,65 @@ function renderPitchAnalytics(items, isSnapshot) {
   return html;
 }
 
+
+// ─── Traffic Sources (GA4 sync via refreshTrafficSources Cloud Function) ────
+// Channel bars respect the dashboard date filter (client-side over the synced
+// daily rows, capped at the 60-day sync window). Top sources are a fixed
+// last-28-days list. GA aggregates — the "Exclude me" toggle can't apply here.
+function renderTrafficSources(startStr, endStr) {
+  const el = document.getElementById('traffic-sources');
+  if (!el) return;
+  if (!_trafficData) {
+    el.innerHTML = `<div style="color:#777;font-size:12px;padding:6px 0">No GA data yet — enable the Analytics Data API, grant the functions service account Viewer access on the GA4 property, then hit forceRefreshTraffic once. The daily sync takes over from there.</div>`;
+    return;
+  }
+  const startKey = (startStr || '').replaceAll('-', '');
+  const endKey = (endStr || '').replaceAll('-', '');
+  const rows = (_trafficData.daily || []).filter(r => r.date >= startKey && r.date <= endKey);
+  const byChannel = {};
+  rows.forEach(r => {
+    if (!byChannel[r.channel]) byChannel[r.channel] = { sessions: 0, users: 0 };
+    byChannel[r.channel].sessions += r.sessions;
+    byChannel[r.channel].users += r.users;
+  });
+  const sorted = Object.entries(byChannel).sort((a, b) => b[1].sessions - a[1].sessions);
+  const totalSessions = sorted.reduce((s, [, v]) => s + v.sessions, 0);
+  const maxCount = sorted.length ? sorted[0][1].sessions : 1;
+
+  const oldest = (_trafficData.daily || []).reduce((m, r) => (!m || r.date < m ? r.date : m), null);
+  const clipped = oldest && startKey && startKey < oldest;
+  let html = '';
+  if (!sorted.length) {
+    html += `<div style="color:#777;font-size:12px;padding:6px 0">No GA sessions in this date range${clipped ? ' (sync covers the last 60 days only)' : ''}.</div>`;
+  } else {
+    html += `<div style="color:#888;font-size:11px;margin-bottom:8px">${totalSessions} GA sessions in range &middot; all traffic (admins can&rsquo;t be excluded)${clipped ? ' &middot; range clipped to the 60-day sync window' : ''}</div>`;
+    sorted.forEach(([channel, v]) => {
+      const pctBar = Math.round((v.sessions / maxCount) * 100);
+      const share = totalSessions ? Math.round((v.sessions / totalSessions) * 100) : 0;
+      html += `<div class="breakdown-bar">
+        <span class="breakdown-label">${channel}</span>
+        <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
+        <span class="breakdown-count">${v.sessions} sessions</span>
+        <span class="breakdown-sessions">${share}% share</span>
+        <span class="breakdown-sessions">${v.users} users</span>
+      </div>`;
+    });
+  }
+  const srcs = (_trafficData.sources || []).slice(0, 12);
+  if (srcs.length) {
+    html += `<div style="color:#888;font-size:11px;margin:14px 0 6px">Top sources &middot; fixed last 28 days</div>`;
+    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 18px">`;
+    srcs.forEach(s => {
+      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
+        <span style="color:#bbb">${s.source}</span><span style="color:#777">${s.sessions}</span>
+      </div>`;
+    });
+    html += `</div>`;
+  }
+  const upd = _trafficData.updatedAt?.toDate ? _trafficData.updatedAt.toDate() : null;
+  if (upd) html += `<div style="color:#555;font-size:10px;margin-top:10px">Synced ${upd.toLocaleString('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>`;
+  el.innerHTML = html;
+}
 
 // ─── Colour annotation for hex meta values ──────────────────────────────────
 // "Default" means exactly the two out-of-the-box TEAM colours — Home and Away.
