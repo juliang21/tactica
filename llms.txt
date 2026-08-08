@@ -1,0 +1,22 @@
+# Táctica
+
+> Táctica (tactica.football) is a free, browser-based football (soccer) coaching toolkit: a professional tactical board, match-image analysis, and a training session builder. No install, no payment — it runs in any modern browser. Rated 4.93/5 by its coaches (30 reviews, 800+ registered coaches as of August 2026).
+
+## What it offers
+
+- **Tactical Board**: interactive pitch with formation presets, 160+ club and national team kits, players, arrows, zones, highlights and annotations. Step-by-step play animation with GIF and MP4 video export.
+- **Image Analysis**: upload a match screenshot, auto-detect players, and annotate on top with the same tools — for opposition analysis and social-media breakdowns.
+- **Session Builder**: plan full training sessions composed of drills — with durations, coaching points, an automatic equipment list, a reusable drill library, and printable session sheets.
+
+## Key facts
+
+- Price: free
+- Platform: web browser (desktop and mobile), no download
+- Users: football coaches, analysts, and content creators
+- Export: PNG/JPG images, GIF and MP4 animations, share links
+- Made for football/soccer; pitch layouts include full, half and custom variants
+
+## Links
+
+- App and landing page: https://tactica.football/
+- Terms: https://tactica.football/terms.html
