@@ -351,16 +351,43 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
    so the tabs stay centred on the pitch. */
 #toolbar.collapsed ~ #canvas-wrap #mode-bar { padding-left: 0; }
 
-/* Mode switch: crossfade the toolbar + side panel so changing use cases is a
-   smooth transition, not a hard cut. Animation (not transition) so it doesn't
-   clash with the toolbar's own width/opacity collapse transition. */
+/* Mode switch: the toolbar + side panel slide out one way and the new mode's
+   content slides in from the other (direction follows the mode-tab order).
+   Animation (not transition) so it doesn't clash with the toolbar's own
+   width/opacity collapse transition. Desktop only: on mobile the side panel's
+   slide-over uses translateX itself, so animating transform there would flash
+   the hidden panel — mobile falls back to the plain crossfade. */
 @keyframes modeContentSwap {
   0%   { opacity: 1; }
   40%  { opacity: 0; }
   60%  { opacity: 0; }
   100% { opacity: 1; }
 }
-#toolbar.mode-swapping, #side-panel.mode-swapping { animation: modeContentSwap 0.34s ease; }
+/* Exit is quick; the ENTRY is the readable part — the new panel glides in
+   from 84px on a long ease-out and turns visible early in the glide, so the
+   direction of travel is unmistakable. */
+@keyframes modeSlideLeft {
+  0%   { opacity: 1; transform: translateX(0); animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.6); }
+  30%  { opacity: 0; transform: translateX(-56px); }
+  45%  { opacity: 0; transform: translateX(84px); animation-timing-function: cubic-bezier(0.16, 0.84, 0.28, 1); }
+  72%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes modeSlideRight {
+  0%   { opacity: 1; transform: translateX(0); animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.6); }
+  30%  { opacity: 0; transform: translateX(56px); }
+  45%  { opacity: 0; transform: translateX(-84px); animation-timing-function: cubic-bezier(0.16, 0.84, 0.28, 1); }
+  72%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@media (min-width: 769px) {
+  #toolbar.mode-swapping-left,  #side-panel.mode-swapping-left  { animation: modeSlideLeft 0.62s linear; }
+  #toolbar.mode-swapping-right, #side-panel.mode-swapping-right { animation: modeSlideRight 0.62s linear; }
+}
+@media (max-width: 768px) {
+  #toolbar.mode-swapping-left,  #side-panel.mode-swapping-left,
+  #toolbar.mode-swapping-right, #side-panel.mode-swapping-right { animation: modeContentSwap 0.34s ease; }
+}
 /* Underlined mode tabs: all three labels stay legible, the active one carries
    an emerald underline (browser-tab metaphor). Inactive tabs are clearly
    present — not the near-invisible dim state they used to be. */

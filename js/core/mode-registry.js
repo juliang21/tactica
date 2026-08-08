@@ -52,14 +52,24 @@ export function activateMode(newModeId) {
   const reduce = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches;
   if (!prev || reduce || !fadeEls.length) { doSwap(); return; }
 
+  // Slide direction follows the mode-tab order: moving right in the tabs
+  // (e.g. Board → Image) slides the panels left, moving back slides right.
+  const MODE_TAB_ORDER = ['pitch', 'image', 'training'];
+  const forward = MODE_TAB_ORDER.indexOf(newModeId) >= MODE_TAB_ORDER.indexOf(prev.id);
+  const cls = forward ? 'mode-swapping-left' : 'mode-swapping-right';
+
   fadeEls.forEach(el => {
-    el.classList.remove('mode-swapping');
+    el.classList.remove('mode-swapping-left', 'mode-swapping-right');
     void el.offsetWidth;            // restart the animation if mid-swap
-    el.classList.add('mode-swapping');
-    el.addEventListener('animationend', () => el.classList.remove('mode-swapping'), { once: true });
+    el.classList.add(cls);
+    const clean = () => el.classList.remove('mode-swapping-left', 'mode-swapping-right');
+    el.addEventListener('animationend', clean, { once: true });
+    // Hidden tabs suspend CSS animations (no animationend) — never leave the
+    // class stuck; at rest the animation classes have no visual effect anyway.
+    setTimeout(clean, 1000);
   });
-  // Swap the content while the panels are faded out (~40% through the anim).
-  setTimeout(doSwap, 150);
+  // Swap the content while the panels are hidden (30–45% of the 0.62s animation).
+  setTimeout(doSwap, 210);
 }
 
 // ─── Side Panel Tabs ───────────────────────────────────────────────────────
