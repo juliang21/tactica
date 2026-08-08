@@ -1121,14 +1121,17 @@ window.applyZoneBorder = function(dotEl) {
 window.applyZoneBorderStyle = applyZoneBorderStyle;
 window.applyZoneOpacity = applyZoneOpacity;
 
-// Zone label editing
+// Zone label editing. Freeform ("Custom Zone") shares the same panel + label
+// element as shadow zones — the old startsWith('shadow') guard silently ignored
+// every edit (including deleting the text) on freeform zones.
+const _hasZoneLabel = t => t?.startsWith('shadow') || t === 'freeform';
 window.liveUpdateZoneLabel = function(val) {
-  if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
+  if (!S.selectedEl || !_hasZoneLabel(S.selectedEl.dataset.type)) return;
   S.selectedEl.dataset.zoneLabel = val;
   updateShadowLabel(S.selectedEl);
 };
 window.confirmZoneLabel = function() {
-  if (!S.selectedEl || !S.selectedEl.dataset.type?.startsWith('shadow')) return;
+  if (!S.selectedEl || !_hasZoneLabel(S.selectedEl.dataset.type)) return;
   S.pushUndo();
   trackElementEdited(S.selectedEl.dataset.type, 'label');
   const hasLabel = !!S.selectedEl.dataset.zoneLabel?.trim();

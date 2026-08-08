@@ -176,6 +176,7 @@ export function applyTransform(el) {
     if (t === 'shadow-circle' && _updateShadowLabelFn) _updateShadowLabelFn(el);
   } else if (t === 'freeform') {
     if (_updateFreeformFn) _updateFreeformFn(el);
+    if (_updateShadowLabelFn) _updateShadowLabelFn(el);   // label follows the zone
   } else if (t === 'motion') {
     if (_updateMotionFn) _updateMotionFn(el);
   } else if (t === 'shadow-rect') {

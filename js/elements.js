@@ -1375,9 +1375,20 @@ export function addShadow(x, y, type) {
 // Update zone label position (after move/resize/rotate)
 export function updateShadowLabel(el) {
   if (!el) return;
-  const label = el.querySelector('.zone-label');
-  if (!label) return;
+  let label = el.querySelector('.zone-label');
   const text = el.dataset.zoneLabel || '';
+  // Freeform ("Custom") zones — and shapes converted while label-less — have no
+  // label element; build it on demand so typing a label always works.
+  if (!label) {
+    if (!text) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    label = document.createElementNS(ns, 'text');
+    label.classList.add('zone-label');
+    label.setAttribute('font-family', 'Inter, system-ui, sans-serif');
+    label.setAttribute('font-weight', '600');
+    label.setAttribute('pointer-events', 'none');
+    el.appendChild(label);
+  }
   label.textContent = text;
   label.style.display = text ? '' : 'none';
   if (!text) return;
