@@ -396,11 +396,11 @@
   <div class="tab-content active" id="tab-overview">
     <div id="milestone-top"></div>
     <div class="section">
-      <div class="section-header"><span class="icon">&#127919;</span> Use Case Breakdown &mdash; how coaches use Táctica</div>
+      <div class="section-header"><span class="icon">&#127919;</span> Use Case Breakdown: How coaches use Táctica</div>
       <div id="usecase-breakdown"></div>
     </div>
     <div class="section">
-      <div class="section-header"><span class="icon">&#128268;</span> Traffic Sources &mdash; where users come from (GA4)</div>
+      <div class="section-header"><span class="icon">&#128268;</span> Traffic Sources: Where new users come from (GA4)</div>
       <div id="traffic-sources"></div>
     </div>
     <div class="section">
@@ -936,7 +936,7 @@ function renderUserStats(users, sessions, allUsers, actions, activeUids, signUps
   const barPct = Math.min(100, Math.round(((totalCoaches - prevM) / (nextM - prevM)) * 100));
   const overallPct = Math.min(100, Math.round((totalCoaches / milestones[milestones.length - 1]) * 100));
   const milestoneHTML = `<div class="milestone-card">
-    <div class="label">Total Coaches &mdash; Road to 1,000 &middot; Next Milestone: ${nextM}</div>
+    <div class="label">Total Coaches: Road to 1,000 &middot; Next Milestone: ${nextM}</div>
     <div class="milestone-track">
       <div class="milestone-fill" style="width:${overallPct}%">
         <span class="milestone-count">${totalCoaches}</span>
@@ -1411,9 +1411,11 @@ function renderPitchAnalytics(items, isSnapshot) {
 
 
 // ─── Traffic Sources (GA4 sync via refreshTrafficSources Cloud Function) ────
+// NEW USERS ONLY, first-touch attribution (firstUser* dimensions) — returning
+// visits are deliberately excluded so "Direct" doesn't swallow the picture.
 // Channel bars respect the dashboard date filter (client-side over the synced
 // daily rows, capped at the 60-day sync window). Top sources are a fixed
-// last-28-days list. GA aggregates — the "Exclude me" toggle can't apply here.
+// last-28-days window. GA aggregates — the "Exclude me" toggle can't apply.
 function renderTrafficSources(startStr, endStr) {
   const el = document.getElementById('traffic-sources');
   if (!el) return;
@@ -1423,46 +1425,45 @@ function renderTrafficSources(startStr, endStr) {
   }
   const startKey = (startStr || '').replaceAll('-', '');
   const endKey = (endStr || '').replaceAll('-', '');
+  const val = r => r.newUsers ?? r.users ?? 0;   // fallback for a pre-migration doc
   const rows = (_trafficData.daily || []).filter(r => r.date >= startKey && r.date <= endKey);
   const byChannel = {};
-  rows.forEach(r => {
-    if (!byChannel[r.channel]) byChannel[r.channel] = { sessions: 0, users: 0 };
-    byChannel[r.channel].sessions += r.sessions;
-    byChannel[r.channel].users += r.users;
-  });
-  const sorted = Object.entries(byChannel).sort((a, b) => b[1].sessions - a[1].sessions);
-  const totalSessions = sorted.reduce((s, [, v]) => s + v.sessions, 0);
-  const maxCount = sorted.length ? sorted[0][1].sessions : 1;
+  rows.forEach(r => { byChannel[r.channel] = (byChannel[r.channel] || 0) + val(r); });
+  const sorted = Object.entries(byChannel).sort((a, b) => b[1] - a[1]);
+  const total = sorted.reduce((s, [, v]) => s + v, 0);
+  const maxCount = sorted.length ? sorted[0][1] : 1;
 
   const oldest = (_trafficData.daily || []).reduce((m, r) => (!m || r.date < m ? r.date : m), null);
   const clipped = oldest && startKey && startKey < oldest;
   let html = '';
   if (!sorted.length) {
-    html += `<div style="color:#777;font-size:12px;padding:6px 0">No GA sessions in this date range${clipped ? ' (sync covers the last 60 days only)' : ''}.</div>`;
+    html += `<div style="color:#777;font-size:12px;padding:6px 0">No new GA users in this date range${clipped ? ' (sync covers the last 60 days only)' : ''}.</div>`;
   } else {
-    html += `<div style="color:#888;font-size:11px;margin-bottom:8px">${totalSessions} GA sessions in range &middot; all traffic (admins can&rsquo;t be excluded)${clipped ? ' &middot; range clipped to the 60-day sync window' : ''}</div>`;
+    html += `<div style="color:#888;font-size:11px;margin-bottom:8px">${total} new users in range &middot; first-touch attribution &middot; returning visits excluded${clipped ? ' &middot; range clipped to the 60-day sync window' : ''}</div>`;
     sorted.forEach(([channel, v]) => {
-      const pctBar = Math.round((v.sessions / maxCount) * 100);
-      const share = totalSessions ? Math.round((v.sessions / totalSessions) * 100) : 0;
+      const pctBar = Math.round((v / maxCount) * 100);
+      const share = total ? Math.round((v / total) * 100) : 0;
       html += `<div class="breakdown-bar">
         <span class="breakdown-label">${channel}</span>
         <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
-        <span class="breakdown-count">${v.sessions} sessions</span>
+        <span class="breakdown-count">${v} new users</span>
         <span class="breakdown-sessions">${share}% share</span>
-        <span class="breakdown-sessions">${v.users} users</span>
       </div>`;
     });
   }
-  const srcs = (_trafficData.sources || []).slice(0, 12);
+  const srcs = (_trafficData.sources || []).map(s => ({ source: s.source, n: val(s) })).filter(s => s.n > 0).slice(0, 12);
   if (srcs.length) {
-    html += `<div style="color:#888;font-size:11px;margin:14px 0 6px">Top sources &middot; fixed last 28 days</div>`;
-    html += `<div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:4px 18px">`;
+    const srcMax = srcs[0].n;
+    html += `<div style="color:#888;font-size:11px;margin:16px 0 6px">Top sources: First touch of new users &middot; fixed last 28 days</div>`;
     srcs.forEach(s => {
-      html += `<div style="display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px solid rgba(255,255,255,0.04)">
-        <span style="color:#bbb">${s.source}</span><span style="color:#777">${s.sessions}</span>
+      const pctBar = Math.round((s.n / srcMax) * 100);
+      html += `<div class="breakdown-bar">
+        <span class="breakdown-label">${s.source}</span>
+        <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
+        <span class="breakdown-count">${s.n} new users</span>
+        <span class="breakdown-sessions"></span>
       </div>`;
     });
-    html += `</div>`;
   }
   const upd = _trafficData.updatedAt?.toDate ? _trafficData.updatedAt.toDate() : null;
   if (upd) html += `<div style="color:#555;font-size:10px;margin-top:10px">Synced ${upd.toLocaleString('en', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' })}</div>`;
@@ -1628,7 +1629,7 @@ function renderModeFeatures(configs, actions, targetId, opts = {}) {
         });
       }
     } else {
-      html += `<div style="color:#555;font-size:12px;padding:8px 0">No type breakdown &mdash; binary feature (used/not used)</div>`;
+      html += `<div style="color:#555;font-size:12px;padding:8px 0">No type breakdown: binary feature (used/not used)</div>`;
     }
 
     html += `</div>`;
