@@ -8,6 +8,25 @@
 <link rel="canonical" href="https://tactica.football/">
 <meta name="robots" content="index, follow">
 <meta name="theme-color" content="#0b0e0d">
+<script>
+/* First-touch source capture: on the very first visit of this browser, store
+   where the visitor came from. Read once at sign-up (logSession) and stamped
+   onto the user doc, so the admin can attribute sign-ups to real sources.
+   Never overwritten — first touch wins. */
+try {
+  if (!localStorage.getItem('tactica_first_touch')) {
+    var _ftp = new URLSearchParams(location.search);
+    localStorage.setItem('tactica_first_touch', JSON.stringify({
+      referrer: (document.referrer || '').slice(0, 300),
+      utmSource: _ftp.get('utm_source') || '',
+      utmMedium: _ftp.get('utm_medium') || '',
+      utmCampaign: _ftp.get('utm_campaign') || '',
+      landing: (location.pathname + location.search).slice(0, 300),
+      capturedAt: Date.now()
+    }));
+  }
+} catch (e) {}
+</script>
 
 <!-- Open Graph -->
 <meta property="og:type" content="website">
@@ -3113,6 +3132,6 @@
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=88"></script>
+<script type="module" src="js/app.js?v=89"></script>
 </body>
 </html>

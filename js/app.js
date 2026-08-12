@@ -29,7 +29,7 @@ import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAn
 import { onAuthChange, getCurrentUser } from './auth.js';
 // access-check.js kept for future reactivation (Turkey/email blocking disabled)
 // import { shouldBlockUser, shouldBlockAnonymous, showMaintenanceOverlay, isBlockedEmail } from './access-check.js';
-import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed, getLandingStats } from './firestore.js?v=7';
+import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed, getLandingStats } from './firestore.js?v=8';
 import { hideUpgradePrompt, setUserTier, updateLockedUI, initSubscriptionListener, stopSubscriptionListener, startCheckout, openManageSubscription, isPro } from './subscription.js';
 import './features/feedback.js';
 import './features/bundles.js';

@@ -400,7 +400,11 @@
       <div id="usecase-breakdown"></div>
     </div>
     <div class="section">
-      <div class="section-header"><span class="icon">&#128268;</span> Traffic Sources: Where new users come from (GA4)</div>
+      <div class="section-header"><span class="icon">&#128228;</span> Sign-up Sources: Where new coaches came from</div>
+      <div id="signup-sources"></div>
+    </div>
+    <div class="section">
+      <div class="section-header"><span class="icon">&#128268;</span> Site Traffic (GA4): New-visitor channel mix</div>
       <div id="traffic-sources"></div>
     </div>
     <div class="section">
@@ -769,6 +773,7 @@ window.applyDateFilter = function() {
   const signUps = allUsersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
 
   renderUseCaseBreakdown(filteredActions, activeUids.size, filteredSessions);
+  renderSignupSources(allUsersFiltered, startMs, endMs);
   renderTrafficSources(startStr, endStr);
   renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids, signUps);
   renderSessionStats(filteredSessions, filteredActions);
@@ -1410,6 +1415,71 @@ function renderPitchAnalytics(items, isSnapshot) {
 }
 
 
+// ─── Sign-up Sources (first-party first-touch, stamped on tactica_users) ────
+// Total ALWAYS equals the Sign-ups stat for the same range: same data, same
+// clock, same "Exclude me" filter. Unknowns are called out, never hidden.
+const UNTRACKED = 'Untracked (joined before source tracking)';
+function classifyFirstTouch(ft) {
+  if (!ft) return UNTRACKED;
+  const utm = (ft.utmSource || '').toLowerCase();
+  if (utm) {
+    if (/^(ig|instagram)$/.test(utm)) return 'Instagram';
+    if (/^(tw|twitter|x)$/.test(utm)) return 'Twitter / X';
+    if (/^(fb|facebook)$/.test(utm)) return 'Facebook';
+    if (/^(yt|youtube)$/.test(utm)) return 'YouTube';
+    if (/^(tt|tiktok)$/.test(utm)) return 'TikTok';
+    return 'Campaign: ' + utm;
+  }
+  let host = '';
+  try { host = new URL(ft.referrer).hostname.toLowerCase(); } catch (e) { host = ''; }
+  if (!host || host.endsWith('tactica.football')) return 'Direct / unknown';
+  const has = (...ds) => ds.some(d => host === d || host.endsWith('.' + d));
+  if (has('chatgpt.com', 'chat.openai.com', 'perplexity.ai', 'claude.ai', 'copilot.microsoft.com') || host === 'gemini.google.com') return 'AI Assistant';
+  if (has('t.co', 'twitter.com', 'x.com')) return 'Twitter / X';
+  if (has('instagram.com')) return 'Instagram';
+  if (has('facebook.com', 'fb.me', 'fb.com')) return 'Facebook';
+  if (has('youtube.com', 'youtu.be')) return 'YouTube';
+  if (has('linkedin.com', 'lnkd.in')) return 'LinkedIn';
+  if (has('tiktok.com')) return 'TikTok';
+  if (has('whatsapp.com', 'wa.me')) return 'WhatsApp';
+  if (has('reddit.com')) return 'Reddit';
+  if (has('google.com') || host.startsWith('www.google.') || has('bing.com', 'duckduckgo.com') || host.includes('search.yahoo')) return 'Search';
+  return 'Referral: ' + host;
+}
+
+function renderSignupSources(usersFiltered, startMs, endMs) {
+  const el = document.getElementById('signup-sources');
+  if (!el) return;
+  const signups = usersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs);
+  if (!signups.length) {
+    el.innerHTML = `<div style="color:#777;font-size:12px;padding:6px 0">No sign-ups in this date range.</div>`;
+    return;
+  }
+  const byChannel = {};
+  signups.forEach(u => {
+    const ch = classifyFirstTouch(u.firstTouch);
+    byChannel[ch] = (byChannel[ch] || 0) + 1;
+  });
+  // Untracked always sorts last so the real sources lead the chart.
+  const sorted = Object.entries(byChannel).sort((a, b) =>
+    (a[0] === UNTRACKED) - (b[0] === UNTRACKED) || b[1] - a[1]);
+  const total = signups.length;
+  const maxCount = Math.max(...sorted.map(([, v]) => v));
+  let html = `<div style="color:#888;font-size:11px;margin-bottom:8px">${total} sign-ups in range &middot; first-party first-touch &middot; total matches the Sign-ups stat</div>`;
+  sorted.forEach(([channel, v]) => {
+    const share = Math.round((v / total) * 100);
+    const pctBar = Math.round((v / maxCount) * 100);
+    const dim = channel === UNTRACKED ? ';opacity:0.55' : '';
+    html += `<div class="breakdown-bar" style="${dim.slice(1)}">
+      <span class="breakdown-label" title="${channel}">${channel}</span>
+      <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
+      <span class="breakdown-count">${v} sign-up${v === 1 ? '' : 's'}</span>
+      <span class="breakdown-sessions">${share}%</span>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+
 // ─── Traffic Sources (GA4 sync via refreshTrafficSources Cloud Function) ────
 // NEW USERS ONLY, first-touch attribution (firstUser* dimensions) — returning
 // visits are deliberately excluded so "Direct" doesn't swallow the picture.
@@ -1439,7 +1509,7 @@ function renderTrafficSources(startStr, endStr) {
   if (!sorted.length) {
     html += `<div style="color:#777;font-size:12px;padding:6px 0">No new GA users in this date range${clipped ? ' (sync covers the last 60 days only)' : ''}.</div>`;
   } else {
-    html += `<div style="color:#888;font-size:11px;margin-bottom:8px">${total} new users in range &middot; first-touch attribution &middot; returning visits excluded${clipped ? ' &middot; range clipped to the 60-day sync window' : ''}</div>`;
+    html += `<div style="color:#888;font-size:11px;margin-bottom:8px">${total} new GA visitors in range &middot; first-touch &middot; delayed up to 48h, invisible to ad-blockers &middot; directional only${clipped ? ' &middot; range clipped to the 60-day sync window' : ''}</div>`;
     sorted.forEach(([channel, v]) => {
       const pctBar = Math.round((v / maxCount) * 100);
       const share = total ? Math.round((v / total) * 100) : 0;

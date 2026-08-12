@@ -3,7 +3,7 @@
 
 import { getCurrentUser } from '../auth.js';
 // Share app.js's firestore.js instance (?v=7) so notes events carry the session id.
-import { logAction } from '../firestore.js?v=7';
+import { logAction } from '../firestore.js?v=8';
 
 let _notesOpenTracked = false;
 

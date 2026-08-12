@@ -144,14 +144,24 @@ export async function logSession(uid, email, displayName) {
   const firstSeen = existing.firstSeen || now;
   const hasReviewed = existing.reviewed === true;
 
-  await setDoc(userRef, {
+  const profile = {
     email: email || '',
     displayName: displayName || '',
     firstSeen,
     lastSeen: now,
     sessionCount,
     lastSessionDate: today,
-  }, { merge: true });
+  };
+  // Brand-new user → stamp where this browser FIRST landed (captured by the
+  // inline script in index.html). Presence of the field also marks the user as
+  // "tracked era" — older accounts have no firstTouch at all.
+  if (!existing.firstSeen) {
+    try {
+      const ft = JSON.parse(localStorage.getItem('tactica_first_touch') || 'null');
+      profile.firstTouch = ft || { referrer: '', utmSource: '', utmMedium: '', utmCampaign: '', landing: '', capturedAt: now };
+    } catch (e) { /* storage blocked — skip, user stays untracked */ }
+  }
+  await setDoc(userRef, profile, { merge: true });
 
   // Log individual session
   const device = window.innerWidth <= 768 ? 'mobile' : 'desktop';
