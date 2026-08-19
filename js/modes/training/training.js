@@ -667,6 +667,40 @@ function escapeHtml(s) {
 }
 
 // ─── Save drill ─────────────────────────────────────────────────────────────
+// Rasterise the current board into a small JPEG for the drill-library card.
+// Serialise-and-draw, same technique as the mini-pitch export. Never blocks a
+// save: any failure returns null and the drill saves without a thumbnail.
+async function captureBoardThumb() {
+  try {
+    const svg = document.getElementById('pitch-svg');
+    if (!svg) return null;
+    const clone = svg.cloneNode(true);
+    clone.querySelectorAll('.selection-outline, .sel-handle, .resize-handle, #element-handles, .marquee-rect, [data-handle]').forEach(n => n.remove());
+    clone.setAttribute('xmlns', 'http://www.w3.org/2000/svg');
+    clone.setAttribute('xmlns:xlink', 'http://www.w3.org/1999/xlink');
+    const vb = svg.viewBox && svg.viewBox.baseVal;
+    const w = (vb && vb.width) || parseFloat(svg.getAttribute('width')) || 700;
+    const h = (vb && vb.height) || parseFloat(svg.getAttribute('height')) || 480;
+    const img = new Image();
+    await new Promise((res, rej) => {
+      const t = setTimeout(() => rej(new Error('thumb timeout')), 3000);
+      img.onload = () => { clearTimeout(t); res(); };
+      img.onerror = () => { clearTimeout(t); rej(new Error('thumb decode failed')); };
+      img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
+    });
+    const W = 340, H = Math.max(1, Math.round(W * h / w));
+    const canvas = document.createElement('canvas');
+    canvas.width = W; canvas.height = H;
+    const ctx = canvas.getContext('2d');
+    ctx.fillStyle = '#1a1f2e'; ctx.fillRect(0, 0, W, H);
+    ctx.drawImage(img, 0, 0, W, H);
+    return canvas.toDataURL('image/jpeg', 0.65);
+  } catch (e) {
+    console.warn('[training] thumb capture failed:', e);
+    return null;
+  }
+}
+
 export async function saveDrill() {
   const formData = readDrillFromForm();
   if (!formData.name) {
@@ -687,11 +721,15 @@ export async function saveDrill() {
     return;
   }
 
+  window.deselect?.();   // selection strokes would bake into the thumbnail
+  const thumb = await captureBoardThumb();
+
   const now = Date.now();
   const drill = {
     id: _editingDrillId || ('drill_' + now + '_' + Math.random().toString(36).slice(2, 7)),
     ...formData,
     boardState: captureState(),
+    thumb: thumb || _currentDrill?.thumb || null,   // keep the old thumb if capture fails
     createdAt: _currentDrill?.createdAt || now,
     updatedAt: now,
   };
@@ -760,9 +798,17 @@ async function renderDrillLibrary() {
     const cat = d.category ? `<span class="drill-card-phase">${escapeHtml(d.category)}</span>` : '';
     const dur = d.duration ? `${d.duration} min` : '';
     const metaBits = [d.numPlayers ? `${d.numPlayers} players` : '', dur, ...objTags.map(t => escapeHtml(t))].filter(Boolean);
+    const thumbHtml = (typeof d.thumb === 'string' && d.thumb.startsWith('data:image'))
+      ? `<img class="drill-card-thumb" src="${d.thumb}" alt="" loading="lazy">`
+      : `<div class="drill-card-thumb drill-card-thumb-empty">
+           <svg width="34" height="24" viewBox="0 0 34 24" fill="none"><rect x="1" y="1" width="32" height="22" rx="2" stroke="currentColor" stroke-width="1.4"/><line x1="17" y1="1" x2="17" y2="23" stroke="currentColor" stroke-width="1"/><circle cx="17" cy="12" r="4" stroke="currentColor" stroke-width="1"/></svg>
+         </div>`;
     card.innerHTML = `
-      <div class="drill-card-title">${cat}${escapeHtml(d.name || 'Untitled drill')}</div>
-      <div class="drill-card-meta">${metaBits.length ? metaBits.join(' · ') : 'no details yet'}</div>
+      ${thumbHtml}
+      <div class="drill-card-body">
+        <div class="drill-card-title">${cat}${escapeHtml(d.name || 'Untitled drill')}</div>
+        <div class="drill-card-meta">${metaBits.length ? metaBits.join(' · ') : 'no details yet'}</div>
+      </div>
       <button class="drill-card-delete" type="button" aria-label="Delete drill">&times;</button>
     `;
     card.onclick = (e) => {

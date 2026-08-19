@@ -508,10 +508,23 @@ body.training-drill-mode #pitch-container {
   background: var(--panel);
   border: 1px solid rgba(255,255,255,0.06);
   border-radius: 10px;
-  padding: 14px 16px;
+  padding: 0;
+  overflow: hidden;
   cursor: pointer;
   transition: all 0.15s;
 }
+.drill-card-thumb {
+  display: block; width: 100%;
+  aspect-ratio: 700 / 480;
+  object-fit: contain;   /* drills can be on portrait pitches — show all of it */
+  background: #14200f;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.drill-card-thumb-empty {
+  display: flex; align-items: center; justify-content: center;
+  color: var(--text-dim);
+}
+.drill-card-body { padding: 12px 16px 14px; }
 .drill-card:hover { border-color: var(--accent); background: var(--panel2); }
 .drill-card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; padding-right: 30px; }
 .drill-card-meta { font-size: 11px; color: var(--text-muted); }
