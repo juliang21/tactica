@@ -544,6 +544,21 @@ body.training-drill-mode #pitch-container {
   transition: all 0.15s;
 }
 .drill-card-delete:hover { color: #fff; background: #ef4444; border-color: #ef4444; }
+/* Duplicate sits left of delete, same chip size but neutral so the destructive
+   action stays the visually louder one. */
+.drill-card-copy {
+  position: absolute; top: 8px; right: 38px;
+  width: 24px; height: 24px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.06);
+  border: 1px solid rgba(255,255,255,0.16);
+  color: var(--text-dim);
+  cursor: pointer;
+  border-radius: 6px;
+  transition: all 0.15s;
+}
+.drill-card-copy:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
+.drill-card-copy svg { display: block; }
 
 /* ═══ SESSION EDITOR ═══════════════════════════════════════════════════════ */
 /* Visible when in the session editor view. Hides the side panel (sessions
@@ -840,7 +855,20 @@ body.training-session-mode #topbar-session-save-btn { display: inline-flex !impo
   .ps-num { display: inline-flex; align-items: center; justify-content: center; width: 20px; height: 20px;
     background: #16a06f; color: #fff; border-radius: 5px; font-size: 11px; font-weight: 800; }
   .ps-meta { font-size: 11px; color: #16a06f; font-weight: 700; margin-bottom: 8px; }
-  .ps-field { display: grid; grid-template-columns: 130px 1fr; gap: 10px; font-size: 12px; margin-bottom: 5px; }
+  /* Board picture beside the text. Fixed column so every drill on the sheet
+     lines up; the text column takes whatever is left (and all of it when the
+     drill has no saved picture). */
+  .ps-body { display: flex; align-items: flex-start; gap: 14px; }
+  /* Capped on BOTH axes: a landscape board fills the column, a portrait one
+     shrinks instead of turning one drill into half a page. */
+  .ps-board { flex: 0 0 auto; }
+  .ps-board img {
+    display: block; width: auto; height: auto;
+    max-width: 210px; max-height: 58mm;
+    border: 1px solid #d7dbde; border-radius: 6px;
+  }
+  .ps-fields { flex: 1 1 auto; min-width: 0; }
+  .ps-field { display: grid; grid-template-columns: 112px 1fr; gap: 10px; font-size: 12px; margin-bottom: 5px; }
   .ps-flabel { font-weight: 700; color: #6b7280; }
   .ps-fval { color: #14181a; }
   .ps-foot { margin-top: 16px; font-size: 10px; color: #9aa0a6; text-align: center; }

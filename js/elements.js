@@ -440,6 +440,76 @@ export function updatePoleColor(el, color) {
   el.dataset.poleColor = color;
   el.querySelector('.pole-bar')?.setAttribute('fill', POLE_COLORS[color] || color);
 }
+
+// ─── Free-kick mannequin ─────────────────────────────────────────────────────
+// Training equipment: a human-silhouette dummy on a weighted base — used for
+// walls, dribbling gates and passing lanes. Drawn standing up like the pole
+// (shadow + base ellipse under a vertical body) so the two read as the same
+// family of gear, and shares the pole's rotate + uniform-scale behaviour.
+const MANNEQUIN_COLORS = {
+  red:    '#E63946', yellow: '#FFD43B', blue: '#3D6FE5',
+  black:  '#2E2E2E', white:  '#F2F2F2', orange: '#F58A1E',
+};
+export function addMannequin(x, y, color = 'red') {
+  const ns = 'http://www.w3.org/2000/svg';
+  const id = 'mannequin-' + S.nextObjectId();
+  const c = MANNEQUIN_COLORS[color] || MANNEQUIN_COLORS.red;
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('id', id);
+  g.dataset.type = 'mannequin';
+  const _sc = window.getPreferredScale?.('mannequin') ?? 1;
+  g.dataset.cx = x; g.dataset.cy = y; g.dataset.scale = String(_sc);
+  g.dataset.rotation = '0'; g.dataset.mannequinColor = color;
+
+  const sh = document.createElementNS(ns, 'ellipse');
+  sh.setAttribute('cx','0'); sh.setAttribute('cy','9');
+  sh.setAttribute('rx','6'); sh.setAttribute('ry','2.2');
+  sh.setAttribute('fill','rgba(0,0,0,0.28)'); sh.setAttribute('pointer-events','none');
+
+  const base = document.createElementNS(ns, 'ellipse');
+  base.setAttribute('cx','0'); base.setAttribute('cy','8');
+  base.setAttribute('rx','5.4'); base.setAttribute('ry','2');
+  base.setAttribute('fill','#2a2a2a');
+
+  // Torso: shoulders wide at the top, tapering to the base — the classic
+  // free-kick dummy outline. Head sits just above the shoulders.
+  const body = document.createElementNS(ns, 'path');
+  body.classList.add('mannequin-body');
+  body.setAttribute('d', 'M -4.6,-9.4 Q -4.6,-11 -3,-11.3 L 3,-11.3 Q 4.6,-11 4.6,-9.4 L 3.5,0 L 2.3,7.4 L -2.3,7.4 L -3.5,0 Z');
+  body.setAttribute('fill', c);
+  body.setAttribute('stroke','rgba(0,0,0,0.28)'); body.setAttribute('stroke-width','0.6');
+
+  const head = document.createElementNS(ns, 'circle');
+  head.classList.add('mannequin-head');
+  head.setAttribute('cx','0'); head.setAttribute('cy','-14'); head.setAttribute('r','2.6');
+  head.setAttribute('fill', c);
+  head.setAttribute('stroke','rgba(0,0,0,0.28)'); head.setAttribute('stroke-width','0.6');
+
+  const shine = document.createElementNS(ns, 'path');
+  shine.setAttribute('d', 'M -2.4,-9.6 L -1.5,-9.6 L -0.9,6.6 L -1.9,6.6 Z');
+  shine.setAttribute('fill','rgba(255,255,255,0.30)');
+  shine.setAttribute('pointer-events','none');
+
+  const hit = document.createElementNS(ns, 'circle');
+  hit.classList.add('hit-area');
+  hit.setAttribute('cx','0'); hit.setAttribute('cy','-3'); hit.setAttribute('r','17');
+  hit.setAttribute('fill','transparent'); hit.setAttribute('stroke','none');
+
+  g.appendChild(hit); g.appendChild(sh); g.appendChild(base);
+  g.appendChild(body); g.appendChild(head); g.appendChild(shine);
+  g.setAttribute('transform', `translate(${x},${y}) rotate(0) scale(${_sc})`);
+  S.playersLayer.appendChild(g);
+  makeDraggable(g);
+  g.addEventListener('click', e => { if (S.tool === 'select') { e.stopPropagation(); select(g, { additive: e.ctrlKey || e.metaKey }); } });
+  return g;
+}
+
+export function updateMannequinColor(el, color) {
+  el.dataset.mannequinColor = color;
+  const c = MANNEQUIN_COLORS[color] || color;
+  el.querySelector('.mannequin-body')?.setAttribute('fill', c);
+  el.querySelector('.mannequin-head')?.setAttribute('fill', c);
+}
 export function updateHoopColor(el, color) {
   el.dataset.hoopColor = color;
   el.querySelector('.hoop-ring')?.setAttribute('stroke', HOOP_COLORS[color] || color);

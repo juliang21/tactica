@@ -111,7 +111,7 @@ export function applyTransform(el) {
   const rot = parseFloat(el.dataset.rotation || '0');
   const t = el.dataset.type;
 
-  if (t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop') {
+  if (t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop' || t === 'mannequin') {
     // Equipment that supports rotate + uniform scale.
     el.setAttribute('transform', `translate(${cx},${cy}) rotate(${rot}) scale(${scale})`);
   } else if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'marker') {
@@ -325,7 +325,7 @@ export function arrowControlPoint(p1, p2, k) {
 function moveElement(el, nx, ny) {
   el.dataset.cx = nx; el.dataset.cy = ny;
   const t = el.dataset.type;
-  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop' || t === 'vision') applyTransform(el);
+  if (t === 'player' || t === 'referee' || t === 'ball' || t === 'cone' || t === 'disc-cone' || t === 'small-goal' || t === 'ladder' || t === 'pole' || t === 'hoop' || t === 'mannequin' || t === 'vision') applyTransform(el);
   else if (t === 'image') applyTransform(el);
   else if (t === 'textbox') applyTransform(el);
   else if (t === 'headline') applyTransform(el);
@@ -423,7 +423,7 @@ export function select(el, opts = {}) {
     el.appendChild(ring);
   }
   // Same dashed lime indicator for non-player objects so selection is obvious.
-  if ((type === 'cone' || type === 'ball' || type === 'disc-cone' || type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop' || type === 'referee')
+  if ((type === 'cone' || type === 'ball' || type === 'disc-cone' || type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop' || type === 'mannequin' || type === 'referee')
       && !el.querySelector('.select-ring')) {
     const ns = 'http://www.w3.org/2000/svg';
     let ring;
@@ -446,6 +446,10 @@ export function select(el, opts = {}) {
       ring = document.createElementNS(ns, 'rect');
       ring.setAttribute('x', '-8'); ring.setAttribute('y', '-19');
       ring.setAttribute('width', '16'); ring.setAttribute('height', '32'); ring.setAttribute('rx', '3');
+    } else if (type === 'mannequin') {
+      ring = document.createElementNS(ns, 'rect');
+      ring.setAttribute('x', '-8.5'); ring.setAttribute('y', '-19.5');
+      ring.setAttribute('width', '17'); ring.setAttribute('height', '32'); ring.setAttribute('rx', '3');
     } else if (type === 'hoop') {
       ring = document.createElementNS(ns, 'ellipse');
       ring.setAttribute('cx', '0'); ring.setAttribute('cy', '0');
@@ -530,6 +534,9 @@ export function select(el, opts = {}) {
   if (type === 'pole') {
     showEquipHandles(el, 4, 15, 'pole');
   }
+  if (type === 'mannequin') {
+    showEquipHandles(el, 5, 15, 'mannequin');
+  }
   if (type === 'hoop') {
     showEquipHandles(el, 15, 6, 'hoop');
   }
@@ -613,6 +620,7 @@ export function select(el, opts = {}) {
     : type === 'small-goal' ? 'Small Goal'
     : type === 'ladder' ? 'Ladder'
     : type === 'pole' ? 'Pole'
+    : type === 'mannequin' ? 'Mannequin'
     : type === 'hoop' ? 'Hoop'
     : type === 'arrow' ? (['Run','Pass','Line'][['run','pass','line'].indexOf(el.dataset.arrowType)] || 'Arrow')
     : type === 'textbox' ? 'Text'
@@ -683,6 +691,12 @@ export function select(el, opts = {}) {
     if (type === 'pole') document.querySelectorAll('#pole-edit-section .color-swatch').forEach(sw =>
       sw.classList.toggle('active', sw.dataset.color === (el.dataset.poleColor || 'red')));
   }
+  const mannSec = document.getElementById('mannequin-edit-section');
+  if (mannSec) {
+    mannSec.style.display = type === 'mannequin' ? '' : 'none';
+    if (type === 'mannequin') document.querySelectorAll('#mannequin-edit-section .color-swatch').forEach(sw =>
+      sw.classList.toggle('active', sw.dataset.color === (el.dataset.mannequinColor || 'red')));
+  }
   const hoopSec = document.getElementById('hoop-edit-section');
   if (hoopSec) {
     hoopSec.style.display = type === 'hoop' ? '' : 'none';
@@ -718,10 +732,10 @@ export function select(el, opts = {}) {
   // Pair rotation is driven by player positions, not editable
   // Net-zone has no rotation (vertices are players)
   // Zones have rotation/layer inside their Advanced panel, so hide standalone sections
-  const showStandaloneRot = (type === 'vision' || type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop') && !isZone;
+  const showStandaloneRot = (type === 'vision' || type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop' || type === 'mannequin') && !isZone;
   document.getElementById('rotation-section').style.display = showStandaloneRot ? '' : 'none';
   // Sync the rotation slider value for small-goal / ladder (vision is handled below)
-  if (type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop') {
+  if (type === 'small-goal' || type === 'ladder' || type === 'pole' || type === 'hoop' || type === 'mannequin') {
     const rv = el.dataset.rotation || '0';
     document.getElementById('rot-slider').value = rv;
     document.getElementById('rot-val').textContent = Math.round(parseFloat(rv)) + '°';
@@ -1860,7 +1874,7 @@ export function updateHandlePositions(el) {
       const rp = rotG.querySelector('path');
       if (rp) rp.setAttribute('d', `M${rotateAt.x-3},${rotateAt.y-2} A4,4 0 1,1 ${rotateAt.x+2},${rotateAt.y-3}`);
     }
-  } else if (type === 'pole' || type === 'hoop') {
+  } else if (type === 'pole' || type === 'hoop' || type === 'mannequin') {
     const cx = parseFloat(el.dataset.cx), cy = parseFloat(el.dataset.cy);
     const scale = parseFloat(el.dataset.scale || '1');
     const rot = parseFloat(el.dataset.rotation || '0');
@@ -1988,7 +2002,7 @@ function onEndpointDrag(e) {
     onSmallGoalHandleDrag(el, pt);
   } else if (t === 'ladder') {
     onLadderHandleDrag(el, pt);
-  } else if (t === 'pole' || t === 'hoop') {
+  } else if (t === 'pole' || t === 'hoop' || t === 'mannequin') {
     onEquipHandleDrag(el, pt);
   }
 }

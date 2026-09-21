@@ -1571,6 +1571,36 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     ctx.restore();
   }
 
+  function renderMannequin(g) {
+    const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
+    if (isNaN(cx) || isNaN(cy)) return;
+    const sc = parseFloat(g.dataset.scale || '1');
+    const rot = parseFloat(g.dataset.rotation || '0') * Math.PI / 180;
+    const body = g.querySelector('.mannequin-body');
+    const color = body?.getAttribute('fill') || '#E63946';
+    ctx.save(); ctx.translate(cx, cy); ctx.rotate(rot); ctx.scale(sc, sc);
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.ellipse(0, 9, 6, 2.2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#2a2a2a';
+    ctx.beginPath(); ctx.ellipse(0, 8, 5.4, 2, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = color; ctx.strokeStyle = 'rgba(0,0,0,0.28)'; ctx.lineWidth = 0.6;
+    ctx.beginPath();
+    ctx.moveTo(-4.6, -9.4);
+    ctx.quadraticCurveTo(-4.6, -11, -3, -11.3);
+    ctx.lineTo(3, -11.3);
+    ctx.quadraticCurveTo(4.6, -11, 4.6, -9.4);
+    ctx.lineTo(3.5, 0); ctx.lineTo(2.3, 7.4);
+    ctx.lineTo(-2.3, 7.4); ctx.lineTo(-3.5, 0);
+    ctx.closePath(); ctx.fill(); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0, -14, 2.6, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    ctx.fillStyle = 'rgba(255,255,255,0.30)';
+    ctx.beginPath();
+    ctx.moveTo(-2.4, -9.6); ctx.lineTo(-1.5, -9.6);
+    ctx.lineTo(-0.9, 6.6); ctx.lineTo(-1.9, 6.6);
+    ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+
   function renderHoop(g) {
     const cx = parseFloat(g.dataset.cx), cy = parseFloat(g.dataset.cy);
     if (isNaN(cx) || isNaN(cy)) return;
@@ -1682,6 +1712,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
     else if (type === 'small-goal') renderSmallGoal(g);
     else if (type === 'disc-cone') renderDiscCone(g);
     else if (type === 'pole') renderPole(g);
+    else if (type === 'mannequin') renderMannequin(g);
     else if (type === 'hoop') renderHoop(g);
     else if (type === 'tag') renderTag(g);
   });

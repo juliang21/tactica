@@ -1,6 +1,6 @@
 import * as S from './state.js';
 import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected, isPointInSelectionBounds, beginGroupDrag } from './interaction.js';
-import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom, addLadder, updateLadder, addPole, addHoop, updatePoleColor, updateHoopColor } from './elements.js';
+import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom, addLadder, updateLadder, addPole, addHoop, addMannequin, updatePoleColor, updateHoopColor, updateMannequinColor } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
          applyNameSize, applyNameColor, applyNameBg, updatePlayerNameBg,
@@ -18,10 +18,10 @@ import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFo
          applyMarkerBorderColor, applyMarkerBgColor, applyMarkerLineColor, applyMarkerOpacity, applyMarkerHighlight, liveUpdateMarkerName, confirmMarkerName,
          applyImageCrop, applyImageOpacity,
          applyZoomFactor, applyZoomSize, applyZoomRing,
-         applyLadderRungs, applyLadderColor, applyPoleColor, applyHoopColor,
+         applyLadderRungs, applyLadderColor, applyPoleColor, applyHoopColor, applyMannequinColor,
          applySize, applyRotation, clearAll, getOrCreateMarker } from './ui.js';
 import { setPitch, setPitchColor, setPitchOpt, setPitchVisual, togglePitchFlip, updatePitchFromToggles, setPitchLineColor, toggleStripes, rebuildPitch, fitPitchToViewport } from './pitch.js';
-import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=26';
+import { exportImage, selectFmt, closeExport, doExport, drawWatermark } from './export.js?v=27';
 import { triggerImageUpload, handleImageUpload, enterImageMode, exitImageMode, toggleMiniPitch, setMiniPitchType, setMiniPitchColor, setMiniPitchLine, updateMiniPitch } from './imagemode.js?v=14';
 import { findPlayerAt, detectAt, flashDetection, isDetectionReady, getDetections } from './detect.js?v=15';
 import { trackElementInserted, trackModeSwitch, trackElementEdited, trackElementDragged, trackToolActivated, trackSignIn, registerAnalysisTracker } from './analytics.js';
@@ -1838,6 +1838,7 @@ window.applyMarkerScaleY = function(val) {
   updateAllLinks(); // flattening the ellipse moves the rim → re-trim link lines
 };
 window.applyPoleColor = applyPoleColor;
+window.applyMannequinColor = applyMannequinColor;
 window.applyHoopColor = applyHoopColor;
 window.applyLadderRungs = applyLadderRungs;
 window.applyLadderColor = applyLadderColor;
@@ -2746,6 +2747,7 @@ S.svg.addEventListener('click', e => {
   else if (S.tool === 'small-goal') placed = addSmallGoal(pt.x, pt.y);
   else if (S.tool === 'ladder') placed = addLadder(pt.x, pt.y);
   else if (S.tool === 'pole') placed = addPole(pt.x, pt.y);
+  else if (S.tool === 'mannequin') placed = addMannequin(pt.x, pt.y);
   else if (S.tool === 'hoop') placed = addHoop(pt.x, pt.y);
   else if (S.tool === 'referee') placed = addReferee(pt.x, pt.y);
   else if (S.tool === 'shadow-circle') placed = addShadow(pt.x, pt.y, 'shadow-circle');
@@ -4476,6 +4478,10 @@ function _copyElementData(el) {
     data.scale = el.dataset.scale || '1';
     data.rotation = el.dataset.rotation || '0';
     data.poleColor = el.dataset.poleColor || 'red';
+  } else if (t === 'mannequin') {
+    data.scale = el.dataset.scale || '1';
+    data.rotation = el.dataset.rotation || '0';
+    data.mannequinColor = el.dataset.mannequinColor || 'red';
   } else if (t === 'hoop') {
     data.scale = el.dataset.scale || '1';
     data.rotation = el.dataset.rotation || '0';
@@ -4714,6 +4720,12 @@ function _pasteOne(d, x, y) {
     }
   } else if (d.type === 'pole') {
     placed = addPole(x, y, d.poleColor || 'red');
+    if (placed) {
+      placed.dataset.scale = d.scale || '1'; placed.dataset.rotation = d.rotation || '0';
+      applyTransform(placed);
+    }
+  } else if (d.type === 'mannequin') {
+    placed = addMannequin(x, y, d.mannequinColor || 'red');
     if (placed) {
       placed.dataset.scale = d.scale || '1'; placed.dataset.rotation = d.rotation || '0';
       applyTransform(placed);

@@ -571,9 +571,9 @@ function readDrillFromForm() {
 // free. Players and pure annotations (arrows, zones, text) are excluded.
 const EQUIP_LABELS = {
   ball: 'ball', cone: 'cone', 'disc-cone': 'disc cone', 'small-goal': 'goal',
-  ladder: 'ladder', pole: 'pole', hoop: 'hoop',
+  ladder: 'ladder', pole: 'pole', hoop: 'hoop', mannequin: 'mannequin',
 };
-const EQUIP_ORDER = ['ball','cone','disc-cone','small-goal','ladder','pole','hoop'];
+const EQUIP_ORDER = ['ball','cone','disc-cone','small-goal','ladder','pole','hoop','mannequin'];
 export function countEquipment() {
   const counts = {};
   const scan = (layer) => { if (!layer) return; layer.querySelectorAll('[data-type]').forEach(el => {
@@ -688,7 +688,9 @@ async function captureBoardThumb() {
       img.onerror = () => { clearTimeout(t); rej(new Error('thumb decode failed')); };
       img.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(new XMLSerializer().serializeToString(clone));
     });
-    const W = 340, H = Math.max(1, Math.round(W * h / w));
+    // 560px: sharp on a retina library card AND ~170 dpi at the size it prints
+    // in the session PDF. Still ~20 KB as JPEG, so the drill doc stays small.
+    const W = 560, H = Math.max(1, Math.round(W * h / w));
     const canvas = document.createElement('canvas');
     canvas.width = W; canvas.height = H;
     const ctx = canvas.getContext('2d');
@@ -809,11 +811,21 @@ async function renderDrillLibrary() {
         <div class="drill-card-title">${cat}${escapeHtml(d.name || 'Untitled drill')}</div>
         <div class="drill-card-meta">${metaBits.length ? metaBits.join(' · ') : 'no details yet'}</div>
       </div>
+      <button class="drill-card-copy" type="button" aria-label="Duplicate drill" title="Duplicate drill">
+        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+          <rect x="5.5" y="5.5" width="9" height="9" rx="1.8"/>
+          <path d="M10.5 3.2A1.7 1.7 0 0 0 8.8 1.5H3.2A1.7 1.7 0 0 0 1.5 3.2v5.6a1.7 1.7 0 0 0 1.7 1.7"/>
+        </svg>
+      </button>
       <button class="drill-card-delete" type="button" aria-label="Delete drill">&times;</button>
     `;
     card.onclick = (e) => {
-      if (e.target.closest('.drill-card-delete')) return;
+      if (e.target.closest('.drill-card-delete') || e.target.closest('.drill-card-copy')) return;
       openDrill(d.id);
+    };
+    card.querySelector('.drill-card-copy').onclick = async (e) => {
+      e.stopPropagation();
+      await duplicateDrill(d);
     };
     card.querySelector('.drill-card-delete').onclick = async (e) => {
       e.stopPropagation();
@@ -878,6 +890,38 @@ async function renderSessionLibrary() {
   wrap.appendChild(list);
 }
 
+// ─── Duplicate a drill ───────────────────────────────────────────────────────
+// Coaches build variants of the same drill (same shape, different constraints),
+// so copying beats rebuilding. The clone carries the board and the thumbnail;
+// only identity and timestamps are new.
+async function duplicateDrill(card) {
+  const source = (await loadDrill(card.id)) || card;
+  const existing = await listDrills().catch(() => []);
+  const names = new Set(existing.map(d => (d.name || '').trim()));
+  const base = (source.name || 'Untitled drill').trim();
+  let name = `${base} (copy)`;
+  for (let n = 2; names.has(name); n++) name = `${base} (copy ${n})`;
+
+  const now = Date.now();
+  const copy = {
+    ...source,
+    id: 'drill_' + now + '_' + Math.random().toString(36).slice(2, 7),
+    name,
+    createdAt: now,
+    updatedAt: now,
+  };
+  try {
+    await saveDrillCloudOrLocal(copy);
+  } catch (e) {
+    console.error(e);
+    window.showNotification?.('Could not duplicate the drill. Please try again.', 'error', 4000);
+    return;
+  }
+  track('training_drill_duplicated', { sourceId: source.id, drillId: copy.id });
+  window.showNotification?.(`Copied as "${name}".`, 'success', 3000);
+  renderDrillLibrary();
+}
+
 async function openDrill(id) {
   const drill = await loadDrill(id);
   if (!drill) {
@@ -894,7 +938,23 @@ async function openDrill(id) {
     relocatePitchToCanvas();
     await applyBoardState(drill.boardState);
     window.switchTab?.('drill');
+    backfillThumb(drill);
   });
+}
+
+// Drills saved before thumbnails existed have no picture, which leaves a hole
+// in the library card and in the printed session. Opening one is the only
+// moment its board is on screen, so grab the picture then — silently, and
+// without touching updatedAt so the library order doesn't shuffle.
+async function backfillThumb(drill) {
+  if (!drill || (typeof drill.thumb === 'string' && drill.thumb.startsWith('data:image'))) return;
+  await new Promise(r => setTimeout(r, 300));   // let the pitch finish laying out
+  if (_editingDrillId !== drill.id) return;     // coach already moved on
+  const thumb = await captureBoardThumb();
+  if (!thumb) return;
+  drill.thumb = thumb;
+  if (_currentDrill && _currentDrill.id === drill.id) _currentDrill.thumb = thumb;
+  try { await saveDrillCloudOrLocal({ ...drill, thumb }); } catch (e) { console.warn('[training] thumb backfill failed:', e); }
 }
 
 // ─── Tag input wiring (set up once) ─────────────────────────────────────────
@@ -980,14 +1040,24 @@ export async function printSession() {
   const drillHTML = drills.map((d, i) => {
     const objs = [...(d.objectives?.general||[]),...(d.objectives?.offensive||[]),...(d.objectives?.defensive||[])];
     const meta = [d.category, d.duration ? d.duration + ' min' : '', d.numPlayers ? d.numPlayers + ' players' : ''].filter(Boolean).join(' · ');
+    // The board picture is what coaches actually read on the pitch, so it sits
+    // beside the text. Drills saved before thumbnails existed simply have none;
+    // the section then falls back to full-width text.
+    const hasThumb = typeof d.thumb === 'string' && d.thumb.startsWith('data:image');
+    const boardHTML = hasThumb ? `<div class="ps-board"><img src="${d.thumb}" alt="${esc(d.name || 'Drill')} board"></div>` : '';
     return `<section class="ps-drill">
       <h3><span class="ps-num">${i+1}</span> ${esc(d.name || 'Untitled drill')}</h3>
       ${meta ? `<div class="ps-meta">${esc(meta)}</div>` : ''}
-      ${block('Objectives', objs.join(', '))}
-      ${block('Description', d.description)}
-      ${block('Coaching points', d.coachingPoints)}
-      ${block('Progression / variants', d.variants)}
-      ${block('Equipment', equipmentText(d.equipment))}
+      <div class="ps-body">
+        ${boardHTML}
+        <div class="ps-fields">
+          ${block('Objectives', objs.join(', '))}
+          ${block('Description', d.description)}
+          ${block('Coaching points', d.coachingPoints)}
+          ${block('Progression / variants', d.variants)}
+          ${block('Equipment', equipmentText(d.equipment))}
+        </div>
+      </div>
     </section>`;
   }).join('');
 
