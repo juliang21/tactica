@@ -85,7 +85,28 @@ registerDragEnd((el) => {
 function undo() {
   if (!S.undoStack.length) return;
   deselect();
-  const snap = S.undoStack.pop();
+
+  // With animation steps, an undo entry only makes sense on the step it was
+  // recorded on — restoring a step-3 snapshot while step 9 is displayed would
+  // write step 3's positions into step 9. Drop entries whose step no longer
+  // exists (the coach deleted it) rather than corrupting a different one.
+  let snap = null;
+  while (S.undoStack.length) {
+    const candidate = S.undoStack.pop();
+    if (!candidate._frameId || !frames.length || candidate._removedStep ||
+        frames.some(f => f.id === candidate._frameId)) { snap = candidate; break; }
+  }
+  if (!snap) return;
+
+  // A step deletion is undone by putting the step back, not by the DOM alone.
+  if (snap._removedStep && frames.length) {
+    const { at, frame } = snap._removedStep;
+    frames.splice(Math.min(at, frames.length), 0, frame);
+  }
+
+  const targetFrame = snap._frameId ? frames.findIndex(f => f.id === snap._frameId) : -1;
+  if (targetFrame >= 0) currentFrame = targetFrame;
+
   S.objectsLayer.innerHTML = snap.objects;
   S.playersLayer.innerHTML = snap.players;
   S.playerCounts.a = snap.playerCounts.a;
@@ -159,8 +180,15 @@ function undo() {
   });
   // Refresh link positions after restoring
   updateAllLinks();
-  // Re-apply current frame if in animation mode
-  if (frames.length > 0) applyFrame(currentFrame);
+  if (frames.length > 0) {
+    // The restored DOM is now the truth for this step, so write it back into
+    // the frame. Re-applying the stored frame here (what this used to do)
+    // immediately reinstated the very positions the coach was undoing, which
+    // made Undo a no-op for anyone using animation steps.
+    saveCurrentToFrame();
+    renderStepBar();
+    drawTrails();
+  }
 }
 window.undo = undo;
 
@@ -3206,13 +3234,16 @@ function updateFreeformPreview(cursor) {
 
 // ─── Keyframe / Step Animation System ────────────────────────────────────────
 // Each frame stores:
-//   positions: { elementId: {x, y} }   — positions of ALL elements
+//   id:         stable identity, so undo entries survive steps being reordered
+//   positions:  { elementId: {x, y} }   — positions of ALL elements
 //   elementIds: Set<string>             — which element IDs exist in this frame
 let frames = [];
 let currentFrame = 0;
 let animationRunning = false;
 let animationId = null;
 let trailsGroup = null;
+let _frameSeq = 0;
+const newFrameId = () => 'f' + (++_frameSeq) + '_' + Math.random().toString(36).slice(2, 7);
 
 // Expose frame data for captureState serialization
 window._getFramesForSave = () => frames.map(f => ({
@@ -3224,6 +3255,7 @@ window._getCurrentFrame = () => currentFrame;
 // Restore frames when loading a saved drill / analysis.
 window._setFramesFromLoad = (savedFrames, savedCurrent) => {
   frames = (savedFrames || []).map(f => ({
+    id: newFrameId(),
     positions: f.positions || {},
     elementIds: new Set(Array.isArray(f.elementIds) ? f.elementIds : []),
   }));
@@ -3329,10 +3361,17 @@ function saveCurrentToFrame() {
   }
 }
 
+// Every undo entry is tagged with the step that was on screen when it was
+// pushed, so undo can put the change back where it was made instead of
+// bleeding one step's positions into another.
+S.registerUndoStamp(() => (
+  frames.length > 0 ? { _frameId: frames[currentFrame]?.id || null } : {}
+));
+
 function addStep() {
   // First step: just capture current state as Step 1
   if (frames.length === 0) {
-    frames.push({ positions: snapshotPositions(), elementIds: snapshotElementIds() });
+    frames.push({ id: newFrameId(), positions: snapshotPositions(), elementIds: snapshotElementIds() });
     currentFrame = 0;
     renderStepBar();
     drawTrails();
@@ -3341,8 +3380,12 @@ function addStep() {
     return;
   }
   saveCurrentToFrame();
-  frames.push({ positions: snapshotPositions(), elementIds: snapshotElementIds() });
-  currentFrame = frames.length - 1;
+  // Insert straight after the step being worked on. Identical to appending
+  // when you're on the last step; when you're fixing step 3 of 15 it puts the
+  // new step where you're looking instead of jumping you to the end.
+  const at = currentFrame + 1;
+  frames.splice(at, 0, { id: newFrameId(), positions: snapshotPositions(), elementIds: snapshotElementIds() });
+  currentFrame = at;
   renderStepBar();
   drawTrails();
   // Track animation feature usage
@@ -3362,13 +3405,33 @@ function goToStep(idx) {
 
 function deleteStep(idx) {
   if (frames.length <= 1) return; // can't delete the only step
+  if (idx < 0 || idx >= frames.length) return;
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_animation', { trigger: 'delete_step', step: idx + 1, totalSteps: frames.length }).catch(() => {});
+
+  // Whatever is on the pitch right now belongs to the step being displayed —
+  // bank it before the array shifts, or those edits vanish with the splice.
+  saveCurrentToFrame();
+
+  // Make the deletion undoable: the DOM snapshot alone can't bring a step
+  // back, so carry the removed frame (and where it sat) on the undo entry.
+  S.pushUndo();
+  const entry = S.undoStack[S.undoStack.length - 1];
+  if (entry) {
+    entry._removedStep = { at: idx, frame: frames[idx] };
+    entry._frameId = frames[currentFrame]?.id || null;
+  }
+
   frames.splice(idx, 1);
+  // Deleting a step BEFORE the current one shifts everything down by one;
+  // without this the board silently jumps to a different step.
+  if (idx < currentFrame) currentFrame--;
   if (currentFrame >= frames.length) currentFrame = frames.length - 1;
+  if (currentFrame < 0) currentFrame = 0;
   applyFrame(currentFrame);
   renderStepBar();
   drawTrails();
+  showNotification(`Step ${idx + 1} deleted — Undo to bring it back.`, 'info', 4000);
 }
 
 async function clearAllSteps() {

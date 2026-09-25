@@ -59,16 +59,24 @@ export function setDirty(v) {
 export const undoStack = [];
 const MAX_UNDO = 40;
 
+// In animation mode the DOM only shows ONE step, so a DOM snapshot alone is
+// ambiguous — undo also has to know which step the snapshot belongs to.
+// app.js registers a stamper that tags every entry with the active step.
+let _undoStamp = null;
+export function registerUndoStamp(fn) { _undoStamp = fn; }
+
 export function pushUndo() {
   const objLayer = document.getElementById('objects-layer');
   const plLayer = document.getElementById('players-layer');
   setDirty(true);   // every mutating action goes through here
-  undoStack.push({
+  const entry = {
     objects: objLayer.innerHTML,
     players: plLayer.innerHTML,
     playerCounts: { ...playerCounts },
     objectCounter: objectCounter
-  });
+  };
+  if (_undoStamp) { try { Object.assign(entry, _undoStamp()); } catch (e) {} }
+  undoStack.push(entry);
   if (undoStack.length > MAX_UNDO) undoStack.shift();
 }
 
