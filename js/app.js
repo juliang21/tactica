@@ -1,5 +1,5 @@
 import * as S from './state.js';
-import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected, isPointInSelectionBounds, beginGroupDrag } from './interaction.js';
+import { deselect, deleteSelected, switchTab, select, applyTransform, updateArrowVisual, arrowControlPoint, registerDeselect, showFreeformHandles, registerRewrap, registerHeadlineRewrap, registerVisionUpdate, registerMarkerRimUpdate, registerFreeformUpdate, registerMotionUpdate, registerTagReposition, registerLinkUpdate, registerShadowLabelUpdate, registerZonePanelSync, registerDragEnd, makeDraggable, registerSelectTracker, registerSelectTeamContext, startMarquee, updateMarquee, endMarquee, cleanupMarquee, forEachSelected, isPointInSelectionBounds, beginGroupDrag } from './interaction.js';
 import { addPlayer, addReferee, addBall, addCone, addSmallGoal, addDiscCone, addArrow, addShadow, addMarker, updateMarkerRim, addSpotlight, addTextBox, updateTextBoxBg, rewrapTextBox, addHeadline, rewrapHeadline, openHeadlineEdit, addVision, updateVisionPolygon, addFreeformZone, updateFreeformPath, addMotion, updateMotionVisual, updatePlayerArms, addTag, openTagEdit, repositionTag, addLink, updateLink, updateAllLinks, addPair, addFreePair, updatePair, updateAllPairs, addNetZone, addFreeNetZone, updateNetZone, updateAllNetZones, updateShadowLabel, addImage, addZoom, addLadder, updateLadder, addPole, addHoop, addMannequin, updatePoleColor, updateHoopColor, updateMannequinColor } from './elements.js';
 import { setTool, setArrowType, selectTeamContext, applyKit, applyColor, placeFormation,
          liveUpdateNumber, confirmNumber, adjustPlayerNumber, liveUpdateName, confirmName,
@@ -70,6 +70,7 @@ registerAnalysisTracker(() => {
 registerSelectTracker((type) => {
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'element_selected', { element: type }).catch(() => {});
+  showPathHandle();
 });
 
 registerDragEnd((el) => {
@@ -79,6 +80,7 @@ registerDragEnd((el) => {
     if (el.dataset.type === 'player') drawTrails();
     refreshActiveStepThumbnail();
   }
+  showPathHandle();     // it moved: the path now leaves from somewhere else
 });
 
 // ─── Undo ────────────────────────────────────────────────────────────────────
@@ -3303,10 +3305,38 @@ function snapshotPositions() {
   return positions;
 }
 
+// Point on the quadratic bezier A→B with control point cp, at t
+function _bezierAt(a, b, cp, t) {
+  const u = 1 - t;
+  return {
+    x: u * u * a.x + 2 * u * t * cp.x + t * t * b.x,
+    y: u * u * a.y + 2 * u * t * cp.y + t * t * b.y
+  };
+}
+
 // Interpolate all dataset properties between two snapshots
 function _interpolateSnap(el, from, to, ease) {
+  // `pathCurve` is how much the path LEAVING this step bows out. Without it
+  // every element travelled in a dead straight line between steps, which is
+  // what made curved passes impossible to animate: you could draw the arc,
+  // but on playback the ball ignored it and went direct.
+  const k = parseFloat(from.pathCurve || '0');
+  let curved = null;
+  if (k) {
+    const a = { x: parseFloat(from.cx), y: parseFloat(from.cy) };
+    const b = { x: parseFloat(to.cx), y: parseFloat(to.cy) };
+    if (!isNaN(a.x) && !isNaN(a.y) && !isNaN(b.x) && !isNaN(b.y)) {
+      curved = _bezierAt(a, b, arrowControlPoint(a, b, k), ease);
+    }
+  }
   for (const key in to) {
     if (key.startsWith('_')) continue;
+    if (curved && (key === 'cx' || key === 'cy')) {
+      el.dataset[key] = key === 'cx' ? curved.x : curved.y;
+      continue;
+    }
+    // the bend belongs to the segment, not to the element: it must not tween
+    if (key === 'pathCurve') { el.dataset.pathCurve = from.pathCurve ?? to.pathCurve ?? '0'; continue; }
     if (_numericKeys.has(key)) {
       const a = parseFloat(from[key]);
       const b = parseFloat(to[key]);
@@ -3474,6 +3504,118 @@ async function clearAllSteps() {
   if (container) container.style.display = 'none';
 }
 
+// ─── Path-bend handle ───────────────────────────────────────────────────────
+// Lets you bend the route an element takes to the NEXT step, so a pass can
+// travel round a defender instead of through him. The bend is stored on the
+// element as `pathCurve` and gets snapshotted per step like everything else,
+// so each segment can bend differently.
+let pathHandleGroup = null;
+let pathDragEl = null;
+
+function removePathHandle() {
+  if (pathHandleGroup) { pathHandleGroup.remove(); pathHandleGroup = null; }
+}
+
+// Where the element is now, and where it lands on the next step.
+function _pathEndpoints(el) {
+  if (animationRunning || frames.length < 2) return null;
+  if (currentFrame < 0 || currentFrame >= frames.length - 1) return null;
+  const next = frames[currentFrame + 1];
+  if (!next || !next.elementIds.has(el.id)) return null;
+  const to = next.positions[el.id];
+  if (!to) return null;
+  const a = { x: parseFloat(el.dataset.cx), y: parseFloat(el.dataset.cy) };
+  const b = { x: parseFloat(to.cx), y: parseFloat(to.cy) };
+  if ([a.x, a.y, b.x, b.y].some(isNaN)) return null;
+  if (Math.hypot(b.x - a.x, b.y - a.y) < 12) return null;   // barely moves: nothing to bend
+  return { a, b };
+}
+
+function showPathHandle() {
+  removePathHandle();
+  const el = S.selectedEl;
+  if (!el) return;
+  if (document.body.classList.contains('shared-view')) return;
+  const ends = _pathEndpoints(el);
+  if (!ends) return;
+
+  const ns = 'http://www.w3.org/2000/svg';
+  const k = parseFloat(el.dataset.pathCurve || '0');
+  const cp = arrowControlPoint(ends.a, ends.b, k);
+
+  pathHandleGroup = document.createElementNS(ns, 'g');
+  pathHandleGroup.setAttribute('id', 'path-bend-handle');
+
+  const preview = document.createElementNS(ns, 'path');
+  preview.setAttribute('d', `M${ends.a.x},${ends.a.y} Q${cp.x},${cp.y} ${ends.b.x},${ends.b.y}`);
+  preview.setAttribute('fill', 'none');
+  preview.setAttribute('stroke', '#C9A962');
+  preview.setAttribute('stroke-width', '1.6');
+  preview.setAttribute('stroke-dasharray', '4,5');
+  preview.setAttribute('opacity', '0.75');
+  preview.setAttribute('pointer-events', 'none');
+  pathHandleGroup.appendChild(preview);
+
+  // Same rule as the arrow handles: a bigger target on a phone.
+  const isMobile = 'ontouchstart' in window && window.innerWidth <= 768;
+  const g = document.createElementNS(ns, 'g');
+  g.setAttribute('cursor', 'grab');
+  const hit = document.createElementNS(ns, 'circle');
+  hit.setAttribute('cx', cp.x); hit.setAttribute('cy', cp.y);
+  hit.setAttribute('r', isMobile ? '22' : '14');
+  hit.setAttribute('fill', 'transparent'); hit.setAttribute('stroke', 'none');
+  g.appendChild(hit);
+  const dot = document.createElementNS(ns, 'circle');
+  dot.setAttribute('cx', cp.x); dot.setAttribute('cy', cp.y);
+  dot.setAttribute('r', isMobile ? '10' : '6');
+  dot.setAttribute('fill', '#C9A962');
+  dot.setAttribute('stroke', '#1a1a1a'); dot.setAttribute('stroke-width', '1.5');
+  g.appendChild(dot);
+  g.addEventListener('mousedown', onPathHandleDown);
+  g.addEventListener('touchstart', onPathHandleDown, { passive: false });
+  pathHandleGroup.appendChild(g);
+
+  S.svg.appendChild(pathHandleGroup);
+}
+
+function onPathHandleDown(e) {
+  e.stopPropagation(); e.preventDefault();
+  pathDragEl = S.selectedEl;
+}
+
+function onPathHandleMove(e) {
+  if (!pathDragEl) return;
+  const ends = _pathEndpoints(pathDragEl);
+  if (!ends) return;
+  e.preventDefault();
+  const pt = S.getSVGPoint(e);
+  // Project the pointer onto the perpendicular of the segment: that distance
+  // IS the curvature, same as the arrow curve handle does.
+  const midX = (ends.a.x + ends.b.x) / 2, midY = (ends.a.y + ends.b.y) / 2;
+  let perpX = -(ends.b.y - ends.a.y), perpY = ends.b.x - ends.a.x;
+  const len = Math.hypot(perpX, perpY);
+  if (len < 1) return;
+  perpX /= len; perpY /= len;
+  const k = (pt.x - midX) * perpX + (pt.y - midY) * perpY;
+  pathDragEl.dataset.pathCurve = String(k);
+  showPathHandle();
+}
+
+function onPathHandleUp() {
+  if (!pathDragEl) return;
+  pathDragEl = null;
+  saveCurrentToFrame();        // the bend belongs to the step, so bank it there
+  drawTrails();
+  refreshActiveStepThumbnail();
+}
+
+document.addEventListener('mousemove', onPathHandleMove);
+document.addEventListener('touchmove', onPathHandleMove, { passive: false });
+document.addEventListener('mouseup', onPathHandleUp);
+document.addEventListener('touchend', onPathHandleUp);
+
+registerDeselect(removePathHandle);
+
 function drawTrails() {
   if (trailsGroup) trailsGroup.remove();
   if (frames.length < 2) { trailsGroup = null; return; }
@@ -3508,15 +3650,27 @@ function drawTrails() {
     const prevX = parseFloat(pPrev.cx), prevY = parseFloat(pPrev.cy);
     const currX = parseFloat(pCurr.cx), currY = parseFloat(pCurr.cy);
 
-    const trail = document.createElementNS(ns, 'line');
-    trail.setAttribute('x1', prevX); trail.setAttribute('y1', prevY);
-    trail.setAttribute('x2', currX); trail.setAttribute('y2', currY);
+    // The bend lives on the step the movement LEAVES, so the trail arriving at
+    // this step reads the previous one's. Without that the trail would draw a
+    // straight line while the animation flew a curve.
+    const kIn = parseFloat(pPrev.pathCurve || '0');
+    const A = { x: prevX, y: prevY }, B = { x: currX, y: currY };
+    const cpIn = kIn ? arrowControlPoint(A, B, kIn) : null;
+
+    const trail = document.createElementNS(ns, 'path');
+    trail.setAttribute('d', cpIn
+      ? `M${prevX},${prevY} Q${cpIn.x},${cpIn.y} ${currX},${currY}`
+      : `M${prevX},${prevY} L${currX},${currY}`);
+    trail.setAttribute('fill', 'none');
     trail.setAttribute('stroke', color); trail.setAttribute('stroke-width', '2');
     trail.setAttribute('stroke-dasharray', '6,4'); trail.setAttribute('opacity', '0.5');
     trail.setAttribute('stroke-linecap', 'round');
 
-    const mx = (prevX + currX) / 2, my = (prevY + currY) / 2;
-    const angle = Math.atan2(dy, dx);
+    // chevron sits on the curve, pointing along the real tangent
+    const mid = cpIn ? _bezierAt(A, B, cpIn, 0.5) : { x: (prevX + currX) / 2, y: (prevY + currY) / 2 };
+    const ahead = cpIn ? _bezierAt(A, B, cpIn, 0.56) : { x: currX, y: currY };
+    const mx = mid.x, my = mid.y;
+    const angle = Math.atan2(ahead.y - mid.y, ahead.x - mid.x);
     const sz = 5;
     const chev = document.createElementNS(ns, 'polygon');
     const tipX = mx + sz * Math.cos(angle), tipY = my + sz * Math.sin(angle);

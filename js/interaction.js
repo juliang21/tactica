@@ -24,6 +24,10 @@ function _getElementIcon(type, el) {
 let _rewrapFn = null;
 let _selectTrackFn = null;
 export function registerSelectTracker(fn) { _selectTrackFn = fn; }
+// app.js owns the animation frames, so it has to be told when the selection
+// goes away in order to take its path handle off the pitch.
+let _deselectFn = null;
+export function registerDeselect(fn) { _deselectFn = fn; }
 export function registerRewrap(fn) { _rewrapFn = fn; }
 
 // ─── Vision polygon update callback ─────────────────────────────────────────
@@ -1103,6 +1107,7 @@ export function deselectVisual(el) {
 }
 
 export function deselect() {
+  if (_deselectFn) _deselectFn();
   if (!S.selectedEl && S.selectedEls.size === 0) return;
   // Deselect all multi-selected elements
   for (const el of S.selectedEls) deselectVisual(el);
