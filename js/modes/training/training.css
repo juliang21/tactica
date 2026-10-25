@@ -500,65 +500,159 @@ body.training-drill-mode #pitch-container {
 /* ── Library cards ─────────────────────────────────────────────────────── */
 .drill-card-list {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
+  gap: 16px;
 }
+
+/* ── Library toolbar: count + category filter + sort ───────────────────── */
+.library-toolbar {
+  display: flex; flex-direction: column; gap: 10px;
+  padding-bottom: 2px;
+}
+.lib-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
+.lib-count { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; }
+.lib-count strong { color: var(--text); font-size: 14px; font-weight: 800; }
+.lib-count-of { color: var(--text-dim); }
+.lib-chips { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.lib-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: inherit; font-size: 11.5px; font-weight: 600;
+  color: var(--text-muted); background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
+  padding: 5px 11px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+}
+.lib-chip:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
+.lib-chip.active {
+  color: #0d1a12; background: var(--accent); border-color: var(--accent); font-weight: 700;
+}
+.lib-chip-n { font-size: 10px; opacity: 0.65; font-variant-numeric: tabular-nums; }
+.lib-sort { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+.lib-sort > span { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); font-weight: 700; }
+.lib-sort-select {
+  font-family: inherit; font-size: 12px; color: var(--text);
+  background: var(--panel); border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 7px; padding: 6px 9px; cursor: pointer;
+}
+.lib-sort-select:focus { outline: none; border-color: var(--accent); }
+
+/* ── Drill card ────────────────────────────────────────────────────────── */
 .drill-card {
   position: relative;
+  display: flex; flex-direction: column;
   background: var(--panel);
   border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 10px;
+  border-radius: 12px;
   padding: 0;
   overflow: hidden;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
 }
+.drill-card:hover, .drill-card:focus-visible {
+  border-color: var(--accent); background: var(--panel2);
+  transform: translateY(-2px); outline: none;
+}
+.drill-card-media { position: relative; }
 .drill-card-thumb {
   display: block; width: 100%;
-  aspect-ratio: 700 / 480;
-  object-fit: contain;   /* drills can be on portrait pitches — show all of it */
-  background: #14200f;
+  aspect-ratio: 16 / 10;
+  object-fit: contain;
+  /* Matches the colour baked into the thumbnail canvas, so a portrait board
+     letterboxed into a landscape card reads as one surface, not black bars. */
+  background: #1a1f2e;
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 .drill-card-thumb-empty {
   display: flex; align-items: center; justify-content: center;
   color: var(--text-dim);
 }
-.drill-card-body { padding: 12px 16px 14px; }
-.drill-card:hover { border-color: var(--accent); background: var(--panel2); }
-.drill-card-title { font-size: 14px; font-weight: 700; color: var(--text); margin-bottom: 4px; padding-right: 30px; }
-.drill-card-meta { font-size: 11px; color: var(--text-muted); }
-.drill-card-delete {
+.drill-card-thumb-empty svg { width: 38px; height: 27px; }
+.drill-card-duration {
+  position: absolute; left: 8px; bottom: 8px;
+  font-size: 10.5px; font-weight: 700; color: #fff;
+  background: rgba(0,0,0,0.62); backdrop-filter: blur(3px);
+  border-radius: 5px; padding: 3px 7px; letter-spacing: 0.01em;
+  pointer-events: none;
+}
+/* Actions stay out of the way until the card is hovered or keyboard-focused.
+   They were permanently visible before, which made every card look busy. */
+.drill-card-actions {
   position: absolute; top: 8px; right: 8px;
-  width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  /* Visible by default — coaches reported not finding delete when it only
-     appeared on hover. Reads as a clear affordance, reddens on hover. */
-  background: rgba(239,68,68,0.10);
-  border: 1px solid rgba(239,68,68,0.28);
-  color: #ef7a7a;
-  font-size: 16px;
-  line-height: 1;
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.15s;
+  display: flex; gap: 5px;
+  opacity: 0; transition: opacity 0.15s;
 }
+.drill-card:hover .drill-card-actions,
+.drill-card:focus-within .drill-card-actions { opacity: 1; }
+.drill-card-copy, .drill-card-delete {
+  width: 26px; height: 26px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(10,10,10,0.72); backdrop-filter: blur(4px);
+  border: 1px solid rgba(255,255,255,0.14);
+  color: #e2e2e2; cursor: pointer; border-radius: 7px;
+  transition: all 0.15s; padding: 0;
+}
+.drill-card-copy svg, .drill-card-delete svg { display: block; }
+.drill-card-copy:hover { color: #0d1a12; background: var(--accent); border-color: var(--accent); }
 .drill-card-delete:hover { color: #fff; background: #ef4444; border-color: #ef4444; }
-/* Duplicate sits left of delete, same chip size but neutral so the destructive
-   action stays the visually louder one. */
-.drill-card-copy {
-  position: absolute; top: 8px; right: 38px;
-  width: 24px; height: 24px;
-  display: flex; align-items: center; justify-content: center;
-  background: rgba(255,255,255,0.06);
-  border: 1px solid rgba(255,255,255,0.16);
-  color: var(--text-dim);
-  cursor: pointer;
-  border-radius: 6px;
-  transition: all 0.15s;
+
+.session-card .drill-card-body { gap: 8px; padding: 14px; }
+.drill-card-body {
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 12px 14px 13px;
+  flex: 1 1 auto;
 }
-.drill-card-copy:hover { color: #fff; background: var(--accent); border-color: var(--accent); }
-.drill-card-copy svg { display: block; }
+.drill-card-title {
+  font-size: 14px; font-weight: 700; color: var(--text); margin: 0;
+  line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+.drill-card-desc {
+  font-size: 11.5px; line-height: 1.45; color: var(--text-muted); margin: 0;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden;
+}
+/* Structural facts (players / minutes / kit) read as a row of figures, kept
+   separate from the coaching objectives below — they used to be one
+   undifferentiated dot-separated string. */
+.drill-card-stats {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  margin-top: auto; padding-top: 8px;
+  border-top: 1px solid rgba(255,255,255,0.06);
+}
+.drill-stat {
+  display: inline-flex; align-items: center; gap: 4.5px;
+  font-size: 11.5px; font-weight: 600; color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+}
+.drill-stat i { display: inline-flex; color: var(--text-dim); }
+.drill-stat i svg { width: 13px; height: 13px; }
+.drill-card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.drill-tag {
+  font-size: 10px; font-weight: 600; color: var(--text-muted);
+  background: rgba(255,255,255,0.055);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 999px; padding: 2.5px 8px;
+  max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+.drill-tag-more { color: var(--text-dim); }
+
+@media (max-width: 720px) {
+  .drill-card-list { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 12px; }
+  .library-toolbar { gap: 10px; }
+  .lib-count { width: 100%; }
+  /* Category chips become one horizontally scrollable row instead of wrapping
+     into three lines and pushing the grid off-screen. */
+  .lib-chips {
+    flex-wrap: nowrap; overflow-x: auto; -webkit-overflow-scrolling: touch;
+    scrollbar-width: none; padding-bottom: 2px;
+  }
+  .lib-chips::-webkit-scrollbar { display: none; }
+  .lib-sort > span { display: none; }
+  .drill-card-body { padding: 10px 11px 11px; gap: 5px; }
+  .drill-card-title { font-size: 13px; }
+  .drill-card-desc { -webkit-line-clamp: 2; font-size: 11px; }
+  .drill-card-stats { gap: 9px; }
+  /* Touch devices have no hover, so the actions are always available. */
+  .drill-card-actions { opacity: 1; }
+}
 
 /* ═══ SESSION EDITOR ═══════════════════════════════════════════════════════ */
 /* Visible when in the session editor view. Hides the side panel (sessions
@@ -794,6 +888,9 @@ body.training-session-mode #topbar-session-save-btn { display: inline-flex !impo
   color: var(--accent); background: var(--accent-subtle);
   border-radius: 4px; padding: 2px 6px;
 }
+/* On a drill card the category sits on its own line above the title rather
+   than inline with it, which was wrapping titles around the chip. */
+.drill-card-body .drill-card-phase { align-self: flex-start; margin-right: 0; }
 
 /* Session header: total time + equipment + print */
 .session-header-info { display: flex; flex-direction: column; gap: 6px; min-width: 0; }

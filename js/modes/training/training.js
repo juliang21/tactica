@@ -764,19 +764,155 @@ export async function saveDrill() {
 
 // ─── Library ────────────────────────────────────────────────────────────────
 async function renderLibrary() {
+  invalidateDrillCache();
   await renderDrillLibrary();
   await renderSessionLibrary();
+}
+
+// ─── Drill library ──────────────────────────────────────────────────────────
+// The library is the screen coaches live in once they have more than a handful
+// of drills, so it carries a toolbar (count + category + sort) and cards rich
+// enough to pick from without opening anything.
+let _drillsCache = null;
+const _lib = { q: '', category: 'all', sort: 'recent' };
+function invalidateDrillCache() { _drillsCache = null; }
+
+const ICONS = {
+  players: '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="6" cy="5.5" r="2.5"/><path d="M1.5 14c0-2.5 2-4.2 4.5-4.2S10.5 11.5 10.5 14"/><path d="M10.8 3.5a2.4 2.4 0 0 1 0 4.6"/><path d="M12.2 10c1.4.6 2.3 1.9 2.3 4"/></svg>',
+  clock:   '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="8" r="6.3"/><path d="M8 4.4V8l2.4 1.6"/></svg>',
+  kit:     '<svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M8 2.2 13.6 5v6L8 13.8 2.4 11V5z"/><path d="M8 7.6 13.6 5M8 7.6 2.4 5M8 7.6v6.2"/></svg>',
+  board:   '<svg viewBox="0 0 34 24" fill="none" stroke="currentColor" stroke-width="1.4"><rect x="1" y="1" width="32" height="22" rx="2"/><line x1="17" y1="1" x2="17" y2="23" stroke-width="1"/><circle cx="17" cy="12" r="4" stroke-width="1"/></svg>',
+};
+
+function drillObjectives(d) {
+  return [...(d.objectives?.general || []), ...(d.objectives?.offensive || []), ...(d.objectives?.defensive || [])];
+}
+function equipmentPieces(counts) {
+  return Object.values(counts || {}).reduce((a, n) => a + (parseInt(n, 10) || 0), 0);
+}
+function drillSearchText(d) {
+  return [d.name, d.category, d.description, ...drillObjectives(d)].filter(Boolean).join(' ').toLowerCase();
+}
+
+function buildLibraryToolbar(all, shown) {
+  const bar = document.createElement('div');
+  bar.className = 'library-toolbar';
+  // Only offer categories that actually exist in this coach's library.
+  const cats = [...new Set(all.map(d => d.category).filter(Boolean))].sort();
+  const chip = (val, label, n) =>
+    `<button class="lib-chip${_lib.category === val ? ' active' : ''}" type="button" data-cat="${escapeHtml(val)}">
+       ${escapeHtml(label)}<span class="lib-chip-n">${n}</span></button>`;
+  bar.innerHTML = `
+    <div class="lib-toolbar-row">
+      <div class="lib-count"><strong>${shown}</strong> ${shown === 1 ? 'drill' : 'drills'}${
+        shown !== all.length ? ` <span class="lib-count-of">of ${all.length}</span>` : ''}</div>
+      <label class="lib-sort">
+        <span>Sort</span>
+        <select class="lib-sort-select">
+          <option value="recent">Last edited</option>
+          <option value="created">Newest first</option>
+          <option value="name">Name A–Z</option>
+          <option value="duration">Duration</option>
+        </select>
+      </label>
+    </div>
+    <div class="lib-chips">
+      ${chip('all', 'All', all.length)}
+      ${cats.map(c => chip(c, c, all.filter(d => d.category === c).length)).join('')}
+    </div>`;
+  bar.querySelectorAll('.lib-chip').forEach(b => {
+    b.onclick = () => { _lib.category = b.dataset.cat; renderDrillLibrary(); };
+  });
+  const sel = bar.querySelector('.lib-sort-select');
+  sel.value = _lib.sort;
+  sel.onchange = () => { _lib.sort = sel.value; renderDrillLibrary(); };
+  return bar;
+}
+
+function buildDrillCard(d) {
+  const card = document.createElement('article');
+  card.className = 'drill-card';
+  card.tabIndex = 0;
+  card.dataset.search = drillSearchText(d);
+
+  const objs = drillObjectives(d);
+  const tagHtml = objs.slice(0, 2).map(t => `<span class="drill-tag">${escapeHtml(t)}</span>`).join('')
+    + (objs.length > 2 ? `<span class="drill-tag drill-tag-more">+${objs.length - 2}</span>` : '');
+
+  const hasThumb = typeof d.thumb === 'string' && d.thumb.startsWith('data:image');
+  const media = hasThumb
+    ? `<img class="drill-card-thumb" src="${d.thumb}" alt="" loading="lazy">`
+    : `<div class="drill-card-thumb drill-card-thumb-empty">${ICONS.board}</div>`;
+
+  const pieces = equipmentPieces(d.equipment);
+  const stat = (icon, val, title) =>
+    `<span class="drill-stat" title="${escapeHtml(title)}"><i>${icon}</i>${escapeHtml(String(val))}</span>`;
+
+  card.innerHTML = `
+    <div class="drill-card-media">
+      ${media}
+      ${d.duration ? `<span class="drill-card-duration">${escapeHtml(String(d.duration))} min</span>` : ''}
+      <div class="drill-card-actions">
+        <button class="drill-card-copy" type="button" aria-label="Duplicate drill" title="Duplicate">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
+            <rect x="5.5" y="5.5" width="9" height="9" rx="1.8"/>
+            <path d="M10.5 3.2A1.7 1.7 0 0 0 8.8 1.5H3.2A1.7 1.7 0 0 0 1.5 3.2v5.6a1.7 1.7 0 0 0 1.7 1.7"/>
+          </svg>
+        </button>
+        <button class="drill-card-delete" type="button" aria-label="Delete drill" title="Delete">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M2.5 4.5h11M6.2 4.5V3a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v1.5"/>
+            <path d="M4 4.5 4.6 13a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9L12 4.5"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+    <div class="drill-card-body">
+      ${d.category ? `<span class="drill-card-phase">${escapeHtml(d.category)}</span>` : ''}
+      <h3 class="drill-card-title">${escapeHtml(d.name || 'Untitled drill')}</h3>
+      ${d.description ? `<p class="drill-card-desc">${escapeHtml(d.description)}</p>` : ''}
+      <div class="drill-card-stats">
+        ${d.numPlayers ? stat(ICONS.players, d.numPlayers, 'Players') : ''}
+        ${d.duration ? stat(ICONS.clock, d.duration + ' min', 'Duration') : ''}
+        ${pieces ? stat(ICONS.kit, pieces, equipmentText(d.equipment)) : ''}
+      </div>
+      ${tagHtml ? `<div class="drill-card-tags">${tagHtml}</div>` : ''}
+    </div>`;
+
+  const open = (e) => {
+    if (e.target.closest('.drill-card-delete') || e.target.closest('.drill-card-copy')) return;
+    openDrill(d.id);
+  };
+  card.onclick = open;
+  card.onkeydown = (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openDrill(d.id); } };
+  card.querySelector('.drill-card-copy').onclick = async (e) => {
+    e.stopPropagation();
+    invalidateDrillCache();
+    await duplicateDrill(d);
+  };
+  card.querySelector('.drill-card-delete').onclick = async (e) => {
+    e.stopPropagation();
+    if (!confirm(`Delete drill "${d.name || 'Untitled'}"?`)) return;
+    await deleteDrill(d.id);
+    track('training_drill_deleted', { drillId: d.id });
+    invalidateDrillCache();
+    renderDrillLibrary();
+  };
+  return card;
 }
 
 async function renderDrillLibrary() {
   const wrap = document.querySelectorAll('.training-library-section')[0];
   if (!wrap) return;
-  wrap.querySelectorAll('.training-empty, .drill-card-list').forEach(n => n.remove());
+  wrap.querySelectorAll('.training-empty, .drill-card-list, .library-toolbar').forEach(n => n.remove());
 
-  let drills = [];
-  try { drills = await listDrills(); } catch (e) { console.warn(e); }
+  if (!_drillsCache) {
+    try { _drillsCache = await listDrills(); }
+    catch (e) { console.warn(e); _drillsCache = []; }
+  }
+  const all = _drillsCache;
 
-  if (!drills.length) {
+  if (!all.length) {
     const empty = document.createElement('div');
     empty.className = 'training-empty';
     empty.innerHTML = 'No drills yet. Click <strong>New Drill</strong> above to create your first one.';
@@ -784,59 +920,33 @@ async function renderDrillLibrary() {
     return;
   }
 
-  const list = document.createElement('div');
-  list.className = 'drill-card-list';
-  drills.forEach(d => {
-    const card = document.createElement('div');
-    card.className = 'drill-card';
-    const objTags = [
-      ...(d.objectives?.general || []),
-      ...(d.objectives?.offensive || []),
-      ...(d.objectives?.defensive || []),
-    ].slice(0, 3);
-    card.dataset.search = [d.name, d.category,
-      ...(d.objectives?.general||[]), ...(d.objectives?.offensive||[]), ...(d.objectives?.defensive||[])
-    ].join(' ').toLowerCase();
-    const cat = d.category ? `<span class="drill-card-phase">${escapeHtml(d.category)}</span>` : '';
-    const dur = d.duration ? `${d.duration} min` : '';
-    const metaBits = [d.numPlayers ? `${d.numPlayers} players` : '', dur, ...objTags.map(t => escapeHtml(t))].filter(Boolean);
-    const thumbHtml = (typeof d.thumb === 'string' && d.thumb.startsWith('data:image'))
-      ? `<img class="drill-card-thumb" src="${d.thumb}" alt="" loading="lazy">`
-      : `<div class="drill-card-thumb drill-card-thumb-empty">
-           <svg width="34" height="24" viewBox="0 0 34 24" fill="none"><rect x="1" y="1" width="32" height="22" rx="2" stroke="currentColor" stroke-width="1.4"/><line x1="17" y1="1" x2="17" y2="23" stroke="currentColor" stroke-width="1"/><circle cx="17" cy="12" r="4" stroke="currentColor" stroke-width="1"/></svg>
-         </div>`;
-    card.innerHTML = `
-      ${thumbHtml}
-      <div class="drill-card-body">
-        <div class="drill-card-title">${cat}${escapeHtml(d.name || 'Untitled drill')}</div>
-        <div class="drill-card-meta">${metaBits.length ? metaBits.join(' · ') : 'no details yet'}</div>
-      </div>
-      <button class="drill-card-copy" type="button" aria-label="Duplicate drill" title="Duplicate drill">
-        <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
-          <rect x="5.5" y="5.5" width="9" height="9" rx="1.8"/>
-          <path d="M10.5 3.2A1.7 1.7 0 0 0 8.8 1.5H3.2A1.7 1.7 0 0 0 1.5 3.2v5.6a1.7 1.7 0 0 0 1.7 1.7"/>
-        </svg>
-      </button>
-      <button class="drill-card-delete" type="button" aria-label="Delete drill">&times;</button>
-    `;
-    card.onclick = (e) => {
-      if (e.target.closest('.drill-card-delete') || e.target.closest('.drill-card-copy')) return;
-      openDrill(d.id);
-    };
-    card.querySelector('.drill-card-copy').onclick = async (e) => {
-      e.stopPropagation();
-      await duplicateDrill(d);
-    };
-    card.querySelector('.drill-card-delete').onclick = async (e) => {
-      e.stopPropagation();
-      if (!confirm(`Delete drill "${d.name || 'Untitled'}"?`)) return;
-      await deleteDrill(d.id);
-      track('training_drill_deleted', { drillId: d.id });
-      renderDrillLibrary();
-    };
-    list.appendChild(card);
-  });
-  wrap.appendChild(list);
+  const q = _lib.q.trim().toLowerCase();
+  let list = all.filter(d =>
+    (_lib.category === 'all' || d.category === _lib.category) &&
+    (!q || drillSearchText(d).includes(q)));
+
+  const by = {
+    recent:   (a, b) => (b.updatedAt || 0) - (a.updatedAt || 0),
+    created:  (a, b) => (b.createdAt || 0) - (a.createdAt || 0),
+    name:     (a, b) => (a.name || '').localeCompare(b.name || ''),
+    duration: (a, b) => (parseInt(a.duration, 10) || 0) - (parseInt(b.duration, 10) || 0),
+  };
+  list = [...list].sort(by[_lib.sort] || by.recent);
+
+  wrap.appendChild(buildLibraryToolbar(all, list.length));
+
+  if (!list.length) {
+    const none = document.createElement('div');
+    none.className = 'training-empty';
+    none.textContent = q ? 'No drills match that search.' : 'No drills in this category.';
+    wrap.appendChild(none);
+    return;
+  }
+
+  const grid = document.createElement('div');
+  grid.className = 'drill-card-list';
+  list.forEach(d => grid.appendChild(buildDrillCard(d)));
+  wrap.appendChild(grid);
 }
 
 async function renderSessionLibrary() {
@@ -869,10 +979,27 @@ async function renderSessionLibrary() {
       ...(s.objectives?.offensive || []),
       ...(s.objectives?.defensive || []),
     ].slice(0, 3);
+    // Same anatomy as a drill card (body + hover actions) so the two lists read
+    // as one system; a session has no board of its own, so no media block.
+    card.classList.add('session-card');
     card.innerHTML = `
-      <div class="drill-card-title">${escapeHtml(s.name || 'Untitled session')}</div>
-      <div class="drill-card-meta">${count} ${count === 1 ? 'drill' : 'drills'} · ${s.numPlayers || '?'} players${tags.length ? ' · ' + tags.map(escapeHtml).join(' · ') : ''}</div>
-      <button class="drill-card-delete" type="button" aria-label="Delete session">&times;</button>
+      <div class="drill-card-body">
+        <span class="drill-card-phase">Session</span>
+        <h3 class="drill-card-title">${escapeHtml(s.name || 'Untitled session')}</h3>
+        <div class="drill-card-stats">
+          <span class="drill-stat" title="Drills"><i>${ICONS.kit}</i>${count} ${count === 1 ? 'drill' : 'drills'}</span>
+          ${s.numPlayers ? `<span class="drill-stat" title="Players"><i>${ICONS.players}</i>${escapeHtml(String(s.numPlayers))}</span>` : ''}
+        </div>
+        ${tags.length ? `<div class="drill-card-tags">${tags.map(t => `<span class="drill-tag">${escapeHtml(t)}</span>`).join('')}</div>` : ''}
+      </div>
+      <div class="drill-card-actions">
+        <button class="drill-card-delete" type="button" aria-label="Delete session" title="Delete">
+          <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
+            <path d="M2.5 4.5h11M6.2 4.5V3a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v1.5"/>
+            <path d="M4 4.5 4.6 13a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9L12 4.5"/>
+          </svg>
+        </button>
+      </div>
     `;
     card.onclick = (e) => {
       if (e.target.closest('.drill-card-delete')) return;
@@ -999,27 +1126,32 @@ if (document.readyState === 'loading') {
 // ─── Window exposure ────────────────────────────────────────────────────────
 // ─── Library search ──────────────────────────────────────────────────────────
 export function filterTrainingLibrary(query) {
-  const q = (query || '').trim().toLowerCase();
-  document.querySelectorAll('.training-library-section').forEach(section => {
-    const cards = section.querySelectorAll('.drill-card');
-    let shown = 0;
-    cards.forEach(card => {
-      const match = !q || (card.dataset.search || '').includes(q);
-      card.style.display = match ? '' : 'none';
-      if (match) shown++;
-    });
-    // toggle a "no matches" line per section when searching
-    let none = section.querySelector('.training-search-empty');
-    if (q && cards.length && shown === 0) {
-      if (!none) {
-        none = document.createElement('div');
-        none.className = 'training-empty training-search-empty';
-        section.appendChild(none);
-      }
-      none.textContent = 'No matches.';
-      none.style.display = '';
-    } else if (none) { none.style.display = 'none'; }
+  const q = (query || '').trim();
+  // Drills re-render through the filter/sort pipeline so the toolbar count
+  // stays truthful; sessions are a plain show/hide over their cards.
+  _lib.q = q;
+  renderDrillLibrary();
+
+  const section = document.querySelectorAll('.training-library-section')[1];
+  if (!section) return;
+  const needle = q.toLowerCase();
+  const cards = section.querySelectorAll('.drill-card');
+  let shown = 0;
+  cards.forEach(card => {
+    const match = !needle || (card.dataset.search || '').includes(needle);
+    card.style.display = match ? '' : 'none';
+    if (match) shown++;
   });
+  let none = section.querySelector('.training-search-empty');
+  if (needle && cards.length && shown === 0) {
+    if (!none) {
+      none = document.createElement('div');
+      none.className = 'training-empty training-search-empty';
+      section.appendChild(none);
+    }
+    none.textContent = 'No matches.';
+    none.style.display = '';
+  } else if (none) { none.style.display = 'none'; }
 }
 window.filterTrainingLibrary = filterTrainingLibrary;
 
