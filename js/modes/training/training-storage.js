@@ -141,3 +141,64 @@ export async function deleteSession(id) {
   }
   writeLocalSessions(readLocalSessions().filter(s => s.id !== id));
 }
+
+// ─── Migrate localStorage → Firestore ───────────────────────────────────────
+// Until the security rules named users/{uid}/drills and users/{uid}/sessions,
+// every cloud write was denied and quietly fell back to localStorage. Fixing
+// the rules only helps new saves, so a coach's existing library has to be
+// lifted up once, on the first sign-in after the fix.
+//
+// Deliberately conservative: never deletes the local copy, never overwrites a
+// cloud drill that is newer, and never throws — a failed migration must not
+// block sign-in or lose anything.
+const MIGRATION_KEY = 'tactica_training_migrated_';
+
+// Cloud-only listing. listDrills()/listSessions() fall back to localStorage
+// when the cloud read fails, which during a migration would mean comparing the
+// local library against itself, skipping every item and marking the migration
+// done without moving anything.
+async function listCloudOnly(uid, name) {
+  const q = query(collection(db, 'users', uid, name), orderBy('updatedAt', 'desc'));
+  const snap = await getDocs(q);
+  return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+}
+
+async function migrateCollection(localList, listCloud, saveCloud) {
+  let cloud = [];
+  try { cloud = await listCloud(); } catch (e) { return { moved: 0, failed: localList.length }; }
+  const byId = new Map(cloud.map(d => [d.id, d]));
+  let moved = 0, failed = 0;
+  for (const item of localList) {
+    const existing = byId.get(item.id);
+    // Skip anything the cloud already holds at the same or newer revision.
+    if (existing && (existing.updatedAt || 0) >= (item.updatedAt || 0)) continue;
+    try {
+      // saveCloud falls back to localStorage instead of throwing, so the
+      // return value is the only honest signal that it really reached cloud.
+      const { storedIn } = await saveCloud(item) || {};
+      if (storedIn === 'cloud') moved++; else failed++;
+    } catch (e) { console.warn('[training] migration failed for', item.id, e); failed++; }
+  }
+  return { moved, failed };
+}
+
+export async function migrateTrainingLocalToCloud(uid) {
+  if (!uid || !isSignedIn()) return null;
+  const key = MIGRATION_KEY + uid;
+  if (localStorage.getItem(key)) return null;
+
+  const drills = readLocal();
+  const sessions = readLocalSessions();
+  if (!drills.length && !sessions.length) {
+    localStorage.setItem(key, '1');
+    return null;
+  }
+
+  const d = await migrateCollection(drills, () => listCloudOnly(uid, 'drills'), saveDrillCloudOrLocal);
+  const s = await migrateCollection(sessions, () => listCloudOnly(uid, 'sessions'), saveSessionCloudOrLocal);
+
+  // Only mark done when nothing failed, so a flaky network retries next time
+  // instead of stranding the rest of the library on this device.
+  if (d.failed === 0 && s.failed === 0) localStorage.setItem(key, '1');
+  return { drills: d.moved, sessions: s.moved, failed: d.failed + s.failed };
+}

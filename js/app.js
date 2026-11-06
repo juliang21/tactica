@@ -40,6 +40,7 @@ import { registerMode, activateMode, getActiveModeId, switchTabForMode } from '.
 import { pitchMode } from './modes/pitch/config.js';
 import { imageMode } from './modes/image/config.js';
 import { trainingMode } from './modes/training/config.js';
+import { migrateTrainingLocalToCloud } from './modes/training/training-storage.js';
 
 // ─── Register Modes & activate default ─────────────────────────────────────
 registerMode('pitch', pitchMode);
@@ -6342,6 +6343,18 @@ onAuthChange(async (user) => {
     if (gate) gate.style.display = 'none';
     // Migrate localStorage to cloud on first sign-in
     try { await migrateLocalToCloud(user.uid); } catch (e) { console.warn('Migration error:', e); }
+    // Same for the Session Builder's drills and sessions, which were stranded
+    // on-device while the security rules didn't name their collections.
+    try {
+      const moved = await migrateTrainingLocalToCloud(user.uid);
+      if (moved && (moved.drills || moved.sessions)) {
+        const bits = [
+          moved.drills  ? `${moved.drills} drill${moved.drills === 1 ? '' : 's'}` : '',
+          moved.sessions ? `${moved.sessions} session${moved.sessions === 1 ? '' : 's'}` : '',
+        ].filter(Boolean).join(' and ');
+        showNotification(`${bits} from this device are now in your cloud library.`, 'success', 5000);
+      }
+    } catch (e) { console.warn('Training migration error:', e); }
     // Track auto-restored sessions (returning users who didn't actively sign in)
     if (!_authInitialized) {
       const method = user.providerData?.[0]?.providerId === 'google.com' ? 'google' : 'email';
