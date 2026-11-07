@@ -480,6 +480,12 @@
 
   <!-- ═══ TRAINING TAB ═══ -->
   <div class="tab-content" id="tab-training">
+    <div class="section">
+      <div class="section-header"><span class="icon">📚</span> Drill Library: What coaches have actually built</div>
+      <div class="stats-grid" id="training-lib-stats"></div>
+      <div id="training-lib-depth" style="margin-top:18px"></div>
+      <div id="training-lib-categories" style="margin-top:18px"></div>
+    </div>
     <div id="features-training"></div>
   </div>
 
@@ -570,6 +576,7 @@ window.switchAdminTab = function(tab) {
 // ─── Data cache ────────────────────────────────────────────────────────────
 let _allUsers = [];
 let _trafficData = null;   // tactica_admin/traffic_sources — GA4 sync, fetched once
+let _trainingStats = null; // tactica_admin/training_stats — Session Builder library aggregate
 let _allSessions = [];
 let _allActions = [];
 
@@ -590,6 +597,12 @@ window.loadDashboard = async function() {
         const tSnap = await getDoc(doc(db, 'tactica_admin', 'traffic_sources'));
         _trafficData = tSnap.exists() ? tSnap.data() : undefined;   // undefined = not set up yet
       } catch (e) { console.warn('Traffic sources fetch failed:', e); _trafficData = undefined; }
+    }
+    if (_trainingStats === null) {
+      try {
+        const gSnap = await getDoc(doc(db, 'tactica_admin', 'training_stats'));
+        _trainingStats = gSnap.exists() ? gSnap.data() : undefined;   // undefined = job hasn't run
+      } catch (e) { console.warn('Training stats fetch failed:', e); _trainingStats = undefined; }
     }
 
     const sessionsQ = query(collection(db, 'tactica_sessions'), orderBy('timestamp', 'desc'));
@@ -1486,6 +1499,94 @@ function renderSignupSources(usersFiltered, startMs, endMs) {
 // Channel bars respect the dashboard date filter (client-side over the synced
 // daily rows, capped at the 60-day sync window). Top sources are a fixed
 // last-28-days window. GA aggregates — the "Exclude me" toggle can't apply.
+// ─── Session Builder: drill library aggregate ───────────────────────────────
+// Reads tactica_admin/training_stats, written daily by refreshTrainingStats.
+// Coaches' drills are owner-readable only, so this is the one way the dashboard
+// can see library content without shipping it to the browser.
+// NOTE: these are all-time totals, not filtered by the date picker — the job
+// aggregates the library as it stands, so the range selector does not apply.
+function renderTrainingLibraryStats() {
+  const statsEl = document.getElementById('training-lib-stats');
+  const depthEl = document.getElementById('training-lib-depth');
+  const catEl = document.getElementById('training-lib-categories');
+  if (!statsEl) return;
+
+  if (!_trainingStats) {
+    statsEl.innerHTML = '';
+    depthEl.innerHTML = `<div style="color:#777;font-size:12px;padding:6px 0">
+      No library snapshot yet — the daily job hasn't run. Trigger it once with
+      <code>forceRefreshTrainingStats</code> and it takes over from there.</div>`;
+    catEl.innerHTML = '';
+    return;
+  }
+
+  const t = _trainingStats;
+  const ago = t.updatedAt ? Math.round((Date.now() - t.updatedAt) / 3600000) : null;
+  const sessionRate = t.coachesWithDrills
+    ? Math.round((t.coachesWithSessions / t.coachesWithDrills) * 100) : 0;
+
+  statsEl.innerHTML = `
+    <div class="stat-card"><div class="label">Drills Saved</div><div class="value">${t.totalDrills || 0}</div>
+      <div class="sub">${t.createdLast7 || 0} in the last 7 days</div></div>
+    <div class="stat-card"><div class="label">Coaches with a Drill</div><div class="value">${t.coachesWithDrills || 0}</div>
+      <div class="sub">${t.avgDrillsPerCoach || 0} drills each on average</div></div>
+    <div class="stat-card"><div class="label">Sessions Built</div><div class="value">${t.totalSessions || 0}</div>
+      <div class="sub">${t.avgDrillsPerSession || 0} drills per session</div></div>
+    <div class="stat-card"><div class="label">Drills but No Session</div><div class="value">${t.coachesDrillsButNoSession || 0}</div>
+      <div class="sub">${sessionRate}% of drill-makers compose a session</div></div>
+    <div class="stat-card"><div class="label">Avg Drill Length</div><div class="value">${t.avgDurationMin || 0}<span style="font-size:14px"> min</span></div></div>
+    <div class="stat-card"><div class="label">Snapshot Age</div><div class="value">${ago === null ? '—' : ago + 'h'}</div>
+      <div class="sub">refreshes daily</div></div>`;
+
+  // Library depth — the curve that decides where a free-tier cap would sit.
+  const buckets = t.depthBuckets || {};
+  const order = ['1-4', '5-19', '20+'];
+  const totalCoaches = order.reduce((n, k) => n + (buckets[k] || 0), 0);
+  const maxB = Math.max(1, ...order.map(k => buckets[k] || 0));
+  let dHtml = `<div style="color:#888;font-size:11px;margin-bottom:8px">Library depth: How many drills each coach has &middot; all-time &middot; sets where a free cap would bite</div>`;
+  order.forEach(k => {
+    const v = buckets[k] || 0;
+    const share = totalCoaches ? Math.round((v / totalCoaches) * 100) : 0;
+    dHtml += `<div class="breakdown-bar">
+      <span class="breakdown-label">${k} drills</span>
+      <div class="breakdown-track"><div class="breakdown-fill" style="width:${Math.round((v / maxB) * 100)}%"></div></div>
+      <span class="breakdown-count">${v} coaches</span>
+      <span class="breakdown-sessions">${share}% share</span>
+    </div>`;
+  });
+
+  // Completeness — would these drills be useful to another coach?
+  const c = t.completeness || {};
+  dHtml += `<div style="color:#888;font-size:11px;margin:16px 0 6px">Drill completeness: Share of drills carrying each field &middot; the quality bar for a public library</div>`;
+  [['Description', c.description], ['Coaching points', c.coachingPoints], ['Objectives tagged', c.objectives]]
+    .forEach(([label, v]) => {
+      const n = v || 0;
+      dHtml += `<div class="breakdown-bar">
+        <span class="breakdown-label">${label}</span>
+        <div class="breakdown-track"><div class="breakdown-fill" style="width:${n}%"></div></div>
+        <span class="breakdown-count">${n}%</span>
+        <span class="breakdown-sessions">of all drills</span>
+      </div>`;
+    });
+  depthEl.innerHTML = dHtml;
+
+  const cats = Object.entries(t.categories || {}).sort((a, b) => b[1] - a[1]);
+  if (!cats.length) { catEl.innerHTML = ''; return; }
+  const catMax = cats[0][1];
+  const catTotal = cats.reduce((n, [, v]) => n + v, 0);
+  let cHtml = `<div style="color:#888;font-size:11px;margin-bottom:8px">Category mix: What kind of sessions coaches are planning</div>`;
+  cats.forEach(([name, v]) => {
+    const share = catTotal ? Math.round((v / catTotal) * 100) : 0;
+    cHtml += `<div class="breakdown-bar">
+      <span class="breakdown-label">${name}</span>
+      <div class="breakdown-track"><div class="breakdown-fill" style="width:${Math.round((v / catMax) * 100)}%"></div></div>
+      <span class="breakdown-count">${v} drills</span>
+      <span class="breakdown-sessions">${share}% share</span>
+    </div>`;
+  });
+  catEl.innerHTML = cHtml;
+}
+
 function renderTrafficSources(startStr, endStr) {
   const el = document.getElementById('traffic-sources');
   if (!el) return;
@@ -1565,6 +1666,7 @@ function renderFeaturesTab(actions, activeUsers) {
   renderModeFeatures(FEATURE_CONFIGS_TACTICAL, actions, 'features-tactical', { includePitchAnalytics: true });
   renderModeFeatures(FEATURE_CONFIGS_IMAGE, actions, 'features-image');
   renderModeFeatures(FEATURE_CONFIGS_TRAINING, actions, 'features-training');
+  renderTrainingLibraryStats();
 }
 
 function renderModeFeatures(configs, actions, targetId, opts = {}) {
