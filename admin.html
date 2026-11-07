@@ -397,7 +397,7 @@
     <div class="section">
       <div class="section-header"><span class="icon">📈</span> Weekly Active Coaches: Distinct coaches who opened Táctica each week</div>
       <div class="chart-container">
-        <div class="chart-bars" id="wau-bars"></div>
+        <div class="ke-plot" id="wau-plot"></div>
         <div class="chart-labels" id="wau-labels"></div>
         <div id="wau-foot" style="color:#888;font-size:11px;margin-top:10px"></div>
       </div>
@@ -2123,10 +2123,10 @@ function renderChart(sessions, startStr, endStr) {
 const WAU_WEEKS = 12;
 
 function renderWau() {
-  const barsEl = document.getElementById('wau-bars');
+  const plotEl = document.getElementById('wau-plot');
   const labelsEl = document.getElementById('wau-labels');
   const footEl = document.getElementById('wau-foot');
-  if (!barsEl) return;
+  if (!plotEl) return;
 
   const excludeMe = document.getElementById('exclude-me')?.checked;
   const adminUids = excludeMe
@@ -2151,22 +2151,48 @@ function renderWau() {
   const counts = weeks.map(w => w.uids.size);
   const maxCount = Math.max(1, ...counts);
 
-  barsEl.innerHTML = '';
+  // Same geometry as the Key Event trend: fixed viewBox for the line, HTML
+  // slots on top so dots stay round and hit-targets stay bigger than the marks.
+  const W = 720, H = 120, PAD_T = 12;
+  const n = weeks.length;
+  const xFor = i => (i + 0.5) * (W / n);
+  const yFor = c => H - (c / maxCount) * (H - PAD_T);
+  const pts = counts.map((c, i) => [xFor(i), yFor(c)]);
+
+  // The current week is still filling, so it is drawn as a dashed tail with a
+  // hollow dot — provisional, never a solid line implying a real drop.
+  const solid = pts.slice(0, n - 1);
+  const linePath = monotonePath(solid);
+  const areaPath = solid.length > 1
+    ? `${linePath} L ${solid[solid.length - 1][0].toFixed(1)} ${H} L ${solid[0][0].toFixed(1)} ${H} Z`
+    : '';
+  const tail = solid.length
+    ? `M ${solid[solid.length - 1][0].toFixed(1)} ${solid[solid.length - 1][1].toFixed(1)} L ${pts[n - 1][0].toFixed(1)} ${pts[n - 1][1].toFixed(1)}`
+    : '';
+
+  let slots = '';
   labelsEl.innerHTML = '';
   weeks.forEach((w, i) => {
-    const n = w.uids.size;
-    const inProgress = i === weeks.length - 1;
-    const pct = (n / maxCount) * 100;
+    const c = w.uids.size;
+    const inProgress = i === n - 1;
     const label = new Date(w.start).toLocaleDateString('en', { month: 'short', day: 'numeric' });
-    // The current week is still filling up — hatch it so it is never read as a drop.
-    const style = inProgress
-      ? `height:${Math.max(pct, 2)}%;background:repeating-linear-gradient(45deg,#34D399,#34D399 4px,#1f6b50 4px,#1f6b50 8px)`
-      : `height:${Math.max(pct, 2)}%`;
-    barsEl.innerHTML += `<div class="chart-bar" style="${style}">
-      <div class="tooltip">Week of ${label}: ${n} active ${n === 1 ? 'coach' : 'coaches'}${inProgress ? ' (in progress)' : ''}</div>
-    </div>`;
+    const topPct = (yFor(c) / H) * 100;
+    const dotStyle = inProgress
+      ? `top:${topPct.toFixed(2)}%;background:#1a1a1a;border-color:#34D399`
+      : `top:${topPct.toFixed(2)}%`;
+    slots += `<div class="ke-slot"><span class="ke-dot" style="${dotStyle}"></span>` +
+      `<div class="tooltip">Week of ${label}: ${c} active ${c === 1 ? 'coach' : 'coaches'}` +
+      `${inProgress ? ' (in progress)' : ''}</div></div>`;
     labelsEl.innerHTML += `<span>${label}</span>`;
   });
+
+  plotEl.innerHTML = `
+    <svg class="ke-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" aria-hidden="true">
+      ${areaPath ? `<path d="${areaPath}" fill="rgba(52,211,153,0.10)"/>` : ''}
+      <path d="${linePath}" fill="none" stroke="#34D399" stroke-width="2" vector-effect="non-scaling-stroke" stroke-linejoin="round" stroke-linecap="round"/>
+      ${tail ? `<path d="${tail}" fill="none" stroke="#34D399" stroke-width="2" stroke-dasharray="4 4" vector-effect="non-scaling-stroke" stroke-linecap="round" opacity="0.7"/>` : ''}
+    </svg>
+    <div class="ke-slots">${slots}</div>`;
 
   const done = counts.slice(0, -1);
   const last = done[done.length - 1];
@@ -2178,7 +2204,7 @@ function renderWau() {
   }
   footEl.textContent = `Distinct coaches with at least one session, Mon–Sun · last ${WAU_WEEKS} weeks`
     + ' · independent of the date filter above'
-    + ` · striped bar is the current week, still in progress${delta}`
+    + ` · dashed tail is the current week, still in progress${delta}`
     + (excludeMe ? ' · admin accounts excluded' : '');
 }
 
