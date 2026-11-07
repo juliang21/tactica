@@ -394,6 +394,14 @@
 
   <!-- ═══ OVERVIEW TAB ═══ -->
   <div class="tab-content active" id="tab-overview">
+    <div class="section">
+      <div class="section-header"><span class="icon">📈</span> Weekly Active Coaches: Distinct coaches who opened Táctica each week</div>
+      <div class="chart-container">
+        <div class="chart-bars" id="wau-bars"></div>
+        <div class="chart-labels" id="wau-labels"></div>
+        <div id="wau-foot" style="color:#888;font-size:11px;margin-top:10px"></div>
+      </div>
+    </div>
     <div id="milestone-top"></div>
     <div class="section">
       <div class="section-header"><span class="icon">&#127919;</span> Use Case Breakdown: How coaches use Táctica</div>
@@ -788,6 +796,7 @@ window.applyDateFilter = function() {
   renderUseCaseBreakdown(filteredActions, activeUids.size, filteredSessions);
   renderSignupSources(allUsersFiltered, startMs, endMs);
   renderTrafficSources(startStr, endStr);
+  renderWau();
   renderUserStats(filteredUsers, filteredSessions, allUsersFiltered, filteredActions, activeUids, signUps);
   renderSessionStats(filteredSessions, filteredActions);
   renderFeatureStats(filteredActions, activeUids.size);
@@ -2104,6 +2113,73 @@ function renderChart(sessions, startStr, endStr) {
     barsEl.innerHTML += `<div class="chart-bar" style="height:${Math.max(pct, 2)}%"><div class="tooltip">${weekday} ${dayLabel}: ${b.count} sessions, ${b.uniqueUsers.size} coaches</div></div>`;
     labelsEl.innerHTML += `<span>${i % showEvery === 0 ? dayLabel.slice(3) : ''}</span>`;
   });
+}
+
+// ─── Weekly Active Coaches (WAU) ────────────────────────────────────────────
+// Distinct uids with at least one session in each Mon–Sun week. Uses the same
+// mondayOf() week boundary as the retention cohorts so the two tabs agree.
+// Deliberately independent of the From/To date filter — a trailing-12-week
+// trend is the point; clipping it to the picker would make it meaningless.
+const WAU_WEEKS = 12;
+
+function renderWau() {
+  const barsEl = document.getElementById('wau-bars');
+  const labelsEl = document.getElementById('wau-labels');
+  const footEl = document.getElementById('wau-foot');
+  if (!barsEl) return;
+
+  const excludeMe = document.getElementById('exclude-me')?.checked;
+  const adminUids = excludeMe
+    ? new Set((_allUsers || []).filter(u => ADMIN_EMAILS.includes(u.email)).map(u => u.uid))
+    : new Set();
+
+  const thisMonday = mondayOf(Date.now());
+  const weeks = [];
+  for (let i = WAU_WEEKS - 1; i >= 0; i--) {
+    weeks.push({ start: addWeeks(thisMonday, -i), uids: new Set() });
+  }
+  const firstStart = weeks[0].start;
+
+  (_allSessions || []).forEach(sess => {
+    const ts = sess.timestamp;
+    if (!ts || ts < firstStart || adminUids.has(sess.uid)) return;
+    const m = mondayOf(ts);
+    const w = weeks.find(x => x.start === m);
+    if (w) w.uids.add(sess.uid);
+  });
+
+  const counts = weeks.map(w => w.uids.size);
+  const maxCount = Math.max(1, ...counts);
+
+  barsEl.innerHTML = '';
+  labelsEl.innerHTML = '';
+  weeks.forEach((w, i) => {
+    const n = w.uids.size;
+    const inProgress = i === weeks.length - 1;
+    const pct = (n / maxCount) * 100;
+    const label = new Date(w.start).toLocaleDateString('en', { month: 'short', day: 'numeric' });
+    // The current week is still filling up — hatch it so it is never read as a drop.
+    const style = inProgress
+      ? `height:${Math.max(pct, 2)}%;background:repeating-linear-gradient(45deg,#34D399,#34D399 4px,#1f6b50 4px,#1f6b50 8px)`
+      : `height:${Math.max(pct, 2)}%`;
+    barsEl.innerHTML += `<div class="chart-bar" style="${style}">
+      <div class="tooltip">Week of ${label}: ${n} active ${n === 1 ? 'coach' : 'coaches'}${inProgress ? ' (in progress)' : ''}</div>
+    </div>`;
+    labelsEl.innerHTML += `<span>${label}</span>`;
+  });
+
+  const done = counts.slice(0, -1);
+  const last = done[done.length - 1];
+  const prev = done[done.length - 2];
+  let delta = '';
+  if (typeof last === 'number' && typeof prev === 'number' && prev > 0) {
+    const d = Math.round(((last - prev) / prev) * 100);
+    delta = ` · last completed week ${last} (${d >= 0 ? '+' : ''}${d}% WoW)`;
+  }
+  footEl.textContent = `Distinct coaches with at least one session, Mon–Sun · last ${WAU_WEEKS} weeks`
+    + ' · independent of the date filter above'
+    + ` · striped bar is the current week, still in progress${delta}`
+    + (excludeMe ? ' · admin accounts excluded' : '');
 }
 
 // ─── Key Event Trend ─────────────────────────────────────────────────────────
