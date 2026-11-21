@@ -501,25 +501,26 @@ body.training-drill-mode #pitch-container {
 .drill-card-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(258px, 1fr));
-  gap: 16px;
+  /* 20 > the card's own 16px padding, so cards read as separate objects. */
+  gap: var(--space-5);
 }
 
 /* ── Library toolbar: count + category filter + sort ───────────────────── */
 .library-toolbar {
-  display: flex; flex-direction: column; gap: 10px;
-  padding-bottom: 2px;
+  display: flex; flex-direction: column; gap: var(--space-3);
+  padding-bottom: var(--space-0);
 }
 .lib-toolbar-row { display: flex; align-items: center; justify-content: space-between; gap: 14px; }
 .lib-count { font-size: 12.5px; color: var(--text-muted); white-space: nowrap; }
 .lib-count strong { color: var(--text); font-size: 14px; font-weight: 800; }
 .lib-count-of { color: var(--text-dim); }
-.lib-chips { display: flex; gap: 6px; flex-wrap: wrap; min-width: 0; }
+.lib-chips { display: flex; gap: var(--space-2); flex-wrap: wrap; min-width: 0; }
 .lib-chip {
   display: inline-flex; align-items: center; gap: 6px;
   font-family: inherit; font-size: 11.5px; font-weight: 600;
   color: var(--text-muted); background: var(--panel);
   border: 1px solid rgba(255,255,255,0.08); border-radius: 999px;
-  padding: 5px 11px; cursor: pointer; transition: all 0.15s; white-space: nowrap;
+  padding: var(--space-1) var(--space-3); cursor: pointer; transition: all 0.15s; white-space: nowrap;
 }
 .lib-chip:hover { color: var(--text); border-color: rgba(255,255,255,0.2); }
 .lib-chip.active {
@@ -570,14 +571,14 @@ body.training-drill-mode #pitch-container {
   position: absolute; left: 8px; bottom: 8px;
   font-size: 10.5px; font-weight: 700; color: #fff;
   background: rgba(0,0,0,0.62); backdrop-filter: blur(3px);
-  border-radius: 5px; padding: 3px 7px; letter-spacing: 0.01em;
+  border-radius: 5px; padding: var(--space-0) var(--space-2); letter-spacing: 0.01em;
   pointer-events: none;
 }
 /* Actions stay out of the way until the card is hovered or keyboard-focused.
    They were permanently visible before, which made every card look busy. */
 .drill-card-actions {
   position: absolute; top: 8px; right: 8px;
-  display: flex; gap: 5px;
+  display: flex; gap: var(--space-1);
   opacity: 0; transition: opacity 0.15s;
 }
 .drill-card:hover .drill-card-actions,
@@ -596,8 +597,8 @@ body.training-drill-mode #pitch-container {
 
 .session-card .drill-card-body { gap: 8px; padding: 14px; }
 .drill-card-body {
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 12px 14px 13px;
+  display: flex; flex-direction: column; gap: var(--space-2);
+  padding: var(--space-4);
   flex: 1 1 auto;
 }
 .drill-card-title {
@@ -613,8 +614,8 @@ body.training-drill-mode #pitch-container {
    separate from the coaching objectives below — they used to be one
    undifferentiated dot-separated string. */
 .drill-card-stats {
-  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-  margin-top: auto; padding-top: 8px;
+  display: flex; align-items: center; gap: var(--space-4); flex-wrap: wrap;
+  margin-top: auto; padding-top: var(--space-3);
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 .drill-stat {
@@ -624,12 +625,12 @@ body.training-drill-mode #pitch-container {
 }
 .drill-stat i { display: inline-flex; color: var(--text-dim); }
 .drill-stat i svg { width: 13px; height: 13px; }
-.drill-card-tags { display: flex; gap: 5px; flex-wrap: wrap; }
+.drill-card-tags { display: flex; gap: var(--space-1); flex-wrap: wrap; }
 .drill-tag {
   font-size: 10px; font-weight: 600; color: var(--text-muted);
   background: rgba(255,255,255,0.055);
   border: 1px solid rgba(255,255,255,0.07);
-  border-radius: 999px; padding: 2.5px 8px;
+  border-radius: 999px; padding: var(--space-0) var(--space-2);
   max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
 }
 .drill-tag-more { color: var(--text-dim); }

@@ -31,10 +31,12 @@
   --gk-b:   #f4cca8;
 
   /* Spacing scale — 4px base */
+  --space-0: 2px;
   --space-1: 4px;
   --space-2: 8px;
   --space-3: 12px;
   --space-4: 16px;
+  --space-5: 20px;
   --space-6: 24px;
   --space-8: 32px;
 
@@ -129,8 +131,13 @@ body {
 
 /* Tool groups — panel sections with 2-column grid */
 .tool-group {
-  display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-1);
-  padding: var(--space-2) var(--space-3);
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  /* Row gap is deliberately larger than column gap: the toolbar's width is
+     pinned by its widest label, so there is no horizontal room to spend, but
+     vertical space is free and the rows carry the grouping signal.
+     Ladder: icon/label 4 < columns 8 < rows 12 < group padding 16. */
+  column-gap: var(--space-2); row-gap: var(--space-3);
+  padding: var(--space-4) var(--space-3);
   border-bottom: 1px solid var(--border);
 }
 .tool-group:last-child { border-bottom: none; }
@@ -138,7 +145,10 @@ body {
   grid-column: 1 / -1; /* span full width */
   font-size: 9px; font-weight: 700; letter-spacing: 2px;
   text-transform: uppercase; color: var(--text-dim);
-  margin: 0 0 2px; padding: 0;
+  /* No bottom margin: the grid's row-gap already separates the title from
+     the first row of buttons, and stacking a margin on it produced an
+     off-grid 14px. Letting row-gap do the work keeps it at a clean 12. */
+  margin: 0; padding: 0;
 }
 .tool-group-save {
   grid-template-columns: 1fr; margin-top: auto;
@@ -178,7 +188,7 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   width: 100%; height: 48px; border-radius: var(--radius-sm);
   border: 1px solid transparent; background: transparent;
   cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center;
-  gap: 3px; transition: all 0.15s; color: var(--text-muted); position: relative;
+  gap: var(--space-1); transition: all 0.15s; color: var(--text-muted); position: relative;
 }
 .tool-btn svg { flex-shrink: 0; }
 .tool-label {
@@ -548,7 +558,9 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   align-self: stretch;
 }
 .panel-section {
-  padding: var(--space-3) var(--space-4);
+  /* 16px all round: 32px between two sections across the divider, double the
+     16px between settings inside one. */
+  padding: var(--space-4);
   border-bottom: 1px solid var(--border);
 }
 .panel-section:last-child { border-bottom: none; }
@@ -823,7 +835,9 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 
 /* Swatches */
 .name-color-row { display: flex; gap: 6px; flex-wrap: wrap; }
-.picker-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; padding: 2px 3px; }
+/* 4px: swatches are one control (a palette), not a list of separate ones.
+   Also load-bearing — a row has ~1px of slack, so a wider gap re-wraps it. */
+.picker-row { display: flex; gap: var(--space-1); align-items: center; flex-wrap: wrap; padding: var(--space-0); }
 .color-swatch.mini { width: 28px; height: 28px; border-radius: 50%; flex-shrink: 0; }
 .no-bg-swatch {
   background: transparent !important;
@@ -940,7 +954,9 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 
 /* Player section */
 #number-section { display: block; }
-.field-group { display: flex; flex-direction: column; gap: 6px; margin-bottom: 10px; }
+/* Ladder: swatches 4 < label-to-control 8 < setting-to-setting 16.
+   The old 6 vs 10 was only 1.67x apart — too weak to read as grouping. */
+.field-group { display: flex; flex-direction: column; gap: var(--space-2); margin-bottom: var(--space-4); }
 .field-group:last-child { margin-bottom: 0; }
 .field-label { font-size: 11px; font-weight: 500; color: var(--text-muted); }
 .toggle-row {
