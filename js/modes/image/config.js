@@ -44,7 +44,19 @@ export const imageMode = {
   // exitImageMode() in imagemode.js because it controls overflow/layout
   // that only makes sense once an image is loaded — not during the upload
   // overlay phase.
-  onActivate() {},
+  onActivate() {
+    // Runs inside the deferred mode swap, after the outgoing mode's
+    // onDeactivate. That ordering matters: activateMode() delays the swap by
+    // 210ms for the panel slide, so anything _doSwitchToImage() set up
+    // beforehand can be clobbered by the previous mode tearing down — leaving
+    // Session Builder calls hideTrainingShell(), which unconditionally shows
+    // the pitch container, and the dropzone and the pitch ended up on screen
+    // together. Re-assert the upload state here, once nothing else will write.
+    // Authoritative both ways, so neither branch can be left half-applied.
+    const hasImage = !!document.getElementById('image-bg');
+    if (hasImage) window.hideImageUploadPane?.();
+    else window.showImageUploadPane?.();
+  },
 
   onDeactivate() {
     deselect();

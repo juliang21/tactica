@@ -2009,6 +2009,7 @@ function showImageUploadPane() {
 }
 window.showImageUploadPane = showImageUploadPane;
 
+window.hideImageUploadPane = hideImageUploadPane;
 function hideImageUploadPane() {
   const overlay = document.getElementById('image-upload-overlay');
   const pitchContainer = document.getElementById('pitch-container');
