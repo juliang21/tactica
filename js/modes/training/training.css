@@ -9,7 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--space-6);
   backdrop-filter: blur(2px);
 }
 .training-welcome-card {
@@ -794,7 +794,7 @@ body.training-session-mode #topbar-session-save-btn { display: inline-flex !impo
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 24px;
+  padding: var(--space-6);
 }
 .drill-picker-card {
   background: var(--panel);
@@ -811,7 +811,7 @@ body.training-session-mode #topbar-session-save-btn { display: inline-flex !impo
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 16px 20px;
+  padding: var(--space-4) var(--space-5);
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
 }
 .drill-picker-header h3 {
@@ -827,14 +827,14 @@ body.training-session-mode #topbar-session-save-btn { display: inline-flex !impo
   font-size: 22px;
   line-height: 1;
   cursor: pointer;
-  padding: 4px 8px;
+  padding: var(--space-1) var(--space-2);
 }
 .drill-picker-close:hover { color: var(--text); }
 .drill-picker-list {
   display: flex;
   flex-direction: column;
-  gap: 6px;
-  padding: 16px;
+  gap: var(--space-1);
+  padding: var(--space-4);
   overflow-y: auto;
 }
 .drill-picker-item {
@@ -842,7 +842,7 @@ body.training-session-mode #topbar-session-save-btn { display: inline-flex !impo
   background: var(--bg);
   border: 1px solid rgba(255, 255, 255, 0.06);
   border-radius: 8px;
-  padding: 12px 14px;
+  padding: var(--space-3) var(--space-3);
   cursor: pointer;
   font-family: inherit;
   transition: all 0.15s;
@@ -851,9 +851,9 @@ body.training-session-mode #topbar-session-save-btn { display: inline-flex !impo
   border-color: var(--accent);
   background: rgba(52, 211, 153, 0.05);
 }
-.drill-picker-item-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: 2px; }
+.drill-picker-item-title { font-size: 13px; font-weight: 700; color: var(--text); margin-bottom: var(--space-0); }
 .drill-picker-item-meta { font-size: 11px; color: var(--text-muted); }
-.drill-picker-empty { padding: 18px; color: var(--text-muted); font-size: 13px; text-align: center; }
+.drill-picker-empty { padding: var(--space-4); color: var(--text-muted); font-size: 13px; text-align: center; }
 
 /* ── Responsive ────────────────────────────────────────────────────────── */
 @media (max-width: 900px) {
