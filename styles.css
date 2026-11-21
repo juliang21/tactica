@@ -2154,7 +2154,10 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
 }
 /* Opens upward + to the right since the button is bottom-left of the sidebar */
 .app-menu-dropdown {
-  position: absolute; bottom: 44px; left: 0; width: 220px;
+  /* Width follows the wrapper instead of a fixed 220px. The toolbar scroller
+     above this is overflow:auto, so anything wider than the toolbar gets
+     clipped on the right — which was cutting the "ES" language button in half. */
+  position: absolute; bottom: 44px; left: 0; right: 0; width: auto; min-width: 0;
   background: rgba(26, 26, 34, 0.95);
   backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -3509,4 +3512,6 @@ body.shared-view #canvas-wrap {
 /* Language row inside the account menu — same anatomy as the other items,
    with the two choices inline on the right. */
 .app-menu-lang { display: flex; align-items: center; gap: 10px; }
-.app-menu-lang .lang-switch { margin-left: auto; margin-right: 0; }
+.app-menu-lang .lang-switch { margin-left: auto; margin-right: 0; flex-shrink: 0; }
+.app-menu-lang .lang-switch button { padding: 4px 9px; }
+.app-menu-lang > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
