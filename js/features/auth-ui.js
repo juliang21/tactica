@@ -3,6 +3,7 @@
 // ──────────────────────────────────────────────────────────────────────────────
 import { signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut } from '../auth.js';
 import { trackSignUp, trackSignIn, trackSignOut } from '../analytics.js';
+import { t } from '../i18n.js?v=3';   // same ?v everywhere — i18n is stateful
 
 // ─── Auth UI (avatar, menu) ─────────────────────────────────────────────────
 export function updateAuthUI(user) {
@@ -63,7 +64,7 @@ export function updateAuthUI(user) {
     menuAvatarInitials.style.display = 'none';
 
     // Two-line label collapses to single "Sign in" prompt
-    if (labelPrimary) labelPrimary.textContent = 'Sign in';
+    if (labelPrimary) labelPrimary.textContent = t('ui.sign-in', 'Sign in');
     if (labelSecondary) labelSecondary.style.display = 'none';
 
     // Dropdown: hide user info, show sign-in, hide sign-out

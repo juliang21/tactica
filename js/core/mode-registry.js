@@ -1,3 +1,4 @@
+import { t } from '../i18n.js?v=3';   // same ?v everywhere — i18n is stateful
 // ─── Mode Registry ──────────────────────────────────────────────────────────
 // Central mode lifecycle manager. Each mode (pitch, image, video, training…)
 // registers its configuration here. switchMode() coordinates toolbar, side
@@ -143,9 +144,10 @@ function syncModeButtons(modeId, label) {
   // Mobile dropdown (uses a shorter label on small viewports to avoid colliding
   // with the Settings icon + Export/Share CTAs).
   const ddLabel = document.getElementById('mode-dropdown-label');
-  const shortLabels = { pitch: 'Board', image: 'Image' };
+  const shortLabels = { pitch: t('ui.board-short', 'Board'), image: t('ui.image-short', 'Image') };
   const isNarrow = window.innerWidth <= 768;
-  if (ddLabel) ddLabel.textContent = (isNarrow && shortLabels[modeId]) || label || modeId;
+  const fullLabel = t('nav.' + ({ pitch: 'board', image: 'image', training: 'session' }[modeId] || modeId), label);
+  if (ddLabel) ddLabel.textContent = (isNarrow && shortLabels[modeId]) || fullLabel || modeId;
   document.querySelectorAll('.mode-dropdown-option').forEach(o => {
     o.classList.toggle('active', o.dataset.mode === modeId);
   });
