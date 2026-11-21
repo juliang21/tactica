@@ -2,7 +2,7 @@ import * as S from './state.js';
 import { deselectVisual, select } from './interaction.js';
 import { trackExportClicked, trackExportCompleted } from './analytics.js';
 import { canAccess } from './subscription.js';
-import { t } from './i18n.js?v=4';   // same ?v everywhere — i18n is stateful
+import { t } from './i18n.js?v=5';   // same ?v everywhere — i18n is stateful
 
 // Helper: word-wrap text for canvas rendering
 function wrapCanvasText(ctx, content, maxW) {

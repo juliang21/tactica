@@ -245,7 +245,7 @@ const STRINGS = {
     'ui.send-reset-link': "Send Reset Link",
     'ui.session-drills': "Session drills",
     'ui.set-as-default-arrow': "★ Set as default arrow",
-    'ui.setup-amp-instructions': "(setup &amp; instructions)",
+    'ui.setup-amp-instructions': "(setup & instructions)",
     'ui.shared-analysis': "Shared analysis",
     'ui.sharp': "Sharp",
     'ui.show-arms': "Show arms",

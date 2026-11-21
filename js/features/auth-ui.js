@@ -3,7 +3,7 @@
 // ──────────────────────────────────────────────────────────────────────────────
 import { signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, signOut } from '../auth.js';
 import { trackSignUp, trackSignIn, trackSignOut } from '../analytics.js';
-import { t } from '../i18n.js?v=4';   // same ?v everywhere — i18n is stateful
+import { t } from '../i18n.js?v=5';   // same ?v everywhere — i18n is stateful
 
 // ─── Auth UI (avatar, menu) ─────────────────────────────────────────────────
 export function updateAuthUI(user) {
