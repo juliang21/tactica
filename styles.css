@@ -3488,3 +3488,25 @@ body.shared-view #canvas-wrap {
     justify-content: center;
   }
 }
+
+/* ── Language switcher ─────────────────────────────────────────────────────
+   Two-state segmented control on the landing gate. Small and quiet: it is an
+   escape hatch from our locale guess, not a headline control. */
+.lang-switch {
+  display: inline-flex; gap: 2px; padding: 2px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.1);
+  border-radius: 999px; margin-right: 6px;
+}
+.lang-switch button {
+  font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
+  color: var(--text-dim); background: transparent; border: none;
+  padding: 4px 10px; border-radius: 999px; cursor: pointer; transition: all 0.15s;
+}
+.lang-switch button:hover { color: var(--text); }
+.lang-switch button.active { color: #0d1a12; background: var(--accent); }
+
+/* Language row inside the account menu — same anatomy as the other items,
+   with the two choices inline on the right. */
+.app-menu-lang { display: flex; align-items: center; gap: 10px; }
+.app-menu-lang .lang-switch { margin-left: auto; margin-right: 0; }

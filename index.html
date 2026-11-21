@@ -94,19 +94,25 @@ try {
   <header class="landing-header">
     <span class="landing-logo">Táctica</span>
     <nav class="landing-nav">
-      <button type="button" onclick="openAuthModal(); switchAuthTab('signin');">Sign in</button>
+      <!-- Language sits on the gate because a first-time Spanish visitor only
+           ever sees this screen; buried in the app menu they'd bounce first. -->
+      <div class="lang-switch" id="lang-switch" role="group" aria-label="Language">
+        <button type="button" data-lang="en" onclick="__tacticaSetLang('en')">EN</button>
+        <button type="button" data-lang="es" onclick="__tacticaSetLang('es')">ES</button>
+      </div>
+      <button type="button" data-i18n="landing.signin" onclick="openAuthModal(); switchAuthTab('signin');">Sign in</button>
     </nav>
   </header>
   <div class="landing-split">
     <!-- Left: text -->
     <div class="landing-left">
-      <h1 class="landing-headline">Master Every Play<br><span class="landing-headline-alt">with Táctica</span></h1>
-      <p class="landing-sub">Elevate your coaching with Táctica's intuitive professional tactical board. Plan formations, draw dynamic plays, and analyze in real-time.</p>
+      <h1 class="landing-headline"><span data-i18n="landing.headline1">Master Every Play</span><br><span class="landing-headline-alt" data-i18n="landing.headline2">with Táctica</span></h1>
+      <p class="landing-sub" data-i18n="landing.sub">Elevate your coaching with Táctica's intuitive professional tactical board. Plan formations, draw dynamic plays, and analyze in real-time.</p>
       <div class="landing-actions">
-        <button class="landing-btn landing-btn-primary" onclick="openAuthModal(); switchAuthTab('signup');">
+        <button class="landing-btn landing-btn-primary" data-i18n="landing.getStarted" onclick="openAuthModal(); switchAuthTab('signup');">
           Get started
         </button>
-        <button class="landing-btn landing-btn-secondary" onclick="openAuthModal(); switchAuthTab('signin');">
+        <button class="landing-btn landing-btn-secondary" data-i18n="landing.signin" onclick="openAuthModal(); switchAuthTab('signin');">
           Sign in
         </button>
       </div>
@@ -178,11 +184,11 @@ try {
    <div class="proof-card">
     <div class="lstat">
       <div class="lstat-num"><span id="hero-rating" data-count="4.96" data-decimals="2">4.96</span><span class="lstat-star">★</span></div>
-      <div class="lstat-label">average rating · <span id="hero-reviews">24</span> reviews</div>
+      <div class="lstat-label"><span data-i18n="landing.ratingLabel">average rating</span> · <span id="hero-reviews">24</span> <span data-i18n="landing.reviewsWord">reviews</span></div>
     </div>
     <div class="lstat">
       <div class="lstat-num"><span id="hero-coaches" data-count="600" data-prefix="+">+600</span></div>
-      <div class="lstat-label">coaches on Táctica</div>
+      <div class="lstat-label" data-i18n="landing.coachesLabel">coaches on Táctica</div>
     </div>
     <div class="lstat lstat-quotes">
       <div class="trust-marquee">
@@ -226,10 +232,10 @@ try {
   <div class="landing-legal">
     <!-- Crawlable links to the static feature pages. Without them those pages
          are reachable only from the sitemap, which carries far less weight. -->
-    <a href="/tactical-board/" class="landing-terms-link">Tactics Board</a>
-    <a href="/session-planner/" class="landing-terms-link">Session Planner</a>
-    <a href="/match-analysis/" class="landing-terms-link">Match Analysis</a>
-    <a href="/terms.html" class="landing-terms-link">Terms &amp; Conditions</a>
+    <a href="/tactical-board/" class="landing-terms-link" data-i18n="landing.navBoard">Tactics Board</a>
+    <a href="/session-planner/" class="landing-terms-link" data-i18n="landing.navSession">Session Planner</a>
+    <a href="/match-analysis/" class="landing-terms-link" data-i18n="landing.navAnalysis">Match Analysis</a>
+    <a href="/terms.html" class="landing-terms-link" data-i18n="landing.terms">Terms &amp; Conditions</a>
   </div>
 </div>
 <script>
@@ -666,6 +672,15 @@ try {
           Sign In
         </button>
         <!-- Always visible -->
+        <!-- Language override, reachable from inside the app too -->
+        <div class="app-menu-item app-menu-lang">
+          <span data-i18n="menu.language">Language</span>
+          <div class="lang-switch" role="group" aria-label="Language">
+            <button type="button" data-lang="en" onclick="__tacticaSetLang('en')">EN</button>
+            <button type="button" data-lang="es" onclick="__tacticaSetLang('es')">ES</button>
+          </div>
+        </div>
+        <div class="app-menu-divider"></div>
         <button class="app-menu-item" onclick="toggleAppMenu(); openMyAnalyses()">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none"><path d="M2 3h5l1 1.5H14v9H2V3z" stroke="currentColor" stroke-width="1.3" stroke-linejoin="round"/></svg>
           My Analyses
@@ -721,7 +736,7 @@ try {
           <line x1="8" y1="2" x2="8" y2="14" stroke="currentColor" stroke-width="0.9"/>
           <circle cx="8" cy="8" r="2.5" fill="none" stroke="currentColor" stroke-width="0.9"/>
         </svg>
-        Tactical Board
+        <span data-i18n="nav.board">Tactical Board</span>
       </button>
       <button class="mode-tab" id="mode-image-btn" onclick="switchMode('image')">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
@@ -729,14 +744,14 @@ try {
           <path d="M4 14l3-3 2 2L12 10" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
           <path d="M8 6V2M6 4l2-2 2 2" stroke="currentColor" stroke-width="1.2" stroke-linecap="round" stroke-linejoin="round"/>
         </svg>
-        Image Analysis
+        <span data-i18n="nav.image">Image Analysis</span>
       </button>
       <button class="mode-tab" id="mode-training-btn" onclick="switchMode('training')">
         <svg width="14" height="14" viewBox="0 0 16 16" fill="none">
           <path d="M2 4h12M2 8h12M2 12h7" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"/>
           <circle cx="13" cy="12" r="1.5" fill="currentColor"/>
         </svg>
-        Session Builder
+        <span data-i18n="nav.session">Session Builder</span>
       </button>
     </div>
   </div>
@@ -747,9 +762,9 @@ try {
       <svg width="10" height="10" viewBox="0 0 10 10" fill="none"><path d="M2 4l3 3 3-3" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg>
     </button>
     <div id="mode-dropdown-menu" style="display:none">
-      <button class="mode-dropdown-option active" data-mode="pitch" onclick="selectModeDropdown('pitch')">Tactical Board</button>
-      <button class="mode-dropdown-option" data-mode="image" onclick="selectModeDropdown('image')">Image Analysis</button>
-      <button class="mode-dropdown-option" data-mode="training" onclick="selectModeDropdown('training')">Session Builder</button>
+      <button class="mode-dropdown-option active" data-mode="pitch" onclick="selectModeDropdown('pitch')"><span data-i18n="nav.board">Tactical Board</span></button>
+      <button class="mode-dropdown-option" data-mode="image" onclick="selectModeDropdown('image')"><span data-i18n="nav.image">Image Analysis</span></button>
+      <button class="mode-dropdown-option" data-mode="training" onclick="selectModeDropdown('training')"><span data-i18n="nav.session">Session Builder</span></button>
     </div>
   </div>
   <div id="pitch-wrap">
@@ -990,9 +1005,9 @@ try {
     <!-- ── LANDING VIEW ── -->
     <div class="training-container" data-training-view="landing">
       <div class="training-hero">
-        <span class="training-hero-eyebrow">Session Builder</span>
-        <h1 class="training-hero-title">Plan your sessions, design your drills.</h1>
-        <p class="training-hero-sub">Build a full training session composed of drills, or save individual drills to your library.</p>
+        <span class="training-hero-eyebrow" data-i18n="sb.eyebrow">Session Builder</span>
+        <h1 class="training-hero-title" data-i18n="sb.title">Plan your sessions, design your drills.</h1>
+        <p class="training-hero-sub" data-i18n="sb.sub">Build a full training session composed of drills, or save individual drills to your library.</p>
       </div>
 
       <div class="training-actions">
@@ -1002,9 +1017,9 @@ try {
             <span class="training-action-chip">
               <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round"><path d="M12 6v12M6 12h12"/></svg>
             </span>
-            <span class="training-action-title">New Drill</span>
-            <span class="training-action-desc">Lay out players, cones, ladders and arrows on the pitch. Add objectives and step-by-step animation.</span>
-            <span class="training-action-go">Start a drill <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h9M8 4l4 4-4 4"/></svg></span>
+            <span class="training-action-title" data-i18n="sb.newDrill">New Drill</span>
+            <span class="training-action-desc" data-i18n="sb.newDrillDesc">Lay out players, cones, ladders and arrows on the pitch. Add objectives and step-by-step animation.</span>
+            <span class="training-action-go"><span data-i18n="sb.startDrill">Start a drill</span> <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h9M8 4l4 4-4 4"/></svg></span>
           </span>
         </button>
 
@@ -1014,9 +1029,9 @@ try {
             <span class="training-action-chip">
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M4 7h16M4 12h16M4 17h10"/></svg>
             </span>
-            <span class="training-action-title">New Session</span>
-            <span class="training-action-desc">Chain several drills into a full session. Warm-up to cool-down, with objectives and player counts.</span>
-            <span class="training-action-go">Plan a session <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h9M8 4l4 4-4 4"/></svg></span>
+            <span class="training-action-title" data-i18n="sb.newSession">New Session</span>
+            <span class="training-action-desc" data-i18n="sb.newSessionDesc">Chain several drills into a full session. Warm-up to cool-down, with objectives and player counts.</span>
+            <span class="training-action-go"><span data-i18n="sb.planSession">Plan a session</span> <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 8h9M8 4l4 4-4 4"/></svg></span>
           </span>
         </button>
       </div>
@@ -1024,20 +1039,20 @@ try {
       <div class="training-library">
         <div class="training-library-search">
           <svg width="15" height="15" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"><circle cx="7" cy="7" r="4.5"/><path d="M11 11l3 3"/></svg>
-          <input type="text" id="training-search" placeholder="Search drills and sessions by name, category or objective…" oninput="filterTrainingLibrary(this.value)">
+          <input type="text" id="training-search" placeholder="Search drills and sessions by name, category or objective…" data-i18n-attr="placeholder:sb.searchPlaceholder" oninput="filterTrainingLibrary(this.value)">
         </div>
         <div class="training-library-section">
           <div class="training-library-header">
-            <h2 class="training-library-title">My Drills</h2>
+            <h2 class="training-library-title" data-i18n="sb.myDrills">My Drills</h2>
           </div>
-          <div class="training-empty">No drills yet. Click <strong>New Drill</strong> above to create your first one.</div>
+          <div class="training-empty" data-i18n-html="sb.noDrills">No drills yet. Click <strong>New Drill</strong> above to create your first one.</div>
         </div>
 
         <div class="training-library-section">
           <div class="training-library-header">
-            <h2 class="training-library-title">My Sessions</h2>
+            <h2 class="training-library-title" data-i18n="sb.mySessions">My Sessions</h2>
           </div>
-          <div class="training-empty">No sessions yet. Click <strong>New Session</strong> above to plan your first session.</div>
+          <div class="training-empty" data-i18n-html="sb.noSessions">No sessions yet. Click <strong>New Session</strong> above to plan your first session.</div>
         </div>
       </div>
     </div>
@@ -3166,6 +3181,7 @@ try {
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=96"></script>
+<script type="module" src="js/i18n.js?v=1"></script>
+<script type="module" src="js/app.js?v=97"></script>
 </body>
 </html>

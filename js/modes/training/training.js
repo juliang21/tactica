@@ -6,6 +6,7 @@
 import { captureState } from '../../storage.js';
 import * as S from '../../state.js';
 import { getCurrentUser } from '../../auth.js';
+import { t } from '../../i18n.js';
 // Same ?v= as app.js so we share ONE firestore.js module instance — otherwise
 // this is a separate instance whose _sessionId is never set, and every training
 // event gets logged with sessionId: null (breaking session-level analytics).
@@ -821,7 +822,11 @@ export function normalizeCategory(raw) {
 }
 export function categoryLabel(raw) {
   const key = normalizeCategory(raw);
-  return key ? (CATEGORY_LABELS[key] || key) : '';
+  if (!key) return '';
+  // Stored value stays the key; only the display text is localised. This is
+  // the whole point of the keys — a Spanish UI shows "Técnico" without ever
+  // writing that string to the drill.
+  return CATEGORY_LABELS[key] ? t('cat.' + key, CATEGORY_LABELS[key]) : key;
 }
 
 // ─── Drill library ──────────────────────────────────────────────────────────
@@ -860,20 +865,20 @@ function buildLibraryToolbar(all, shown) {
        ${escapeHtml(label)}<span class="lib-chip-n">${n}</span></button>`;
   bar.innerHTML = `
     <div class="lib-toolbar-row">
-      <div class="lib-count"><strong>${shown}</strong> ${shown === 1 ? 'drill' : 'drills'}${
-        shown !== all.length ? ` <span class="lib-count-of">of ${all.length}</span>` : ''}</div>
+      <div class="lib-count"><strong>${shown}</strong> ${shown === 1 ? t('sb.drill') : t('sb.drills')}${
+        shown !== all.length ? ` <span class="lib-count-of">${t('sb.of')} ${all.length}</span>` : ''}</div>
       <label class="lib-sort">
-        <span>Sort</span>
+        <span>${t('sb.sort')}</span>
         <select class="lib-sort-select">
-          <option value="recent">Last edited</option>
-          <option value="created">Newest first</option>
-          <option value="name">Name A–Z</option>
-          <option value="duration">Duration</option>
+          <option value="recent">${t('sb.sortRecent')}</option>
+          <option value="created">${t('sb.sortCreated')}</option>
+          <option value="name">${t('sb.sortName')}</option>
+          <option value="duration">${t('sb.sortDuration')}</option>
         </select>
       </label>
     </div>
     <div class="lib-chips">
-      ${chip('all', 'All', all.length)}
+      ${chip('all', t('sb.all'), all.length)}
       ${cats.map(c => chip(c, categoryLabel(c), all.filter(d => normalizeCategory(d.category) === c).length)).join('')}
     </div>`;
   bar.querySelectorAll('.lib-chip').forEach(b => {
@@ -909,13 +914,13 @@ function buildDrillCard(d) {
       ${media}
       ${d.duration ? `<span class="drill-card-duration">${escapeHtml(String(d.duration))} min</span>` : ''}
       <div class="drill-card-actions">
-        <button class="drill-card-copy" type="button" aria-label="Duplicate drill" title="Duplicate">
+        <button class="drill-card-copy" type="button" aria-label="${t('sb.duplicate')}" title="${t('sb.duplicate')}">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linejoin="round">
             <rect x="5.5" y="5.5" width="9" height="9" rx="1.8"/>
             <path d="M10.5 3.2A1.7 1.7 0 0 0 8.8 1.5H3.2A1.7 1.7 0 0 0 1.5 3.2v5.6a1.7 1.7 0 0 0 1.7 1.7"/>
           </svg>
         </button>
-        <button class="drill-card-delete" type="button" aria-label="Delete drill" title="Delete">
+        <button class="drill-card-delete" type="button" aria-label="${t('sb.delete')}" title="${t('sb.delete')}">
           <svg width="13" height="13" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round">
             <path d="M2.5 4.5h11M6.2 4.5V3a1 1 0 0 1 1-1h1.6a1 1 0 0 1 1 1v1.5"/>
             <path d="M4 4.5 4.6 13a1 1 0 0 0 1 .9h4.8a1 1 0 0 0 1-.9L12 4.5"/>
@@ -925,11 +930,11 @@ function buildDrillCard(d) {
     </div>
     <div class="drill-card-body">
       ${d.category ? `<span class="drill-card-phase">${escapeHtml(categoryLabel(d.category))}</span>` : ''}
-      <h3 class="drill-card-title">${escapeHtml(d.name || 'Untitled drill')}</h3>
+      <h3 class="drill-card-title">${escapeHtml(d.name || t('sb.untitledDrill'))}</h3>
       ${d.description ? `<p class="drill-card-desc">${escapeHtml(d.description)}</p>` : ''}
       <div class="drill-card-stats">
-        ${d.numPlayers ? stat(ICONS.players, d.numPlayers, 'Players') : ''}
-        ${d.duration ? stat(ICONS.clock, d.duration + ' min', 'Duration') : ''}
+        ${d.numPlayers ? stat(ICONS.players, d.numPlayers, t('sb.players')) : ''}
+        ${d.duration ? stat(ICONS.clock, d.duration + ' min', t('sb.duration')) : ''}
         ${pieces ? stat(ICONS.kit, pieces, equipmentText(d.equipment)) : ''}
       </div>
       ${tagHtml ? `<div class="drill-card-tags">${tagHtml}</div>` : ''}
@@ -994,7 +999,7 @@ async function renderDrillLibrary() {
   if (!list.length) {
     const none = document.createElement('div');
     none.className = 'training-empty';
-    none.textContent = q ? 'No drills match that search.' : 'No drills in this category.';
+    none.textContent = q ? t('sb.noMatch') : t('sb.noneInCategory');
     wrap.appendChild(none);
     return;
   }
@@ -1040,8 +1045,8 @@ async function renderSessionLibrary() {
     card.classList.add('session-card');
     card.innerHTML = `
       <div class="drill-card-body">
-        <span class="drill-card-phase">Session</span>
-        <h3 class="drill-card-title">${escapeHtml(s.name || 'Untitled session')}</h3>
+        <span class="drill-card-phase">${t('sb.session')}</span>
+        <h3 class="drill-card-title">${escapeHtml(s.name || t('sb.untitledSession'))}</h3>
         <div class="drill-card-stats">
           <span class="drill-stat" title="Drills"><i>${ICONS.kit}</i>${count} ${count === 1 ? 'drill' : 'drills'}</span>
           ${s.numPlayers ? `<span class="drill-stat" title="Players"><i>${ICONS.players}</i>${escapeHtml(String(s.numPlayers))}</span>` : ''}
@@ -1210,6 +1215,13 @@ export function filterTrainingLibrary(query) {
   } else if (none) { none.style.display = 'none'; }
 }
 window.filterTrainingLibrary = filterTrainingLibrary;
+
+// Re-render the library when the coach switches language: the toolbar, the
+// category chips and every card label come from t(), so a swap has to repaint.
+window.addEventListener('tactica:langchange', () => {
+  if (document.querySelector('.training-library')) renderLibrary();
+});
+
 
 // ─── Printable session sheet (Print / Save as PDF) ───────────────────────────
 export async function printSession() {
