@@ -407,7 +407,7 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
 }
 .mode-tab {
   position: relative;
-  display: flex; align-items: center; justify-content: center; gap: 7px;
+  display: flex; align-items: center; justify-content: center; gap: var(--space-2);
   padding: 9px 12px;
   border: none; border-radius: 0; background: transparent;
   font-family: 'Manrope', sans-serif; font-size: 12.5px; font-weight: 600;
@@ -619,7 +619,7 @@ body:not(.mobile-layout) .rondos-brand { display: none; }
   flex: 1; height: 28px; border-radius: 14px;
   font-size: 12px; font-weight: 500; cursor: pointer;
   border: none; background: transparent;
-  transition: all 0.15s; display: flex; align-items: center; gap: 5px; justify-content: center;
+  transition: all 0.15s; display: flex; align-items: center; gap: var(--space-1); justify-content: center;
   color: var(--text-dim);
 }
 .team-pill:hover { color: var(--text); }
@@ -3085,7 +3085,7 @@ body.shared-view #canvas-wrap {
 /* ── Header (wordmark left · nav right) ── */
 .landing-header {
   width: 100%; max-width: var(--landing-max, 1200px);
-  padding: clamp(20px, 2.6vh, 34px) 64px 0;
+  padding: clamp(20px, 2.6vh, 32px) 64px 0;
   box-sizing: border-box; flex-shrink: 0;
   position: relative; z-index: 2;
   display: flex; align-items: center; justify-content: space-between;
@@ -3116,7 +3116,10 @@ body.shared-view #canvas-wrap {
 .landing-legal {
   width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
   box-sizing: border-box; flex: 0 0 auto;
-  padding: 16px 64px clamp(16px, 2.4vh, 28px);
+  /* Several links live here since the SEO pages were added; without a gap
+     they ran together as one string. */
+  display: flex; flex-wrap: wrap; gap: var(--space-4);
+  padding: var(--space-4) 64px clamp(16px, 2.4vh, 28px);
 }
 .landing-byline {
   margin-top: 0;
@@ -3160,7 +3163,7 @@ body.shared-view #canvas-wrap {
 .landing-sub {
   font-family: 'Manrope', sans-serif;
   font-size: clamp(15px, 1.15vw, 18px); font-weight: 400;
-  color: var(--text-muted); margin-bottom: clamp(28px, 4vh, 46px);
+  color: var(--text-muted); margin-bottom: clamp(28px, 4vh, 48px);
   line-height: 1.65; max-width: 30em;
 }
 
@@ -3169,7 +3172,7 @@ body.shared-view #canvas-wrap {
   display: flex; gap: 12px; margin-bottom: 0;
 }
 .landing-btn {
-  padding: 14px 32px; border-radius: 24px;
+  padding: var(--space-4) var(--space-8); border-radius: 24px;
   font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
   cursor: pointer; transition: all 0.15s;
   letter-spacing: 0.3px;
@@ -3192,7 +3195,7 @@ body.shared-view #canvas-wrap {
 .landing-proof {
   width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
   box-sizing: border-box; flex: 0 0 auto;
-  padding: 0 64px clamp(14px, 2vh, 22px);
+  padding: 0 64px clamp(16px, 2vh, 24px);
 }
 /* One bounded card so the three read as a single block of proof. The stat
    columns size to their CONTENT (auto) rather than stretching to equal
@@ -3206,19 +3209,19 @@ body.shared-view #canvas-wrap {
   background: linear-gradient(180deg, rgba(255,255,255,0.038), rgba(255,255,255,0.012));
   padding: 14px 24px;
 }
-.lstat { min-width: 0; padding: 0 30px; }
-.lstat:first-child { padding-left: 6px; }
+.lstat { min-width: 0; padding: 0 var(--space-8); }
+.lstat:first-child { padding-left: var(--space-2); }
 .lstat + .lstat { border-left: 1px solid rgba(255,255,255,0.09); }
-.lstat-quotes { padding-right: 6px; }
+.lstat-quotes { padding-right: var(--space-2); }
 .lstat-num {
-  display: flex; align-items: center; gap: 5px;
+  display: flex; align-items: center; gap: var(--space-1);
   font-family: 'Outfit', sans-serif; font-weight: 800;
   font-size: 44px; line-height: 1.02; color: var(--text); letter-spacing: -1.6px;
   font-variant-numeric: tabular-nums;
 }
 .lstat-star { color: var(--accent); font-size: 28px; letter-spacing: 0; }
 .lstat-label {
-  margin-top: 7px; font-size: 12.5px; line-height: 1.35;
+  margin-top: var(--space-2); font-size: 12.5px; line-height: 1.35;
   color: rgba(255,255,255,0.42); letter-spacing: 0.2px;
 }
 /* staggered fade-up, driven by .in from the loader script */
@@ -3263,7 +3266,7 @@ body.shared-view #canvas-wrap {
   border-radius: 10px; padding: 14px 16px;
   flex-shrink: 0;
 }
-.t-stars { color: #FBBF24; font-size: 12px; letter-spacing: 1.5px; margin-bottom: 7px; }
+.t-stars { color: #FBBF24; font-size: 12px; letter-spacing: 1.5px; margin-bottom: var(--space-2); }
 .t-card blockquote {
   margin: 0; font-family: 'Manrope', sans-serif;
   font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.85);
