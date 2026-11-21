@@ -424,7 +424,7 @@ async function renderSessionDrillList() {
         ...(d.objectives?.defensive || []),
       ].slice(0, 3);
       const dur = d.duration ? `${d.duration} min` : '';
-      const cat = d.category ? `<span class="session-drill-phase">${escapeHtml(d.category)}</span>` : '';
+      const cat = d.category ? `<span class="session-drill-phase">${escapeHtml(categoryLabel(d.category))}</span>` : '';
       const metaBits = [d.numPlayers ? `${d.numPlayers} players` : '', dur, ...tags.map(escapeHtml)].filter(Boolean);
       card.innerHTML = `
         <div class="session-drill-num">${idx + 1}</div>
@@ -539,7 +539,13 @@ function applyDrillToForm(drill) {
   if (nameEl) nameEl.value = drill.name || '';
   document.getElementById('drill-num-players').value = drill.numPlayers ?? 10;
   const dur = document.getElementById('drill-duration'); if (dur) dur.value = drill.duration ?? 15;
-  const cat = document.getElementById('drill-category'); if (cat) cat.value = drill.category || '';
+  const cat = document.getElementById('drill-category');
+  if (cat) {
+    const key = normalizeCategory(drill.category);
+    // An unrecognised legacy value has no matching <option>; leave the select
+    // on "Uncategorised" rather than silently blanking a value we can't show.
+    cat.value = CATEGORY_LABELS[key] ? key : '';
+  }
   const desc = document.getElementById('drill-description'); if (desc) desc.value = drill.description || '';
   const cp = document.getElementById('drill-coaching-points'); if (cp) cp.value = drill.coachingPoints || '';
   document.getElementById('drill-variants').value = drill.variants || '';
@@ -769,6 +775,48 @@ async function renderLibrary() {
   await renderSessionLibrary();
 }
 
+// ─── Drill categories ────────────────────────────────────────────────────────
+// The <select> options originally had no value attribute, so the browser used
+// the option TEXT as the stored value. Coaches running Chrome's auto-translate
+// therefore saved "Calentamiento" / "Técnico" / "Fase de juego" instead of the
+// English label, splitting the same category across languages. The options now
+// carry stable keys; this normalises everything already stored so old drills,
+// filter chips and the printed sheet all agree.
+const CATEGORY_LABELS = {
+  'warm-up': 'Warm-up',
+  'technical': 'Technical',
+  'possession': 'Possession',
+  'ssg': 'Small-sided game',
+  'phase-of-play': 'Phase of play',
+  'match': 'Match',
+  'cool-down': 'Cool-down',
+};
+const CATEGORY_ALIASES = {
+  // English labels saved before the keys existed
+  'warm-up': 'warm-up', 'warm up': 'warm-up', 'technical': 'technical',
+  'possession': 'possession', 'small-sided game': 'ssg', 'small sided game': 'ssg',
+  'phase of play': 'phase-of-play', 'match': 'match', 'cool-down': 'cool-down',
+  'cool down': 'cool-down',
+  // Spanish, as produced by browser auto-translate
+  'calentamiento': 'warm-up', 'técnico': 'technical', 'tecnico': 'technical',
+  'posesión': 'possession', 'posesion': 'possession',
+  'juego reducido': 'ssg', 'juego en espacio reducido': 'ssg',
+  'fase de juego': 'phase-of-play', 'partido': 'match',
+  'enfriamiento': 'cool-down', 'enfriarse': 'cool-down', 'vuelta a la calma': 'cool-down',
+};
+// Returns the canonical key, or '' when the drill has no category. An
+// unrecognised value is passed through so nothing a coach typed is ever lost.
+export function normalizeCategory(raw) {
+  const v = (raw == null ? '' : String(raw)).trim();
+  if (!v) return '';
+  if (CATEGORY_LABELS[v]) return v;
+  return CATEGORY_ALIASES[v.toLowerCase()] || v;
+}
+export function categoryLabel(raw) {
+  const key = normalizeCategory(raw);
+  return key ? (CATEGORY_LABELS[key] || key) : '';
+}
+
 // ─── Drill library ──────────────────────────────────────────────────────────
 // The library is the screen coaches live in once they have more than a handful
 // of drills, so it carries a toolbar (count + category + sort) and cards rich
@@ -791,14 +839,15 @@ function equipmentPieces(counts) {
   return Object.values(counts || {}).reduce((a, n) => a + (parseInt(n, 10) || 0), 0);
 }
 function drillSearchText(d) {
-  return [d.name, d.category, d.description, ...drillObjectives(d)].filter(Boolean).join(' ').toLowerCase();
+  return [d.name, categoryLabel(d.category), d.description, ...drillObjectives(d)].filter(Boolean).join(' ').toLowerCase();
 }
 
 function buildLibraryToolbar(all, shown) {
   const bar = document.createElement('div');
   bar.className = 'library-toolbar';
   // Only offer categories that actually exist in this coach's library.
-  const cats = [...new Set(all.map(d => d.category).filter(Boolean))].sort();
+  const cats = [...new Set(all.map(d => normalizeCategory(d.category)).filter(Boolean))]
+    .sort((a, b) => categoryLabel(a).localeCompare(categoryLabel(b)));
   const chip = (val, label, n) =>
     `<button class="lib-chip${_lib.category === val ? ' active' : ''}" type="button" data-cat="${escapeHtml(val)}">
        ${escapeHtml(label)}<span class="lib-chip-n">${n}</span></button>`;
@@ -818,7 +867,7 @@ function buildLibraryToolbar(all, shown) {
     </div>
     <div class="lib-chips">
       ${chip('all', 'All', all.length)}
-      ${cats.map(c => chip(c, c, all.filter(d => d.category === c).length)).join('')}
+      ${cats.map(c => chip(c, categoryLabel(c), all.filter(d => normalizeCategory(d.category) === c).length)).join('')}
     </div>`;
   bar.querySelectorAll('.lib-chip').forEach(b => {
     b.onclick = () => { _lib.category = b.dataset.cat; renderDrillLibrary(); };
@@ -868,7 +917,7 @@ function buildDrillCard(d) {
       </div>
     </div>
     <div class="drill-card-body">
-      ${d.category ? `<span class="drill-card-phase">${escapeHtml(d.category)}</span>` : ''}
+      ${d.category ? `<span class="drill-card-phase">${escapeHtml(categoryLabel(d.category))}</span>` : ''}
       <h3 class="drill-card-title">${escapeHtml(d.name || 'Untitled drill')}</h3>
       ${d.description ? `<p class="drill-card-desc">${escapeHtml(d.description)}</p>` : ''}
       <div class="drill-card-stats">
@@ -922,7 +971,7 @@ async function renderDrillLibrary() {
 
   const q = _lib.q.trim().toLowerCase();
   let list = all.filter(d =>
-    (_lib.category === 'all' || d.category === _lib.category) &&
+    (_lib.category === 'all' || normalizeCategory(d.category) === _lib.category) &&
     (!q || drillSearchText(d).includes(q)));
 
   const by = {
@@ -1171,7 +1220,7 @@ export async function printSession() {
   const block = (label, val) => val ? `<div class="ps-field"><span class="ps-flabel">${label}</span><span class="ps-fval">${esc(val).replace(/\n/g,'<br>')}</span></div>` : '';
   const drillHTML = drills.map((d, i) => {
     const objs = [...(d.objectives?.general||[]),...(d.objectives?.offensive||[]),...(d.objectives?.defensive||[])];
-    const meta = [d.category, d.duration ? d.duration + ' min' : '', d.numPlayers ? d.numPlayers + ' players' : ''].filter(Boolean).join(' · ');
+    const meta = [categoryLabel(d.category), d.duration ? d.duration + ' min' : '', d.numPlayers ? d.numPlayers + ' players' : ''].filter(Boolean).join(' · ');
     // The board picture is what coaches actually read on the pitch, so it sits
     // beside the text. Drills saved before thumbnails existed simply have none;
     // the section then falls back to full-width text.

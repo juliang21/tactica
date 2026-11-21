@@ -1334,15 +1334,20 @@ try {
       </div>
       <div class="drill-meta-section" style="margin-top:14px">
         <label class="drill-meta-label">Category</label>
+        <!-- Every option carries an explicit value. Without one the browser
+             uses the option's TEXT as the value, so Chrome's auto-translate
+             silently saved "Calentamiento" instead of "warm-up" and split the
+             category data across languages. Labels stay translatable; the
+             stored key does not. -->
         <select id="drill-category" class="drill-meta-input drill-meta-select">
           <option value="">Uncategorised</option>
-          <option>Warm-up</option>
-          <option>Technical</option>
-          <option>Possession</option>
-          <option>Small-sided game</option>
-          <option>Phase of play</option>
-          <option>Match</option>
-          <option>Cool-down</option>
+          <option value="warm-up">Warm-up</option>
+          <option value="technical">Technical</option>
+          <option value="possession">Possession</option>
+          <option value="ssg">Small-sided game</option>
+          <option value="phase-of-play">Phase of play</option>
+          <option value="match">Match</option>
+          <option value="cool-down">Cool-down</option>
         </select>
       </div>
       <div class="drill-meta-section" style="margin-top:14px">
@@ -3156,6 +3161,6 @@ try {
   </div>
 </div>
 
-<script type="module" src="js/app.js?v=93"></script>
+<script type="module" src="js/app.js?v=94"></script>
 </body>
 </html>
