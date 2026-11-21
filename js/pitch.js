@@ -329,8 +329,18 @@ export function rebuildPitch() {
     return el;
   }
 
-  // Plain training pitch: no field markings at all (free-form area)
-  if (isPlain) return;
+  // Plain training pitch: no field markings, but a dashed boundary so the
+  // working area reads as a marked-out grid rather than an unbounded field.
+  // Inset, rounded and dashed = coaching-cone boundary, not a touchline.
+  if (isPlain) {
+    const pad = 22;
+    mk('rect', {
+      x: pad, y: pad, width: W - pad * 2, height: H - pad * 2, rx: 6,
+      fill: 'none', stroke: LC, 'stroke-width': '1.6',
+      'stroke-dasharray': '10 7', 'stroke-opacity': '0.65',
+    });
+    return;
+  }
 
   if (isMiddle && !isVertical) {
     // ── Horizontal middle third (center zone only) ──

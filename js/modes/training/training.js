@@ -230,10 +230,14 @@ export function startNewDrill() {
   showView('drill-editor');
   track('training_drill_started');
   // Move the pitch into the canvas slot, then default the right panel to Drill.
-  // We leave the pitch layout untouched — defaults to whatever the app uses
-  // (full horizontal). Users can switch to "Plain" via the Pitch tab.
-  requestAnimationFrame(() => {
+  // A drill is a training-area exercise, not a match shape, so it opens on the
+  // zoomed-in plain pitch rather than the full one — on a full pitch the cones
+  // and players end up tiny in one corner. The Pitch tab still switches it.
+  requestAnimationFrame(async () => {
     relocatePitchToCanvas();
+    // Dynamic import to match applyBoardState and avoid a static cycle.
+    const { setPitch } = await import('../../pitch.js');
+    setPitch(DRILL_DEFAULT_LAYOUT, false);
     window.switchTab?.('drill');
   });
   setTimeout(() => drillNameEl()?.focus(), 50);
@@ -774,6 +778,9 @@ async function renderLibrary() {
   await renderDrillLibrary();
   await renderSessionLibrary();
 }
+
+// The pitch a brand-new drill opens on. Saved drills restore their own.
+const DRILL_DEFAULT_LAYOUT = 'plain-h';
 
 // ─── Drill categories ────────────────────────────────────────────────────────
 // The <select> options originally had no value attribute, so the browser used
