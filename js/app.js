@@ -41,6 +41,7 @@ import { pitchMode } from './modes/pitch/config.js';
 import { imageMode } from './modes/image/config.js';
 import { trainingMode } from './modes/training/config.js';
 import { migrateTrainingLocalToCloud } from './modes/training/training-storage.js';
+import { t, tf } from './i18n.js?v=4';   // same ?v everywhere — i18n is stateful
 
 // ─── Register Modes & activate default ─────────────────────────────────────
 registerMode('pitch', pitchMode);
@@ -811,9 +812,9 @@ window.applyRotation = applyRotation;
 window.clearAll = async function() {
   const confirmed = await showConfirmModal({
     icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/></svg>',
-    title: 'Clear all elements?',
-    desc: 'This will remove every player, zone, arrow, and annotation from the pitch. This cannot be undone.',
-    confirmLabel: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Clear All',
+    title: t('dlg.clearAllTitle'),
+    desc: t('dlg.clearAllDesc'),
+    confirmLabel: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${t('dlg.clearAllBtn')}`,
     confirmClass: 'danger',
   });
   if (!confirmed) return;
@@ -2232,7 +2233,7 @@ async function _processImageFile(file) {
 async function _placeImageFromFile(file, x, y) {
   const result = await _processImageFile(file);
   if (!result || result.error) {
-    showNotification(result?.error || 'Could not load image', 'error', 4000);
+    showNotification(result?.error || t('msg.couldNotLoadImage'), 'error', 4000);
     return;
   }
   S.pushUndo();
@@ -2317,7 +2318,7 @@ function setLogoLocked(el, on) {
 
 window.addPitchLogo = function() {
   if (_currentLogos().length >= MAX_LOGOS) {
-    showNotification(`You can add up to ${MAX_LOGOS} logos.`, 'info', 3500);
+    showNotification(tf('msg.maxLogos', { n: MAX_LOGOS }), 'info', 3500);
     return;
   }
   const input = document.getElementById('pitch-logo-file-input');
@@ -2327,7 +2328,7 @@ window.addPitchLogo = function() {
 async function _placeLogoFromFile(file, x = 350, y = 240) {
   const result = await _processImageFile(file);
   if (!result || result.error) {
-    showNotification(result?.error || 'Could not load image', 'error', 4000);
+    showNotification(result?.error || t('msg.couldNotLoadImage'), 'error', 4000);
     return;
   }
   S.pushUndo();
@@ -2981,7 +2982,7 @@ window.setArrowAsDefault = function() {
   };
   try { localStorage.setItem(DEFAULT_ARROW_KEY, JSON.stringify(def)); } catch (e) {}
   S.setArrowType(def.type);   // so the next arrow also starts from this type
-  showNotification('Saved as your default arrow style.', 'success', 2500);
+  showNotification(t('msg.defaultArrowSaved'), 'success', 2500);
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'feature_arrow_default_set', { type: def.type }).catch(() => {});
 };
@@ -3462,7 +3463,7 @@ function deleteStep(idx) {
   applyFrame(currentFrame);
   renderStepBar();
   drawTrails();
-  showNotification(`Step ${idx + 1} deleted — Undo to bring it back.`, 'info', 4000);
+  showNotification(tf('msg.stepDeleted', { n: idx + 1 }), 'info', 4000);
 }
 
 async function clearAllSteps() {
@@ -3470,9 +3471,9 @@ async function clearAllSteps() {
   const stepCount = frames.length;
   const confirmed = await showConfirmModal({
     icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/><line x1="10" y1="11" x2="10" y2="17" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="11" x2="14" y2="17" stroke="#EF4444" stroke-width="1.5" stroke-linecap="round"/></svg>',
-    title: `Clear all ${stepCount} step${stepCount > 1 ? 's' : ''}?`,
-    desc: 'This will remove all animation steps and restore the pitch to its original state. This cannot be undone.',
-    confirmLabel: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> Clear All',
+    title: stepCount === 1 ? t('dlg.clearStepsTitleOne') : tf('dlg.clearStepsTitle', { n: stepCount }),
+    desc: t('dlg.clearStepsDesc'),
+    confirmLabel: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M3 6h18M8 6V4a2 2 0 012-2h4a2 2 0 012 2v2m3 0v14a2 2 0 01-2 2H7a2 2 0 01-2-2V6h14z" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/></svg> ${t('dlg.clearAllBtn')}`,
     confirmClass: 'danger',
   });
   if (!confirmed) return;
@@ -4530,7 +4531,7 @@ async function exportVideo() {
     }
   } catch (err) {
     console.error('Video export error:', err);
-    showNotification('Video export failed.', 'error', 4000);
+    showNotification(t('msg.videoExportFailed'), 'error', 4000);
     if (recorder) recorder.stop();
     if (trailsGroup) trailsGroup.style.display = '';
     if (exportBtn) exportBtn.innerHTML = origText;
@@ -5269,7 +5270,7 @@ async function confirmSaveAnalysis() {
 
   await saveAnalysis(name);
   closeSaveAnalysis();
-  showNotification('Analysis saved', 'success', 3000);
+  showNotification(t('msg.analysisSaved'), 'success', 3000);
   await updateCurrentBar();
   const u = getCurrentUser();
   if (u) logAction(u.uid, u.email, 'save').catch(() => {});
@@ -5646,16 +5647,16 @@ window.startRenameFolder = startRenameFolder;
 async function askDeleteFolder(folderId, name) {
   const result = await showConfirmModal({
     icon: 'trash',
-    title: 'Delete Folder?',
-    desc: `Delete "${name}"? Analyses inside will be moved to unfiled.`,
-    confirmLabel: 'Delete',
+    title: t('dlg.deleteFolderTitle'),
+    desc: tf('dlg.deleteFolderDesc', { name }),
+    confirmLabel: t('ui.delete', 'Delete'),
     confirmClass: 'danger',
   });
   if (result && result.confirmed) {
     await deleteFolder(folderId);
     _expandedFolders.delete(folderId);
     await renderAnalysesGrid();
-    showNotification('Folder deleted', 'info', 3000);
+    showNotification(t('msg.folderDeleted'), 'info', 3000);
   }
 }
 window.askDeleteFolder = askDeleteFolder;
@@ -5714,7 +5715,7 @@ async function loadAnalysisFromCard(id) {
   const analysis = await loadAnalysis(id, reattachListeners);
   if (analysis) {
     closeMyAnalyses();
-    showNotification('Analysis loaded: ' + analysis.name, 'info', 4000);
+    showNotification(t('msg.analysisLoaded') + analysis.name, 'info', 4000);
     await updateCurrentBar();
   }
 }
@@ -5780,7 +5781,7 @@ async function duplicateFromCard(id) {
   const copy = await duplicateAnalysis(id);
   if (copy) {
     await renderAnalysesGrid();
-    showNotification('Duplicated', 'success', 3000);
+    showNotification(t('msg.duplicated'), 'success', 3000);
   }
 }
 window.duplicateFromCard = duplicateFromCard;
@@ -5826,7 +5827,7 @@ function newAnalysisFromDashboard() {
   if (typeof window._syncWatermarkUI === 'function') window._syncWatermarkUI();
   closeMyAnalyses();
   updateCurrentBar();
-  showNotification('New analysis', 'info', 3000);
+  showNotification(t('msg.newAnalysis'), 'info', 3000);
 }
 window.newAnalysisFromDashboard = newAnalysisFromDashboard;
 
@@ -5919,7 +5920,7 @@ document.addEventListener('keydown', async e => {
     e.preventDefault();
     const saved = await quickSave();
     if (saved) {
-      showNotification('Auto-saved', 'success', 2000);
+      showNotification(t('msg.autoSaved'), 'success', 2000);
       const u = getCurrentUser();
       if (u) logAction(u.uid, u.email, 'save').catch(() => {});
     } else {
@@ -6002,7 +6003,7 @@ async function enterSharedView(shareId) {
     _sharedData = await loadSharedAnalysis(shareId);
     if (!_sharedData) {
       if (gate) gate.style.display = 'flex';
-      showNotification('This shared analysis no longer exists.', 'error', 5000);
+      showNotification(t('msg.sharedGone'), 'error', 5000);
       history.replaceState(null, '', window.location.pathname);
       _pendingShareId = null;
       return;
@@ -6033,7 +6034,7 @@ async function enterSharedView(shareId) {
     history.replaceState(null, '', window.location.pathname);
     _pendingShareId = null;
     if (gate) gate.style.display = 'flex';
-    showNotification('Could not load shared analysis. Please try again.', 'error', 5000);
+    showNotification(t('msg.sharedLoadFailed'), 'error', 5000);
   }
 }
 
@@ -6229,13 +6230,13 @@ function showConfirmModal({ icon, title, desc, confirmLabel, confirmClass, check
 
 async function shareAnalysis() {
   const u = getCurrentUser();
-  if (!u) { showNotification('Sign in to share.', 'error', 3000); return; }
+  if (!u) { showNotification(t('msg.signInToShare'), 'error', 3000); return; }
   const alreadySaved = !!getCurrentId();
   const result = await showConfirmModal({
     icon: '<svg width="28" height="28" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="3" stroke="#34D399" stroke-width="1.5"/><circle cx="6" cy="12" r="3" stroke="#34D399" stroke-width="1.5"/><circle cx="18" cy="19" r="3" stroke="#34D399" stroke-width="1.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" stroke="#34D399" stroke-width="1.5"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5" stroke="#34D399" stroke-width="1.5"/></svg>',
-    title: 'Share Analysis',
-    desc: "This will create a public link. Anyone with the link can view this analysis — they'll need to sign up to make their own copy.",
-    confirmLabel: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="1.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" stroke="currentColor" stroke-width="1.5"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5" stroke="currentColor" stroke-width="1.5"/></svg> Share',
+    title: t('dlg.shareTitle'),
+    desc: t('dlg.shareDesc'),
+    confirmLabel: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none"><circle cx="18" cy="5" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="6" cy="12" r="3" stroke="currentColor" stroke-width="1.5"/><circle cx="18" cy="19" r="3" stroke="currentColor" stroke-width="1.5"/><line x1="8.6" y1="13.5" x2="15.4" y2="17.5" stroke="currentColor" stroke-width="1.5"/><line x1="8.6" y1="10.5" x2="15.4" y2="6.5" stroke="currentColor" stroke-width="1.5"/></svg> ${t('dlg.shareBtn')}`,
     checkbox: {
       label: 'Also save analysis to my account',
       checked: false,
@@ -6276,7 +6277,7 @@ async function shareAnalysis() {
     document.getElementById('share-modal').style.display = 'flex';
   } catch (e) {
     console.error('Share failed:', e);
-    showNotification('Failed to create share link. Please try again.', 'error', 4000);
+    showNotification(t('msg.shareFailed'), 'error', 4000);
   }
 }
 window.shareAnalysis = shareAnalysis;
@@ -6352,7 +6353,7 @@ onAuthChange(async (user) => {
           moved.drills  ? `${moved.drills} drill${moved.drills === 1 ? '' : 's'}` : '',
           moved.sessions ? `${moved.sessions} session${moved.sessions === 1 ? '' : 's'}` : '',
         ].filter(Boolean).join(' and ');
-        showNotification(`${bits} from this device are now in your cloud library.`, 'success', 5000);
+        showNotification(tf('msg.migrated', { bits }), 'success', 5000);
       }
     } catch (e) { console.warn('Training migration error:', e); }
     // Track auto-restored sessions (returning users who didn't actively sign in)
@@ -6383,7 +6384,7 @@ onAuthChange(async (user) => {
     // Show welcome notification only on sign-up (first session ever)
     if (_authInitialized && _sc === 1) {
       const name = user.displayName || user.email || 'User';
-      showNotification('Welcome to Táctica, ' + name + '!', 'success', 4000);
+      showNotification(t('msg.welcome') + name + '!', 'success', 4000);
     }
 
     // Feature announcements — shown once on first click of each tool

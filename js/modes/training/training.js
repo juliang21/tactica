@@ -6,7 +6,7 @@
 import { captureState } from '../../storage.js';
 import * as S from '../../state.js';
 import { getCurrentUser } from '../../auth.js';
-import { t } from '../../i18n.js?v=3';   // same ?v as index.html — a different URL would be a SECOND module instance with its own language state
+import { t, tf } from '../../i18n.js?v=4';   // same ?v as index.html — a different URL would be a SECOND module instance with its own language state
 // Same ?v= as app.js so we share ONE firestore.js module instance — otherwise
 // this is a separate instance whose _sessionId is never set, and every training
 // event gets logged with sessionId: null (breaking session-level analytics).
@@ -349,7 +349,7 @@ export async function saveSession() {
       nameEl.addEventListener('input', clear);
       nameEl.focus();
     }
-    window.showNotification?.('Please give your session a name.', 'error', 3000);
+    window.showNotification?.(t('msg.sessionNeedsName'), 'error', 3000);
     return;
   }
   const now = Date.now();
@@ -362,8 +362,8 @@ export async function saveSession() {
   };
   try {
     const { storedIn } = await saveSessionCloudOrLocal(session);
-    const where = storedIn === 'cloud' ? 'cloud' : 'this device';
-    window.showNotification?.(`Session "${session.name}" saved to ${where}.`, 'success', 3000);
+    const where = storedIn === 'cloud' ? t('msg.savedToCloud') : t('msg.savedToDevice');
+    window.showNotification?.(tf('msg.sessionSaved', { name: session.name, where }), 'success', 3000);
     track('training_session_saved', {
       isNew: !_editingSessionId,
       drillCount: session.drillIds.length,
@@ -373,7 +373,7 @@ export async function saveSession() {
     });
   } catch (e) {
     console.error(e);
-    window.showNotification?.('Could not save session. Please try again.', 'error', 4000);
+    window.showNotification?.(t('msg.sessionSaveFailed'), 'error', 4000);
     return;
   }
   _currentSession = null;
@@ -384,7 +384,7 @@ export async function saveSession() {
 
 async function openSession(id) {
   const session = await loadSession(id);
-  if (!session) { window.showNotification?.('Could not load session.', 'error', 3000); return; }
+  if (!session) { window.showNotification?.(t('msg.sessionLoadFailed'), 'error', 3000); return; }
   _currentSession = session;
   _editingSessionId = id;
   applySessionToForm(session);
@@ -730,7 +730,7 @@ export async function saveDrill() {
       nameEl.addEventListener('input', clear);
       nameEl.focus();
     }
-    window.showNotification?.('Please give your drill a name.', 'error', 3000);
+    window.showNotification?.(t('msg.drillNeedsName'), 'error', 3000);
     return;
   }
 
@@ -749,8 +749,8 @@ export async function saveDrill() {
 
   try {
     const { storedIn } = await saveDrillCloudOrLocal(drill);
-    const where = storedIn === 'cloud' ? 'cloud' : 'this device';
-    window.showNotification?.(`Drill "${drill.name}" saved to ${where}.`, 'success', 3000);
+    const where = storedIn === 'cloud' ? t('msg.savedToCloud') : t('msg.savedToDevice');
+    window.showNotification?.(tf('msg.drillSaved', { name: drill.name, where }), 'success', 3000);
     track('training_drill_saved', {
       isNew: !_editingDrillId,
       numPlayers: drill.numPlayers,
@@ -760,7 +760,7 @@ export async function saveDrill() {
     });
   } catch (e) {
     console.error(e);
-    window.showNotification?.('Could not save drill. Please try again.', 'error', 4000);
+    window.showNotification?.(t('msg.drillSaveFailed'), 'error', 4000);
     return;
   }
 
@@ -953,7 +953,7 @@ function buildDrillCard(d) {
   };
   card.querySelector('.drill-card-delete').onclick = async (e) => {
     e.stopPropagation();
-    if (!confirm(`Delete drill "${d.name || 'Untitled'}"?`)) return;
+    if (!confirm(tf('msg.confirmDeleteDrill', { name: d.name || t('msg.untitled') }))) return;
     await deleteDrill(d.id);
     track('training_drill_deleted', { drillId: d.id });
     invalidateDrillCache();
@@ -1068,7 +1068,7 @@ async function renderSessionLibrary() {
     };
     card.querySelector('.drill-card-delete').onclick = async (e) => {
       e.stopPropagation();
-      if (!confirm(`Delete session "${s.name || 'Untitled'}"?`)) return;
+      if (!confirm(tf('msg.confirmDeleteSession', { name: s.name || t('msg.untitled') }))) return;
       await deleteSession(s.id);
       track('training_session_deleted', { sessionId: s.id });
       renderSessionLibrary();
@@ -1102,18 +1102,18 @@ async function duplicateDrill(card) {
     await saveDrillCloudOrLocal(copy);
   } catch (e) {
     console.error(e);
-    window.showNotification?.('Could not duplicate the drill. Please try again.', 'error', 4000);
+    window.showNotification?.(t('msg.drillDuplicateFailed'), 'error', 4000);
     return;
   }
   track('training_drill_duplicated', { sourceId: source.id, drillId: copy.id });
-  window.showNotification?.(`Copied as "${name}".`, 'success', 3000);
+  window.showNotification?.(tf('msg.copiedAs', { name }), 'success', 3000);
   renderDrillLibrary();
 }
 
 async function openDrill(id) {
   const drill = await loadDrill(id);
   if (!drill) {
-    window.showNotification?.('Could not load drill.', 'error', 3000);
+    window.showNotification?.(t('msg.drillLoadFailed'), 'error', 3000);
     return;
   }
   _currentDrill = drill;
@@ -1227,7 +1227,7 @@ window.addEventListener('tactica:langchange', () => {
 export async function printSession() {
   const session = readSessionFromForm();
   const ids = _currentSession?.drillIds || [];
-  if (!ids.length) { window.showNotification?.('Add at least one drill before printing.', 'error', 3000); return; }
+  if (!ids.length) { window.showNotification?.(t('msg.needOneDrill'), 'error', 3000); return; }
   const all = await listDrills();
   const byId = Object.fromEntries(all.map(d => [d.id, d]));
   const drills = ids.map(id => byId[id]).filter(Boolean);

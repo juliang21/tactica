@@ -2,6 +2,7 @@ import * as S from './state.js';
 import { deselectVisual, select } from './interaction.js';
 import { trackExportClicked, trackExportCompleted } from './analytics.js';
 import { canAccess } from './subscription.js';
+import { t } from './i18n.js?v=4';   // same ?v everywhere — i18n is stateful
 
 // Helper: word-wrap text for canvas rendering
 function wrapCanvasText(ctx, content, maxW) {
@@ -1761,7 +1762,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
           // Never leave the coach empty-handed — fall back to a download
           triggerDownload();
           showExportToast(dataUrl, filename, 'downloaded');
-          if (typeof showNotification === 'function') showNotification("Copying isn't available in this browser — downloaded the image instead.", 'info', 4500);
+          if (typeof showNotification === 'function') showNotification(t('msg.copyUnavailable'), 'info', 4500);
         });
       } else {
         triggerDownload();
@@ -1772,7 +1773,7 @@ function renderOverlays(ctx, W, H, SCALE, canvas, prevSelected, onDone) {
       }
     } catch(err) {
       if (document.body.contains(canvas)) document.body.removeChild(canvas);
-      if (typeof showNotification === 'function') showNotification('Export error: ' + err.message, 'error', 5000);
+      if (typeof showNotification === 'function') showNotification(t('msg.exportError') + err.message, 'error', 5000);
       else console.error('Export error:', err.message);
     }
     if (prevSelected) select(prevSelected);
