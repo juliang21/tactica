@@ -122,13 +122,6 @@ body {
   color: var(--text); text-transform: uppercase;
   display: flex; align-items: center; gap: 8px;
 }
-.beta-badge {
-  display: inline-block; font-family: 'Manrope', sans-serif;
-  font-size: 8px; font-weight: 700; letter-spacing: 1.5px;
-  color: var(--accent); border: 1px solid var(--accent);
-  padding: 2px 5px; border-radius: 3px;
-  opacity: 0.8;
-}
 .tool-sep { display: none; }
 
 /* Tool groups — panel sections with 2-column grid */
@@ -1855,10 +1848,6 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
     /* vertically center with the app-menu-btn (top:10px, h:36px → center at 28px) */
     top: 28px; transform: translateY(-50%);
   }
-  .beta-badge {
-    font-size: 6px; padding: 1px 4px;
-  }
-
   /* Toolbar → horizontal bottom bar */
   #toolbar {
     width: 100%; height: 64px;
@@ -3543,8 +3532,8 @@ body.shared-view #canvas-wrap {
    dimmed and borderless at rest, resolving on hover. Same treatment the
    sidebar's terms link uses. */
 .lang-select-quiet {
-  background: transparent; border-color: transparent;
-  color: var(--text-dim); opacity: 0.5;
+  background: transparent; border-color: rgba(255,255,255,0.1);
+  color: var(--text-dim); opacity: 0.72;
   font-size: 11px; font-weight: 500;
   padding: var(--space-0) var(--space-1);
   transition: opacity 0.15s, color 0.15s, border-color 0.15s;
