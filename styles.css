@@ -3516,25 +3516,19 @@ body.shared-view #canvas-wrap {
 }
 
 /* ── Language switcher ─────────────────────────────────────────────────────
-   Two-state segmented control on the landing gate. Small and quiet: it is an
-   escape hatch from our locale guess, not a headline control. */
-.lang-switch {
-  display: inline-flex; gap: var(--space-0); padding: var(--space-0);
-  background: rgba(255,255,255,0.05);
-  border: 1px solid rgba(255,255,255,0.1);
-  border-radius: 999px; margin-right: var(--space-1);
+   A <select> rather than a pill of buttons: with six languages (and room for
+   more) a segmented control no longer fits the 185px account menu. */
+.lang-select {
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  color: var(--text); background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+  padding: var(--space-1) var(--space-2); cursor: pointer;
+  max-width: 128px; text-overflow: ellipsis;
 }
-.lang-switch button {
-  font-family: inherit; font-size: 11px; font-weight: 700; letter-spacing: 0.04em;
-  color: var(--text-dim); background: transparent; border: none;
-  padding: var(--space-1) var(--space-3); border-radius: 999px; cursor: pointer; transition: all 0.15s;
-}
-.lang-switch button:hover { color: var(--text); }
-.lang-switch button.active { color: #0d1a12; background: var(--accent); }
+.lang-select:hover { border-color: rgba(255,255,255,0.24); }
+.lang-select:focus { outline: none; border-color: var(--accent); }
+.lang-select option { background: var(--panel); color: var(--text); }
 
-/* Language row inside the account menu — same anatomy as the other items,
-   with the two choices inline on the right. */
 .app-menu-lang { display: flex; align-items: center; gap: var(--space-2); }
-.app-menu-lang .lang-switch { margin-left: auto; margin-right: 0; flex-shrink: 0; }
-.app-menu-lang .lang-switch button { padding: var(--space-1) var(--space-2); }
+.app-menu-lang .lang-select { margin-left: auto; flex-shrink: 0; }
 .app-menu-lang > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }

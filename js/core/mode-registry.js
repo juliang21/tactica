@@ -1,4 +1,4 @@
-import { t } from '../i18n.js?v=5';   // same ?v everywhere — i18n is stateful
+import { t } from '../i18n.js?v=6';   // same ?v everywhere — i18n is stateful
 // ─── Mode Registry ──────────────────────────────────────────────────────────
 // Central mode lifecycle manager. Each mode (pitch, image, video, training…)
 // registers its configuration here. switchMode() coordinates toolbar, side

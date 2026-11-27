@@ -41,7 +41,7 @@ import { pitchMode } from './modes/pitch/config.js';
 import { imageMode } from './modes/image/config.js';
 import { trainingMode } from './modes/training/config.js';
 import { migrateTrainingLocalToCloud } from './modes/training/training-storage.js';
-import { t, tf } from './i18n.js?v=5';   // same ?v everywhere — i18n is stateful
+import { t, tf } from './i18n.js?v=6';   // same ?v everywhere — i18n is stateful
 
 // ─── Register Modes & activate default ─────────────────────────────────────
 registerMode('pitch', pitchMode);
