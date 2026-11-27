@@ -105,11 +105,13 @@ body {
 #toolbar .toolbar-scroll,
 #toolbar .tool-group-save,
 #toolbar .tool-group-account,
+#toolbar .sidebar-lang,
 #toolbar .sidebar-terms-link { transition: opacity 0.2s ease; }
 #toolbar.collapsed { width: 0 !important; min-width: 0 !important; padding: 0; border-color: transparent; background: transparent; box-shadow: none; backdrop-filter: none; -webkit-backdrop-filter: none; overflow: hidden; }
 #toolbar.collapsed .toolbar-scroll,
 #toolbar.collapsed .tool-group-save,
 #toolbar.collapsed .tool-group-account,
+#toolbar.collapsed .sidebar-lang,
 #toolbar.collapsed .sidebar-terms-link { opacity: 0; pointer-events: none; }
 .toolbar-toggle.collapsed { left: 0; }
 .toolbar-toggle.collapsed svg { transform: rotate(180deg); }
@@ -1886,6 +1888,13 @@ body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(25
   .tool-group { display: contents; }
   .tool-group-save { display: contents; }
   .tool-group-account { display: contents; padding: 0; border-top: none; }
+  /* The toolbar is a horizontal, horizontally-scrolling strip here, not a
+     sidebar — a language row inside it lands hundreds of px off-screen and
+     pads the strip. Mobile coaches set their language on the landing gate,
+     whose footer switcher is reachable on every screen size. */
+  /* #toolbar-qualified: the base .sidebar-lang rule is declared later in the
+     file, so a bare class selector here would lose on cascade order. */
+  #toolbar .sidebar-lang { display: none; }
   .tool-label { display: none; }
   .tool-group-title { display: none; }
   .tool-bundle > .tool-btn::after { display: none; }
@@ -3529,15 +3538,32 @@ body.shared-view #canvas-wrap {
 .lang-select:focus { outline: none; border-color: var(--accent); }
 .lang-select option { background: var(--panel); color: var(--text); }
 
-/* Stacked, not side by side: the dropdown is only as wide as the toolbar
-   above it, so a label and a six-language select fighting over one row left
-   "Language" as "Langua...". On its own line the select can also show the
-   longest language name in full. */
-.app-menu-lang {
-  display: flex; flex-direction: column; align-items: stretch; gap: var(--space-1);
+/* Quiet variant — the one that actually ships. Picking a language is a
+   once-ever action, so it has to be findable without competing with the work:
+   dimmed and borderless at rest, resolving on hover. Same treatment the
+   sidebar's terms link uses. */
+.lang-select-quiet {
+  background: transparent; border-color: transparent;
+  color: var(--text-dim); opacity: 0.5;
+  font-size: 11px; font-weight: 500;
+  padding: var(--space-0) var(--space-1);
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
 }
-.app-menu-lang > span {
-  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
-  text-transform: uppercase; color: var(--text-muted);
+.lang-select-quiet:hover {
+  opacity: 1; color: var(--text); border-color: rgba(255,255,255,0.12);
 }
-.app-menu-lang .lang-select { width: 100%; max-width: none; }
+.lang-select-quiet:focus { opacity: 1; color: var(--text); }
+/* The native popup is drawn by the OS, so it needs a real background. */
+.lang-select-quiet option { background: var(--panel); color: var(--text); opacity: 1; }
+
+/* Foot of the app sidebar. The landing gate is hidden for good after sign-in,
+   so this is the only switcher a signed-in coach ever sees. */
+.sidebar-lang {
+  flex: 0 0 auto; display: flex; justify-content: center;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+}
+.sidebar-lang .lang-select { max-width: 100%; }
+
+/* Bottom of the landing page, after the legal links. */
+.landing-legal .lang-select { margin-left: auto; }
