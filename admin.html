@@ -71,6 +71,33 @@
   .section-header .icon { font-size: 14px; opacity: 0.7; }
   .section h2 { font-size: 14px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; color: #888; margin-bottom: 12px; }
 
+  /* Collapsible sections. The chevron is appended by JS, so a section stays
+     readable if the script ever fails to run — it just won't fold. */
+  .sec-toggle { cursor: pointer; user-select: none; }
+  .sec-toggle:hover { color: #6EE7B7; }
+  .section h2.sec-toggle:hover { color: #aaa; }
+  .sec-chevron {
+    margin-left: auto; flex-shrink: 0; font-size: 10px; line-height: 1;
+    opacity: 0.45; transition: transform 0.18s ease, opacity 0.18s ease;
+  }
+  .sec-toggle:hover .sec-chevron { opacity: 0.9; }
+  .section.collapsed .sec-chevron { transform: rotate(-90deg); }
+  .section.collapsed .sec-body { display: none; }
+  /* The header's bottom margin is dead space once the body is hidden. */
+  .section.collapsed .section-header,
+  .section.collapsed > h2.sec-toggle { margin-bottom: 0; }
+  .section.collapsed { margin-bottom: 14px; }
+  /* h2 headers have no flex row of their own; give them one for the chevron. */
+  .section > h2.sec-toggle { display: flex; align-items: center; gap: 8px; }
+  .sec-allbar {
+    display: flex; justify-content: flex-end; gap: 14px; margin: -6px 0 14px;
+  }
+  .sec-allbar button {
+    background: none; border: none; color: #666; font-family: inherit;
+    font-size: 11px; cursor: pointer; padding: 2px 0;
+  }
+  .sec-allbar button:hover { color: #34D399; }
+
   /* Table */
   .table-wrap { overflow-x: auto; border-radius: 10px; border: 1px solid rgba(255,255,255,0.06); }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
@@ -394,7 +421,7 @@
 
   <!-- ═══ OVERVIEW TAB ═══ -->
   <div class="tab-content active" id="tab-overview">
-    <div class="section">
+    <div class="section" data-sec="wau">
       <div class="section-header"><span class="icon">📈</span> Weekly Active Coaches: Distinct coaches who opened Táctica each week</div>
       <div class="chart-container">
         <div class="ke-plot" id="wau-plot"></div>
@@ -403,42 +430,42 @@
       </div>
     </div>
     <div id="milestone-top"></div>
-    <div class="section">
+    <div class="section" data-sec="usecase">
       <div class="section-header"><span class="icon">&#127919;</span> Use Case Breakdown: How coaches use Táctica</div>
       <div id="usecase-breakdown"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="languages">
       <div class="section-header"><span class="icon">&#127760;</span> Languages: What coaches read Táctica in</div>
       <div id="language-breakdown"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="signup-sources">
       <div class="section-header"><span class="icon">&#128228;</span> Sign-up Sources: Where new coaches came from</div>
       <div id="signup-sources"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="traffic">
       <div class="section-header"><span class="icon">&#128268;</span> Site Traffic (GA4): New-visitor channel mix</div>
       <div id="traffic-sources"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="coach-level">
       <div class="section-header"><span class="icon">&#128100;</span> Coach-Level Data</div>
       <div class="stats-grid" id="user-stats"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="session-level">
       <div class="section-header"><span class="icon">&#9889;</span> Session-Level Data</div>
       <div class="stats-grid" id="session-stats"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="key-features">
       <div class="section-header"><span class="icon">&#128273;</span> Key Features Usage</div>
       <div class="stats-grid" id="feature-stats"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="sessions-chart">
       <h2 id="chart-title">Sessions</h2>
       <div class="chart-container">
         <div class="chart-bars" id="chart-bars"></div>
         <div class="chart-labels" id="chart-labels"></div>
       </div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="key-event-trend">
       <div class="ke-header">
         <h2 style="margin:0">Key Event Trend</h2>
         <select id="ke-event" class="ke-select" onchange="loadKeyEventChart()">
@@ -466,7 +493,7 @@
         <div class="chart-labels" id="ke-labels"></div>
       </div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="all-coaches">
       <h2 id="users-table-title">All Coaches</h2>
       <div class="table-wrap">
         <table id="coaches-table">
@@ -492,7 +519,7 @@
 
   <!-- ═══ TRAINING TAB ═══ -->
   <div class="tab-content" id="tab-training">
-    <div class="section">
+    <div class="section" data-sec="drill-library">
       <div class="section-header"><span class="icon">📚</span> Drill Library: What coaches have actually built</div>
       <div class="stats-grid" id="training-lib-stats"></div>
       <div id="training-lib-depth" style="margin-top:18px"></div>
@@ -503,15 +530,15 @@
 
   <!-- ═══ REVIEWS TAB ═══ -->
   <div class="tab-content" id="tab-reviews">
-    <div class="section">
+    <div class="section" data-sec="review-funnel">
       <div class="section-header"><span class="icon">⭐</span> Review Funnel</div>
       <div class="stats-grid" id="review-funnel-stats"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="rating-dist">
       <div class="section-header"><span class="icon">📊</span> Rating Distribution</div>
       <div id="review-distribution"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="reviews">
       <div class="section-header"><span class="icon">💬</span> Reviews</div>
       <div id="review-list"></div>
     </div>
@@ -519,14 +546,14 @@
 
   <!-- ═══ RETENTION TAB ═══ -->
   <div class="tab-content" id="tab-retention">
-    <div class="section">
+    <div class="section" data-sec="retention-cohort">
       <div class="section-header"><span class="icon">&#128202;</span> Weekly Cohort Retention</div>
       <div class="ret-note">
         Each coach belongs to one cohort, set by their sign-up week (Mon&ndash;Sun). <strong>W0&nbsp;&middot;&nbsp;Aha</strong> = % of the cohort that hit the aha moment during their sign-up week: started a Board or Image analysis (3+ interactions) or a Training drill/session. <strong>W1&ndash;W8</strong> = % that opened Táctica again during the N-th week after sign-up. Showing the last 8 cohorts; the most recent week of each may still be in progress.
       </div>
       <div class="table-wrap" id="retention-table"></div>
     </div>
-    <div class="section">
+    <div class="section" data-sec="retention-curves">
       <div class="section-header"><span class="icon">&#128201;</span> Retention Curves</div>
       <div id="retention-chart"></div>
     </div>
@@ -566,6 +593,10 @@ onAuthStateChanged(auth, (user) => {
   if (user && ADMIN_EMAILS.includes(user.email)) {
     document.getElementById('auth-gate').style.display = 'none';
     document.getElementById('dashboard').style.display = 'block';
+    // Before loadDashboard: the wrap only moves the container divs, which the
+    // render functions still reach by id, and folding happens with no flash of
+    // a fully-expanded page.
+    initCollapsibleSections();
     loadDashboard();
   } else if (user) {
     document.getElementById('auth-gate').style.display = 'block';
@@ -584,6 +615,101 @@ window.switchAdminTab = function(tab) {
   document.querySelector(`.admin-tab[onclick*="${tab}"]`).classList.add('active');
   document.getElementById('tab-' + tab).classList.add('active');
 };
+
+// ─── Collapsible sections ───────────────────────────────────────────────────
+// Progressive enhancement over the static markup: each .section keeps its
+// heading and gets everything after it wrapped in a .sec-body, which the
+// `collapsed` class hides. Keys come from data-sec, never from the heading
+// text — #chart-title and #users-table-title are rewritten on every render.
+// Preference lives in localStorage, so it survives the session.
+const SEC_STORE = 'tactica_admin_collapsed';
+
+function readCollapsed() {
+  try {
+    const v = JSON.parse(localStorage.getItem(SEC_STORE) || '[]');
+    return new Set(Array.isArray(v) ? v : []);
+  } catch (e) { return new Set(); }   // blocked/corrupt storage → everything open
+}
+function writeCollapsed(set) {
+  try { localStorage.setItem(SEC_STORE, JSON.stringify([...set])); } catch (e) {}
+}
+
+function setSectionCollapsed(sec, collapsed, store) {
+  sec.classList.toggle('collapsed', collapsed);
+  const head = sec.querySelector('.sec-toggle');
+  if (head) head.setAttribute('aria-expanded', String(!collapsed));
+  const body = sec.querySelector('.sec-body');
+  if (body) body.setAttribute('aria-hidden', String(collapsed));
+  if (store !== false) {
+    const set = readCollapsed();
+    const key = sec.dataset.sec;
+    if (collapsed) set.add(key); else set.delete(key);
+    writeCollapsed(set);
+  }
+}
+
+function initCollapsibleSections() {
+  const collapsed = readCollapsed();
+  document.querySelectorAll('.section[data-sec]').forEach(sec => {
+    if (sec.dataset.secReady) return;
+    // The heading is the first element child: .section-header, a bare <h2>,
+    // or .ke-header (an <h2> sharing a row with the chart's selects).
+    const head = sec.firstElementChild;
+    if (!head) return;
+    const clickTarget = head.classList.contains('ke-header')
+      ? head.querySelector('h2') || head
+      : head;
+
+    // Wrap everything after the heading so one class can hide it all.
+    const body = document.createElement('div');
+    body.className = 'sec-body';
+    let n = head.nextSibling;
+    while (n) { const next = n.nextSibling; body.appendChild(n); n = next; }
+    sec.appendChild(body);
+
+    const chev = document.createElement('span');
+    chev.className = 'sec-chevron';
+    chev.textContent = '▼';
+    clickTarget.appendChild(chev);
+
+    clickTarget.classList.add('sec-toggle');
+    clickTarget.setAttribute('role', 'button');
+    clickTarget.setAttribute('tabindex', '0');
+    clickTarget.addEventListener('click', (e) => {
+      // The Key Event Trend heading shares its row with two <select>s; a click
+      // on those must change the chart, not fold the section away.
+      if (e.target.closest('select, button, input, a')) return;
+      setSectionCollapsed(sec, !sec.classList.contains('collapsed'));
+    });
+    clickTarget.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        setSectionCollapsed(sec, !sec.classList.contains('collapsed'));
+      }
+    });
+
+    sec.dataset.secReady = '1';
+    setSectionCollapsed(sec, collapsed.has(sec.dataset.sec), false);
+  });
+
+  // Per-tab expand/collapse-all, above the first section of each tab.
+  document.querySelectorAll('.tab-content').forEach(tab => {
+    if (tab.querySelector(':scope > .sec-allbar')) return;
+    const secs = tab.querySelectorAll(':scope > .section[data-sec]');
+    if (secs.length < 2) return;
+    const bar = document.createElement('div');
+    bar.className = 'sec-allbar';
+    bar.innerHTML = `<button type="button" data-all="open">Expand all</button>` +
+                    `<button type="button" data-all="close">Collapse all</button>`;
+    bar.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-all]');
+      if (!b) return;
+      const want = b.dataset.all === 'close';
+      secs.forEach(sec => setSectionCollapsed(sec, want));
+    });
+    tab.insertBefore(bar, tab.firstElementChild);
+  });
+}
 
 // ─── Data cache ────────────────────────────────────────────────────────────
 let _allUsers = [];
