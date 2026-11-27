@@ -29,7 +29,7 @@ import { saveAnalysis, loadAnalysis, deleteAnalysis, duplicateAnalysis, renameAn
 import { onAuthChange, getCurrentUser } from './auth.js';
 // access-check.js kept for future reactivation (Turkey/email blocking disabled)
 // import { shouldBlockUser, shouldBlockAnonymous, showMaintenanceOverlay, isBlockedEmail } from './access-check.js';
-import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed, getLandingStats } from './firestore.js?v=8';
+import { logSession, logAction, setSessionId, saveSharedAnalysis, loadSharedAnalysis, markUserReviewed, getLandingStats } from './firestore.js?v=9';
 import { hideUpgradePrompt, setUserTier, updateLockedUI, initSubscriptionListener, stopSubscriptionListener, startCheckout, openManageSubscription, isPro } from './subscription.js';
 import './features/feedback.js';
 import './features/bundles.js';
@@ -41,7 +41,7 @@ import { pitchMode } from './modes/pitch/config.js';
 import { imageMode } from './modes/image/config.js';
 import { trainingMode } from './modes/training/config.js';
 import { migrateTrainingLocalToCloud } from './modes/training/training-storage.js';
-import { t, tf } from './i18n.js?v=6';   // same ?v everywhere — i18n is stateful
+import { t, tf } from './i18n.js?v=7';   // same ?v everywhere — i18n is stateful
 
 // ─── Register Modes & activate default ─────────────────────────────────────
 registerMode('pitch', pitchMode);
@@ -1096,6 +1096,20 @@ window.doExport = function(action) {
     method: action === 'copy' ? 'copy' : 'download',
   }).catch(() => {});
 };
+// A coach actively switching language is the signal that our detection guessed
+// wrong — meta.from is the guess we made, meta.lang what they actually wanted.
+// Fires only on an explicit switch: _boot() resolves the language without
+// calling setLang(), so page loads never land here.
+window.addEventListener('tactica:langchange', (e) => {
+  const u = getCurrentUser();
+  if (!u) return;
+  const d = e.detail || {};
+  if (!d.lang || d.lang === d.from) return;
+  logAction(u.uid, u.email, 'feature_language_changed', {
+    lang: d.lang, from: d.from || '', browserLang: d.browserLang || '',
+  }).catch(() => {});
+});
+
 // Firestore hook for export.js (which doesn't import auth/firestore itself).
 // Logs SUCCESSFUL copy-to-clipboard events so the admin dashboard can track
 // Copy Image adoption separately from plain exports.

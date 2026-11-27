@@ -408,6 +408,10 @@
       <div id="usecase-breakdown"></div>
     </div>
     <div class="section">
+      <div class="section-header"><span class="icon">&#127760;</span> Languages: What coaches read Táctica in</div>
+      <div id="language-breakdown"></div>
+    </div>
+    <div class="section">
       <div class="section-header"><span class="icon">&#128228;</span> Sign-up Sources: Where new coaches came from</div>
       <div id="signup-sources"></div>
     </div>
@@ -794,6 +798,7 @@ window.applyDateFilter = function() {
   const signUps = allUsersFiltered.filter(u => u.firstSeen >= startMs && u.firstSeen <= endMs).length;
 
   renderUseCaseBreakdown(filteredActions, activeUids.size, filteredSessions);
+  renderLanguages(filteredSessions, filteredActions);
   renderSignupSources(allUsersFiltered, startMs, endMs);
   renderTrafficSources(startStr, endStr);
   renderWau();
@@ -1467,6 +1472,85 @@ function classifyFirstTouch(ft) {
   if (has('reddit.com')) return 'Reddit';
   if (has('google.com') || host.startsWith('www.google.') || has('bing.com', 'duckduckgo.com') || host.includes('search.yahoo')) return 'Search';
   return 'Referral: ' + host;
+}
+
+// ─── Languages ──────────────────────────────────────────────────────────────
+// Language is stamped on the SESSION doc, not the user doc, because the same
+// coach can open Táctica in Spanish on a club laptop and English at home — so
+// "which language on a given session" is the only question with one answer.
+// Sessions logged before this shipped carry no `lang`; they are reported as
+// Unstamped rather than silently folded into English, which would invent a
+// result the data does not contain.
+function renderLanguages(sessions, actions) {
+  const el = document.getElementById('language-breakdown');
+  if (!el) return;
+  const NAMES = { en: 'English', es: 'Español', de: 'Deutsch', fr: 'Français', it: 'Italiano', tr: 'Türkçe' };
+  const sess = sessions || [];
+  const stamped = sess.filter(s => s.lang);
+  const unstamped = sess.length - stamped.length;
+
+  if (!stamped.length) {
+    el.innerHTML = `<div style="color:#777;font-size:12px;padding:6px 0">No language data in this range yet` +
+      (unstamped ? ` &mdash; all ${unstamped} session${unstamped === 1 ? '' : 's'} predate language tracking.` : '.') +
+      `</div>`;
+    return;
+  }
+
+  // Per language: sessions, and the distinct coaches behind them.
+  const byLang = new Map();
+  stamped.forEach(s => {
+    if (!byLang.has(s.lang)) byLang.set(s.lang, { sessions: 0, coaches: new Set(), chosen: 0 });
+    const e = byLang.get(s.lang);
+    e.sessions++;
+    if (s.uid) e.coaches.add(s.uid);
+    // 'chosen'/'url' = the coach picked it; 'detected' = our guess from the browser.
+    if (s.langSource && s.langSource !== 'detected') e.chosen++;
+  });
+  const rows = [...byLang.entries()]
+    .map(([code, e]) => ({ code, name: NAMES[code] || code, sessions: e.sessions, coaches: e.coaches.size, chosen: e.chosen }))
+    .sort((a, b) => b.sessions - a.sessions);
+
+  const totalSess = stamped.length;
+  const maxSess = Math.max(...rows.map(r => r.sessions));
+  // Distinct coaches across stamped sessions — NOT the sum of the per-language
+  // coach counts, which double-counts anyone who switched language.
+  const totalCoaches = new Set(stamped.map(s => s.uid).filter(Boolean)).size;
+
+  let html = `<div style="color:#888;font-size:11px;margin-bottom:8px">` +
+    `${totalSess} stamped session${totalSess === 1 ? '' : 's'} &middot; ${totalCoaches} distinct coach${totalCoaches === 1 ? '' : 'es'}` +
+    (unstamped ? ` &middot; ${unstamped} session${unstamped === 1 ? '' : 's'} before tracking (excluded)` : '') +
+    `</div>`;
+
+  rows.forEach(r => {
+    const share = Math.round((r.sessions / totalSess) * 100);
+    const pctBar = Math.round((r.sessions / maxSess) * 100);
+    const picked = r.chosen > 0 ? ` &middot; ${r.chosen} picked it` : '';
+    html += `<div class="breakdown-bar">
+      <span class="breakdown-label" title="${r.name} (${r.code})">${r.name}</span>
+      <div class="breakdown-track"><div class="breakdown-fill" style="width:${pctBar}%"></div></div>
+      <span class="breakdown-count">${r.coaches} coach${r.coaches === 1 ? '' : 'es'}</span>
+      <span class="breakdown-sessions">${r.sessions} sess &middot; ${share}%${picked}</span>
+    </div>`;
+  });
+
+  // Switching away from our guess is the signal that detection is wrong.
+  const switches = (actions || []).filter(a => a.action === 'feature_language_changed');
+  if (switches.length) {
+    const pairs = new Map();
+    switches.forEach(a => {
+      const m = a.meta || {};
+      const k = `${m.from || '?'} → ${m.lang || '?'}`;
+      pairs.set(k, (pairs.get(k) || 0) + 1);
+    });
+    const top = [...pairs.entries()].sort((a, b) => b[1] - a[1]).slice(0, 5)
+      .map(([k, v]) => `${k} (${v})`).join(' &middot; ');
+    const who = new Set(switches.map(a => a.uid)).size;
+    html += `<div style="color:#888;font-size:11px;margin-top:10px;padding-top:8px;border-top:1px solid rgba(255,255,255,0.06)">` +
+      `<strong style="color:#ccc">${switches.length} language switch${switches.length === 1 ? '' : 'es'}</strong> by ${who} coach${who === 1 ? '' : 'es'}: ${top}</div>`;
+  }
+
+  html += `<div class="uc-foot">Stamped at sign-in, so one session = one language even if the coach switched mid-visit; switches are counted separately above. "Picked it" = chose the language themselves rather than getting our browser-based guess.</div>`;
+  el.innerHTML = html;
 }
 
 function renderSignupSources(usersFiltered, startMs, endMs) {

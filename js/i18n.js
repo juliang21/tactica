@@ -447,13 +447,23 @@ function detect() {
   return 'en';
 }
 
+// How we arrived at the language, captured HERE and never recomputed: the
+// moment setLang() persists a choice, readStored() can no longer tell a coach's
+// pick apart from our own guess. The admin needs that distinction to know
+// whether detection is working or people are correcting it.
+let _langSource = 'detected';
 let _lang = (() => {
   try {
     const q = new URLSearchParams(location.search).get('lang');
-    if (q && LANGS[q]) return q;
+    if (q && LANGS[q]) { _langSource = 'url'; return q; }
   } catch (e) {}
-  return readStored() || detect();
+  const stored = readStored();
+  if (stored) { _langSource = 'chosen'; return stored; }
+  return detect();
 })();
+// The browser's own preference, kept even after an override, so "we guessed de,
+// they switched to en" is visible rather than inferred.
+const _browserLang = detect();
 
 export function getLang() { return _lang; }
 // True only when the coach picked a language themselves; detection is a guess.
@@ -498,14 +508,18 @@ export function loadLang(lang) {
 
 export function setLang(lang, { persist = true } = {}) {
   if (!LANGS[lang]) return;
+  const from = _lang;
   _lang = lang;
+  if (persist) _langSource = 'chosen';
   if (persist) { try { localStorage.setItem(STORE_KEY, lang); } catch (e) {} }
   document.documentElement.lang = lang;
   // Paint immediately when the dictionary is already in memory; otherwise fetch
   // it first so we never flash a half-translated UI.
   const done = () => {
     applyI18n();
-    window.dispatchEvent(new CustomEvent('tactica:langchange', { detail: { lang } }));
+    window.dispatchEvent(new CustomEvent('tactica:langchange', {
+      detail: { lang, from, browserLang: _browserLang },
+    }));
   };
   if (lang === 'en' || STRINGS[lang]) done(); else loadLang(lang).then(done);
 }
@@ -558,3 +572,10 @@ if (document.readyState === 'loading') {
 }
 window.__tacticaSetLang = setLang;
 window.__tacticaGetLang = getLang;
+// Read by firestore.js when it stamps a session. Deliberately a function, not
+// a value: the coach can switch language before the auth flow logs the session.
+window.__tacticaLangMeta = () => ({
+  lang: _lang,
+  langSource: _langSource,
+  browserLang: _browserLang,
+});

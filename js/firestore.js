@@ -165,6 +165,12 @@ export async function logSession(uid, email, displayName) {
 
   // Log individual session
   const device = window.innerWidth <= 768 ? 'mobile' : 'desktop';
+  // Language is a property of the SESSION, not of the account: the same coach
+  // can open the app in Spanish on a club laptop and English at home. Read off
+  // window rather than importing i18n.js — a second module instance would carry
+  // its own _lang (see /codebase-map).
+  const lm = (typeof window.__tacticaLangMeta === 'function' ? window.__tacticaLangMeta() : null)
+    || { lang: document.documentElement.lang || 'en', langSource: 'detected', browserLang: '' };
   const sessionRef = doc(collection(db, 'tactica_sessions'));
   await setDoc(sessionRef, {
     uid,
@@ -172,6 +178,9 @@ export async function logSession(uid, email, displayName) {
     timestamp: now,
     date: today,
     device,
+    lang: lm.lang || 'en',
+    langSource: lm.langSource || 'detected',
+    browserLang: lm.browserLang || '',
   });
 
   return { sessionCount, hasReviewed };

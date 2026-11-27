@@ -6,11 +6,11 @@
 import { captureState } from '../../storage.js';
 import * as S from '../../state.js';
 import { getCurrentUser } from '../../auth.js';
-import { t, tf } from '../../i18n.js?v=6';   // same ?v as index.html — a different URL would be a SECOND module instance with its own language state
+import { t, tf } from '../../i18n.js?v=7';   // same ?v as index.html — a different URL would be a SECOND module instance with its own language state
 // Same ?v= as app.js so we share ONE firestore.js module instance — otherwise
 // this is a separate instance whose _sessionId is never set, and every training
 // event gets logged with sessionId: null (breaking session-level analytics).
-import { logAction } from '../../firestore.js?v=8';
+import { logAction } from '../../firestore.js?v=9';
 import {
   saveDrillCloudOrLocal, listDrills, loadDrill, deleteDrill,
   saveSessionCloudOrLocal, listSessions, loadSession, deleteSession,
