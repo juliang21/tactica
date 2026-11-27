@@ -178,6 +178,7 @@ export default {
   "ui.line-length": "Longueur de ligne",
   "ui.link-ready": "Lien prêt",
   "ui.lossless-transparent-friendly": "sans perte, gère la transparence",
+  "ui.manage-subscription": "Gérer l'abonnement",
   "ui.marker": "Repère",
   "ui.maybe-later": "Plus tard",
   "ui.monthly": "Mensuel",

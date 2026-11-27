@@ -178,6 +178,7 @@ export default {
   "ui.line-length": "Çizgi uzunluğu",
   "ui.link-ready": "Bağlantı hazır",
   "ui.lossless-transparent-friendly": "kayıpsız, şeffaflık destekli",
+  "ui.manage-subscription": "Aboneliği yönet",
   "ui.marker": "İşaretçi",
   "ui.maybe-later": "Belki sonra",
   "ui.monthly": "Aylık",

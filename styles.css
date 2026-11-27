@@ -3529,6 +3529,15 @@ body.shared-view #canvas-wrap {
 .lang-select:focus { outline: none; border-color: var(--accent); }
 .lang-select option { background: var(--panel); color: var(--text); }
 
-.app-menu-lang { display: flex; align-items: center; gap: var(--space-2); }
-.app-menu-lang .lang-select { margin-left: auto; flex-shrink: 0; }
-.app-menu-lang > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+/* Stacked, not side by side: the dropdown is only as wide as the toolbar
+   above it, so a label and a six-language select fighting over one row left
+   "Language" as "Langua...". On its own line the select can also show the
+   longest language name in full. */
+.app-menu-lang {
+  display: flex; flex-direction: column; align-items: stretch; gap: var(--space-1);
+}
+.app-menu-lang > span {
+  font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+  text-transform: uppercase; color: var(--text-muted);
+}
+.app-menu-lang .lang-select { width: 100%; max-width: none; }

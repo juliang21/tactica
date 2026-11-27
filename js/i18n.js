@@ -206,6 +206,7 @@ const STRINGS = {
     'ui.line-length': "Line length",
     'ui.link-ready': "Link Ready",
     'ui.lossless-transparent-friendly': "lossless, transparent-friendly",
+    'ui.manage-subscription': "Manage Subscription",
     'ui.marker': "Marker",
     'ui.maybe-later': "Maybe later",
     'ui.monthly': "Monthly",
