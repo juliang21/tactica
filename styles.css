@@ -3531,17 +3531,27 @@ body.shared-view #canvas-wrap {
    once-ever action, so it has to be findable without competing with the work:
    dimmed and borderless at rest, resolving on hover. Same treatment the
    sidebar's terms link uses. */
+/* A translucent white chip rather than dimmed text. The translucency lives in
+   the rgba alphas, NOT in an `opacity` property: blanket opacity faded the
+   background along with everything else, so the control could never read as a
+   control — it just looked like greyed-out text you weren't meant to click. */
 .lang-select-quiet {
-  background: transparent; border-color: rgba(255,255,255,0.1);
-  color: var(--text-dim); opacity: 0.72;
+  background: rgba(255,255,255,0.08);
+  border-color: rgba(255,255,255,0.18);
+  color: rgba(255,255,255,0.78);
   font-size: 11px; font-weight: 500;
   padding: var(--space-0) var(--space-1);
-  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
 }
 .lang-select-quiet:hover {
-  opacity: 1; color: var(--text); border-color: rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.14);
+  border-color: rgba(255,255,255,0.3);
+  color: #fff;
 }
-.lang-select-quiet:focus { opacity: 1; color: var(--text); }
+.lang-select-quiet:focus {
+  background: rgba(255,255,255,0.14);
+  color: #fff; border-color: var(--accent);
+}
 /* The native popup is drawn by the OS, so it needs a real background. */
 .lang-select-quiet option { background: var(--panel); color: var(--text); opacity: 1; }
 
