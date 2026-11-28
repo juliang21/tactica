@@ -1,0 +1,1460 @@
+/* Landing page only — extracted from styles.css. The marketing page must
+   not carry the app's styles; see /app/ for those. */
+:root {
+  /* Surfaces — Spotify-inspired elevation */
+  --bg: #111111;           /* matches canvas gradient edge */
+  --panel: #1a1a1a;        /* elevated surface */
+  --panel2: #242424;       /* higher elevation — cards, inputs */
+  --border: #2e2e2e;       /* visible borders */
+
+  /* Text — MDS hierarchy */
+  --text: #e2e2e2;         /* high emphasis */
+  --text-muted: #a0a0a0;   /* medium emphasis */
+  --text-dim: #6a6a6a;     /* low emphasis */
+
+  /* Accent — pitch green (lighter, softer than Spotify) */
+  --accent: #34D399;       /* emerald — fresh, football-pitch feel */
+  --accent-hover: #2BC486; /* darker for hover */
+  --accent-subtle: rgba(52, 211, 153, 0.12); /* tinted backgrounds */
+
+  /* Semantic surface tokens */
+  --surface-hover: rgba(255,255,255,0.07);
+  --surface-active: rgba(255,255,255,0.12);
+
+  /* Arrow colours from kit */
+  --col-run:  #F59E0B;
+  --col-pass: #4ADE80;
+  --col-line: #f94f4f;
+
+  /* Kit team colours */
+  --team-a: #8B5CF6;
+  --team-b: #FBBF24;
+  --gk-a:   #a8f0d0;
+  --gk-b:   #f4cca8;
+
+  /* Spacing scale — 4px base */
+  --space-0: 2px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-5: 20px;
+  --space-6: 24px;
+  --space-8: 32px;
+
+  /* Radius scale */
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 14px;
+
+  /* Layout */
+  --toolbar-w: 210px;
+  --panel-w: 320px;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Manrope', 'Poppins', sans-serif;
+  background: var(--bg); color: var(--text);
+  height: 100vh; display: flex; overflow: hidden; user-select: none;
+}
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 4px; }
+/* ── Toolbar ── Full-height panel, seated below topbar (Figma/Linear pattern) */
+#toolbar {
+  width: 210px; min-width: 210px;
+  background: var(--panel);
+  border: none;
+  border-right: 1px solid var(--border);
+  border-radius: 0;
+  box-shadow: none;
+  display: flex; flex-direction: column;
+  padding: 0; gap: 0; z-index: 150; overflow: visible; position: relative;
+  margin: 52px 0 0 0; /* sits below fixed 52px topbar */
+  align-self: stretch;
+  height: calc(100vh - 52px);
+  max-height: calc(100vh - 52px);
+}
+/* Toolbar collapse toggle */
+.toolbar-toggle {
+  position: fixed; left: var(--toolbar-w); top: 50%; transform: translateY(-50%);
+  width: 14px; height: 48px; z-index: 160;
+  background: rgba(26, 26, 30, 0.85); border: 1px solid rgba(255,255,255,0.1);
+  border-left: none; border-radius: 0 8px 8px 0;
+  color: var(--text-dim); cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: color 0.15s, background 0.15s, left 0.3s ease;
+  padding: 0;
+}
+/* Toolbar collapse/expand */
+#toolbar { transition: width 0.3s ease, min-width 0.3s ease, opacity 0.3s ease, border-color 0.3s ease, background 0.3s ease, box-shadow 0.3s ease; }
+/* Tool groups — panel sections with 2-column grid */
+.tool-group {
+  display: grid; grid-template-columns: 1fr 1fr 1fr;
+  /* Row gap is deliberately larger than column gap: the toolbar's width is
+     pinned by its widest label, so there is no horizontal room to spend, but
+     vertical space is free and the rows carry the grouping signal.
+     Ladder: icon/label 4 < columns 8 < rows 12 < group padding 16. */
+  column-gap: var(--space-2); row-gap: var(--space-3);
+  padding: var(--space-4) var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+/* Prototype: inside full-height toolbar, show Rondos inside sidebar footer */
+body:not(.mobile-layout) .rondos-brand { display: none; }
+/* ─── Reusable "New" badge — add class .has-badge to any .tool-btn ─── */
+.badge-new {
+  position: absolute; top: 2px; right: 2px;
+  font-size: 7px; font-weight: 800; letter-spacing: 0.04em; text-transform: uppercase;
+  color: #fff; background: linear-gradient(135deg, #f43f5e, #e11d48);
+  padding: 1.5px 4px; border-radius: 4px; line-height: 1.1;
+  box-shadow: 0 1px 4px rgba(228,30,72,0.4);
+  pointer-events: none; z-index: 2;
+  animation: badge-pulse 2.5s ease-in-out infinite;
+}
+@keyframes badge-pulse {
+  0%, 100% { opacity: 1; }
+  50%      { opacity: 0.7; }
+}
+/* ─── Reusable Feature Announcement Tooltip ─── */
+.feature-announce {
+  position: fixed; z-index: 10001;
+  width: 280px; background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 0;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  overflow: hidden;
+  animation: announce-in 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+}
+@keyframes announce-in {
+  from { opacity: 0; transform: translateY(8px) scale(0.97); }
+  to   { opacity: 1; transform: translateY(0) scale(1); }
+}
+/* Arrow pointer on left side (default: position right) */
+.feature-announce::before {
+  content: ''; position: absolute;
+  left: -7px; top: 20px;
+  width: 14px; height: 14px;
+  background: var(--panel2); border-left: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+/* Arrow pointer on bottom (position above) */
+.feature-announce--above::before {
+  left: 50%; top: auto; bottom: -7px;
+  margin-left: -var(--space-2);
+  border-left: none; border-bottom: none;
+  border-right: 1px solid rgba(255,255,255,0.1);
+  border-bottom: 1px solid rgba(255,255,255,0.1);
+  transform: rotate(-45deg);
+}
+/* Arrow pointer on top (position below) */
+.feature-announce--below::before {
+  left: 50%; top: -7px; bottom: auto;
+  margin-left: -var(--space-2);
+  border-left: 1px solid var(--border); border-bottom: none;
+  border-right: none;
+  border-top: 1px solid var(--border);
+  transform: rotate(45deg);
+}
+/* Tool bundles (flyout sub-options) */
+.tool-bundle { position: relative; }
+/* Small triangle indicator in bottom-right corner */
+.tool-bundle > .tool-btn::after {
+  content: ''; position: absolute; bottom: 4px; right: 4px;
+  width: 0; height: 0;
+  border: 3.5px solid transparent;
+  border-bottom-color: rgba(255,255,255,0.3);
+  border-right-color: rgba(255,255,255,0.3);
+}
+/* Save button — prominent gold */
+.tool-btn.save-btn {
+  width: 100%; height: 42px; border-radius: 20px;
+  background: #fff; color: #000;
+  border-color: transparent;
+  flex-direction: row; gap: 6px;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(255, 255, 255, 0.15);
+}
+/* (arrow sub-buttons removed — arrows now use .tool-btn) */
+.arrow-sub-btn .tool-tooltip { display: none; }
+/* ── Top Bar with Mode Tabs ── */
+#mode-bar {
+  position: fixed; top: 0; left: 0; right: 0;
+  height: 52px; z-index: 100;
+  background: var(--panel);
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: center;
+  /* The bar spans the full window (for its background), but the tabs must read
+     as centred on the PITCH — which sits between the 210px toolbar and the
+     var(--panel-w) side panel. Insetting by those widths centres the tabs over
+     the canvas column, not the window. */
+  padding-left: 210px; padding-right: var(--panel-w);
+}
+/* When the left toolbar is collapsed it no longer occupies width — reclaim it
+   so the tabs stay centred on the pitch. */
+#toolbar.collapsed ~ #canvas-wrap #mode-bar { padding-left: 0; }
+/* Mode switch: the toolbar + side panel slide out one way and the new mode's
+   content slides in from the other (direction follows the mode-tab order).
+   Animation (not transition) so it doesn't clash with the toolbar's own
+   width/opacity collapse transition. Desktop only: on mobile the side panel's
+   slide-over uses translateX itself, so animating transform there would flash
+   the hidden panel — mobile falls back to the plain crossfade. */
+@keyframes modeContentSwap {
+  0%   { opacity: 1; }
+  40%  { opacity: 0; }
+  60%  { opacity: 0; }
+  100% { opacity: 1; }
+}
+/* Exit is quick; the ENTRY is the readable part — the new panel glides in
+   from 84px on a long ease-out and turns visible early in the glide, so the
+   direction of travel is unmistakable. */
+@keyframes modeSlideLeft {
+  0%   { opacity: 1; transform: translateX(0); animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.6); }
+  30%  { opacity: 0; transform: translateX(-56px); }
+  45%  { opacity: 0; transform: translateX(84px); animation-timing-function: cubic-bezier(0.16, 0.84, 0.28, 1); }
+  72%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0); }
+}
+@keyframes modeSlideRight {
+  0%   { opacity: 1; transform: translateX(0); animation-timing-function: cubic-bezier(0.45, 0, 0.8, 0.6); }
+  30%  { opacity: 0; transform: translateX(56px); }
+  45%  { opacity: 0; transform: translateX(-84px); animation-timing-function: cubic-bezier(0.16, 0.84, 0.28, 1); }
+  72%  { opacity: 1; }
+  100% { opacity: 1; transform: translateX(0); }
+}
+/* Underlined mode tabs: all three labels stay legible, the active one carries
+   an emerald underline (browser-tab metaphor). Inactive tabs are clearly
+   present — not the near-invisible dim state they used to be. */
+.mode-tab-group {
+  display: inline-flex; gap: 4px; align-items: flex-end;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+}
+/* ── Zoom Controls ── */
+.zoom-controls {
+  position: absolute; bottom: 20px; right: 20px;
+  display: flex; align-items: center; gap: 2px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 3px;
+  z-index: 50;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+/* ── Notes Panel ── */
+.notes-panel {
+  position: fixed; right: calc(var(--panel-w) + 16px); top: 64px;
+  width: 220px; height: 260px;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 10px;
+  display: flex; flex-direction: column;
+  z-index: 50;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.3);
+  animation: dashFadeIn 0.15s ease;
+}
+@keyframes notes-pulse {
+  0%   { box-shadow: 0 0 0 0 rgba(30,215,96,0.45); }
+  50%  { box-shadow: 0 0 0 8px rgba(30,215,96,0); }
+  100% { box-shadow: 0 0 0 0 rgba(30,215,96,0); }
+}
+/* ── Canvas ── */
+#canvas-wrap {
+  flex: 1; display: flex; align-items: center; justify-content: center;
+  padding: 64px 20px 20px; position: relative; overflow: hidden;
+  background: var(--bg);
+}
+/* ── Spotlight ── */
+.spotlight-beam { mix-blend-mode: screen; }
+/* ── Right panel ── Full-height, seated below topbar (Figma/Linear pattern) */
+#side-panel {
+  width: var(--panel-w); background: var(--panel);
+  border: none;
+  border-left: 1px solid var(--border);
+  border-radius: 0;
+  display: flex; flex-direction: column;
+  padding: 0; gap: 0; z-index: 10; overflow-y: auto; overflow-x: hidden;
+  box-shadow: none;
+  margin: 52px 0 0 0;
+  height: calc(100vh - 52px);
+  max-height: calc(100vh - 52px);
+  align-self: stretch;
+}
+/* Image Analysis panel: a bit more breathing room between the few sections
+   so they don't read as cramped. */
+#image-mode-info .panel-section { padding: 18px var(--space-4); }
+/* ─── Collapsible sections ─── */
+.panel-section h3.collapsible {
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  user-select: none;
+  margin-bottom: 0;
+  padding: 2px 0;
+  transition: color 0.15s;
+}
+/* Team pills */
+.team-row {
+  display: flex; gap: 0; background: var(--panel2); border-radius: 16px;
+  border: 1px solid var(--border); padding: 3px; margin-bottom: 2px;
+}
+/* Preset team colors */
+.kit-tabs { display: flex; gap: 0; margin-bottom: 8px; border-radius: 8px; overflow: hidden; border: 1px solid var(--border); }
+/* ── Kit hover tooltip ── */
+.kit-tooltip {
+  position: fixed; display: none;
+  padding: 5px 9px;
+  background: #0b0b0b; color: #fff;
+  font-family: 'Manrope', sans-serif;
+  font-size: 11px; font-weight: 500; letter-spacing: 0.01em;
+  border-radius: 6px;
+  border: 1px solid rgba(255,255,255,0.08);
+  box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+  white-space: nowrap;
+  pointer-events: none; z-index: 500;
+  opacity: 0; transform: translateY(2px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+/* Arrow style buttons */
+.style-btn-row { display: flex; gap: 6px; }
+/* Zone panel fill-style buttons use the same lime-outline highlight as Purpose */
+#zone-edit-section .style-btn.active {
+  background: rgba(216,255,60,0.08);
+  border-color: #D8FF3C;
+  color: #D8FF3C;
+  font-weight: 600;
+}
+/* ── Unified Zone Panel ───────────────────────────────────────────────────── */
+/* Element icon in selection header */
+.el-icon {
+  flex-shrink: 0;
+  width: 40px; height: 40px;
+  display: flex; align-items: center; justify-content: center;
+  background: rgba(255,255,255,0.04);
+  border-radius: 50%;
+}
+/* Purpose preset buttons */
+.purpose-row { display: flex; gap: 4px; flex-wrap: nowrap; }
+/* Shape card selector */
+.shape-card-row { display: flex; gap: 6px; }
+/* Round colour swatches (legacy class — now all mini swatches are round) */
+.color-swatch.mini.round.active {
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 3.5px currentColor;
+}
+/* Auto (A) swatch — text-based, no background fill */
+.auto-text-swatch, .auto-border-swatch {
+  background: var(--surface-active) !important;
+  color: var(--text-dim);
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 1.5px dashed var(--border);
+}
+/* Advanced accordion */
+.zone-advanced-toggle {
+  font-size: 11px; font-weight: 500;
+  color: var(--text-muted); cursor: pointer;
+  padding: 8px 0; text-align: center;
+  transition: color 0.15s;
+  border-top: 1px solid var(--border);
+  margin-top: 4px;
+}
+/* Label visibility toggle */
+.zone-toggle { position: relative; display: inline-block; width: 36px; height: 20px; }
+/* Swatches */
+.name-color-row { display: flex; gap: 6px; flex-wrap: wrap; }
+/* 4px: swatches are one control (a palette), not a list of separate ones.
+   Also load-bearing — a row has ~1px of slack, so a wider gap re-wraps it. */
+.picker-row { display: flex; gap: var(--space-1); align-items: center; flex-wrap: wrap; padding: 0 var(--space-0); }
+/* Compact add players section */
+.compact-add { display: flex; flex-direction: column; gap: 0; }
+/* Player section */
+#number-section { display: block; }
+/* Ladder: swatches 4 < label-to-control 8 < setting-to-setting 16.
+   The old 6 vs 10 was only 1.67x apart — too weak to read as grouping. */
+.field-group { display: flex; flex-direction: column; gap: var(--space-2); }
+/* Separation lives on the FOLLOWING group, not as a trailing margin on the
+   previous one. A trailing margin survives when the last sibling is hidden
+   — several panels end with a display:none field-group — which left 16px of
+   dead space above the section divider that :last-child could not reach. */
+.field-group + .field-group { margin-top: var(--space-4); }
+/* Large toggle variant */
+.toggle-switch-lg {
+  width: 42px; height: 24px; border-radius: 12px;
+}
+/* Sliders */
+.slider-wrap { display: flex; flex-direction: column; gap: 6px; }
+/* Selection info */
+#selection-info { font-size: 12px; color: var(--text-muted); line-height: 1.6; }
+/* Secondary CTA: reads clearly above the muted default but below a filled
+   primary — green-tinted border + full-strength text, brightens on hover. */
+.action-btn.secondary { border-color: rgba(52,211,153,0.45); color: var(--text); }
+/* Logo roster chips (Pitch tab › Logos) */
+.logo-chip { display: flex; align-items: center; gap: var(--space-2); padding: var(--space-1) var(--space-1); border: 1px solid var(--border); border-radius: 8px; margin-bottom: var(--space-1); background: rgba(255,255,255,0.02); }
+/* Layer order buttons (inline compact) */
+#layer-controls-inline {
+  display: flex; gap: 3px; margin-top: 8px;
+}
+/* Hover hints use native title= attributes (see index.html). The previous
+   CSS ::after tooltips were absolutely positioned and wider than the panel,
+   which inflated the panel's scrollWidth and caused a horizontal scrollbar
+   that cut/distorted the whole properties panel. */
+
+/* Legacy layer buttons (zone Advanced panel) */
+.layer-btn-row {
+  display: flex; gap: 4px;
+}
+/* Export modal */
+.modal-backdrop {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.6); z-index: 300;
+  align-items: center; justify-content: center;
+}
+/* ─── Reusable modal dismiss row ──────────────────────────────────────────
+   "Don't show this again" belongs BELOW the primary action: the CTA is what
+   most people want and should read first; opting out is the quieter, secondary
+   choice. A hairline separates it so it reads as a footer rather than crowding
+   the button. Usage — place as the LAST child of .modal-box, after .modal-row:
+     <label class="modal-dismiss">
+       <input type="checkbox" id="…"> Don't show this again
+     </label>
+   .modal-box is a flex column with gap:12px, so no margin is needed on top. */
+.modal-dismiss {
+  display: flex; align-items: center; justify-content: center; gap: var(--space-2);
+  padding-top: var(--space-3);
+  border-top: 1px solid var(--border);
+  font-family: 'Manrope', sans-serif;
+  font-size: 12px; color: var(--text-muted);
+  cursor: pointer; user-select: none;
+  transition: color 0.15s;
+}
+/* Same component inside a feature tooltip — left-aligned to match its copy */
+.feature-announce .modal-dismiss {
+  justify-content: flex-start;
+  margin-top: var(--space-2); padding-top: var(--space-2);
+  font-size: 11.5px;
+}
+/* Review Modal */
+.review-card {
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 16px; padding: var(--space-8) var(--space-6) var(--space-6); width: 340px;
+  text-align: center; position: relative;
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+  font-family: 'Manrope', sans-serif;
+  animation: reviewSlideIn 0.35s ease-out;
+}
+@keyframes reviewSlideIn {
+  from { opacity: 0; transform: translateY(20px) scale(0.95); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+@keyframes reviewFadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+/* Panel close button — hidden on desktop, shown on mobile */
+.panel-close-btn { display: none; }
+/* Tabs */
+.panel-tabs {
+  display: flex; gap: 0; padding: var(--space-1) var(--space-4) 0;
+  border-bottom: 1px solid var(--border);
+  background: var(--panel);
+  border-radius: var(--radius-lg) var(--radius-lg) 0 0;
+  position: sticky; top: 0; z-index: 5;
+}
+/* ── Pitch Toggle Buttons ── */
+.pitch-toggle-row {
+  display: flex; gap: 4px;
+}
+/* ── Pitch Visual Grid (size + orientation thumbnails) ── */
+.pitch-visual-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 6px;
+}
+/* ── Pitch Flip Button ── */
+.pitch-flip-btn {
+  display: flex; align-items: center; justify-content: center; gap: 6px;
+  width: 100%; margin-top: 8px; padding: 6px 0;
+  border: 1px solid var(--border); border-radius: var(--radius-sm);
+  background: transparent; color: var(--text-dim);
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 500;
+  cursor: pointer; transition: all 0.15s;
+}
+/* ── Pitch Switch Rows (checkbox toggles) ── */
+.pitch-switch-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 6px 0; cursor: pointer;
+  font-family: 'Manrope', sans-serif; font-size: 12px; color: var(--text-muted);
+}
+/* ── Pitch Color Dots ── */
+.pitch-color-row { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+/* ── Upgrade overlay ── */
+.upgrade-overlay {
+  display: none; position: fixed; inset: 0;
+  background: rgba(0,0,0,0.55); z-index: 9999;
+  align-items: center; justify-content: center;
+}
+/* Upgrade menu item accent */
+.app-menu-upgrade { color: #F59E0B !important; }
+/* Cursor states */
+body.tool-select #pitch-svg { cursor: default; }
+body.tool-player #pitch-svg { cursor: crosshair; }
+body.tool-arrow  #pitch-svg { cursor: crosshair; }
+body.tool-ball   #pitch-svg { cursor: crosshair; }
+body.tool-shadow #pitch-svg { cursor: crosshair; }
+body.tool-cone   #pitch-svg { cursor: crosshair; }
+body.tool-textbox #pitch-svg { cursor: text; }
+body.tool-spotlight #pitch-svg { cursor: crosshair; }
+body.tool-freeform #pitch-svg { cursor: crosshair; }
+body.tool-motion #pitch-svg { cursor: crosshair; }
+body.tool-net-zone #pitch-svg { cursor: crosshair; }
+/* Step animation controls — below pitch.
+   flex-wrap + flex-basis 100% on step-bar puts cards on row 1 and the action
+   buttons on row 2 so wider cards don't squeeze the controls into wrapped text.
+   width:100% caps the container at its parent (pitch-wrap) so step-bar can
+   actually overflow + scroll instead of growing motion-controls indefinitely. */
+#motion-controls {
+  display: none; align-items: center; justify-content: center; gap: 8px;
+  padding: 10px 0 0;
+  flex-wrap: wrap;
+  width: 100%;
+  box-sizing: border-box;
+}
+/* Wrap step-bar with scroll arrows so users can navigate past 8-10 frames
+   without losing access to the controls below. */
+#motion-controls .step-bar-wrap {
+  flex-basis: 100%;
+  display: flex; align-items: stretch; gap: 4px;
+  min-width: 0;
+}
+/* Add-step action button — sibling of step-bar so it's always visible
+   regardless of how far the cards are scrolled. */
+#step-add-btn {
+  display: none; align-items: center; gap: 5px;
+  padding: 7px 12px; border-radius: 8px;
+  background: rgba(15,15,15,0.85); backdrop-filter: blur(12px);
+  border: 1px solid rgba(216,255,60,0.4);
+  color: #d8ff3c;
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+  cursor: pointer; transition: all 0.15s;
+  white-space: nowrap; flex-shrink: 0;
+}
+/* Motion playback buttons */
+#motion-play-btn:hover {
+  background: rgba(30,215,96,0.2);
+  border-color: var(--accent);
+}
+/* ── Feedback Widget ─────────────────────────────────────────────────────── */
+#feedback-bubble {
+  position: fixed; bottom: 20px; right: 20px; z-index: 500;
+  padding: var(--space-2) var(--space-4); border-radius: 20px;
+  background: var(--panel2); border: 1px solid var(--border);
+  color: var(--text-muted); cursor: pointer;
+  display: flex; align-items: center; gap: var(--space-1);
+  font-family: 'Manrope', sans-serif; font-size: 12px; font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.2s; box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+@keyframes fbSlideUp { from { opacity:0; transform: translateY(10px); } to { opacity:1; transform: translateY(0); } }
+/* ── Image Upload Overlay (on canvas area) ── */
+#image-upload-overlay {
+  display: none;
+  align-items: center; justify-content: center;
+  width: 100%; min-height: 480px;
+  padding: var(--space-8);
+}
+/* ── Mini Pitch Grid (image mode sidebar) ── */
+.mini-pitch-grid {
+  grid-template-columns: repeat(4, 1fr) !important;
+}
+/* ── Image Mode (canvas/layout only — panel visibility handled by mode-registry.js) ── */
+body.image-mode #pitch-container { overflow: visible; box-shadow: none; }
+body.image-mode #pitch-container #pitch-svg { flex-shrink: 1; }
+body.image-mode #pitch-wrap { overflow-x: auto; overflow-y: hidden; cursor: grab; }
+body.image-mode #pitch-wrap:active { cursor: grabbing; }
+body.image-mode #pitch-wrap::-webkit-scrollbar { height: 6px; }
+body.image-mode #pitch-wrap::-webkit-scrollbar-track { background: transparent; }
+body.image-mode #pitch-wrap::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 3px; }
+body.image-mode #pitch-wrap::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+/* Mode tab button styling handled by .mode-tab / .mode-tab.active classes */
+
+/* ── Mobile Mode Dropdown ── */
+#mode-dropdown {
+  display: none; /* hidden on desktop, shown on mobile */
+}
+/* ── Mobile Context Bar (appears above toolbar when element selected) ── */
+#mobile-context-bar {
+  display: none; /* hidden everywhere by default */
+}
+/* ── Mobile panel toggle button ── */
+/* right: 100px sits clear of the top-right CTA group (Share + Export, ~88px wide) */
+#mobile-panel-toggle {
+  display: none;
+  position: fixed; top: 10px; right: 100px; z-index: 400;
+  width: 36px; height: 36px; border-radius: 8px;
+  background: var(--panel2); border: 1px solid var(--border);
+  color: var(--text-muted); cursor: pointer;
+  align-items: center; justify-content: center;
+}
+/* ── Responsive: Tablet (≤1024px) ── */
+@media (max-width: 1024px) {
+  :root { --panel-w: 280px; }
+}
+/* ── Responsive: Mobile (≤768px) ── */
+@media (max-width: 768px) {
+  body {
+    flex-direction: column;
+    height: 100vh; height: 100dvh;
+    overflow: hidden;
+  }
+
+  /* Logo — stacked on mobile: TÁCTICA over BETA, vertically centered with top bar */
+  .tool-logo {
+    position: fixed; top: 50%; left: 12px; z-index: 200;
+    font-size: 11px; letter-spacing: 2px;
+    display: flex; flex-direction: column; align-items: flex-start; gap: 2px;
+    line-height: 1;
+    /* vertically center with the app-menu-btn (top:10px, h:36px → center at 28px) */
+    top: 28px; transform: translateY(-50%);
+  }
+  /* Toolbar → horizontal bottom bar */
+  #toolbar {
+    width: 100%; height: 64px;
+    flex-direction: row; order: 3;
+    align-items: center;
+    padding: 0 10px; gap: 6px;
+    border-right: none; border-top: 1px solid var(--border);
+    overflow-x: auto; overflow-y: visible;
+    flex-shrink: 0;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    max-height: none;
+  }
+  #toolbar::-webkit-scrollbar { display: none; }
+  .toolbar-scroll {
+    display: contents; /* flatten on mobile — let toolbar handle horizontal scroll */
+    overflow: visible;
+  }
+  /* Scroll fade hint on right edge */
+  #toolbar::after {
+    content: '';
+    position: sticky; right: 0; top: 0;
+    min-width: 28px; height: 100%; flex-shrink: 0;
+    background: linear-gradient(to right, transparent, var(--panel) 80%);
+    pointer-events: none;
+  }
+  .tool-group { display: contents; }
+  .tool-group-save { display: contents; }
+  .tool-group-account { display: contents; padding: 0; border-top: none; }
+  /* The toolbar is a horizontal, horizontally-scrolling strip here, not a
+     sidebar — a language row inside it lands hundreds of px off-screen and
+     pads the strip. Mobile coaches set their language on the landing gate,
+     whose footer switcher is reachable on every screen size. */
+  /* #toolbar-qualified: the base .sidebar-lang rule is declared later in the
+     file, so a bare class selector here would lose on cascade order. */
+  #toolbar .sidebar-lang { display: none; }
+  .tool-label { display: none; }
+  .tool-group-title { display: none; }
+  .tool-bundle > .tool-btn::after { display: none; }
+  .bundle-menu {
+    position: fixed; bottom: 72px; left: auto;
+    top: auto;
+  }
+  #toolbar .tool-sep {
+    width: 1px; height: 32px; margin: 0 4px; flex-shrink: 0;
+  }
+  #toolbar .tool-btn {
+    width: 52px; height: 52px; flex-shrink: 0;
+    flex-direction: column; border-radius: 12px;
+    background: rgba(255,255,255,0.04);
+  }
+  #toolbar .tool-btn svg { width: 22px; height: 22px; }
+  #toolbar .tool-btn.active {
+    background: rgba(255,255,255,0.1);
+  }
+  #toolbar .tool-btn.save-btn {
+    width: 52px; height: 52px;
+    order: -1; flex-direction: column;
+    border-radius: 12px;
+    background: var(--accent); color: #1a1a1a;
+  }
+  #toolbar .tool-btn.save-btn svg { width: 22px; height: 22px; }
+  #toolbar .tool-btn.danger { margin-left: auto; margin-top: 0; }
+
+  /* Toolbar → fixed at bottom */
+  #toolbar {
+    position: fixed; bottom: 0; left: 0; right: 0;
+    z-index: 200;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  /* Context bar → floating above toolbar */
+  #mobile-context-bar.show {
+    display: flex;
+    position: fixed; bottom: 72px; left: 10px; right: 10px;
+    z-index: 199;
+    height: 44px; padding: 0 14px;
+    background: var(--panel2); border: 1px solid var(--border);
+    border-radius: 12px;
+    align-items: center; gap: 8px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    animation: ctxBarIn 0.2s ease;
+  }
+  @keyframes ctxBarIn {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  /* Canvas takes remaining space */
+  #canvas-wrap {
+    flex: 1; order: 2;
+    padding: 50px 4px 70px;
+    min-height: 0;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+  }
+
+  /* Make pitch SVG responsive — fill available space */
+  #pitch-wrap { width: 100%; }
+  #pitch-container {
+    width: 100%; max-width: 100%;
+    max-height: 100%;
+    display: flex;
+  }
+  #pitch-svg {
+    width: 100% !important;
+    height: 100% !important;
+    max-height: calc(100dvh - 120px);
+  }
+
+  /* Side panel → slide-over from right */
+  #side-panel {
+    position: fixed; top: 0; right: 0; bottom: 64px;
+    width: 280px; z-index: 300;
+    transform: translateX(100%);
+    transition: transform 0.25s ease;
+    border: none; border-left: 1px solid var(--border);
+    border-radius: 0; margin: 0;
+    max-height: none; align-self: stretch;
+    backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+    background: rgba(20, 20, 30, 0.92);
+    box-shadow: -4px 0 24px rgba(0,0,0,0.5);
+  }
+  #side-panel.open {
+    transform: translateX(0);
+  }
+  .panel-tabs {
+    border-radius: 0;
+    padding-top: 6px;
+    padding-right: 44px; /* leave room for close button */
+  }
+
+  /* Close button inside panel */
+  .panel-close-btn {
+    display: flex !important;
+    position: absolute; top: 6px; right: 8px; z-index: 10;
+    width: 32px; height: 32px; border-radius: 8px;
+    border: none; background: rgba(255,255,255,0.06);
+    color: var(--text-muted); cursor: pointer;
+    align-items: center; justify-content: center;
+  }
+  .panel-close-btn:hover { background: rgba(255,255,255,0.1); color: var(--text); }
+
+  /* Hide desktop toolbar toggle on mobile */
+  .toolbar-toggle { display: none !important; }
+
+  /* Panel toggle button visible */
+  #mobile-panel-toggle {
+    display: flex;
+  }
+  /* Hide toggle when panel is open (set via JS) */
+  #mobile-panel-toggle.hidden { display: none !important; }
+
+  /* Mobile panel backdrop */
+  #mobile-backdrop {
+    display: none; position: fixed; inset: 0; bottom: 64px;
+    background: rgba(0,0,0,0.5); z-index: 299;
+  }
+  #mobile-backdrop.show { display: block; }
+
+  /* Feedback button — compact on mobile, higher above toolbar */
+  #feedback-bubble {
+    bottom: 84px; right: 12px;
+    padding: 10px 14px; font-size: 11px;
+  }
+  #feedback-bubble .feedback-full { display: none; }
+  #feedback-bubble .feedback-short { display: inline; }
+  #feedback-panel {
+    bottom: 130px; right: 8px; width: calc(100vw - 16px); max-width: 320px;
+  }
+
+  /* Rondos brand — hide on mobile to save space */
+  .rondos-brand {
+    display: none;
+  }
+
+  /* Mode bar → hide tab bar, show dropdown */
+  #mode-bar { display: none !important; }
+  #mode-tabs-bar { display: none !important; }
+  #mode-dropdown {
+    display: block;
+    position: absolute; top: 28px; left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 200;
+  }
+
+  /* Save wrapper reorder on mobile */
+  .save-wrapper { order: -1; margin-right: 6px; }
+
+  /* Terms link — separate from last toolbar button */
+  .sidebar-terms-link { padding-left: 12px; }
+
+  /* Analyses dashboard — full mobile */
+  .analyses-header { padding: 16px 16px; }
+  .analyses-title { font-size: 15px; }
+  .analyses-grid { padding: 16px 16px; }
+  .analyses-card-grid, .folder-grid {
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 12px;
+  }
+  .analyses-new-btn { padding: 8px 14px; font-size: 12px; }
+  .analyses-folder-btn { padding: 8px 12px; font-size: 12px; }
+  .analyses-header-right { gap: 6px; }
+  .analysis-card-info { padding: 10px 12px; }
+  .analysis-card-name { font-size: 12px; }
+
+  /* Current analysis bar — hidden on mobile */
+  .current-analysis-bar { display: none !important; }
+}
+/* ── Top Notification Bar ── */
+.notif-bar {
+  position: fixed; top: 0; left: 0; right: 0; z-index: 1000;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 14px 24px;
+  background: #f7f5fb;
+  border-bottom: 3px solid #5b3ea8;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.08);
+  transform: translateY(-100%);
+  opacity: 0;
+  transition: transform 0.3s ease, opacity 0.3s ease;
+  pointer-events: none;
+}
+/* Notification variants */
+.notif-bar.notif-success { background: #e8f5ed; border-bottom-color: #34a853; }
+/* ── App Menu (bottom of sidebar) ── */
+.app-menu-wrapper {
+  position: relative;
+  width: 100%;
+}
+/* Opens upward + to the right since the button is bottom-left of the sidebar */
+.app-menu-dropdown {
+  /* Width follows the wrapper instead of a fixed 220px. The toolbar scroller
+     above this is overflow:auto, so anything wider than the toolbar gets
+     clipped on the right — which was cutting the "ES" language button in half. */
+  position: absolute; bottom: 44px; left: 0; right: 0; width: auto; min-width: 0;
+  background: rgba(26, 26, 34, 0.95);
+  backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 14px; box-shadow: 0 12px 40px rgba(0,0,0,0.5);
+  padding: 6px 0; z-index: 300;
+  animation: menuFadeInUp 0.15s ease;
+}
+@keyframes menuFadeInUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+/* ── Top-right: Sign-in link + Export CTA ── */
+.topbar-right {
+  position: fixed; top: 10px; right: 16px; z-index: 300;
+  display: flex; align-items: center; gap: 14px;
+}
+/* Unsaved-work indicator: quiet amber dot on the topbar Save button */
+#topbar-save-btn { position: relative; }
+@keyframes unsavedPop {
+  from { transform: scale(0); }
+  to   { transform: scale(1); }
+}
+/* First-visit starter hint (chip floating over the pitch) */
+#starter-hint {
+  position: absolute;
+  top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: 60;
+  display: flex; align-items: center; gap: var(--space-2);
+  background: rgba(10, 12, 10, 0.88);
+  border: 1px solid rgba(255,255,255,0.12);
+  border-radius: 24px;
+  padding: var(--space-2) var(--space-2) var(--space-2) var(--space-4);
+  font-family: 'Manrope', sans-serif; font-size: 12.5px;
+  color: rgba(255,255,255,0.92);
+  box-shadow: 0 8px 28px rgba(0,0,0,0.45);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  animation: starterIn 0.45s cubic-bezier(0.22,0.61,0.36,1);
+  white-space: nowrap; max-width: 92%;
+}
+@keyframes starterIn {
+  from { opacity: 0; transform: translateX(-50%) translateY(-10px); }
+  to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+}
+/* Hover affordance: pitch elements feel grabbable in select mode */
+#objects-layer [data-type], #players-layer [data-type],
+#mp-objects-layer [data-type], #mp-players-layer [data-type] {
+  transition: filter 0.12s ease;
+}
+body.tool-select:not(.shared-view) #objects-layer [data-type]:hover,
+body.tool-select:not(.shared-view) #players-layer [data-type]:hover,
+body.tool-select:not(.shared-view) #mp-objects-layer [data-type]:hover,
+body.tool-select:not(.shared-view) #mp-players-layer [data-type]:hover {
+  filter: brightness(1.18) drop-shadow(0 1px 5px rgba(255,255,255,0.30));
+  cursor: grab;
+}
+body.tool-select:not(.shared-view) #objects-layer [data-type]:active,
+body.tool-select:not(.shared-view) #players-layer [data-type]:active,
+body.tool-select:not(.shared-view) #mp-objects-layer [data-type]:active,
+body.tool-select:not(.shared-view) #mp-players-layer [data-type]:active {
+  cursor: grabbing;
+}
+/* Post-export toast: thumbnail + copy/share actions */
+#export-toast {
+  position: fixed;
+  right: 22px; bottom: 84px;   /* clears the feedback bubble */
+  z-index: 750;
+  display: flex; align-items: stretch; gap: var(--space-3);
+  background: #161616;
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 14px;
+  padding: var(--space-3);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.55);
+  max-width: 340px;
+  animation: exportToastIn 0.35s cubic-bezier(0.22,0.61,0.36,1);
+}
+@keyframes exportToastIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Copy-image as a first-class action in the export modal */
+.modal-btn.export-copy {
+  border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(255,255,255,0.06);
+  color: var(--text);
+  font-weight: 600;
+  white-space: nowrap;
+}
+@keyframes menuFadeIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: translateY(0); } }
+/* ── Save Menu Dropdown ── */
+.save-wrapper {
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+@keyframes saveMenuIn { from { opacity:0; transform: translateX(-4px); } to { opacity:1; transform: translateX(0); } }
+/* Cursor for marker tool — crosshair conveys "place me here" instead of grab */
+body.tool-marker #pitch-svg { cursor: crosshair; }
+/* Image tool — crosshair while waiting for a click to place */
+body.tool-image #pitch-svg { cursor: crosshair; }
+/* ── Shared View ── */
+body.shared-view #toolbar,
+body.shared-view #side-panel,
+body.shared-view .toolbar-toggle,
+body.shared-view .tool-logo,
+body.shared-view #mode-tabs-bar,
+body.shared-view .rondos-brand,
+body.shared-view #motion-controls,
+body.shared-view .fb-bubble,
+body.shared-view .save-wrap,
+body.shared-view #analysis-name-input,
+body.shared-view #app-menu-btn,
+body.shared-view #mode-dropdown,
+body.shared-view #mode-bar { display: none !important; }
+body.shared-view #canvas-wrap {
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 56px);
+  margin-top: 56px;
+}
+body.shared-view #pitch {
+  pointer-events: none;
+}
+body.shared-view #canvas-wrap {
+  position: relative;
+}
+/* ── Share Modals ── */
+.share-confirm-modal {
+  z-index: 800;
+  backdrop-filter: blur(6px);
+  background: rgba(0,0,0,0.65);
+}
+@media (max-width: 600px) {
+body.shared-view #canvas-wrap {
+    margin-top: 80px;
+    min-height: auto;
+    align-items: flex-start;
+    padding-top: 8px !important;
+  }
+body.shared-view #pitch-wrap {
+    overflow: visible;
+  }
+}
+/* ── Analyses Dashboard ── */
+#analyses-dashboard {
+  position: fixed; inset: 0; z-index: 600;
+  background: var(--bg);
+  display: flex; flex-direction: column;
+  animation: dashFadeIn 0.2s ease;
+}
+@keyframes dashFadeIn { from { opacity:0; } to { opacity:1; } }
+/* ── Analysis Card ── */
+.analysis-card {
+  background: transparent; border: none;
+  border-radius: 12px; overflow: visible; cursor: pointer;
+  transition: all 0.2s;
+  display: flex; flex-direction: column;
+  position: relative;
+}
+/* Hover actions overlay on thumbnail */
+.analysis-card-actions {
+  position: absolute; top: 8px; right: 8px;
+  display: flex; gap: 4px;
+  opacity: 0; transition: opacity 0.15s;
+  z-index: 2;
+}
+/* ── Drag and Drop ── */
+.analysis-card[draggable] { cursor: grab; }
+/* ── Folders ── */
+.folder-section {
+  margin-bottom: 8px;
+}
+/* ── New Folder Button ── */
+.analyses-header-right {
+  display: flex; align-items: center; gap: 8px;
+}
+/* ── Move Menu ── */
+.move-menu {
+  position: fixed; z-index: 800;
+  background: var(--panel); border: 1px solid var(--border);
+  border-radius: 8px; padding: 4px;
+  min-width: 170px;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+  animation: dashFadeIn 0.12s ease;
+}
+/* ── Folder Empty State ── */
+.folder-empty {
+  grid-column: 1 / -1;
+  text-align: center; padding: 20px;
+  font-family: 'Manrope', sans-serif; font-size: 12px;
+  color: var(--text-dim);
+  border: 1.5px dashed var(--border); border-radius: 8px;
+}
+/* ── Save Toast ── */
+.save-toast {
+  position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+  padding: var(--space-2) var(--space-6); border-radius: 8px;
+  background: var(--panel2); border: 1px solid var(--accent);
+  color: var(--accent); font-family: 'Manrope', sans-serif;
+  font-size: 12px; font-weight: 600; letter-spacing: 0.3px;
+  z-index: 700; opacity: 0; pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.4);
+}
+/* ── Current Analysis Indicator (shown inline in mode bar) ── */
+.current-analysis-bar {
+  display: none;
+  align-items: center; gap: 6px;
+  padding: 0 8px; height: 52px;
+  position: absolute; left: 220px;
+}
+/* ── Responsive: Small phones (≤480px) ── */
+@media (max-width: 480px) {
+  #canvas-wrap { padding: 50px 4px 70px; }
+
+  #side-panel { width: 100%; }
+
+  #toolbar { gap: 3px; padding: 0 6px; }
+  #toolbar .tool-btn { width: 46px; height: 46px; }
+  #toolbar .tool-btn.save-btn { width: 46px; height: 46px; }
+
+  .auth-modal-box { width: 92vw !important; padding: 24px 20px !important; }
+}
+/* ─── Landing Gate ──────────────────────────────────────────────────────── */
+.landing-gate {
+  position: fixed; inset: 0; z-index: 2000;
+  background: var(--bg);
+  display: flex; flex-direction: column; align-items: center;
+  overflow-y: auto; overflow-x: hidden;
+}
+/* ── Split layout ── */
+.landing-split {
+  display: flex; align-items: center;       /* text block centres against the carousel */
+  width: 100%; max-width: var(--landing-max, 1200px);
+  padding: clamp(20px, 3.4vh, 52px) 64px clamp(32px, 3.8vh, 44px);
+  gap: clamp(48px, 5vw, 88px);
+  position: relative; z-index: 1;
+  box-sizing: border-box;
+  flex: 0 0 auto; margin-top: auto;   /* with .landing-proof's margin-bottom:auto the
+                                         leftover height splits above/below the pair,
+                                         so the proof card stays close to the hero */
+  min-height: 0;
+}
+.landing-left {
+  flex: 1; min-width: 0;
+  display: flex; flex-direction: column;
+  align-items: flex-start;
+}
+.landing-right {
+  flex: 1; min-width: 0;
+  position: relative;
+  display: flex; align-items: center; justify-content: center;
+}
+:root { --landing-max: min(1340px, 94vw); }
+/* ── Header (wordmark left · nav right) ── */
+.landing-header {
+  width: 100%; max-width: var(--landing-max, 1200px);
+  padding: clamp(20px, 2.6vh, 32px) 64px 0;
+  box-sizing: border-box; flex-shrink: 0;
+  position: relative; z-index: 2;
+  display: flex; align-items: center; justify-content: space-between;
+}
+.landing-logo {
+  font-family: 'Outfit', sans-serif;
+  font-size: 21px; font-weight: 900;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  color: var(--accent);
+}
+.landing-nav { display: flex; align-items: center; gap: 28px; }
+.landing-nav a, .landing-nav button {
+  font-family: 'Manrope', sans-serif;
+  font-size: 13.5px; font-weight: 600;
+  color: rgba(255,255,255,0.55); text-decoration: none;
+  background: none; border: none; padding: 0; cursor: pointer;
+  transition: color 0.15s;
+}
+.landing-nav a:hover, .landing-nav button:hover { color: var(--text); }
+/* Byline + terms: sits under the ratings card, bottom-left of the page */
+.landing-footer {
+  width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
+  margin-bottom: auto;          /* pairs with .landing-split's margin-top:auto */
+  box-sizing: border-box; flex: 0 0 auto;
+  padding: 0 64px;
+}
+.landing-legal {
+  width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
+  box-sizing: border-box; flex: 0 0 auto;
+  /* Several links live here since the SEO pages were added; without a gap
+     they ran together as one string. */
+  display: flex; flex-wrap: wrap; gap: var(--space-4);
+  padding: var(--space-4) 64px clamp(16px, 2.4vh, 28px);
+}
+.landing-byline {
+  margin-top: 0;
+  font-family: 'Manrope', sans-serif;
+  font-size: 13px; font-weight: 400; line-height: 1.65;
+  color: rgba(255,255,255,0.42);
+  max-width: 54em;              /* wide enough to land on two lines */
+}
+.landing-byline b { color: rgba(255,255,255,0.82); font-weight: 700; }
+.landing-byline a { color: var(--accent); text-decoration: none; }
+.landing-byline a:hover { text-decoration: underline; }
+.landing-terms-link {
+  display: inline-block; font-size: 12px;
+  color: rgba(255,255,255,0.32); text-decoration: none; transition: color 0.15s;
+}
+.landing-terms-link:hover { color: rgba(255,255,255,0.6); }
+@media (max-width: 620px) {
+/* full-width nav labels collide with the wordmark below this */
+  .landing-header { padding: 18px 20px 0; }
+.landing-logo { font-size: 16px; letter-spacing: 1.6px; }
+.landing-nav { gap: 16px; }
+.landing-nav a, .landing-nav button { font-size: 12px; }
+}
+.landing-logo, .landing-nav a, .landing-nav button { white-space: nowrap; }
+/* Headline */
+.landing-headline {
+  font-family: 'Outfit', sans-serif;
+  font-size: clamp(38px, 4.5vw, 67px); font-weight: 900;
+  color: var(--text); line-height: 1.05;
+  letter-spacing: -2px;
+  margin-bottom: clamp(16px, 2.2vh, 28px);
+}
+.landing-headline-alt {
+  font-family: 'Poppins', sans-serif;   /* Outfit/Manrope ship no italic axis */
+  font-weight: 700; font-style: italic;
+  color: var(--accent);
+  letter-spacing: -1.5px;
+}
+.landing-sub {
+  font-family: 'Manrope', sans-serif;
+  font-size: clamp(15px, 1.15vw, 18px); font-weight: 400;
+  color: var(--text-muted); margin-bottom: clamp(28px, 4vh, 48px);
+  line-height: 1.65; max-width: 30em;
+}
+/* CTAs */
+.landing-actions {
+  display: flex; gap: 12px; margin-bottom: 0;
+}
+.landing-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  text-decoration: none;            /* these are <a> now, not <button> */
+  padding: var(--space-4) var(--space-8); border-radius: 24px;
+  font-family: 'Manrope', sans-serif; font-size: 14px; font-weight: 700;
+  cursor: pointer; transition: all 0.15s;
+  letter-spacing: 0.3px;
+}
+.landing-btn-primary {
+  border: none; background: var(--accent); color: #000;
+  box-shadow: 0 4px 16px rgba(30,215,96,0.25);
+}
+.landing-btn-primary:hover { opacity: 0.9; transform: translateY(-1px); box-shadow: 0 6px 20px rgba(30,215,96,0.4); }
+.landing-btn-secondary {
+  border: 1px solid rgba(255,255,255,0.25); background: transparent;
+  color: var(--text);
+}
+.landing-btn-secondary:hover { border-color: rgba(255,255,255,0.5); background: rgba(255,255,255,0.06); }
+/* ── Above-the-fold social proof (rating · coaches · review carousel) ──
+   Big number + small muted label, split by hairline dividers, with the live
+   review carousel as the third column. Reveals on LOAD, not on scroll: it sits
+   above the fold, so a scroll trigger would never fire and it'd stay invisible. */
+.landing-proof {
+  width: 100%; max-width: var(--landing-max, 1200px); margin: 0 auto;
+  box-sizing: border-box; flex: 0 0 auto;
+  padding: 0 64px clamp(16px, 2vh, 24px);
+}
+/* One bounded card so the three read as a single block of proof. The stat
+   columns size to their CONTENT (auto) rather than stretching to equal
+   fractions — spread across the full width they read as three loose,
+   unrelated items. */
+.proof-card {
+  display: grid; grid-template-columns: auto auto minmax(0, 1fr);
+  align-items: center;
+  border: 1px solid rgba(255,255,255,0.075);
+  border-radius: 18px;
+  background: linear-gradient(180deg, rgba(255,255,255,0.038), rgba(255,255,255,0.012));
+  padding: 14px 24px;
+}
+.lstat { min-width: 0; padding: 0 var(--space-8); }
+.lstat:first-child { padding-left: var(--space-2); }
+.lstat + .lstat { border-left: 1px solid rgba(255,255,255,0.09); }
+.lstat-quotes { padding-right: var(--space-2); }
+.lstat-num {
+  display: flex; align-items: center; gap: var(--space-1);
+  font-family: 'Outfit', sans-serif; font-weight: 800;
+  font-size: 44px; line-height: 1.02; color: var(--text); letter-spacing: -1.6px;
+  font-variant-numeric: tabular-nums;
+}
+.lstat-star { color: var(--accent); font-size: 28px; letter-spacing: 0; }
+.lstat-label {
+  margin-top: var(--space-2); font-size: 12.5px; line-height: 1.35;
+  color: rgba(255,255,255,0.42); letter-spacing: 0.2px;
+}
+/* staggered fade-up, driven by .in from the loader script */
+.landing-proof .lstat {
+  opacity: 0; transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.landing-proof.in .lstat { opacity: 1; transform: none; }
+.landing-proof.in .lstat:nth-of-type(2) { transition-delay: 0.09s; }
+.landing-proof.in .lstat:nth-of-type(3) { transition-delay: 0.18s; }
+@media (prefers-reduced-motion: reduce) {
+.landing-proof .lstat { opacity: 1; transform: none; transition: none; }
+}
+@media (max-width: 900px) {
+.landing-proof { padding: 6px 32px 30px; }
+.proof-card { grid-template-columns: auto auto; gap: 14px 0; padding: 14px 16px; }
+.lstat { padding: 0 18px; }
+.lstat-num { font-size: 32px; }
+.lstat-quotes { grid-column: 1 / -1; padding: 0; border-left: none; }
+}
+@media (max-width: 560px) {
+.landing-proof { padding: 18px 20px 28px; }
+.lstat-num { font-size: 26px; }
+.lstat-label { font-size: 11px; }
+}
+/* ── Review carousel (third column of the proof row) ── */
+.trust-marquee {
+  position: relative; height: 118px; overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
+          mask-image: linear-gradient(to bottom, transparent 0%, #000 16%, #000 84%, transparent 100%);
+}
+.trust-track {
+  display: flex; flex-direction: column; gap: 12px;
+  animation: trustScroll 26s linear infinite;
+  will-change: transform;
+}
+.trust-marquee:hover .trust-track { animation-play-state: paused; }
+.t-card {
+  background: rgba(255,255,255,0.03);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 10px; padding: 14px 16px;
+  flex-shrink: 0;
+}
+.t-stars { color: #FBBF24; font-size: 12px; letter-spacing: 1.5px; margin-bottom: var(--space-2); }
+.t-card blockquote {
+  margin: 0; font-family: 'Manrope', sans-serif;
+  font-size: 13px; line-height: 1.5; color: rgba(255,255,255,0.85);
+}
+.t-card figcaption {
+  margin-top: 9px; font-family: 'Manrope', sans-serif;
+  font-size: 11px; font-weight: 700; color: var(--accent);
+}
+@keyframes trustScroll {
+  from { transform: translateY(0); }
+  to   { transform: translateY(-50%); }
+}
+@media (prefers-reduced-motion: reduce) {
+.trust-track { animation: none; }
+}
+/* Golden glow behind mockup */
+.landing-glow {
+  position: absolute;
+  width: 140%; height: 140%;
+  top: -20%; left: -20%;
+  background: radial-gradient(ellipse at center, rgba(30,215,96,0.32) 0%, rgba(30,215,96,0.15) 35%, transparent 68%);
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(50px);
+}
+/* Product mockup */
+.landing-mockup {
+  position: relative;
+  position: absolute; inset: 0;
+  border-radius: 14px;
+  overflow: hidden;
+  /* On a #111 page a black shadow has almost nothing to darken, so elevation
+     is carried by the .hero-ambient bloom behind + a rim light on top here.
+     The dark layers only do the short contact shadow. */
+  box-shadow:
+    0 30px 60px -20px rgba(0, 0, 0, 0.9),
+    0 8px 20px -6px rgba(0, 0, 0, 0.7),
+    0 0 0 1px rgba(255, 255, 255, 0.1),
+    inset 0 1px 0 rgba(255, 255, 255, 0.16);
+  background: #1a2e16;
+  z-index: 1;
+}
+/* Wrapper: owns the sizing so the bloom can spill outside the clipped frame. */
+.hero-frame {
+  position: relative;
+  width: 100%; max-width: clamp(520px, 42vw, 660px);
+  aspect-ratio: 3 / 2;          /* fixed box: the two slides differ in ratio */
+}
+.hero-ambient {
+  position: absolute; inset: 0;
+  z-index: 0; pointer-events: none;
+  background-size: cover; background-position: center;
+  border-radius: 50%;
+  filter: blur(56px) saturate(2.3);
+  opacity: 0;
+  transform: scale(1.08) translateY(26px);
+  transition: opacity 0.7s ease;
+}
+.hero-ambient.is-active { opacity: 0.95; }
+@media (prefers-reduced-motion: reduce) {
+.hero-ambient { transition: none; }
+}
+/* ── Hero carousel ── */
+.hero-slide {
+  position: absolute; inset: 0;
+  opacity: 0; transition: opacity 0.7s ease;
+}
+.hero-slide.is-active { opacity: 1; }
+.hero-slide > * {
+  display: block; width: 100%; height: 100%;
+  object-fit: cover;
+}
+.hero-dots {
+  position: absolute; left: 0; right: 0; bottom: 12px; z-index: 2;
+  display: flex; justify-content: center; gap: 7px;
+}
+.hero-dot {
+  width: 7px; height: 7px; padding: 0; border: none; border-radius: 50%;
+  background: rgba(255,255,255,0.4); cursor: pointer;
+  transition: width 0.25s, background 0.25s, border-radius 0.25s;
+}
+.hero-dot:hover { background: rgba(255,255,255,0.7); }
+.hero-dot.is-active { width: 20px; border-radius: 4px; background: #fff; }
+@media (prefers-reduced-motion: reduce) {
+.hero-slide { transition: none; }
+}
+/* ── Landing responsive (mobile) ── */
+@media (max-width: 860px) {
+  .landing-split {
+    flex-direction: column; padding: 28px 24px; gap: 24px;
+    text-align: center;
+    align-items: center;      /* column direction: this is horizontal centring */
+  }
+  /* the byline costs ~80px stacked — claw it back so the reviews stay in view */
+  .landing-byline { font-size: 12.5px; }
+  .landing-footer { padding: 0 24px; text-align: center; }
+  .landing-legal { padding: 14px 24px 20px; text-align: center; }
+  .landing-byline { max-width: 100%; }
+  .landing-left { align-items: center; }
+  .landing-headline { font-size: 48px; letter-spacing: -1px; }
+  .landing-sub { max-width: 100%; }
+  .landing-actions { justify-content: center; }
+  /* slides are absolutely positioned, so the frame has no intrinsic width —
+     the shrink-to-fit column would collapse it to zero without this */
+  .landing-right { width: 100%; }
+  .hero-frame { max-width: 400px; margin: 0 auto; }
+  .hero-ambient { filter: blur(34px) saturate(2.1); }
+  .landing-trust { padding: 48px 24px 64px; }
+  .trust-inner { grid-template-columns: 1fr; gap: 32px; text-align: center; }
+  .trust-number { font-size: 52px; }
+}
+/* ─── Auth Modal ────────────────────────────────────────────────────────── */
+#auth-modal { z-index: 2100; }
+/* ── Mobile Hint Modal ──────────────────────────────────────────────────── */
+.mobile-hint-overlay {
+  position: fixed; inset: 0; z-index: 99999;
+  background: rgba(0,0,0,0.75); backdrop-filter: blur(6px);
+  display: flex; align-items: center; justify-content: center;
+  padding: var(--space-6);
+}
+/* ─── Mobile topbar compaction (appended so it wins the cascade) ─────────── */
+@media (max-width: 768px) {
+  .topbar-right { top: 10px; right: 10px; gap: 6px; }
+  .topbar-signin-link { display: none; }
+  .topbar-share-btn span,
+  .topbar-export-btn span { display: none; }
+  .topbar-share-btn,
+  .topbar-export-btn {
+    width: 36px; height: 36px;
+    padding: 0;
+    border-radius: 50%;
+    justify-content: center;
+  }
+}
+/* ── Language switcher ─────────────────────────────────────────────────────
+   A <select> rather than a pill of buttons: with six languages (and room for
+   more) a segmented control no longer fits the 185px account menu. */
+.lang-select {
+  font-family: inherit; font-size: 12px; font-weight: 600;
+  color: var(--text); background: var(--panel);
+  border: 1px solid rgba(255,255,255,0.12); border-radius: 8px;
+  padding: var(--space-1) var(--space-2); cursor: pointer;
+  max-width: 128px; text-overflow: ellipsis;
+}
+.lang-select:hover { border-color: rgba(255,255,255,0.24); }
+.lang-select:focus { outline: none; border-color: var(--accent); }
+.lang-select option { background: var(--panel); color: var(--text); }
+/* Quiet variant — the one that actually ships. Picking a language is a
+   once-ever action, so it has to be findable without competing with the work:
+   dimmed and borderless at rest, resolving on hover. Same treatment the
+   sidebar's terms link uses. */
+.lang-select-quiet {
+  background: transparent; border-color: rgba(255,255,255,0.1);
+  color: var(--text-dim); opacity: 0.72;
+  font-size: 11px; font-weight: 500;
+  padding: var(--space-0) var(--space-1);
+  transition: opacity 0.15s, color 0.15s, border-color 0.15s;
+}
+.lang-select-quiet:hover {
+  opacity: 1; color: var(--text); border-color: rgba(255,255,255,0.12);
+}
+.lang-select-quiet:focus { opacity: 1; color: var(--text); }
+/* The native popup is drawn by the OS, so it needs a real background. */
+.lang-select-quiet option { background: var(--panel); color: var(--text); opacity: 1; }
+/* Foot of the app sidebar. The landing gate is hidden for good after sign-in,
+   so this is the only switcher a signed-in coach ever sees. */
+.sidebar-lang {
+  flex: 0 0 auto; display: flex; justify-content: center;
+  padding: var(--space-2) var(--space-2) var(--space-3);
+  border-top: 1px solid var(--border);
+}
+.sidebar-lang .lang-select { max-width: 100%; }
+/* Bottom of the landing page, after the legal links. */
+.landing-legal .lang-select { margin-left: auto; }
