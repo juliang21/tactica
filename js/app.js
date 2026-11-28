@@ -489,7 +489,7 @@ let _popularOrder = null;
 
 async function loadTeamsDB() {
   try {
-    const resp = await fetch('data/teams.json');
+    const resp = await fetch('/data/teams.json');
     const data = await resp.json();
     _teamsDB = data.clubs;
     _popularNames = new Set(data.popular);

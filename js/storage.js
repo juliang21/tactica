@@ -7,7 +7,7 @@ import {
   saveAnalysisToCloud, loadAnalysisFromCloud, listAnalysesFromCloud,
   deleteAnalysisFromCloud, duplicateAnalysisInCloud, migrateLocalToCloud,
   saveFolderToCloud, listFoldersFromCloud, deleteFolderFromCloud,
-} from './firestore.js';
+} from './firestore.js?v=9';   // same ?v everywhere — a bare specifier is a SECOND module instance
 
 const STORAGE_KEY = 'tactica_analyses';
 const CURRENT_KEY = 'tactica_current_id';
